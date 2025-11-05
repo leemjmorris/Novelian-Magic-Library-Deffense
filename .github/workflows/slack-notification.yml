@@ -26,6 +26,8 @@ jobs:
       - name: Send Slack notification
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           GITHUB_SLACK_MAPPING: ${{ secrets.GITHUB_SLACK_MAPPING }}
           GITHUB_EVENT: ${{ toJson(github.event) }}
           GITHUB_REPOSITORY: ${{ github.repository }}
