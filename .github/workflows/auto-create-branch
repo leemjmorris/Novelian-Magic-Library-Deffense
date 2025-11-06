@@ -1,0 +1,64 @@
+# .github/workflows/auto-create-branch.yml
+name: Auto Create Branch on Issue Assignment
+
+on:
+  issues:
+    types: [assigned]
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Create branch for assigned issue
+        run: |
+          ISSUE_NUMBER=${{ github.event.issue.number }}
+          ASSIGNEE="${{ github.event.assignee.login }}"
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          
+          # Issue 라벨에서 브랜치 타입 결정
+          LABELS='${{ toJson(github.event.issue.labels.*.name) }}'
+          
+          # 라벨 기반 타입 매핑
+          if echo "$LABELS" | grep -q "bug"; then
+            BRANCH_TYPE="bugfix"
+          elif echo "$LABELS" | grep -q "enhancement"; then
+            BRANCH_TYPE="feature"
+          elif echo "$LABELS" | grep -q "documentation"; then
+            BRANCH_TYPE="docs"
+          elif echo "$LABELS" | grep -q "hotfix"; then
+            BRANCH_TYPE="hotfix"
+          elif echo "$LABELS" | grep -q "error"; then
+            BRANCH_TYPE="error-fix"
+          elif echo "$LABELS" | grep -q "refactor"; then
+            BRANCH_TYPE="refactor"
+          elif echo "$LABELS" | grep -q "test"; then
+            BRANCH_TYPE="test"
+          else
+            BRANCH_TYPE="feature"
+          fi
+          
+          # 이슈 제목을 브랜치명으로 변환 (소문자, 하이픈, 최대 30자)
+          DESCRIPTION=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | sed 's/[^a-z0-9-]//g' | cut -c1-30 | sed 's/-$//')
+          
+          BRANCH_NAME="${BRANCH_TYPE}/${ISSUE_NUMBER}-${DESCRIPTION}"
+          
+          echo "Creating branch: $BRANCH_NAME"
+          
+          # 브랜치 생성
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # main에서 최신 변경사항 가져오기
+          git checkout main
+          git pull origin main
+          
+          # 새 브랜치 생성 및 푸시
+          git checkout -b "$BRANCH_NAME"
+          git push origin "$BRANCH_NAME"
+          
+          # Issue에 코멘트 추가
+          gh issue comment $ISSUE_NUMBER --body "✅ **Branch가 자동 생성되었습니다!**
