@@ -1,0 +1,24 @@
+# .github/ISSUE_TEMPLATE/docs.yml
+name: 📚 Documentation
+description: 문서 작업
+title: "[Docs] "
+labels: ["documentation"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📋 작업 흐름 안내
+        
+        1. 이 Issue가 생성되면 고유 번호가 부여됩니다
+        2. 담당자가 assign되면 자동으로 문서 작업용 branch가 생성됩니다
+        3. Branch 형식: `docs/234-api-documentation`
+        
+  - type: textarea
+    id: docs-description
+    attributes:
+      label: 문서 작업 내용
+      description: 어떤 문서 작업이 필요한가요?
+      placeholder: README 업데이트, API 문서 작성 등
+    validations:
+      required: true
