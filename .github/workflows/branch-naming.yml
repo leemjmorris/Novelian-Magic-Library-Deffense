@@ -6,6 +6,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
 jobs:
   check-branch-name:
     runs-on: ubuntu-latest
@@ -28,13 +33,25 @@ jobs:
             echo "Issue: #$ISSUE_NUMBER"
             echo "Description: $(echo $branch_name | cut -d'/' -f2 | cut -d'-' -f2-)"
             
-            # Issue 존재 여부 확인
-            echo "Checking if issue #$ISSUE_NUMBER exists..."
-            if gh issue view $ISSUE_NUMBER --json number > /dev/null 2>&1; then
-              echo "✅ Issue #$ISSUE_NUMBER exists"
+            # PR인 경우 원본 저장소에서 Issue 확인
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              REPO="${{ github.repository }}"
+              echo "Checking if issue #$ISSUE_NUMBER exists in $REPO..."
+              if gh issue view $ISSUE_NUMBER --repo $REPO --json number > /dev/null 2>&1; then
+                echo "✅ Issue #$ISSUE_NUMBER exists in $REPO"
+              else
+                echo "❌ Issue #$ISSUE_NUMBER does not exist in $REPO"
+                exit 1
+              fi
             else
-              echo "❌ Issue #$ISSUE_NUMBER does not exist"
-              exit 1
+              # create 이벤트인 경우 현재 저장소에서 확인
+              echo "Checking if issue #$ISSUE_NUMBER exists..."
+              if gh issue view $ISSUE_NUMBER --json number > /dev/null 2>&1; then
+                echo "✅ Issue #$ISSUE_NUMBER exists"
+              else
+                echo "❌ Issue #$ISSUE_NUMBER does not exist"
+                exit 1
+              fi
             fi
           else
             echo "❌ Branch name doesn't follow convention: $branch_name"
