@@ -1,0 +1,53 @@
+name: Branch Naming Convention
+
+on:
+  create:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name
+        run: |
+          branch_name="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          
+          # main 브랜치는 통과
+          if [[ "$branch_name" == "main" ]]; then
+            echo "✅ Main branch"
+            exit 0
+          fi
+          
+          # 브랜치 명명 규칙 체크
+          if [[ "$branch_name" =~ ^(feature|bugfix|hotfix|error-fix|refactor|docs|test|chore|release)/[a-z0-9-]+$ ]]; then
+            echo "✅ Branch name follows convention: $branch_name"
+            echo "Type: $(echo $branch_name | cut -d'/' -f1)"
+            echo "Description: $(echo $branch_name | cut -d'/' -f2)"
+          else
+            echo "❌ Branch name doesn't follow convention: $branch_name"
+            echo ""
+            echo "📝 Expected format: type/description-with-hyphens"
+            echo ""
+            echo "✅ Valid types:"
+            echo "  • feature (새 기능)"
+            echo "  • bugfix (버그 수정)"
+            echo "  • hotfix (긴급 수정)"
+            echo "  • error-fix (에러 수정)"
+            echo "  • refactor (코드 개선)"
+            echo "  • docs (문서 작업)"
+            echo "  • test (테스트 추가)"
+            echo "  • chore (기타 작업)"
+            echo "  • release (릴리즈)"
+            echo ""
+            echo "✅ Description rules:"
+            echo "  • Only lowercase letters (a-z)"
+            echo "  • Numbers (0-9)"
+            echo "  • Hyphens (-) instead of spaces"
+            echo ""
+            echo "📌 Examples:"
+            echo "  • feature/user-authentication"
+            echo "  • bugfix/login-error-fix"
+            echo "  • error-fix/null-pointer-exception"
+            exit 1
+          fi
