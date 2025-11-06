@@ -1,8 +1,8 @@
-# .github/ISSUE_TEMPLATE/feature.yml
-name: 🚀 Feature Request
-description: 새로운 기능 제안
-title: "[Feature] "
-labels: ["enhancement"]
+# .github/ISSUE_TEMPLATE/bug.yml
+name: 🐛 Bug Report
+description: 버그 리포트
+title: "[Bug] "
+labels: ["bug"]
 assignees: []
 body:
   - type: markdown
@@ -11,21 +11,43 @@ body:
         ## 📋 Branch 생성 안내
         
         이 Issue를 assign하면 자동으로 다음 형식의 branch가 생성됩니다:
-```
-        feature/{issue-number}-{description}
-```
+        
+        `bugfix/{issue-number}-{description}`
         
   - type: textarea
-    id: description
+    id: bug-description
     attributes:
-      label: 기능 설명
-      description: 구현하고자 하는 기능을 설명해주세요
-      placeholder: 어떤 기능이 필요한가요?
+      label: 버그 설명
+      description: 어떤 버그가 발생했나요?
+      placeholder: 버그에 대해 설명해주세요
     validations:
       required: true
       
   - type: textarea
-    id: additional
+    id: steps
     attributes:
-      label: 추가 정보
-      description: 참고할 만한 추가 정보가 있다면 작성해주세요
+      label: 재현 단계
+      description: 버그를 재현하는 방법을 단계별로 작성해주세요
+      placeholder: |
+        1. '...'로 이동
+        2. '...'를 클릭
+        3. '...'까지 스크롤
+        4. 에러 발생
+    validations:
+      required: true
+      
+  - type: textarea
+    id: expected
+    attributes:
+      label: 예상 동작
+      description: 어떻게 동작해야 하나요?
+    validations:
+      required: true
+      
+  - type: textarea
+    id: actual
+    attributes:
+      label: 실제 동작
+      description: 실제로 어떻게 동작하나요?
+    validations:
+      required: true
