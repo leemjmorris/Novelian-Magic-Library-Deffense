@@ -18,6 +18,10 @@ now = datetime.utcnow()
 yesterday_start = now - timedelta(days=7)  # 최근 7일
 yesterday_end = now
 
+# LMJ: Date for display (KST based yesterday)
+kst_now = now + timedelta(hours=9)
+yesterday = kst_now - timedelta(days=1)
+
 print(f"Collecting issues from {yesterday_start} to {yesterday_end}")
 
 # LMJ: Fetch issues from GitHub
