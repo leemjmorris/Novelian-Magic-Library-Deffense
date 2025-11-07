@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
-    public float speed;
-    public float damage;
+    public float speed = 10f;
+    public float damage = 10f;
     private Vector3 direction;
     private Transform target;
 
@@ -12,14 +12,26 @@ public class Projectile : MonoBehaviour
         if (target != null)
         {
             direction = (target.position - transform.position).normalized;
-            transform.LookAt(target);
+            transform.Translate(direction * speed * Time.deltaTime);
         }
-        transform.position += direction * speed * Time.deltaTime;
     }
-    
-    public void Fire(Transform target, float damage)
+
+    public void SetTarget(Transform target)
     {
         this.target = target;
-        this.damage = damage;
+        
+    }
+    
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Monster"))
+        {
+            var monster = collision.GetComponent<Monster>();
+            if (monster != null)
+            {
+                monster.TakeDamage(damage);
+            }
+            Destroy(gameObject);
+        }
     }
 }
