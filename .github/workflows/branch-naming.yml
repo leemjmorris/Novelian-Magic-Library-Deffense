@@ -19,40 +19,28 @@ jobs:
         run: |
           branch_name="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
           
-          # main 브랜치는 통과
+          # LMJ : main branch always passes
           if [[ "$branch_name" == "main" ]]; then
             echo "✅ Main branch"
             exit 0
           fi
           
-          # 브랜치 명명 규칙 체크 (Issue 번호 포함)
-          if [[ "$branch_name" =~ ^(feature|bugfix|hotfix|error-fix|refactor|docs|test|chore|release)/[0-9]+-[a-z0-9-]+$ ]]; then
+          # LMJ : Check branch naming convention (with issue number)
+          if [[ "$branch_name" =~ ^(feature|bugfix|hotfix|error-fix|fix|refactor|docs|csvs|test|chore|release)/[0-9]+-[a-z0-9-]+$ ]]; then
             echo "✅ Branch name follows convention: $branch_name"
             ISSUE_NUMBER=$(echo $branch_name | grep -oP '(?<=/)[0-9]+(?=-)')
-            echo "Type: $(echo $branch_name | cut -d'/' -f1)"
-            echo "Issue: #$ISSUE_NUMBER"
-            echo "Description: $(echo $branch_name | cut -d'/' -f2 | cut -d'-' -f2-)"
+            BRANCH_TYPE=$(echo $branch_name | cut -d'/' -f1)
+            DESCRIPTION=$(echo $branch_name | cut -d'/' -f2 | cut -d'-' -f2-)
             
-            # PR인 경우 원본 저장소에서 Issue 확인
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-              REPO="${{ github.repository }}"
-              echo "Checking if issue #$ISSUE_NUMBER exists in $REPO..."
-              if gh issue view $ISSUE_NUMBER --repo $REPO --json number > /dev/null 2>&1; then
-                echo "✅ Issue #$ISSUE_NUMBER exists in $REPO"
-              else
-                echo "❌ Issue #$ISSUE_NUMBER does not exist in $REPO"
-                exit 1
-              fi
-            else
-              # create 이벤트인 경우 현재 저장소에서 확인
-              echo "Checking if issue #$ISSUE_NUMBER exists..."
-              if gh issue view $ISSUE_NUMBER --json number > /dev/null 2>&1; then
-                echo "✅ Issue #$ISSUE_NUMBER exists"
-              else
-                echo "❌ Issue #$ISSUE_NUMBER does not exist"
-                exit 1
-              fi
-            fi
+            echo "📋 Branch details:"
+            echo "  Type: $BRANCH_TYPE"
+            echo "  Issue: #$ISSUE_NUMBER"
+            echo "  Description: $DESCRIPTION"
+            
+            # LMJ : Note - Issue existence is validated by pr-issue-link-check.yml
+            echo ""
+            echo "💡 Issue existence will be validated by PR-Issue Link Check workflow"
+            
           else
             echo "❌ Branch name doesn't follow convention: $branch_name"
             echo ""
@@ -63,8 +51,10 @@ jobs:
             echo "  • bugfix (버그 수정)"
             echo "  • hotfix (긴급 수정)"
             echo "  • error-fix (에러 수정)"
+            echo "  • fix (수정)"
             echo "  • refactor (코드 개선)"
             echo "  • docs (문서 작업)"
+            echo "  • csvs (데이터 작업)"
             echo "  • test (테스트 추가)"
             echo "  • chore (기타 작업)"
             echo "  • release (릴리즈)"
@@ -78,7 +68,8 @@ jobs:
             echo "📌 Examples:"
             echo "  • feature/123-user-authentication"
             echo "  • bugfix/456-login-error-fix"
-            echo "  • error-fix/789-null-pointer-exception"
+            echo "  • fix/789-null-pointer-exception"
+            echo "  • csvs/42-update-character-stats"
             exit 1
           fi
         env:
