@@ -1,362 +1,343 @@
+#!/usr/bin/env python3
+# LMJ : Generate daily report using Gemini API and post to Notion
+
 import os
 import json
 import requests
 from datetime import datetime, timedelta
+from github import Github
+import google.generativeai as genai
 
-print("=== Daily Report Generation Started ===")
+def generate_daily_report():
+    github_token = os.getenv('GITHUB_TOKEN')
+    gemini_api_key = os.getenv('GEMINI_API_KEY')
+    notion_token = os.getenv('NOTION_API_TOKEN')
+    notion_page_id = os.getenv('NOTION_REPORT_PAGE_ID')
+    slack_webhook = os.getenv('SLACK_WEBHOOK_URL')
+    repository_name = os.getenv('GITHUB_REPOSITORY')
+    
+    if not all([github_token, gemini_api_key, notion_token, notion_page_id]):
+        print("Missing required credentials")
+        return
+    
+    # LMJ : Initialize GitHub API
+    g = Github(github_token)
+    repo = g.get_repo(repository_name)
+    
+    # LMJ : Get activities from last 24 hours
+    since = datetime.utcnow() - timedelta(days=1)
+    
+    # LMJ : Collect issues activity
+    issues_data = []
+    issues = repo.get_issues(state='all', since=since)
+    for issue in issues:
+        if issue.pull_request:
+            continue
+        
+        issue_info = {
+            'number': issue.number,
+            'title': issue.title,
+            'state': issue.state,
+            'labels': [label.name for label in issue.labels],
+            'assignees': [assignee.login for assignee in issue.assignees],
+            'created_at': issue.created_at.isoformat(),
+            'updated_at': issue.updated_at.isoformat(),
+            'body': issue.body or '',
+            'comments_count': issue.comments
+        }
+        
+        # LMJ : Get comments
+        comments = []
+        for comment in issue.get_comments(since=since):
+            comments.append({
+                'author': comment.user.login,
+                'body': comment.body,
+                'created_at': comment.created_at.isoformat()
+            })
+        issue_info['comments'] = comments
+        
+        issues_data.append(issue_info)
+    
+    # LMJ : Collect pull requests activity
+    prs_data = []
+    pulls = repo.get_pulls(state='all', sort='updated', direction='desc')
+    for pr in pulls:
+        if pr.updated_at < since:
+            break
+        
+        pr_info = {
+            'number': pr.number,
+            'title': pr.title,
+            'state': pr.state,
+            'merged': pr.merged,
+            'author': pr.user.login,
+            'created_at': pr.created_at.isoformat(),
+            'updated_at': pr.updated_at.isoformat(),
+            'merged_at': pr.merged_at.isoformat() if pr.merged_at else None,
+            'body': pr.body or '',
+            'head_branch': pr.head.ref,
+            'base_branch': pr.base.ref
+        }
+        prs_data.append(pr_info)
+    
+    # LMJ : Collect commits
+    commits_data = []
+    commits = repo.get_commits(since=since)
+    for commit in commits:
+        commit_info = {
+            'sha': commit.sha[:7],
+            'message': commit.commit.message,
+            'author': commit.commit.author.name,
+            'date': commit.commit.author.date.isoformat()
+        }
+        commits_data.append(commit_info)
+    
+    # LMJ : Prepare data summary for Gemini
+    data_summary = {
+        'date': datetime.now().strftime('%Y.%m.%d'),
+        'issues': issues_data,
+        'pull_requests': prs_data,
+        'commits': commits_data,
+        'team_members': [
+            'leemjmorris', 'jaemoon23', 'LeeChaeBin002',
+            'Kdwio', 'bigwaterplz', 'kimjiw8698-crypto'
+        ]
+    }
+    
+    # LMJ : Generate report using Gemini
+    genai.configure(api_key=gemini_api_key)
+    model = genai.GenerativeModel('gemini-1.5-pro')
+    
+    prompt = f"""
+다음은 Novelian Magic Library Defense 프로젝트의 지난 24시간 동안의 GitHub 활동 데이터입니다.
 
-# LMJ: Load environment variables
-notion_token = os.environ["NOTION_TOKEN"]
-report_page_id = os.environ["NOTION_REPORT_PAGE_ID"]
-gemini_api_key = os.environ["GEMINI_API_KEY"]
-github_token = os.environ["GITHUB_TOKEN"]
-repo = os.environ["GITHUB_REPOSITORY"]
-slack_webhook = os.environ.get("SLACK_WEBHOOK_URL")
+```json
+{json.dumps(data_summary, ensure_ascii=False, indent=2)}
+```
 
-# LMJ: Calculate yesterday's date
-now = datetime.utcnow()
-# 최근 24시간 이슈 수집
-yesterday_start = now - timedelta(hours=24)
-yesterday_end = now
+위 데이터를 분석하여 다음 형식으로 일간 보고서를 작성해주세요:
 
-# LMJ: Date for display (KST based yesterday)
-kst_now = now + timedelta(hours=9)
-yesterday = (kst_now - timedelta(days=1)).date()
+# {data_summary['date']} 일간 보고
 
-print(f"Collecting issues from last 24 hours ({yesterday_start} to {yesterday_end})")
+## 📊 오늘의 통계
+- 생성된 Issue: X건
+- 닫힌 Issue: X건
+- 생성된 PR: X건
+- 머지된 PR: X건
+- 커밋 수: X개
 
-# LMJ: Fetch issues from GitHub
-headers = {
-    "Authorization": f"token {github_token}",
-    "Accept": "application/vnd.github.v3+json"
-}
+## 🔥 Issue Handling 현황
+(각 Issue를 분석하여 어떻게 처리되었는지 설명)
 
-issues_url = f"https://api.github.com/repos/{repo}/issues"
-params = {
-    "state": "all",
-    "since": yesterday_start.isoformat() + "Z",
-    "per_page": 100
-}
+## ✨ 추가된 기능 및 변경사항
+(머지된 PR과 커밋을 분석하여 새로운 기능이나 버그 수정 내용 요약)
 
-response = requests.get(issues_url, headers=headers, params=params)
-if response.status_code != 200:
-    print(f"❌ GitHub API error: {response.status_code}")
-    exit(1)
+## 👥 팀원별 작업 내역
+### 프로그래머
+- **이명진 (@leemjmorris)**: 
+- **이재문 (@jaemoon23)**: 
+- **이채빈 (@LeeChaeBin002)**: 
 
-all_issues = response.json()
+### 기획자
+- **김동욱 (@Kdwio)**: 
+- **김민휘 (@bigwaterplz)**: 
+- **김지원 (@kimjiw8698-crypto)**: 
 
-# LMJ: Filter new issues created yesterday
-new_issues = []
-for issue in all_issues:
-    created_at = datetime.strptime(issue["created_at"], "%Y-%m-%dT%H:%M:%SZ")
-    if yesterday_start <= created_at <= yesterday_end:
-        if "pull_request" not in issue:
-            new_issues.append(issue)
+## ⚠️ 예상되는 문제점
+(현재 진행 중인 작업을 분석하여 예상되는 문제점이나 블로커 파악)
 
-# LMJ: Filter completed issues yesterday
-completed_issues = []
-for issue in all_issues:
-    if issue.get("closed_at"):
-        closed_at = datetime.strptime(issue["closed_at"], "%Y-%m-%dT%H:%M:%SZ")
-        if yesterday_start <= closed_at <= yesterday_end:
-            if "pull_request" not in issue:
-                completed_issues.append(issue)
+## 💡 추천 사항
+(팀의 생산성 향상을 위한 구체적인 제안)
 
-# LMJ: Get all open issues for "in progress" count
-open_params = {"state": "open", "per_page": 100}
-open_response = requests.get(issues_url, headers=headers, params=open_params)
-all_open = [i for i in open_response.json() if "pull_request" not in i] if open_response.status_code == 200 else []
+---
 
-print(f"New: {len(new_issues)}, Completed: {len(completed_issues)}, In Progress: {len(all_open)}")
-
-if len(new_issues) == 0 and len(completed_issues) == 0:
-    print("No issues to report")
-    exit(0)
-
-# LMJ: Classify issues by priority
-def classify_issue(issue):
-    labels = [label['name'].lower() for label in issue.get('labels', [])]
-    if any(x in labels for x in ['critical', 'urgent', 'priority-critical']):
-        return 'critical'
-    elif any(x in labels for x in ['bug', 'high', 'priority-high']):
-        return 'major'
-    else:
-        return 'normal'
-
-critical_issues = [i for i in new_issues if classify_issue(i) == 'critical']
-major_issues = [i for i in new_issues if classify_issue(i) == 'major']
-normal_issues = [i for i in new_issues if classify_issue(i) == 'normal']
-
-# LMJ: Prepare issue summary for Gemini
-issues_summary = f"""신규 이슈 {len(new_issues)}건:
-긴급: {len(critical_issues)}건
-주요: {len(major_issues)}건
-일반: {len(normal_issues)}건
-
-완료된 이슈: {len(completed_issues)}건
+**주의사항:**
+1. 구체적이고 실용적인 내용으로 작성해주세요.
+2. 데이터가 없는 경우 "활동 없음"이라고 표기해주세요.
+3. Issue와 PR 번호를 명확히 포함해주세요.
+4. 팀원별 작업은 각 팀원이 기여한 Issue, PR, 커밋을 기반으로 작성해주세요.
+5. 예상 문제점과 추천사항은 기술적 관점과 프로젝트 관리 관점에서 모두 고려해주세요.
 """
-
-for issue in new_issues[:5]:  # Sample first 5
-    issues_summary += f"\n- #{issue['number']}: {issue['title']}"
-    labels = [label['name'] for label in issue.get('labels', [])]
-    if labels:
-        issues_summary += f" [라벨: {', '.join(labels)}]"
-
-# LMJ: Generate analysis using Gemini
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}"
-
-prompt = f"""다음은 어제({yesterday.strftime('%Y년 %m월 %d일')}) 개발팀의 이슈 현황입니다:
-
-{issues_summary}
-
-다음 두 가지만 간결하게 작성해주세요:
-
-1. 📈 트렌드 분석 (2-3문장)
-   - 이슈 발생 패턴, 주요 카테고리, 특이사항 분석
-
-2. 💬 코멘트 (2-3문장)
-   - 팀에게 권장하는 우선순위와 조치사항
-
-전문적이고 간결하게 한국어로 작성해주세요."""
-
-gemini_payload = {
-    "contents": [{
-        "parts": [{
-            "text": prompt
-        }]
-    }]
-}
-
-trend_analysis = ""
-comment = ""
-
-try:
-    response = requests.post(gemini_url, json=gemini_payload)
-    if response.status_code == 200:
-        result = response.json()
-        ai_response = result["candidates"][0]["content"]["parts"][0]["text"]
-        
-        # LMJ: Parse AI response
-        if "📈 트렌드 분석" in ai_response and "💬 코멘트" in ai_response:
-            parts = ai_response.split("💬 코멘트")
-            trend_analysis = parts[0].replace("📈 트렌드 분석", "").strip()
-            comment = parts[1].strip()
-        else:
-            trend_analysis = ai_response[:200]
-            comment = "금일 이슈에 대한 신속한 대응을 권장합니다."
-        
-        print("✅ Gemini analysis generated")
-    else:
-        print(f"⚠️ Gemini API error: {response.status_code}")
-        trend_analysis = "금일 이슈 발생 패턴 분석 중입니다."
-        comment = "각 이슈에 대한 우선순위 검토를 권장합니다."
-except Exception as e:
-    print(f"⚠️ Gemini error: {e}")
-    trend_analysis = "금일 이슈 발생 패턴 분석 중입니다."
-    comment = "각 이슈에 대한 우선순위 검토를 권장합니다."
-
-# LMJ: Create Notion page
-notion_headers = {
-    "Authorization": f"Bearer {notion_token}",
-    "Notion-Version": "2022-06-28",
-    "Content-Type": "application/json"
-}
-
-page_title = f"{yesterday.strftime('%y.%m.%d')} 일간 보고"
-
-# LMJ: Build page content
-children = []
-
-# Header divider
-children.append({
-    "object": "block",
-    "type": "divider",
-    "divider": {}
-})
-
-# Summary section
-children.append({
-    "object": "block",
-    "type": "heading_2",
-    "heading_2": {
-        "rich_text": [{"type": "text", "text": {"content": "📊 요약"}}]
-    }
-})
-
-children.append({
-    "object": "block",
-    "type": "bulleted_list_item",
-    "bulleted_list_item": {
-        "rich_text": [{"type": "text", "text": {"content": f"신규 이슈: {len(new_issues)}건"}}]
-    }
-})
-
-children.append({
-    "object": "block",
-    "type": "bulleted_list_item",
-    "bulleted_list_item": {
-        "rich_text": [{"type": "text", "text": {"content": f"완료된 이슈: {len(completed_issues)}건"}}]
-    }
-})
-
-children.append({
-    "object": "block",
-    "type": "bulleted_list_item",
-    "bulleted_list_item": {
-        "rich_text": [{"type": "text", "text": {"content": f"진행 중: {len(all_open)}건"}}]
-    }
-})
-
-# LMJ: Add critical issues section
-if critical_issues:
-    children.append({
-        "object": "block",
-        "type": "heading_2",
-        "heading_2": {
-            "rich_text": [{"type": "text", "text": {"content": "🚨 긴급 이슈 (즉시 처리 필요)"}}]
-        }
-    })
     
-    for idx, issue in enumerate(critical_issues, 1):
-        assignees = [a["login"] for a in issue.get("assignees", [])]
-        assignee_text = f" [담당: @{', @'.join(assignees)}]" if assignees else " [담당자 없음]"
-        
-        children.append({
-            "object": "block",
-            "type": "numbered_list_item",
-            "numbered_list_item": {
-                "rich_text": [
-                    {"type": "text", "text": {"content": f"#{issue['number']} - {issue['title']}", "link": {"url": issue['html_url']}}},
-                    {"type": "text", "text": {"content": assignee_text}}
-                ]
-            }
-        })
-
-# LMJ: Add major issues section
-if major_issues:
-    children.append({
-        "object": "block",
-        "type": "heading_2",
-        "heading_2": {
-            "rich_text": [{"type": "text", "text": {"content": "⚠️ 주요 이슈"}}]
-        }
-    })
-    
-    for issue in major_issues:
-        assignees = [a["login"] for a in issue.get("assignees", [])]
-        assignee_text = f" [담당: @{', @'.join(assignees)}]" if assignees else " [담당자 없음]"
-        
-        children.append({
-            "object": "block",
-            "type": "numbered_list_item",
-            "numbered_list_item": {
-                "rich_text": [
-                    {"type": "text", "text": {"content": f"#{issue['number']} - {issue['title']}", "link": {"url": issue['html_url']}}},
-                    {"type": "text", "text": {"content": assignee_text}}
-                ]
-            }
-        })
-
-# LMJ: Add normal issues section
-if normal_issues:
-    children.append({
-        "object": "block",
-        "type": "heading_2",
-        "heading_2": {
-            "rich_text": [{"type": "text", "text": {"content": "📝 일반 이슈"}}]
-        }
-    })
-    
-    for issue in normal_issues:
-        assignees = [a["login"] for a in issue.get("assignees", [])]
-        assignee_text = f" [담당: @{', @'.join(assignees)}]" if assignees else " [담당자 없음]"
-        
-        children.append({
-            "object": "block",
-            "type": "numbered_list_item",
-            "numbered_list_item": {
-                "rich_text": [
-                    {"type": "text", "text": {"content": f"#{issue['number']} - {issue['title']}", "link": {"url": issue['html_url']}}},
-                    {"type": "text", "text": {"content": assignee_text}}
-                ]
-            }
-        })
-
-# LMJ: Add trend analysis
-children.append({
-    "object": "block",
-    "type": "heading_2",
-    "heading_2": {
-        "rich_text": [{"type": "text", "text": {"content": "📈 트렌드 분석"}}]
-    }
-})
-
-children.append({
-    "object": "block",
-    "type": "paragraph",
-    "paragraph": {
-        "rich_text": [{"type": "text", "text": {"content": trend_analysis}}]
-    }
-})
-
-# LMJ: Add comment
-children.append({
-    "object": "block",
-    "type": "heading_2",
-    "heading_2": {
-        "rich_text": [{"type": "text", "text": {"content": "💬 코멘트"}}]
-    }
-})
-
-children.append({
-    "object": "block",
-    "type": "paragraph",
-    "paragraph": {
-        "rich_text": [{"type": "text", "text": {"content": comment}}]
-    }
-})
-
-# LMJ: Create page
-create_page_url = "https://api.notion.com/v1/pages"
-page_data = {
-    "parent": {"page_id": report_page_id},
-    "properties": {
-        "title": {
-            "title": [{"text": {"content": page_title}}]
-        }
-    },
-    "children": children
-}
-
-notion_page_url = None
-try:
-    response = requests.post(create_page_url, headers=notion_headers, json=page_data)
-    if response.status_code == 200:
-        page_id = response.json()["id"]
-        notion_page_url = f"https://notion.so/{page_id.replace('-', '')}"
-        print(f"✅ Daily report created: {notion_page_url}")
-    else:
-        print(f"❌ Notion API error: {response.status_code} - {response.text}")
-        exit(1)
-except Exception as e:
-    print(f"❌ Error creating Notion page: {e}")
-    exit(1)
-
-# LMJ: Send Slack notification
-if slack_webhook and notion_page_url:
     try:
-        slack_message = f"📅 *{yesterday.strftime('%y.%m.%d')} 일간 보고*가 생성되었습니다.\n\n"
-        slack_message += f"📊 신규 {len(new_issues)}건 | 완료 {len(completed_issues)}건 | 진행중 {len(all_open)}건\n\n"
-        slack_message += f"🔗 <{notion_page_url}|보고서 보기>"
-        
-        slack_payload = {"text": slack_message}
-        slack_response = requests.post(slack_webhook, json=slack_payload)
-        
-        if slack_response.status_code == 200:
-            print("✅ Slack notification sent")
-        else:
-            print(f"⚠️ Slack notification failed: {slack_response.status_code}")
+        response = model.generate_content(prompt)
+        report_content = response.text
+        print("Report generated successfully")
     except Exception as e:
-        print(f"⚠️ Slack error: {e}")
+        print(f"Failed to generate report: {e}")
+        report_content = f"# {data_summary['date']} 일간 보고\n\n리포트 생성 실패: {str(e)}"
+    
+    # LMJ : Post to Notion
+    post_to_notion(notion_token, notion_page_id, data_summary['date'], report_content)
+    
+    # LMJ : Send Slack notification
+    if slack_webhook:
+        send_slack_summary(slack_webhook, data_summary, report_content)
 
-print("=== Daily Report Generation Completed ===")
+def post_to_notion(notion_token, parent_page_id, date, content):
+    # LMJ : Prepare Notion API headers
+    headers = {
+        'Authorization': f'Bearer {notion_token}',
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+    }
+    
+    # LMJ : Create page title
+    page_title = f"{date} 일간 보고"
+    
+    # LMJ : Convert markdown content to Notion blocks
+    blocks = markdown_to_notion_blocks(content)
+    
+    # LMJ : Create new page
+    create_url = "https://api.notion.com/v1/pages"
+    create_payload = {
+        "parent": {"page_id": parent_page_id},
+        "properties": {
+            "title": {
+                "title": [
+                    {
+                        "text": {
+                            "content": page_title
+                        }
+                    }
+                ]
+            }
+        },
+        "children": blocks
+    }
+    
+    response = requests.post(create_url, headers=headers, json=create_payload)
+    
+    if response.status_code == 200:
+        print(f"Successfully posted daily report to Notion")
+        return response.json()
+    else:
+        print(f"Failed to post to Notion: {response.status_code} - {response.text}")
+        return None
+
+def markdown_to_notion_blocks(markdown_content):
+    # LMJ : Simple markdown to Notion blocks conversion
+    blocks = []
+    lines = markdown_content.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Headings
+        if line.startswith('# '):
+            blocks.append({
+                "object": "block",
+                "type": "heading_1",
+                "heading_1": {
+                    "rich_text": [{"type": "text", "text": {"content": line[2:]}}]
+                }
+            })
+        elif line.startswith('## '):
+            blocks.append({
+                "object": "block",
+                "type": "heading_2",
+                "heading_2": {
+                    "rich_text": [{"type": "text", "text": {"content": line[3:]}}]
+                }
+            })
+        elif line.startswith('### '):
+            blocks.append({
+                "object": "block",
+                "type": "heading_3",
+                "heading_3": {
+                    "rich_text": [{"type": "text", "text": {"content": line[4:]}}]
+                }
+            })
+        elif line.startswith('- '):
+            blocks.append({
+                "object": "block",
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {
+                    "rich_text": [{"type": "text", "text": {"content": line[2:]}}]
+                }
+            })
+        elif line.startswith('---'):
+            blocks.append({
+                "object": "block",
+                "type": "divider",
+                "divider": {}
+            })
+        else:
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{"type": "text", "text": {"content": line}}]
+                }
+            })
+    
+    return blocks
+
+def send_slack_summary(webhook_url, data_summary, report_preview):
+    # LMJ : Send brief summary to Slack
+    issues_count = len(data_summary['issues'])
+    prs_count = len(data_summary['pull_requests'])
+    commits_count = len(data_summary['commits'])
+    
+    # LMJ : Get first 500 chars of report as preview
+    preview = report_preview[:500] + '...' if len(report_preview) > 500 else report_preview
+    
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": f"📄 {data_summary['date']} 일간 보고서 생성 완료",
+                "emoji": True
+            }
+        },
+        {
+            "type": "section",
+            "fields": [
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Issue:* {issues_count}건"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*PR:* {prs_count}건"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*Commits:* {commits_count}개"
+                },
+                {
+                    "type": "mrkdwn",
+                    "text": f"*일자:* {data_summary['date']}"
+                }
+            ]
+        },
+        {
+            "type": "divider"
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"📖 *보고서 미리보기:*\n{preview}"
+            }
+        },
+        {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "📁 전체 보고서는 Notion에서 확인하세요."
+                }
+            ]
+        }
+    ]
+    
+    payload = {"blocks": blocks}
+    requests.post(webhook_url, json=payload)
+    print("Slack summary sent")
+
+if __name__ == '__main__':
+    generate_daily_report()
