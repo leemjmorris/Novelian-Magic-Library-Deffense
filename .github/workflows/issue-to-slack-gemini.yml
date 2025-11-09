@@ -1,0 +1,181 @@
+name: Issue to Slack (Gemini-powered)
+
+on:
+  issues:
+    types: [opened, closed, reopened]
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Process issue with Gemini and send to Slack
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_LABELS: ${{ toJson(github.event.issue.labels) }}
+          ISSUE_ASSIGNEES: ${{ toJson(github.event.issue.assignees) }}
+          ISSUE_MILESTONE: ${{ github.event.issue.milestone.title }}
+          ACTION: ${{ github.event.action }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const https = require('https');
+            
+            // Gemini API 호출 함수
+            async function callGeminiAPI(prompt) {
+              const apiKey = process.env.GEMINI_API_KEY;
+              const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+              
+              const data = JSON.stringify({
+                contents: [{
+                  parts: [{
+                    text: prompt
+                  }]
+                }],
+                generationConfig: {
+                  temperature: 0.7,
+                  maxOutputTokens: 800
+                }
+              });
+              
+              return new Promise((resolve, reject) => {
+                const req = https.request(url, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': data.length
+                  }
+                }, (res) => {
+                  let body = '';
+                  res.on('data', chunk => body += chunk);
+                  res.on('end', () => {
+                    try {
+                      const response = JSON.parse(body);
+                      const text = response.candidates[0].content.parts[0].text;
+                      resolve(text);
+                    } catch (error) {
+                      reject(error);
+                    }
+                  });
+                });
+                
+                req.on('error', reject);
+                req.write(data);
+                req.end();
+              });
+            }
+            
+            // Slack에 메시지 전송 함수
+            async function sendToSlack(message) {
+              const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+              const url = new URL(webhookUrl);
+              
+              const data = JSON.stringify({ text: message });
+              
+              return new Promise((resolve, reject) => {
+                const req = https.request({
+                  hostname: url.hostname,
+                  path: url.pathname + url.search,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': data.length
+                  }
+                }, (res) => {
+                  let body = '';
+                  res.on('data', chunk => body += chunk);
+                  res.on('end', () => resolve(body));
+                });
+                
+                req.on('error', reject);
+                req.write(data);
+                req.end();
+              });
+            }
+            
+            // 메인 로직
+            try {
+              const issueTitle = process.env.ISSUE_TITLE;
+              const issueBody = process.env.ISSUE_BODY || '내용 없음';
+              const issueNumber = process.env.ISSUE_NUMBER;
+              const issueUrl = process.env.ISSUE_URL;
+              const issueUser = process.env.ISSUE_USER;
+              const action = process.env.ACTION;
+              const labels = JSON.parse(process.env.ISSUE_LABELS || '[]');
+              const assignees = JSON.parse(process.env.ISSUE_ASSIGNEES || '[]');
+              const milestone = process.env.ISSUE_MILESTONE || '없음';
+              
+              // 액션에 따른 이모지
+              const actionEmoji = {
+                'opened': '🆕',
+                'closed': '✅',
+                'reopened': '🔄'
+              };
+              
+              // 레이블 정보
+              const labelNames = labels.map(l => l.name).join(', ') || '없음';
+              
+              // 담당자 정보
+              const assigneeNames = assignees.map(a => `@${a.login}`).join(', ') || '미배정';
+              
+              // Gemini에게 요약 요청
+              const prompt = `다음 GitHub Issue를 한국어로 간결하고 보기 좋게 요약해주세요. 
+              
+Issue 제목: ${issueTitle}
+Issue 내용: ${issueBody}
+액션: ${action}
+레이블: ${labelNames}
+담당자: ${assigneeNames}
+마일스톤: ${milestone}
+
+요구사항:
+1. 핵심 내용만 2-3문장으로 요약
+2. 중요한 정보(우선순위, 담당자, 마일스톤 등)는 강조
+3. 이모지를 적절히 사용하여 가독성 향상
+4. Slack 메시지 형식으로 작성 (markdown 지원)
+5. 너무 길지 않게 작성 (최대 200자)
+
+형식 예시:
+📝 **[요약]**
+핵심 내용 요약...
+
+👤 **담당:** @사용자
+🏷️ **레이블:** 레이블들
+📅 **마일스톤:** 마일스톤명`;
+
+              console.log('Gemini API 호출 중...');
+              const geminiSummary = await callGeminiAPI(prompt);
+              console.log('Gemini 요약 완료:', geminiSummary);
+              
+              // Slack 메시지 구성
+              const slackMessage = `${actionEmoji[action]} *Issue #${issueNumber} ${action === 'opened' ? '생성됨' : action === 'closed' ? '완료됨' : '재오픈됨'}*
+              
+${geminiSummary}
+
+🔗 <${issueUrl}|Issue 보기>
+👨‍💻 작성자: @${issueUser}`;
+              
+              console.log('Slack으로 전송 중...');
+              await sendToSlack(slackMessage);
+              console.log('Slack 전송 완료!');
+              
+            } catch (error) {
+              console.error('Error:', error);
+              core.setFailed(error.message);
+            }
