@@ -1,0 +1,40 @@
+# 백로그 및 작업 상태 레이블
+# 이 파일은 레이블 구성의 문서화 목적입니다
+
+# 작업 상태 레이블
+- name: "📥 backlog"
+  color: "d4c5f9"
+  description: "백로그에 있는 작업 (아직 스프린트에 할당되지 않음)"
+
+- name: "✅ ready"
+  color: "0e8a16"
+  description: "작업 준비 완료 (스프린트에 추가 가능)"
+
+- name: "🚀 in-progress"
+  color: "fbca04"
+  description: "현재 진행 중인 작업"
+
+- name: "👀 in-review"
+  color: "d876e3"
+  description: "리뷰 중인 작업"
+
+- name: "✨ blocked"
+  color: "b60205"
+  description: "차단된 작업 (의존성 문제 등)"
+
+# 우선순위 레이블
+- name: "🔴 priority: critical"
+  color: "d93f0b"
+  description: "최우선 작업"
+
+- name: "🟡 priority: high"
+  color: "fbca04"
+  description: "높은 우선순위"
+
+- name: "🔵 priority: medium"
+  color: "0075ca"
+  description: "중간 우선순위"
+
+- name: "⚪ priority: low"
+  color: "e4e669"
+  description: "낮은 우선순위"
