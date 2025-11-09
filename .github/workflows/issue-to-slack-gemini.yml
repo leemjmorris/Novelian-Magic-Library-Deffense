@@ -29,20 +29,20 @@ jobs:
             const assignees = context.payload.issue.assignees;
             const milestone = context.payload.issue.milestone?.title || '없음';
             
-            // LMJ : GitHub username to Slack display name mapping
+            // LMJ : GitHub username to Slack User ID mapping
             const userMapping = {
-              'leemjmorris': '이명진',
-              'jaemoon23': '이재문',
-              'LeeChaeBin002': '이채빈',
-              'Kdwio': '김동욱',
-              'bigwaterplz': '김민휘',
-              'kimjiw8698-crypto': '김지원'
+              'leemjmorris': 'U09R6F3CBHN',
+              'jaemoon23': 'U09QR380TLH',
+              'LeeChaeBin002': 'U09QFND0J20',
+              'Kdwio': 'U09LZ9Q6F3J',
+              'bigwaterplz': 'U09PKGUMVA6',
+              'kimjiw8698-crypto': 'U09QDRGNT08'
             };
             
-            // LMJ : Convert GitHub assignees to Slack mentions
+            // LMJ : Convert GitHub assignees to Slack User ID mentions
             const slackMentions = assignees.map(a => {
-              const name = userMapping[a.login] || a.login;
-              return `@${name}`;
+              const userId = userMapping[a.login];
+              return userId ? `<@${userId}>` : `@${a.login}`;
             }).join(' ') || '미배정';
             
             async function callGemini(prompt) {
