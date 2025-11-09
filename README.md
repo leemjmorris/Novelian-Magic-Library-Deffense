@@ -56,7 +56,17 @@
 - 👀 **리뷰 중**: 코드 리뷰가 필요한 작업
 - ✨ **완료**: 마무리된 작업
 
-**자세한 사용법**: [백로그 관리 가이드](docs/BACKLOG_GUIDE.md)
+📖 **가이드**: [백로그 관리 가이드](docs/BACKLOG_GUIDE.md)
+
+### 🤖 AI 기반 Slack 알림
+**Gemini API**를 활용하여 Issue를 자동으로 요약하고 Slack으로 전송합니다.
+
+- ✨ AI가 Issue 내용을 한국어로 요약
+- 📊 중요 정보 자동 강조 (담당자, 우선순위, 마일스톤)
+- 🎨 이모지로 가독성 향상
+- 🔔 실시간 팀 알림
+
+🔧 **설정 방법**: [Gemini-Slack 연동 가이드](docs/GEMINI_SLACK_SETUP.md)
 
 ### 이슈 & PR 규칙
 - 모든 기능/버그는 Issue로 등록
@@ -191,6 +201,13 @@
 ## 📞 Contact
 
 프로젝트 관련 문의사항은 Issues 또는 Slack을 통해 남겨주세요.
+
+---
+
+## 📚 문서
+
+- [백로그 관리 가이드](docs/BACKLOG_GUIDE.md)
+- [Gemini-Slack 연동 가이드](docs/GEMINI_SLACK_SETUP.md)
 
 ---
 
