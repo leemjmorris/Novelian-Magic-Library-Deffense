@@ -1,244 +1,307 @@
-# Gemini-Powered Slack 알림 설정 가이드
+# 🤖 Gemini-Slack 연동 가이드
 
-## 🤖 개요
+## 개요
 
-GitHub Issue가 생성/완료/재오픈될 때 **Gemini API**를 사용하여 Issue 내용을 요약하고, 보기 좋게 가공한 후 **Slack**으로 자동 전송하는 시스템입니다.
-
-## 🎯 주요 기능
-
-- ✨ Gemini API로 Issue 내용 자동 요약 (한국어)
-- 📊 중요 정보 강조 (담당자, 레이블, 마일스톤)
-- 🎨 이모지를 활용한 가독성 향상
-- 🔔 실시간 Slack 알림
-- 🔄 Issue 상태별 다른 알림 (생성/완료/재오픈)
+이 가이드는 **Gemini API**를 활용하여 GitHub 이슈/PR 정보를 Slack으로 자동 전송하는 시스템 설정 방법을 설명합니다.
 
 ---
 
-## 📋 설정 단계
+## 📋 목차
 
-### 1단계: Gemini API 키 발급
-
-1. [Google AI Studio](https://makersuite.google.com/app/apikey) 접속
-2. "Get API Key" 클릭
-3. 새 프로젝트 생성 또는 기존 프로젝트 선택
-4. "Create API Key" 클릭
-5. 생성된 API 키 복사 (한 번만 표시되니 안전한 곳에 저장!)
-
-**API 키 예시**: `AIzaSyA...` (실제로는 훨씬 김)
+1. [사전 준비](#사전-준비)
+2. [Gemini API 키 발급](#gemini-api-키-발급)
+3. [Slack Webhook URL 생성](#slack-webhook-url-생성)
+4. [GitHub Secrets 설정](#github-secrets-설정)
+5. [워크플로우 동작 확인](#워크플로우-동작-확인)
+6. [트러블슈팅](#트러블슈팅)
 
 ---
 
-### 2단계: Slack Webhook URL 생성
+## 🛠️ 사전 준비
 
-#### A. Slack App 생성
+### 필요한 계정
+- ✅ Google 계정 (Gemini API)
+- ✅ Slack 워크스페이스 관리자 권한
+- ✅ GitHub 레포지토리 관리자 권한
+
+### 연동 구조
+
+```
+GitHub Issue/PR 생성
+    ↓
+GitHub Actions 트리거
+    ↓
+Gemini API 호출 (요약 생성)
+    ↓
+Slack Webhook 전송
+    ↓
+Slack 채널에 메시지 표시
+```
+
+---
+
+## 🔑 Gemini API 키 발급
+
+### 1. Google AI Studio 접속
+
+1. [Google AI Studio](https://aistudio.google.com/) 접속
+2. Google 계정으로 로그인
+
+### 2. API 키 생성
+
+1. 좌측 메뉴에서 **"Get API Key"** 클릭
+2. **"Create API Key"** 버튼 클릭
+3. 프로젝트 선택 (없으면 새로 생성)
+4. API 키 복사 (한 번만 표시되므로 안전한 곳에 보관)
+
+**API 키 형식:**
+```
+AIzaSy... (39자)
+```
+
+### 3. 사용량 확인
+
+- [Google Cloud Console](https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com)에서 사용량 모니터링
+- 무료 할당량: 월 60회 요청 (2025년 기준)
+
+---
+
+## 📢 Slack Webhook URL 생성
+
+### 1. Slack App 생성
+
 1. [Slack API](https://api.slack.com/apps) 접속
-2. "Create New App" 클릭
-3. "From scratch" 선택
-4. App 이름 입력 (예: "GitHub Issue Bot")
-5. Workspace 선택
+2. **"Create New App"** → **"From scratch"** 선택
+3. 앱 이름 입력 (예: `GitHub Notifications`)
+4. 워크스페이스 선택
 
-#### B. Incoming Webhook 활성화
-1. 좌측 메뉴에서 "Incoming Webhooks" 클릭
-2. "Activate Incoming Webhooks" 토글 ON
-3. "Add New Webhook to Workspace" 클릭
-4. 알림을 받을 채널 선택 (예: `#dev-notifications`)
-5. "Allow" 클릭
-6. 생성된 Webhook URL 복사
+### 2. Incoming Webhooks 활성화
 
-**Webhook URL 예시**: 
+1. 좌측 메뉴 **"Incoming Webhooks"** 클릭
+2. **"Activate Incoming Webhooks"** 토글 ON
+3. 하단 **"Add New Webhook to Workspace"** 클릭
+4. 메시지를 받을 채널 선택 (예: `#github-notifications`)
+5. **"허용"** 클릭
+
+### 3. Webhook URL 복사
+
+**URL 형식:**
 ```
-https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX
+https://hooks.slack.com/services/T.../B.../...
+```
+
+⚠️ **보안 주의:** Webhook URL은 누구나 메시지를 보낼 수 있으므로 절대 공개하지 마세요!
+
+---
+
+## 🔐 GitHub Secrets 설정
+
+### 1. 레포지토리 설정 페이지 접속
+
+```
+GitHub 레포지토리 → Settings → Secrets and variables → Actions
+```
+
+### 2. Secrets 추가
+
+**"New repository secret"** 버튼을 클릭하여 아래 3개 Secret 추가:
+
+#### (1) `GEMINI_API_KEY`
+- **Name:** `GEMINI_API_KEY`
+- **Secret:** `AIzaSy...` (발급받은 Gemini API 키)
+
+#### (2) `SLACK_WEBHOOK_URL`
+- **Name:** `SLACK_WEBHOOK_URL`
+- **Secret:** `https://hooks.slack.com/services/...` (발급받은 Webhook URL)
+
+#### (3) `NOTION_API_KEY` (선택사항)
+- **Name:** `NOTION_API_KEY`
+- **Secret:** `secret_...` (Notion 통합 시 필요)
+
+### 3. 설정 확인
+
+Secrets 목록에 다음이 표시되어야 합니다:
+```
+✅ GEMINI_API_KEY
+✅ SLACK_WEBHOOK_URL
+✅ NOTION_API_KEY (선택)
 ```
 
 ---
 
-### 3단계: GitHub Secrets 등록
+## ✅ 워크플로우 동작 확인
 
-1. GitHub 레포지토리 접속
-   ```
-   https://github.com/leemjmorris/Novelian-Magic-Library-Deffense
-   ```
+### 1. 테스트 이슈 생성
 
-2. **Settings** → **Secrets and variables** → **Actions** 클릭
+1. GitHub 레포지토리에서 새 이슈 생성
+2. 제목: `[Test] Gemini-Slack 연동 테스트`
+3. 내용: 간단한 설명 추가
 
-3. **New repository secret** 클릭하여 다음 2개 secret 추가:
+### 2. GitHub Actions 확인
 
-#### Secret 1: GEMINI_API_KEY
-- Name: `GEMINI_API_KEY`
-- Secret: [1단계에서 복사한 Gemini API 키 붙여넣기]
-- "Add secret" 클릭
-
-#### Secret 2: SLACK_WEBHOOK_URL
-- Name: `SLACK_WEBHOOK_URL`
-- Secret: [2단계에서 복사한 Slack Webhook URL 붙여넣기]
-- "Add secret" 클릭
-
----
-
-## 🚀 동작 방식
-
-### Workflow 트리거
-다음 상황에서 자동으로 실행됩니다:
-- ✅ Issue 생성됨 (`opened`)
-- ✅ Issue 완료됨 (`closed`)
-- ✅ Issue 재오픈됨 (`reopened`)
-
-### 처리 흐름
 ```
-1. GitHub Issue 이벤트 발생
-   ↓
-2. Issue 정보 수집 (제목, 내용, 담당자, 레이블 등)
-   ↓
-3. Gemini API에 요약 요청
-   ↓
-4. Gemini가 한국어로 간결하게 요약
-   ↓
-5. Slack으로 포맷팅된 메시지 전송
-   ↓
-6. 팀원들이 Slack에서 알림 확인 ✨
+레포지토리 → Actions 탭
 ```
 
-### Slack 메시지 예시
+- **`Issue Notifications`** 워크플로우 실행 확인
+- 성공 시: ✅ 녹색 체크
+- 실패 시: ❌ 빨간 X (로그 확인)
+
+### 3. Slack 채널 확인
+
+Slack 채널에 다음과 같은 메시지가 표시되어야 합니다:
+
 ```
-🆕 *Issue #45 생성됨*
+🆕 New Issue Created
 
-📝 **[요약]**
-백로그 시스템에 우선순위 필터링 기능을 추가하는 작업입니다. 
-사용자가 Critical/High/Medium/Low 우선순위로 이슈를 필터링할 수 있습니다.
+[Test] Gemini-Slack 연동 테스트
+#123
 
-👤 **담당:** @leemjmorris
-🏷️ **레이블:** enhancement, priority: high
-📅 **마일스톤:** Sprint 3
+📝 AI Summary:
+Gemini API와 Slack 연동 테스트를 위한 이슈입니다...
 
-🔗 Issue 보기
-👨‍💻 작성자: @leemjmorris
+• Priority: Medium
+• Milestone: Prototype
+• Assigned: @leemjmorris
+
+🔗 View Issue
 ```
 
 ---
 
-## 🎨 커스터마이징
+## 🔧 워크플로우 커스터마이징
 
-### 요약 스타일 변경
-워크플로우 파일(`.github/workflows/issue-to-slack-gemini.yml`)의 `prompt` 부분을 수정하세요:
+### Slack 메시지 포맷 수정
 
-```javascript
-const prompt = `다음 GitHub Issue를 한국어로 간결하고 보기 좋게 요약해주세요.
-...
-요구사항:
-1. 핵심 내용만 2-3문장으로 요약
-2. 중요한 정보는 강조
-3. 이모지 사용하여 가독성 향상
-...`;
+파일: `.github/workflows/issue-notifications.yml`
+
+```yaml
+- name: Send to Slack
+  run: |
+    python scripts/send_slack.py \
+      --title "${{ github.event.issue.title }}" \
+      --number "${{ github.event.issue.number }}" \
+      --summary "$SUMMARY" \
+      --priority "${{ github.event.issue.labels[0].name }}" \
+      --url "${{ github.event.issue.html_url }}"
 ```
 
-### 트리거 이벤트 변경
-워크플로우의 `on` 섹션을 수정:
+### Gemini 프롬프트 수정
+
+파일: `scripts/summarize_with_gemini.py`
+
+```python
+prompt = f"""
+다음 GitHub 이슈를 한국어로 요약해주세요:
+
+제목: {title}
+내용: {body}
+
+요약 형식:
+- 핵심 내용 (1-2문장)
+- 주요 작업 항목
+"""
+```
+
+---
+
+## 🐛 트러블슈팅
+
+### 1. Gemini API 오류
+
+**증상:**
+```
+Error: API key not valid
+```
+
+**해결:**
+- GitHub Secrets에서 `GEMINI_API_KEY` 확인
+- API 키 유효성 확인 (39자)
+- [Google AI Studio](https://aistudio.google.com/)에서 새 키 발급
+
+### 2. Slack 메시지 전송 실패
+
+**증상:**
+```
+Error: invalid_payload
+```
+
+**해결:**
+- `SLACK_WEBHOOK_URL` 형식 확인
+- Slack App이 채널에 초대되었는지 확인
+- Webhook URL 재발급 시도
+
+### 3. 워크플로우 실행 안 됨
+
+**증상:**
+- 이슈 생성해도 Actions 탭에 아무것도 없음
+
+**해결:**
+- `.github/workflows/` 디렉토리에 워크플로우 파일 있는지 확인
+- YAML 문법 오류 확인 ([YAML Lint](https://www.yamllint.com/))
+- `on:` 트리거 이벤트 확인
+
+### 4. 중복 메시지 전송
+
+**증상:**
+- 하나의 이슈에 Slack 메시지가 여러 번 전송됨
+
+**해결:**
+- `issue-notifications.yml`의 `on.issues.types` 확인
+- 불필요한 이벤트 제거 (`assigned`, `labeled` 등)
 
 ```yaml
 on:
   issues:
-    types: [opened, closed, reopened, labeled, assigned]
-    # 원하는 이벤트 추가/제거
-```
-
-### Gemini 모델 변경
-필요시 다른 Gemini 모델 사용 가능:
-- `gemini-2.0-flash-exp` (현재 사용 중, 빠르고 효율적)
-- `gemini-pro` (더 정교한 응답)
-
----
-
-## 🔍 테스트 방법
-
-### 1. 새 Issue 생성해보기
-```
-1. GitHub Issues → New issue
-2. 제목: "테스트: Gemini-Slack 연동"
-3. 내용: "Gemini API를 통한 자동 요약 테스트입니다."
-4. Create issue 클릭
-```
-
-### 2. Slack 확인
-- 설정한 채널에서 알림 확인
-- 요약이 제대로 생성되었는지 확인
-- 링크가 올바르게 작동하는지 확인
-
-### 3. Workflow 로그 확인
-문제가 있다면:
-```
-GitHub → Actions 탭 → "Issue to Slack (Gemini-powered)" 클릭
-→ 최근 실행 내역 확인
-→ 에러 로그 확인
+    types: [opened]  # opened만 남기기
 ```
 
 ---
 
-## ⚠️ 주의사항
+## 📊 모니터링
 
-### API 사용량 제한
-- **Gemini API**: 무료 티어는 분당 60 요청 제한
-- **Slack Webhook**: 분당 1회 제한
+### GitHub Actions 사용량
 
-### Secret 보안
-- ❌ 절대 API 키를 코드에 직접 작성하지 말 것
-- ✅ 항상 GitHub Secrets 사용
-- ✅ Secret은 읽기 전용, 수정시 새로 생성 필요
+```
+레포지토리 → Settings → Billing → Actions
+```
 
-### 비용
-- Gemini API: 무료 티어 사용 (충분함)
-- Slack: 무료
+- 월 2,000분 무료 (Public 레포지토리는 무제한)
+
+### Gemini API 사용량
+
+```
+Google Cloud Console → APIs & Services → Dashboard
+```
+
+- 일일/월간 사용량 그래프 확인
+
+### Slack 메시지 히스토리
+
+```
+Slack 채널 → 메시지 검색
+```
+
+- `from:@GitHub Notifications` 로 필터링
 
 ---
 
-## 🛠️ 문제 해결
+## 🔗 관련 문서
 
-### Gemini API 호출 실패
-```
-Error: Failed to call Gemini API
-```
-**해결방법**:
-1. API 키가 올바른지 확인
-2. [Google Cloud Console](https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com)에서 Generative Language API 활성화
-3. API 사용량 제한 확인
-
-### Slack 메시지 전송 실패
-```
-Error: Failed to send to Slack
-```
-**해결방법**:
-1. Webhook URL이 올바른지 확인
-2. Slack App이 채널에 초대되었는지 확인
-3. Webhook이 활성화되어 있는지 확인
-
-### Workflow가 실행되지 않음
-**해결방법**:
-1. GitHub Actions가 활성화되어 있는지 확인
-2. Secrets가 올바르게 등록되었는지 확인
-3. `.github/workflows/` 경로가 정확한지 확인
-
----
-
-## 📚 관련 문서
-
-- [Gemini API 문서](https://ai.google.dev/docs)
-- [Slack Webhook 가이드](https://api.slack.com/messaging/webhooks)
 - [GitHub Actions 문서](https://docs.github.com/en/actions)
+- [Gemini API 문서](https://ai.google.dev/docs)
+- [Slack API 문서](https://api.slack.com/)
+- [백로그 관리 가이드](BACKLOG_GUIDE.md)
 
 ---
 
-## 💡 추가 아이디어
+## 📞 지원
 
-### 더 많은 자동화
-- PR 생성/머지시에도 알림
-- Daily summary (하루 Issue 요약)
-- 특정 레이블에만 알림 (예: `priority: critical`)
-- 멘션 기능 (담당자를 Slack에서 자동 멘션)
-
-### 다른 AI 모델 사용
-- OpenAI GPT-4
-- Claude API
-- Cohere
+문제 발생 시:
+1. GitHub Issues에 버그 리포트 작성
+2. Slack `#tech-support` 채널에 문의
+3. 팀 리더에게 직접 연락
 
 ---
 
-**문제가 있거나 질문이 있으면 언제든 Issue를 생성해주세요!** 🚀
+**Last Updated**: 2025-11-09
