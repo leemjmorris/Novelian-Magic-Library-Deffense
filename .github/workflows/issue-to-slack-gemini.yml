@@ -1,4 +1,4 @@
-name: Issue to Slack (Gemini-powered)
+name: Issue to Slack with Gemini
 
 on:
   issues:
@@ -11,97 +11,73 @@ jobs:
       issues: read
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Process issue with Gemini and send to Slack
+      - name: Send to Slack with Gemini
+        uses: actions/github-script@v7
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_URL: ${{ github.event.issue.html_url }}
-          ISSUE_USER: ${{ github.event.issue.user.login }}
-          ISSUE_LABELS: ${{ toJson(github.event.issue.labels) }}
-          ISSUE_ASSIGNEES: ${{ toJson(github.event.issue.assignees) }}
-          ISSUE_MILESTONE: ${{ github.event.issue.milestone.title }}
-          ACTION: ${{ github.event.action }}
-        uses: actions/github-script@v7
         with:
           script: |
             const https = require('https');
             
-            async function callGeminiAPI(prompt) {
+            const issueTitle = context.payload.issue.title;
+            const issueBody = context.payload.issue.body || '내용 없음';
+            const issueNumber = context.payload.issue.number;
+            const issueUrl = context.payload.issue.html_url;
+            const action = context.payload.action;
+            const labels = context.payload.issue.labels.map(l => l.name).join(', ') || '없음';
+            const assignees = context.payload.issue.assignees.map(a => a.login).join(', ') || '미배정';
+            const milestone = context.payload.issue.milestone?.title || '없음';
+            
+            // LMJ : Call Gemini API to summarize issue
+            async function callGemini(prompt) {
               const apiKey = process.env.GEMINI_API_KEY;
               const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
               
-              const data = JSON.stringify({
-                contents: [{
-                  parts: [{ text: prompt }]
-                }],
-                generationConfig: {
-                  temperature: 0.3,
-                  maxOutputTokens: 300
-                }
-              });
-              
               return new Promise((resolve, reject) => {
+                const data = JSON.stringify({
+                  contents: [{ parts: [{ text: prompt }] }],
+                  generationConfig: { temperature: 0.3, maxOutputTokens: 300 }
+                });
+                
                 const req = https.request(url, {
                   method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': data.length
-                  }
+                  headers: { 'Content-Type': 'application/json' }
                 }, (res) => {
                   let body = '';
-                  res.on('data', chunk => body += chunk);
+                  res.on('data', d => body += d);
                   res.on('end', () => {
                     try {
                       const response = JSON.parse(body);
-                      if (response.candidates && response.candidates[0]) {
-                        resolve(response.candidates[0].content.parts[0].text);
-                      } else {
-                        reject(new Error('Invalid Gemini response'));
-                      }
-                    } catch (error) {
-                      reject(error);
+                      resolve(response.candidates[0].content.parts[0].text);
+                    } catch (e) {
+                      reject(e);
                     }
                   });
                 });
-                
                 req.on('error', reject);
                 req.write(data);
                 req.end();
               });
             }
             
+            // LMJ : Send message to Slack
             async function sendToSlack(message) {
               const webhookUrl = process.env.SLACK_WEBHOOK_URL;
               const url = new URL(webhookUrl);
               
-              const data = JSON.stringify({ text: message });
-              
               return new Promise((resolve, reject) => {
+                const data = JSON.stringify({ text: message });
                 const req = https.request({
                   hostname: url.hostname,
                   path: url.pathname + url.search,
                   method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Content-Length': data.length
-                  }
+                  headers: { 'Content-Type': 'application/json' }
                 }, (res) => {
                   let body = '';
-                  res.on('data', chunk => body += chunk);
+                  res.on('data', d => body += d);
                   res.on('end', () => resolve(body));
                 });
-                
                 req.on('error', reject);
                 req.write(data);
                 req.end();
@@ -109,21 +85,10 @@ jobs:
             }
             
             try {
-              const issueTitle = process.env.ISSUE_TITLE;
-              const issueBody = process.env.ISSUE_BODY || '내용 없음';
-              const issueNumber = process.env.ISSUE_NUMBER;
-              const issueUrl = process.env.ISSUE_URL;
-              const issueUser = process.env.ISSUE_USER;
-              const action = process.env.ACTION;
-              const labels = JSON.parse(process.env.ISSUE_LABELS || '[]');
-              const assignees = JSON.parse(process.env.ISSUE_ASSIGNEES || '[]');
-              const milestone = process.env.ISSUE_MILESTONE || '없음';
+              console.log('Starting workflow...');
               
               const actionEmoji = { 'opened': '🆕', 'closed': '✅', 'reopened': '🔄' };
               const actionText = { 'opened': '생성됨', 'closed': '완료됨', 'reopened': '재오픈됨' };
-              
-              const labelNames = labels.map(l => l.name).join(', ') || '없음';
-              const assigneeNames = assignees.map(a => a.login).join(', ') || '미배정';
               
               const prompt = `Summarize this GitHub issue in Korean with 2-3 bullet points.
 
@@ -144,7 +109,7 @@ Format:
               console.log('Calling Gemini API...');
               let summary;
               try {
-                summary = await callGeminiAPI(prompt);
+                summary = await callGemini(prompt);
                 summary = summary.replace(/\*\*/g, '').replace(/###/g, '').trim();
                 
                 if (!summary.includes('- ')) {
@@ -152,9 +117,9 @@ Format:
                   summary = lines.map(l => '- ' + l.trim().replace(/^[-•]\s*/, '')).join('\n');
                 }
                 
-                console.log('Summary:', summary);
+                console.log('Summary generated:', summary);
               } catch (error) {
-                console.error('Gemini error:', error);
+                console.error('Gemini API error:', error);
                 summary = `- ${issueTitle}`;
               }
               
@@ -164,15 +129,15 @@ Format:
 
 ${summary}
 
-👤 *담당:* ${assigneeNames}
-🏷️ *레이블:* ${labelNames}
+👤 *담당:* ${assignees}
+🏷️ *레이블:* ${labels}
 📅 *마일스톤:* ${milestone}
 
 🔗 <${issueUrl}|자세히 보기>`;
               
               console.log('Sending to Slack...');
               await sendToSlack(slackMessage);
-              console.log('Done!');
+              console.log('Successfully sent to Slack!');
               
             } catch (error) {
               console.error('Error:', error);
