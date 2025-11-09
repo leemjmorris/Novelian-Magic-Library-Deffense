@@ -1,0 +1,89 @@
+name: 💡 Feature Request
+description: 새로운 기능 제안 (브랜치 생성 없음)
+title: "[Request] "
+labels: ["feature-request"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        새로운 기능을 제안하기 위한 Issue입니다.
+        ⚠️ 이 템플릿은 브랜치를 자동 생성하지 않습니다.
+        실제 구현이 결정되면 Feature Issue를 별도로 생성해주세요.
+
+  - type: input
+    id: feature-title
+    attributes:
+      label: 기능 제목
+      description: 제안하고 싶은 기능은?
+      placeholder: 예) 멀티플레이 시스템
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: 해결하고자 하는 문제
+      description: 현재 어떤 문제나 니즈가 있나요?
+      placeholder: 예) 현재 싱글플레이만 가능해서 플레이어 간 경쟁 요소가 부족함
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: 제안하는 해결책
+      description: 어떤 기능으로 해결할 수 있을까요?
+      placeholder: |
+        예)
+        - 2인 협동 플레이 모드
+        - 실시간 리더보드
+        - PvP 배틀 모드
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 대안
+      description: 다른 방법이나 대안은 없을까요?
+      placeholder: 예) 비동기 멀티플레이, 턴제 배틀 등
+    validations:
+      required: false
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: 예상 영향도
+      description: 이 기능이 게임에 미칠 영향은?
+      options:
+        - 🔴 Game Changer (게임의 핵심)
+        - 🟠 Major (중요한 기능)
+        - 🟡 Minor (부가 기능)
+        - 🟢 Nice to Have (있으면 좋은)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: target-milestone
+    attributes:
+      label: 목표 단계
+      description: 언제 구현되면 좋을까요?
+      options:
+        - 프로토타입
+        - CBT
+        - OBT
+        - Release
+        - Post-Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 추가 정보
+      description: 참고 자료, 스크린샷, 다른 게임 사례 등
+      placeholder: 레퍼런스 게임, 스크린샷, 링크 등
+    validations:
+      required: false

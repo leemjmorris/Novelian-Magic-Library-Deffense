@@ -1,30 +1,88 @@
-# .github/ISSUE_TEMPLATE/feature.yml
-name: 🚀 Feature Request
-description: 새로운 기능 제안
+name: ✨ Feature
+description: 새로운 기능 구현을 위한 Issue
 title: "[Feature] "
-labels: ["enhancement"]
+labels: ["enhancement", "feature"]
 assignees: []
+
 body:
   - type: markdown
     attributes:
       value: |
-        ## 📋 Branch 생성 안내
-        
-        이 Issue를 assign하면 자동으로 다음 형식의 branch가 생성됩니다:
-        
-        `feature/{issue-number}-{description}`
-        
-  - type: textarea
-    id: description
+        새로운 기능을 구현하기 위한 Issue입니다. 이 템플릿을 사용하면 자동으로 브랜치가 생성됩니다.
+
+  - type: input
+    id: feature-name
     attributes:
-      label: 기능 설명
-      description: 구현하고자 하는 기능을 설명해주세요
-      placeholder: 어떤 기능이 필요한가요?
+      label: 기능 이름
+      description: 어떤 기능을 구현하시나요?
+      placeholder: 예) 방어막 시스템
     validations:
       required: true
-      
+
   - type: textarea
-    id: additional
+    id: feature-description
     attributes:
-      label: 추가 정보
-      description: 참고할 만한 추가 정보가 있다면 작성해주세요
+      label: 기능 설명
+      description: 기능에 대해 자세히 설명해주세요.
+      placeholder: 예) 플레이어가 방향키로 조작 가능한 방어막 시스템 구현
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: 완료 조건
+      description: 어떤 조건이 충족되면 이 기능이 완료되나요?
+      placeholder: |
+        - [ ] 방어막 UI 구현
+        - [ ] 방향키 입력 처리
+        - [ ] 적 공격 방어 로직
+        - [ ] 방어 성공/실패 피드백
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: 담당 역할
+      description: 누가 작업하나요?
+      options:
+        - 프로그래머
+        - 기획자
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 우선순위
+      description: 이 기능의 우선순위는?
+      options:
+        - 🔴 Critical (최우선)
+        - 🟠 High (높음)
+        - 🟡 Medium (보통)
+        - 🟢 Low (낮음)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: 마일스톤
+      description: 어느 단계에서 구현하시나요?
+      options:
+        - 프로토타입
+        - CBT
+        - OBT
+        - Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-notes
+    attributes:
+      label: 기술적 고려사항
+      description: 구현 시 고려해야 할 기술적 사항이 있나요?
+      placeholder: 예) MVP 패턴 적용, Strategy 패턴으로 방어 타입 구분
+    validations:
+      required: false

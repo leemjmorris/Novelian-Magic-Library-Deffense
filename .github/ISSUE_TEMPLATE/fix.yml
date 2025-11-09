@@ -1,0 +1,86 @@
+name: 🐛 Bug Fix
+description: 버그 수정을 위한 Issue
+title: "[Fix] "
+labels: ["bug", "fix"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        버그를 수정하기 위한 Issue입니다. 이 템플릿을 사용하면 자동으로 브랜치가 생성됩니다.
+
+  - type: input
+    id: bug-description
+    attributes:
+      label: 버그 설명
+      description: 어떤 버그를 수정하시나요?
+      placeholder: 예) 플레이어가 공격 시 크래시 발생
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: 현재 동작
+      description: 현재 어떻게 동작하고 있나요?
+      placeholder: 예) 공격 버튼 클릭 시 NullReferenceException 발생
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 예상 동작
+      description: 어떻게 동작해야 하나요?
+      placeholder: 예) 공격 버튼 클릭 시 정상적으로 공격 애니메이션 실행
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: 재현 단계
+      description: 버그를 재현하는 방법을 단계별로 설명해주세요.
+      placeholder: |
+        1. 게임 시작
+        2. 플레이어 스폰
+        3. 공격 버튼 클릭
+        4. 크래시 발생
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 우선순위
+      description: 이 버그의 우선순위는?
+      options:
+        - 🔴 Critical (즉시 수정 필요)
+        - 🟠 High (빠른 수정 필요)
+        - 🟡 Medium (보통)
+        - 🟢 Low (낮음)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: 마일스톤
+      description: 어느 단계에서 수정하시나요?
+      options:
+        - 프로토타입
+        - CBT
+        - OBT
+        - Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 추가 정보
+      description: 스크린샷, 로그, 또는 기타 참고 자료
+      placeholder: 추가 정보를 입력하세요.
+    validations:
+      required: false

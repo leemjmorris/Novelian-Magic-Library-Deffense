@@ -1,24 +1,85 @@
-# .github/ISSUE_TEMPLATE/refactor.yml
-name: ♻️ Refactor
-description: 코드 리팩토링
+name: 🔧 Refactor
+description: 코드 리팩토링을 위한 Issue
 title: "[Refactor] "
 labels: ["refactor"]
 assignees: []
+
 body:
   - type: markdown
     attributes:
       value: |
-        ## 📋 작업 흐름 안내
-        
-        1. 이 Issue가 생성되면 고유 번호가 부여됩니다
-        2. 담당자가 assign되면 자동으로 리팩토링 작업용 branch가 생성됩니다
-        3. Branch 형식: `refactor/567-optimize-database-queries`
-        
-  - type: textarea
-    id: refactor-description
+        코드 리팩토링을 위한 Issue입니다. 이 템플릿을 사용하면 자동으로 브랜치가 생성됩니다.
+
+  - type: input
+    id: refactor-target
     attributes:
-      label: 리팩토링 내용
-      description: 어떤 코드를 개선하려고 하나요?
-      placeholder: 개선이 필요한 코드와 이유를 설명해주세요
+      label: 리팩토링 대상
+      description: 어떤 부분을 리팩토링하시나요?
+      placeholder: 예) EnemyManager 계층 구조 단순화
     validations:
       required: true
+
+  - type: textarea
+    id: current-problem
+    attributes:
+      label: 현재 문제점
+      description: 현재 코드의 어떤 점이 문제인가요?
+      placeholder: 예) 4단계 Manager 계층으로 인한 복잡도 증가, 성능 저하
+    validations:
+      required: true
+
+  - type: textarea
+    id: refactor-plan
+    attributes:
+      label: 리팩토링 계획
+      description: 어떻게 개선하실 건가요?
+      placeholder: |
+        - [ ] 4단계 계층을 3단계로 축소
+        - [ ] 추상 클래스 계층 정리
+        - [ ] 불필요한 Manager 제거
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-improvement
+    attributes:
+      label: 기대 효과
+      description: 리팩토링 후 기대되는 개선 효과는?
+      placeholder: 예) 코드 가독성 향상, 유지보수성 개선, 성능 향상
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 우선순위
+      description: 이 리팩토링의 우선순위는?
+      options:
+        - 🔴 Critical (즉시 필요)
+        - 🟠 High (높음)
+        - 🟡 Medium (보통)
+        - 🟢 Low (낮음)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: 마일스톤
+      description: 어느 단계에서 진행하시나요?
+      options:
+        - 프로토타입
+        - CBT
+        - OBT
+        - Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: breaking-changes
+    attributes:
+      label: Breaking Changes
+      description: 기존 코드와의 호환성 문제가 있나요?
+      placeholder: 예) 기존 EnemyManager를 사용하는 모든 스크립트 수정 필요
+    validations:
+      required: false

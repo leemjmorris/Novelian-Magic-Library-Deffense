@@ -1,0 +1,94 @@
+name: 📊 CSV Data
+description: CSV 데이터 작업을 위한 Issue
+title: "[CSV] "
+labels: ["data", "csvs"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        CSV 데이터 작업을 위한 Issue입니다. 이 템플릿을 사용하면 자동으로 브랜치가 생성됩니다.
+
+  - type: input
+    id: csv-name
+    attributes:
+      label: CSV 파일명
+      description: 어떤 CSV 파일을 작업하시나요?
+      placeholder: 예) PlayerStats.csv, MonsterData.csv
+    validations:
+      required: true
+
+  - type: dropdown
+    id: csv-action
+    attributes:
+      label: 작업 유형
+      description: 어떤 작업을 하시나요?
+      options:
+        - 신규 생성
+        - 데이터 추가
+        - 데이터 수정
+        - 데이터 삭제
+        - 구조 변경
+    validations:
+      required: true
+
+  - type: textarea
+    id: csv-description
+    attributes:
+      label: 작업 설명
+      description: 어떤 데이터를 어떻게 작업하시나요?
+      placeholder: |
+        예)
+        - 플레이어 공격력 데이터 추가
+        - 레벨별 스탯 밸런싱
+        - 신규 몬스터 20종 데이터 입력
+    validations:
+      required: true
+
+  - type: textarea
+    id: data-schema
+    attributes:
+      label: 데이터 스키마
+      description: CSV 파일의 컬럼 구조를 설명해주세요.
+      placeholder: |
+        예)
+        | ID | Name | HP | Attack | Defense | Speed |
+        |----|------|----| -------|---------|-------|
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 우선순위
+      description: 이 데이터 작업의 우선순위는?
+      options:
+        - 🔴 Critical (최우선)
+        - 🟠 High (높음)
+        - 🟡 Medium (보통)
+        - 🟢 Low (낮음)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: 마일스톤
+      description: 어느 단계에서 작업하시나요?
+      options:
+        - 프로토타입
+        - CBT
+        - OBT
+        - Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-systems
+    attributes:
+      label: 관련 시스템
+      description: 이 데이터를 사용하는 시스템은?
+      placeholder: 예) PlayerController, EnemySpawner, BattleSystem
+    validations:
+      required: false

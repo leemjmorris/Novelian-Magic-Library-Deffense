@@ -1,24 +1,83 @@
-# .github/ISSUE_TEMPLATE/docs.yml
-name: 📚 Documentation
-description: 문서 작업
+name: 📝 Documentation
+description: 문서 작업을 위한 Issue
 title: "[Docs] "
-labels: ["documentation"]
+labels: ["documentation", "docs"]
 assignees: []
+
 body:
   - type: markdown
     attributes:
       value: |
-        ## 📋 작업 흐름 안내
-        
-        1. 이 Issue가 생성되면 고유 번호가 부여됩니다
-        2. 담당자가 assign되면 자동으로 문서 작업용 branch가 생성됩니다
-        3. Branch 형식: `docs/234-api-documentation`
-        
-  - type: textarea
-    id: docs-description
+        문서 작업을 위한 Issue입니다. 이 템플릿을 사용하면 자동으로 브랜치가 생성됩니다.
+
+  - type: input
+    id: doc-title
     attributes:
-      label: 문서 작업 내용
-      description: 어떤 문서 작업이 필요한가요?
-      placeholder: README 업데이트, API 문서 작성 등
+      label: 문서 제목
+      description: 어떤 문서를 작성/수정하시나요?
+      placeholder: 예) 방어막 시스템 설계 문서
     validations:
       required: true
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: 문서 유형
+      description: 어떤 종류의 문서인가요?
+      options:
+        - 시스템 설계 문서
+        - API 문서
+        - 개발 가이드
+        - 코딩 컨벤션
+        - 회의록
+        - 기획 문서
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: doc-content
+    attributes:
+      label: 문서 내용
+      description: 작성/수정할 내용을 간략히 설명해주세요.
+      placeholder: |
+        - 방어막 시스템 아키텍처
+        - 클래스 다이어그램
+        - 구현 상세
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 우선순위
+      description: 이 문서 작업의 우선순위는?
+      options:
+        - 🔴 Critical (최우선)
+        - 🟠 High (높음)
+        - 🟡 Medium (보통)
+        - 🟢 Low (낮음)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: 마일스톤
+      description: 어느 단계에서 작업하시나요?
+      options:
+        - 프로토타입
+        - CBT
+        - OBT
+        - Release
+    validations:
+      required: true
+
+  - type: textarea
+    id: related-issues
+    attributes:
+      label: 관련 Issue
+      description: 관련된 다른 Issue가 있나요?
+      placeholder: "#123, #456"
+    validations:
+      required: false

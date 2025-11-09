@@ -1,0 +1,99 @@
+name: 📅 Meeting Notes
+description: 회의록 작성 (브랜치 생성 없음)
+title: "[Meeting] YYYY.MM.DD - "
+labels: ["meeting"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        회의 내용을 기록하기 위한 Issue입니다.
+        ⚠️ 이 템플릿은 브랜치를 자동 생성하지 않습니다.
+
+  - type: input
+    id: meeting-date
+    attributes:
+      label: 회의 일시
+      description: 회의 날짜와 시간
+      placeholder: 예) 2025.11.09 14:00 - 15:30
+    validations:
+      required: true
+
+  - type: input
+    id: meeting-type
+    attributes:
+      label: 회의 유형
+      description: 어떤 종류의 회의인가요?
+      placeholder: 예) 주간 회의, 기획 리뷰, 긴급 회의, 1:1 미팅
+    validations:
+      required: true
+
+  - type: textarea
+    id: attendees
+    attributes:
+      label: 참석자
+      description: 회의 참석자를 태그해주세요.
+      placeholder: "@leemjmorris @jaemoon23 @LeeChaeBin002"
+    validations:
+      required: true
+
+  - type: textarea
+    id: agenda
+    attributes:
+      label: 안건
+      description: 회의 안건
+      placeholder: |
+        1. 주간 진행 상황 공유
+        2. 방어막 시스템 설계 리뷰
+        3. 다음 주 일정 논의
+    validations:
+      required: true
+
+  - type: textarea
+    id: discussion
+    attributes:
+      label: 논의 내용
+      description: 회의에서 논의된 주요 내용
+      placeholder: |
+        ## 1. 주간 진행 상황
+        - 이명진: 방어막 시스템 70% 완료
+        - 이재문: CSV 데이터 시스템 완료
+        
+        ## 2. 방어막 시스템 리뷰
+        - 현재 구현 상태 공유
+        - 개선점 논의
+    validations:
+      required: true
+
+  - type: textarea
+    id: decisions
+    attributes:
+      label: 결정 사항
+      description: 회의에서 내려진 결정들
+      placeholder: |
+        - [ ] 방어막 시스템 UI 수정 (담당: @leemjmorris)
+        - [ ] 몬스터 데이터 밸런싱 (담당: @Kdwio)
+        - [ ] 다음 주 금요일까지 CBT 빌드 완료
+    validations:
+      required: true
+
+  - type: textarea
+    id: action-items
+    attributes:
+      label: 액션 아이템
+      description: 회의 후 진행할 작업들
+      placeholder: |
+        - [ ] Issue #123 생성 - 방어막 UI 개선 (@leemjmorris)
+        - [ ] Issue #124 생성 - 몬스터 데이터 밸런싱 (@Kdwio)
+    validations:
+      required: false
+
+  - type: textarea
+    id: next-meeting
+    attributes:
+      label: 다음 회의
+      description: 다음 회의 일정
+      placeholder: 예) 2025.11.16 14:00 - 주간 회의
+    validations:
+      required: false
