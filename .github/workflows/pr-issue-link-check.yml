@@ -1,4 +1,3 @@
-# .github/workflows/pr-issue-link-check.yml
 name: PR Issue Link Check
 
 on:
@@ -8,63 +7,71 @@ on:
 permissions:
   contents: read
   issues: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   check-issue-link:
     runs-on: ubuntu-latest
     steps:
       - name: Check PR has linked issue
-        run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          PR_BODY="${{ github.event.pull_request.body }}"
-          BRANCH_NAME="${{ github.head_ref }}"
-          REPO="${{ github.repository }}"
-          
-          echo "🔍 Checking PR #$PR_NUMBER"
-          echo "Branch: $BRANCH_NAME"
-          echo "Repository: $REPO"
-          
-          # Branch에서 Issue 번호 추출
-          BRANCH_ISSUE=$(echo "$BRANCH_NAME" | grep -oP '(?<=/)[0-9]+(?=-)' || echo "")
-          
-          if [ -z "$BRANCH_ISSUE" ]; then
-            echo "❌ Could not extract issue number from branch name"
-            echo "Branch name must follow: type/{issue-number}-description"
-            exit 1
-          fi
-          
-          echo "📌 Issue from branch: #$BRANCH_ISSUE"
-          
-          # PR Body에 Issue 링크가 있는지 확인
-          if echo "$PR_BODY" | grep -qiE "(close[sd]?|fix(e[sd])?|resolve[sd]?) #$BRANCH_ISSUE"; then
-            echo "✅ PR correctly links to issue #$BRANCH_ISSUE"
-          else
-            echo "⚠️  PR body does not link to issue #$BRANCH_ISSUE"
-            echo ""
-            echo "Please add one of the following to your PR description:"
-            echo "  • Closes #$BRANCH_ISSUE"
-            echo "  • Fixes #$BRANCH_ISSUE"
-            echo "  • Resolves #$BRANCH_ISSUE"
-            echo ""
-            echo "This will automatically close the issue when the PR is merged."
-            exit 1
-          fi
-          
-          # Issue가 실제로 존재하는지 확인 (원본 저장소에서)
-          if gh issue view $BRANCH_ISSUE --repo $REPO --json number > /dev/null 2>&1; then
-            echo "✅ Issue #$BRANCH_ISSUE exists in $REPO"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = context.payload.pull_request.number;
+            const pr_body = context.payload.pull_request.body || '';
+            const repo = context.repo;
             
-            # Issue 상태 확인
-            ISSUE_STATE=$(gh issue view $BRANCH_ISSUE --repo $REPO --json state --jq '.state')
-            if [ "$ISSUE_STATE" = "OPEN" ]; then
-              echo "✅ Issue #$BRANCH_ISSUE is open"
-            else
-              echo "⚠️  Warning: Issue #$BRANCH_ISSUE is already $ISSUE_STATE"
-            fi
-          else
-            echo "❌ Issue #$BRANCH_ISSUE does not exist in $REPO"
-            exit 1
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
+            console.log(`🔍 Checking PR #${pr_number}`);
+            
+            // LMJ : Extract issue numbers from PR body
+            const issueMatches = pr_body.match(/(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#(\d+)/gi);
+            
+            if (!issueMatches || issueMatches.length === 0) {
+              const comment = `⚠️ **PR에 연결된 Issue가 없습니다.**
+              
+PR을 Issue와 연결하려면 PR 설명에 다음 중 하나를 추가하세요:
+- \`Closes #123\`
+- \`Fixes #123\`
+- \`Resolves #123\`
+
+이렇게 하면 PR이 머지될 때 Issue가 자동으로 닫힙니다.`;
+              
+              await github.rest.issues.createComment({
+                ...repo,
+                issue_number: pr_number,
+                body: comment
+              });
+              
+              core.setFailed('PR must be linked to an issue');
+              return;
+            }
+            
+            // LMJ : Extract issue numbers
+            const linkedIssues = issueMatches.map(match => {
+              const numberMatch = match.match(/#(\d+)/);
+              return numberMatch ? numberMatch[1] : null;
+            }).filter(Boolean);
+            
+            console.log(`📌 Linked issues: ${linkedIssues.join(', ')}`);
+            
+            // LMJ : Verify each linked issue exists
+            for (const issueNumber of linkedIssues) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  ...repo,
+                  issue_number: parseInt(issueNumber)
+                });
+                
+                console.log(`✅ Issue #${issueNumber} exists (${issue.state})`);
+                
+                if (issue.state === 'closed') {
+                  console.log(`⚠️  Warning: Issue #${issueNumber} is already closed`);
+                }
+              } catch (error) {
+                console.error(`❌ Issue #${issueNumber} does not exist`);
+                core.setFailed(`Issue #${issueNumber} not found`);
+                return;
+              }
+            }
+            
+            console.log('✅ All linked issues verified');
