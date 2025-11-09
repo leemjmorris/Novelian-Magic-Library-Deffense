@@ -102,8 +102,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5c576b41f553cc940bc62d646ea94e16, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  collider2D: {fileID: 416387417718891683}
   moveSpeed: 0.5
-  destroyY: -0.5
+  damage: 10
+  attackInterval: 0.7
+  maxHealth: 100
 --- !u!61 &416387417718891683
 BoxCollider2D:
   m_ObjectHideFlags: 0

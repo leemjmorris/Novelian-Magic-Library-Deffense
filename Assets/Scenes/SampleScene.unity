@@ -378,7 +378,7 @@ MonoBehaviour:
   projectilePrefab: {fileID: 9176730954497834366, guid: 3d425aa73cf2f724894d96bf932bc160, type: 3}
   target: {fileID: 0}
   timer: 0
-  attackInterval: 1
+  attackInterval: 0.2
 --- !u!61 &390104980
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -654,7 +654,7 @@ GameObject:
   - component: {fileID: 426034602}
   - component: {fileID: 426034601}
   m_Layer: 0
-  m_Name: Monster
+  m_Name: MonsterSpawner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -674,6 +674,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   monsterPrefab: {fileID: 8808809208899240087, guid: faf5b629ec8f7f34ebd070fa3dab59d3, type: 3}
   spawnInterval: 2
+  maxMonsterCount: 5
 --- !u!4 &426034602
 Transform:
   m_ObjectHideFlags: 0
@@ -913,6 +914,50 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad56f0d90a0040749ba388713ac721f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &1206353160
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1206353162}
+  - component: {fileID: 1206353161}
+  m_Layer: 0
+  m_Name: StageManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1206353161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1206353160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88fbb37c1417a8643b9c1a60b5353d80, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1206353162
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1206353160}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.16798843, y: 1.4415315, z: -7.5153933}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -924,3 +969,4 @@ SceneRoots:
   - {fileID: 390104982}
   - {fileID: 426034602}
   - {fileID: 1078978310}
+  - {fileID: 1206353162}
