@@ -26,8 +26,24 @@ jobs:
             const issueUrl = context.payload.issue.html_url;
             const action = context.payload.action;
             const labels = context.payload.issue.labels.map(l => l.name).join(', ') || '없음';
-            const assignees = context.payload.issue.assignees.map(a => a.login).join(', ') || '미배정';
+            const assignees = context.payload.issue.assignees;
             const milestone = context.payload.issue.milestone?.title || '없음';
+            
+            // LMJ : GitHub username to Slack display name mapping
+            const userMapping = {
+              'leemjmorris': '이명진',
+              'jaemoon23': '이재문',
+              'LeeChaeBin002': '이채빈',
+              'Kdwio': '김동욱',
+              'bigwaterplz': '김민휘',
+              'kimjiw8698-crypto': '김지원'
+            };
+            
+            // LMJ : Convert GitHub assignees to Slack mentions
+            const slackMentions = assignees.map(a => {
+              const name = userMapping[a.login] || a.login;
+              return `@${name}`;
+            }).join(' ') || '미배정';
             
             async function callGemini(prompt) {
               const apiKey = process.env.GEMINI_API_KEY;
@@ -127,7 +143,7 @@ jobs:
 
             ${summary}
 
-            👤 *담당:* ${assignees}
+            👤 *담당:* ${slackMentions}
             🏷️ *레이블:* ${labels}
             📅 *마일스톤:* ${milestone}
 
