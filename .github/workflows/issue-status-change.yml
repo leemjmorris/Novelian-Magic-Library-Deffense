@@ -23,6 +23,9 @@ jobs:
           script: |
             const https = require('https');
             
+            console.log('🔍 Starting status change workflow...');
+            console.log('📋 Webhook URL exists:', !!process.env.SLACK_WEBHOOK_URL);
+            
             const issueNumber = context.payload.issue.number;
             const issueTitle = context.payload.issue.title;
             const issueUrl = context.payload.issue.html_url;
@@ -31,6 +34,9 @@ jobs:
             const labels = context.payload.issue.labels.map(l => l.name);
             const assignees = context.payload.issue.assignees;
             const assignee = assignees.length > 0 ? assignees[0].login : null;
+            
+            console.log(`📌 Issue #${issueNumber}: ${issueTitle}`);
+            console.log(`📌 Action: ${action}, Closed: ${isClosed}`);
             
             const userMapping = {
               'leemjmorris': 'U09R6F3CBHN',
@@ -43,8 +49,14 @@ jobs:
             
             function sendToSlack(message) {
               return new Promise((resolve, reject) => {
+                console.log('📨 Sending to Slack...');
+                console.log('📨 Message:', JSON.stringify(message, null, 2));
+                
                 const data = JSON.stringify(message);
                 const url = new URL(process.env.SLACK_WEBHOOK_URL);
+                
+                console.log('📨 Slack hostname:', url.hostname);
+                console.log('📨 Slack path:', url.pathname);
                 
                 const options = {
                   hostname: url.hostname,
@@ -57,12 +69,25 @@ jobs:
                 };
                 
                 const req = https.request(options, (res) => {
+                  console.log('📨 Slack response status:', res.statusCode);
                   let body = '';
                   res.on('data', (chunk) => body += chunk);
-                  res.on('end', () => resolve(body));
+                  res.on('end', () => {
+                    console.log('📨 Slack response body:', body);
+                    if (res.statusCode === 200) {
+                      console.log('✅ Slack message sent successfully');
+                      resolve(body);
+                    } else {
+                      console.error('❌ Slack API returned non-200 status');
+                      reject(new Error(`Slack returned ${res.statusCode}: ${body}`));
+                    }
+                  });
                 });
                 
-                req.on('error', reject);
+                req.on('error', (error) => {
+                  console.error('❌ Slack request error:', error);
+                  reject(error);
+                });
                 req.write(data);
                 req.end();
               });
@@ -71,6 +96,7 @@ jobs:
             function updateNotion(issueNumber, status) {
               return new Promise(async (resolve, reject) => {
                 try {
+                  console.log('📝 Updating Notion...');
                   const searchData = JSON.stringify({
                     filter: {
                       property: 'Issue Number',
@@ -98,6 +124,7 @@ jobs:
                         const response = JSON.parse(body);
                         if (response.results && response.results.length > 0) {
                           const pageId = response.results[0].id;
+                          console.log('📝 Found Notion page:', pageId);
                           
                           const updateData = JSON.stringify({
                             properties: {
@@ -120,25 +147,38 @@ jobs:
                           const updateReq = https.request(updateOptions, (res) => {
                             let body = '';
                             res.on('data', (chunk) => body += chunk);
-                            res.on('end', () => resolve(body));
+                            res.on('end', () => {
+                              if (res.statusCode === 200) {
+                                console.log('✅ Notion updated successfully');
+                              } else {
+                                console.error('❌ Notion update error:', res.statusCode, body);
+                              }
+                              resolve(body);
+                            });
                           });
                           
                           updateReq.on('error', reject);
                           updateReq.write(updateData);
                           updateReq.end();
                         } else {
+                          console.log('⚠️ Notion page not found');
                           resolve('Page not found');
                         }
                       } catch (error) {
+                        console.error('❌ Notion search parse error:', error);
                         reject(error);
                       }
                     });
                   });
                   
-                  searchReq.on('error', reject);
+                  searchReq.on('error', (error) => {
+                    console.error('❌ Notion search request error:', error);
+                    reject(error);
+                  });
                   searchReq.write(searchData);
                   searchReq.end();
                 } catch (error) {
+                  console.error('❌ Notion update error:', error);
                   reject(error);
                 }
               });
@@ -146,9 +186,11 @@ jobs:
             
             try {
               if (isClosed) {
+                console.log('🎯 Handling issue closure');
                 let prInfo = null;
                 
                 try {
+                  console.log('🔍 Searching for related PR...');
                   const prs = await github.rest.pulls.list({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
@@ -162,14 +204,17 @@ jobs:
                   );
                   
                   if (relatedPR) {
+                    console.log('✅ Found related PR:', relatedPR.number);
                     prInfo = {
                       number: relatedPR.number,
                       url: relatedPR.html_url,
                       merged: relatedPR.merged_at !== null
                     };
+                  } else {
+                    console.log('⚠️ No related PR found');
                   }
                 } catch (error) {
-                  console.log('PR 정보를 가져오지 못했습니다:', error.message);
+                  console.error('❌ PR 정보를 가져오지 못했습니다:', error.message);
                 }
                 
                 await updateNotion(issueNumber, 'Done');
@@ -197,7 +242,10 @@ jobs:
                 await sendToSlack(slackMessage);
               }
               
+              console.log('✅ Status change workflow completed');
+              
             } catch (error) {
-              console.error('Error:', error);
+              console.error('❌ Workflow error:', error);
+              console.error('❌ Error stack:', error.stack);
               core.setFailed(error.message);
             }
