@@ -1,0 +1,16 @@
+name: Test Workflow
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simple test
+        run: |
+          echo "✅ GitHub Actions is working!"
+          echo "Event: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
