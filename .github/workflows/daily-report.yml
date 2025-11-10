@@ -46,6 +46,64 @@ jobs:
               'kimjiw8698-crypto': '김지원'
             };
             
+            function parseAISummaryToBlocks(summary) {
+              const blocks = [];
+              const lines = summary.split('\n');
+              
+              for (const line of lines) {
+                const trimmed = line.trim();
+                
+                if (!trimmed) {
+                  continue;
+                }
+                
+                if (trimmed === '---') {
+                  blocks.push({
+                    object: 'block',
+                    type: 'divider',
+                    divider: {}
+                  });
+                } else if (trimmed.startsWith('## ')) {
+                  const text = trimmed.substring(3).trim();
+                  blocks.push({
+                    object: 'block',
+                    type: 'heading_3',
+                    heading_3: {
+                      rich_text: [{ text: { content: text } }]
+                    }
+                  });
+                } else if (trimmed.startsWith('# ')) {
+                  const text = trimmed.substring(2).trim();
+                  blocks.push({
+                    object: 'block',
+                    type: 'heading_2',
+                    heading_2: {
+                      rich_text: [{ text: { content: text } }]
+                    }
+                  });
+                } else if (trimmed.startsWith('- ')) {
+                  const text = trimmed.substring(2).trim();
+                  blocks.push({
+                    object: 'block',
+                    type: 'bulleted_list_item',
+                    bulleted_list_item: {
+                      rich_text: [{ text: { content: text } }]
+                    }
+                  });
+                } else {
+                  blocks.push({
+                    object: 'block',
+                    type: 'paragraph',
+                    paragraph: {
+                      rich_text: [{ text: { content: trimmed } }]
+                    }
+                  });
+                }
+              }
+              
+              return blocks;
+            }
+            
             async function generateGeminiSummary(issues, prs) {
               const geminiApiKey = process.env.GEMINI_API_KEY;
               
@@ -74,10 +132,7 @@ jobs:
                 '**Pull Requests (최근 24시간):**\n' +
                 (prsList || '없음') + '\n\n' +
                 '**요구 사항:**\n' +
-                '1. 다음 형식으로 요약해주세요:\n\n' +
-                '# 이슈\n' +
-                '- (완료 또는 진행중) 담당자 - 작업 내용 요약\n\n' +
-                '---\n\n' +
+                '다음 형식으로 요약해주세요:\n\n' +
                 '# 전일 보고\n' +
                 '## 완료\n' +
                 '- 담당자 - 완료한 작업 내용\n\n' +
@@ -91,12 +146,13 @@ jobs:
                 '- 담당자 - 오후 작업 계획\n\n' +
                 '## (야근)\n' +
                 '- 담당자 - 야근 작업 계획 (있는 경우에만)\n\n' +
-                '2. Issue의 label을 참고하여 작업의 우선순위와 중요도를 판단하세요.\n' +
-                '3. Issue의 상태(open/closed)를 참고하여 완료 여부를 판단하세요.\n' +
-                '4. PR의 merge 여부를 참고하여 작업 완료를 판단하세요.\n' +
-                '5. 간결하고 명확하게 작성하세요.\n' +
-                '6. 작업 내용이 없으면 해당 섹션을 생략하세요.\n' +
-                '7. 마크다운 형식으로 작성하되, 코드 블록은 사용하지 마세요.\n\n' +
+                '**참고:**\n' +
+                '1. Issue의 label을 참고하여 작업의 우선순위와 중요도를 판단하세요.\n' +
+                '2. Issue의 상태(open/closed)를 참고하여 완료 여부를 판단하세요.\n' +
+                '3. PR의 merge 여부를 참고하여 작업 완료를 판단하세요.\n' +
+                '4. 간결하고 명확하게 작성하세요.\n' +
+                '5. 작업 내용이 없으면 해당 섹션을 생략하세요.\n' +
+                '6. 마크다운 형식으로 작성하되, 코드 블록은 사용하지 마세요.\n\n' +
                 '요약을 시작하세요:';
 
               return new Promise((resolve, reject) => {
@@ -361,18 +417,8 @@ jobs:
                 }
               });
               
-              const summaryLines = aiSummary.split('\n');
-              for (const line of summaryLines) {
-                if (line.trim()) {
-                  blocks.push({
-                    object: 'block',
-                    type: 'paragraph',
-                    paragraph: {
-                      rich_text: [{ text: { content: line } }]
-                    }
-                  });
-                }
-              }
+              const aiBlocks = parseAISummaryToBlocks(aiSummary);
+              blocks.push(...aiBlocks);
               
               blocks.push(
                 {
