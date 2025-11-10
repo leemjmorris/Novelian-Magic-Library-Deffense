@@ -227,7 +227,7 @@ jobs:
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '생성된 Issue: ' } },
-                      { text: { content: `${newIssues.length}개`, annotations: { bold: true } } }
+                      { text: { content: `${newIssues.length}개` }, annotations: { bold: true } }
                     ]
                   }
                 },
@@ -237,7 +237,7 @@ jobs:
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '완료된 Issue: ' } },
-                      { text: { content: `${closedIssues.length}개`, annotations: { bold: true } } }
+                      { text: { content: `${closedIssues.length}개` }, annotations: { bold: true } }
                     ]
                   }
                 },
@@ -247,7 +247,7 @@ jobs:
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '생성된 PR: ' } },
-                      { text: { content: `${newPRs.length}개`, annotations: { bold: true } } }
+                      { text: { content: `${newPRs.length}개` }, annotations: { bold: true } }
                     ]
                   }
                 },
@@ -257,7 +257,7 @@ jobs:
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '머지된 PR: ' } },
-                      { text: { content: `${mergedPRs.length}개`, annotations: { bold: true } } }
+                      { text: { content: `${mergedPRs.length}개` }, annotations: { bold: true } }
                     ]
                   }
                 },
@@ -267,7 +267,7 @@ jobs:
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '진행 중인 Issue: ' } },
-                      { text: { content: `${inProgressIssues.length}개`, annotations: { bold: true } } }
+                      { text: { content: `${inProgressIssues.length}개` }, annotations: { bold: true } }
                     ]
                   }
                 }
@@ -295,11 +295,11 @@ jobs:
                     type: 'bulleted_list_item',
                     bulleted_list_item: {
                       rich_text: [
-                        { text: { content: `${userName}: `, annotations: { bold: true } } },
+                        { text: { content: `${userName}: ` }, annotations: { bold: true } },
                         { text: { content: `진행중 ${stats.inProgress}개 ` } },
-                        { text: { content: '/ ', annotations: { color: 'gray' } } },
+                        { text: { content: '/ ' }, annotations: { color: 'gray' } },
                         { text: { content: `완료 ${stats.completed}개 ` } },
-                        { text: { content: '/ ', annotations: { color: 'gray' } } },
+                        { text: { content: '/ ' }, annotations: { color: 'gray' } },
                         { text: { content: `PR ${stats.prs}개` } }
                       ]
                     }
@@ -341,7 +341,7 @@ jobs:
                           annotations: { bold: true }
                         },
                         { text: { content: `${issue.title} ` } },
-                        { text: { content: `(담당: ${assigneeNames})`, annotations: { color: 'gray' } } }
+                        { text: { content: `(담당: ${assigneeNames})` }, annotations: { color: 'gray' } }
                       ]
                     }
                   });
@@ -381,8 +381,8 @@ jobs:
                           },
                           annotations: { bold: true, strikethrough: true }
                         },
-                        { text: { content: `${issue.title} `, annotations: { strikethrough: true } } },
-                        { text: { content: `(담당: ${assigneeNames})`, annotations: { color: 'gray' } } }
+                        { text: { content: `${issue.title} ` }, annotations: { strikethrough: true } },
+                        { text: { content: `(담당: ${assigneeNames})` }, annotations: { color: 'gray' } }
                       ]
                     }
                   });
@@ -421,7 +421,7 @@ jobs:
                           annotations: { bold: true }
                         },
                         { text: { content: `${pr.title} ` } },
-                        { text: { content: `(작성자: ${authorName})`, annotations: { color: 'gray' } } }
+                        { text: { content: `(작성자: ${authorName})` }, annotations: { color: 'gray' } }
                       ]
                     }
                   });
@@ -462,7 +462,7 @@ jobs:
                           annotations: { bold: true }
                         },
                         { text: { content: `${issue.title} ` } },
-                        { text: { content: `(담당: ${assigneeNames})`, annotations: { color: 'gray' } } }
+                        { text: { content: `(담당: ${assigneeNames})` }, annotations: { color: 'gray' } }
                       ]
                     }
                   });
@@ -474,7 +474,7 @@ jobs:
                     type: 'paragraph',
                     paragraph: {
                       rich_text: [
-                        { text: { content: `... 외 ${inProgressIssues.length - 20}개`, annotations: { italic: true, color: 'gray' } } }
+                        { text: { content: `... 외 ${inProgressIssues.length - 20}개` }, annotations: { italic: true, color: 'gray' } }
                       ]
                     }
                   });
@@ -492,7 +492,7 @@ jobs:
                   type: 'paragraph',
                   paragraph: {
                     rich_text: [
-                      { text: { content: '🤖 이 리포트는 GitHub Actions에 의해 자동으로 생성되었습니다.', annotations: { italic: true, color: 'gray' } } }
+                      { text: { content: '🤖 이 리포트는 GitHub Actions에 의해 자동으로 생성되었습니다.' }, annotations: { italic: true, color: 'gray' } }
                     ]
                   }
                 }
