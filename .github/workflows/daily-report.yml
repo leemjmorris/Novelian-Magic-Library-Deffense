@@ -150,7 +150,7 @@ jobs:
               });
             }
             
-            async function addToNotion(content) {
+            async function createNotionPage() {
               const token = process.env.NOTION_API_TOKEN;
               const parentPageId = process.env.NOTION_REPORT_PAGE_ID;
               
@@ -162,8 +162,7 @@ jobs:
                     title: {
                       title: [{ text: { content: dateStr + ' 개발 현황' } }]
                     }
-                  },
-                  children: content
+                  }
                 });
                 
                 const req = https.request({
@@ -183,7 +182,52 @@ jobs:
                       const result = JSON.parse(body);
                       
                       if (res.statusCode === 200) {
-                        console.log('📄 Page URL:', result.url);
+                        console.log('📄 Page created:', result.url);
+                        resolve(result);
+                      } else {
+                        console.error('❌ Notion API Error:', JSON.stringify(result, null, 2));
+                        reject(new Error('Notion API returned ' + res.statusCode + ': ' + (result.message || 'Unknown error')));
+                      }
+                    } catch (e) {
+                      console.error('❌ Failed to parse response:', body);
+                      reject(e);
+                    }
+                  });
+                });
+                
+                req.on('error', (e) => {
+                  console.error('❌ Request error:', e);
+                  reject(e);
+                });
+                
+                req.write(data);
+                req.end();
+              });
+            }
+            
+            async function appendBlocksToNotion(pageId, blocks) {
+              const token = process.env.NOTION_API_TOKEN;
+              
+              return new Promise((resolve, reject) => {
+                const data = JSON.stringify({ children: blocks });
+                
+                const req = https.request({
+                  hostname: 'api.notion.com',
+                  path: '/v1/blocks/' + pageId + '/children',
+                  method: 'PATCH',
+                  headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json',
+                    'Notion-Version': '2022-06-28'
+                  }
+                }, (res) => {
+                  let body = '';
+                  res.on('data', d => body += d);
+                  res.on('end', () => {
+                    try {
+                      const result = JSON.parse(body);
+                      
+                      if (res.statusCode === 200) {
                         resolve(result);
                       } else {
                         console.error('❌ Notion API Error:', JSON.stringify(result, null, 2));
@@ -632,10 +676,19 @@ jobs:
                 }
               );
               
-              console.log('📤 Sending to Notion...');
-              const result = await addToNotion(blocks);
-              console.log('✅ Daily report added to Notion');
+              console.log('📤 Creating Notion page...');
+              const page = await createNotionPage();
+              const pageId = page.id;
               
+              console.log('📝 Total blocks to add:', blocks.length);
+              
+              for (let i = 0; i < blocks.length; i += 100) {
+                const chunk = blocks.slice(i, i + 100);
+                console.log('📤 Adding blocks ' + (i + 1) + '-' + (i + chunk.length) + '...');
+                await appendBlocksToNotion(pageId, chunk);
+              }
+              
+              console.log('✅ Daily report added to Notion');
               console.log('✅ Daily report generation completed');
               
             } catch (error) {
