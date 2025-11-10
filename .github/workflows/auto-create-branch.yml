@@ -2,7 +2,7 @@ name: Auto Create Branch on Issue Assignment
 
 on:
   issues:
-    types: [assigned]
+    types: [opened, assigned]
 
 permissions:
   contents: write
@@ -12,6 +12,7 @@ permissions:
 jobs:
   create-branch:
     runs-on: ubuntu-latest
+    if: github.event.issue.assignee != null
     steps:
       - uses: actions/checkout@v3
         with:
@@ -20,7 +21,7 @@ jobs:
       - name: Create branch for assigned issue
         run: |
           ISSUE_NUMBER=${{ github.event.issue.number }}
-          ASSIGNEE="${{ github.event.assignee.login }}"
+          ASSIGNEE="${{ github.event.issue.assignee.login }}"
           ISSUE_TITLE="${{ github.event.issue.title }}"
           LABELS='${{ toJson(github.event.issue.labels.*.name) }}'
           
