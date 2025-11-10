@@ -52,66 +52,52 @@ jobs:
               const issuesList = issues.map(issue => {
                 const assignees = issue.assignees.map(a => userNames[a.login] || a.login).join(', ') || '미배정';
                 const labels = issue.labels.map(l => l.name).join(', ');
-                return `- #${issue.number} ${issue.title} (담당: ${assignees}) [${labels}] - ${issue.state}`;
+                return '- #' + issue.number + ' ' + issue.title + ' (담당: ' + assignees + ') [' + labels + '] - ' + issue.state;
               }).join('\n');
               
               const prsList = prs.map(pr => {
                 const author = userNames[pr.user.login] || pr.user.login;
-                return `- #${pr.number} ${pr.title} (작성: ${author}) - ${pr.merged_at ? '머지됨' : pr.state}`;
+                return '- #' + pr.number + ' ' + pr.title + ' (작성: ' + author + ') - ' + (pr.merged_at ? '머지됨' : pr.state);
               }).join('\n');
               
-              const prompt = `당신은 Unity 게임 개발 팀의 일일 보고서를 작성하는 AI입니다.
-아래의 GitHub Issues와 Pull Requests를 분석하여, 팀원별 작업 내용을 요약해주세요.
-
-**팀원 목록:**
-- 이명진 (팀장, 프로그래머)
-- 김재문 (프로그래머)
-- 이채빈 (프로그래머/디자이너)
-- 김동욱 (디자이너)
-- 김민휘 (디자이너)
-- 김지원 (기획자)
-
-**GitHub Issues (최근 24시간):**
-${issuesList || '없음'}
-
-**Pull Requests (최근 24시간):**
-${prsList || '없음'}
-
-**요구 사항:**
-1. 다음 형식으로 요약해주세요:
-
-# 이슈
-- (완료 또는 진행중) 담당자 - 작업 내용 요약
-
----
-
-# 전일 보고
-## 완료
-- 담당자 - 완료한 작업 내용
-
-## 미완료 (사유, 처리)
-- 담당자 - 미완료 작업 및 사유
-
----
-
-# 금일 보고
-## 오전
-- 담당자 - 오전 작업 계획
-
-## 오후
-- 담당자 - 오후 작업 계획
-
-## (야근)
-- 담당자 - 야근 작업 계획 (있는 경우에만)
-
-2. Issue의 label을 참고하여 작업의 우선순위와 중요도를 판단하세요.
-3. Issue의 상태(open/closed)를 참고하여 완료 여부를 판단하세요.
-4. PR의 merge 여부를 참고하여 작업 완료를 판단하세요.
-5. 간결하고 명확하게 작성하세요.
-6. 작업 내용이 없으면 해당 섹션을 생략하세요.
-7. 마크다운 형식으로 작성하되, 코드 블록(```)은 사용하지 마세요.
-
-요약을 시작하세요:`;
+              const prompt = '당신은 Unity 게임 개발 팀의 일일 보고서를 작성하는 AI입니다.\n' +
+                '아래의 GitHub Issues와 Pull Requests를 분석하여, 팀원별 작업 내용을 요약해주세요.\n\n' +
+                '**팀원 목록:**\n' +
+                '- 이명진 (팀장, 프로그래머)\n' +
+                '- 김재문 (프로그래머)\n' +
+                '- 이채빈 (프로그래머/디자이너)\n' +
+                '- 김동욱 (디자이너)\n' +
+                '- 김민휘 (디자이너)\n' +
+                '- 김지원 (기획자)\n\n' +
+                '**GitHub Issues (최근 24시간):**\n' +
+                (issuesList || '없음') + '\n\n' +
+                '**Pull Requests (최근 24시간):**\n' +
+                (prsList || '없음') + '\n\n' +
+                '**요구 사항:**\n' +
+                '1. 다음 형식으로 요약해주세요:\n\n' +
+                '# 이슈\n' +
+                '- (완료 또는 진행중) 담당자 - 작업 내용 요약\n\n' +
+                '---\n\n' +
+                '# 전일 보고\n' +
+                '## 완료\n' +
+                '- 담당자 - 완료한 작업 내용\n\n' +
+                '## 미완료 (사유, 처리)\n' +
+                '- 담당자 - 미완료 작업 및 사유\n\n' +
+                '---\n\n' +
+                '# 금일 보고\n' +
+                '## 오전\n' +
+                '- 담당자 - 오전 작업 계획\n\n' +
+                '## 오후\n' +
+                '- 담당자 - 오후 작업 계획\n\n' +
+                '## (야근)\n' +
+                '- 담당자 - 야근 작업 계획 (있는 경우에만)\n\n' +
+                '2. Issue의 label을 참고하여 작업의 우선순위와 중요도를 판단하세요.\n' +
+                '3. Issue의 상태(open/closed)를 참고하여 완료 여부를 판단하세요.\n' +
+                '4. PR의 merge 여부를 참고하여 작업 완료를 판단하세요.\n' +
+                '5. 간결하고 명확하게 작성하세요.\n' +
+                '6. 작업 내용이 없으면 해당 섹션을 생략하세요.\n' +
+                '7. 마크다운 형식으로 작성하되, 코드 블록은 사용하지 마세요.\n\n' +
+                '요약을 시작하세요:';
 
               return new Promise((resolve, reject) => {
                 const postData = JSON.stringify({
@@ -122,7 +108,7 @@ ${prsList || '없음'}
                 
                 const req = https.request({
                   hostname: 'generativelanguage.googleapis.com',
-                  path: `/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+                  path: '/v1beta/models/gemini-pro:generateContent?key=' + geminiApiKey,
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -163,7 +149,7 @@ ${prsList || '없음'}
                   icon: { emoji: '📊' },
                   properties: {
                     title: {
-                      title: [{ text: { content: `${dateStr} 개발 현황` } }]
+                      title: [{ text: { content: dateStr + ' 개발 현황' } }]
                     }
                   },
                   children: content
@@ -174,7 +160,7 @@ ${prsList || '없음'}
                   path: '/v1/pages',
                   method: 'POST',
                   headers: {
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': 'Bearer ' + token,
                     'Content-Type': 'application/json',
                     'Notion-Version': '2022-06-28'
                   }
@@ -193,7 +179,7 @@ ${prsList || '없음'}
                         resolve(result);
                       } else {
                         console.error('❌ Notion API Error:', JSON.stringify(result, null, 2));
-                        reject(new Error(`Notion API returned ${res.statusCode}: ${result.message || 'Unknown error'}`));
+                        reject(new Error('Notion API returned ' + res.statusCode + ': ' + (result.message || 'Unknown error')));
                       }
                     } catch (e) {
                       console.error('❌ Failed to parse response:', body);
@@ -213,7 +199,7 @@ ${prsList || '없음'}
             }
             
             try {
-              console.log(`Generating daily report for ${dateStr}...`);
+              console.log('Generating daily report for ' + dateStr + '...');
               
               const issuesCreated = await github.rest.issues.listForRepo({
                 owner: context.repo.owner,
@@ -367,7 +353,7 @@ ${prsList || '없음'}
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '생성된 Issue: ' } },
-                      { text: { content: `${newIssues.length}개` }, annotations: { bold: true } }
+                      { text: { content: newIssues.length + '개' }, annotations: { bold: true } }
                     ]
                   }
                 },
@@ -377,7 +363,7 @@ ${prsList || '없음'}
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '완료된 Issue: ' } },
-                      { text: { content: `${closedIssues.length}개` }, annotations: { bold: true } }
+                      { text: { content: closedIssues.length + '개' }, annotations: { bold: true } }
                     ]
                   }
                 },
@@ -387,7 +373,7 @@ ${prsList || '없음'}
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '생성된 PR: ' } },
-                      { text: { content: `${newPRs.length}개` }, annotations: { bold: true } }
+                      { text: { content: newPRs.length + '개' }, annotations: { bold: true } }
                     ]
                   }
                 },
@@ -397,7 +383,7 @@ ${prsList || '없음'}
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '머지된 PR: ' } },
-                      { text: { content: `${mergedPRs.length}개` }, annotations: { bold: true } }
+                      { text: { content: mergedPRs.length + '개' }, annotations: { bold: true } }
                     ]
                   }
                 },
@@ -407,7 +393,7 @@ ${prsList || '없음'}
                   bulleted_list_item: {
                     rich_text: [
                       { text: { content: '진행 중인 Issue: ' } },
-                      { text: { content: `${inProgressIssues.length}개` }, annotations: { bold: true } }
+                      { text: { content: inProgressIssues.length + '개' }, annotations: { bold: true } }
                     ]
                   }
                 }
@@ -435,12 +421,12 @@ ${prsList || '없음'}
                     type: 'bulleted_list_item',
                     bulleted_list_item: {
                       rich_text: [
-                        { text: { content: `${userName}: ` }, annotations: { bold: true } },
-                        { text: { content: `진행중 ${stats.inProgress}개 ` } },
+                        { text: { content: userName + ': ' }, annotations: { bold: true } },
+                        { text: { content: '진행중 ' + stats.inProgress + '개 ' } },
                         { text: { content: '/ ' }, annotations: { color: 'gray' } },
-                        { text: { content: `완료 ${stats.completed}개 ` } },
+                        { text: { content: '완료 ' + stats.completed + '개 ' } },
                         { text: { content: '/ ' }, annotations: { color: 'gray' } },
-                        { text: { content: `PR ${stats.prs}개` } }
+                        { text: { content: 'PR ' + stats.prs + '개' } }
                       ]
                     }
                   });
@@ -475,13 +461,13 @@ ${prsList || '없음'}
                       rich_text: [
                         { 
                           text: { 
-                            content: `#${issue.number} `,
+                            content: '#' + issue.number + ' ',
                             link: { url: issue.html_url }
                           },
                           annotations: { bold: true }
                         },
-                        { text: { content: `${issue.title} ` } },
-                        { text: { content: `(담당: ${assigneeNames})` }, annotations: { color: 'gray' } }
+                        { text: { content: issue.title + ' ' } },
+                        { text: { content: '(담당: ' + assigneeNames + ')' }, annotations: { color: 'gray' } }
                       ]
                     }
                   });
@@ -516,13 +502,13 @@ ${prsList || '없음'}
                       rich_text: [
                         { 
                           text: { 
-                            content: `#${issue.number} `,
+                            content: '#' + issue.number + ' ',
                             link: { url: issue.html_url }
                           },
                           annotations: { bold: true, strikethrough: true }
                         },
-                        { text: { content: `${issue.title} ` }, annotations: { strikethrough: true } },
-                        { text: { content: `(담당: ${assigneeNames})` }, annotations: { color: 'gray' } }
+                        { text: { content: issue.title + ' ' }, annotations: { strikethrough: true } },
+                        { text: { content: '(담당: ' + assigneeNames + ')' }, annotations: { color: 'gray' } }
                       ]
                     }
                   });
@@ -555,13 +541,13 @@ ${prsList || '없음'}
                       rich_text: [
                         { 
                           text: { 
-                            content: `#${pr.number} `,
+                            content: '#' + pr.number + ' ',
                             link: { url: pr.html_url }
                           },
                           annotations: { bold: true }
                         },
-                        { text: { content: `${pr.title} ` } },
-                        { text: { content: `(작성자: ${authorName})` }, annotations: { color: 'gray' } }
+                        { text: { content: pr.title + ' ' } },
+                        { text: { content: '(작성자: ' + authorName + ')' }, annotations: { color: 'gray' } }
                       ]
                     }
                   });
@@ -596,13 +582,13 @@ ${prsList || '없음'}
                       rich_text: [
                         { 
                           text: { 
-                            content: `#${issue.number} `,
+                            content: '#' + issue.number + ' ',
                             link: { url: issue.html_url }
                           },
                           annotations: { bold: true }
                         },
-                        { text: { content: `${issue.title} ` } },
-                        { text: { content: `(담당: ${assigneeNames})` }, annotations: { color: 'gray' } }
+                        { text: { content: issue.title + ' ' } },
+                        { text: { content: '(담당: ' + assigneeNames + ')' }, annotations: { color: 'gray' } }
                       ]
                     }
                   });
@@ -614,7 +600,7 @@ ${prsList || '없음'}
                     type: 'paragraph',
                     paragraph: {
                       rich_text: [
-                        { text: { content: `... 외 ${inProgressIssues.length - 20}개` }, annotations: { italic: true, color: 'gray' } }
+                        { text: { content: '... 외 ' + (inProgressIssues.length - 20) + '개' }, annotations: { italic: true, color: 'gray' } }
                       ]
                     }
                   });
