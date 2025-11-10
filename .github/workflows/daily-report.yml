@@ -108,7 +108,7 @@ jobs:
                 
                 const req = https.request({
                   hostname: 'generativelanguage.googleapis.com',
-                  path: '/v1beta/models/gemini-pro:generateContent?key=' + geminiApiKey,
+                  path: '/v1beta/models/gemini-1.5-flash:generateContent?key=' + geminiApiKey,
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -121,12 +121,10 @@ jobs:
                   res.on('data', d => body += d);
                   res.on('end', () => {
                     try {
-                      console.log('📦 Gemini Raw Response:', body.substring(0, 500));
                       const result = JSON.parse(body);
                       
-                      console.log('📋 Gemini Response Structure:', JSON.stringify(result, null, 2).substring(0, 1000));
-                      
                       if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0] && result.candidates[0].content.parts[0].text) {
+                        console.log('✅ AI summary generated successfully');
                         resolve(result.candidates[0].content.parts[0].text);
                       } else if (result.error) {
                         console.error('❌ Gemini API Error:', result.error);
@@ -156,8 +154,6 @@ jobs:
               const token = process.env.NOTION_API_TOKEN;
               const parentPageId = process.env.NOTION_REPORT_PAGE_ID;
               
-              console.log('🔍 Parent Page ID:', parentPageId);
-              
               return new Promise((resolve, reject) => {
                 const data = JSON.stringify({
                   parent: { page_id: parentPageId },
@@ -180,8 +176,6 @@ jobs:
                     'Notion-Version': '2022-06-28'
                   }
                 }, (res) => {
-                  console.log('🔍 Notion API Status:', res.statusCode);
-                  
                   let body = '';
                   res.on('data', d => body += d);
                   res.on('end', () => {
@@ -190,7 +184,6 @@ jobs:
                       
                       if (res.statusCode === 200) {
                         console.log('📄 Page URL:', result.url);
-                        console.log('📋 Page ID:', result.id);
                         resolve(result);
                       } else {
                         console.error('❌ Notion API Error:', JSON.stringify(result, null, 2));
