@@ -115,23 +115,38 @@ jobs:
                     'Content-Length': Buffer.byteLength(postData)
                   }
                 }, (res) => {
+                  console.log('🔍 Gemini API Status:', res.statusCode);
+                  
                   let body = '';
                   res.on('data', d => body += d);
                   res.on('end', () => {
                     try {
+                      console.log('📦 Gemini Raw Response:', body.substring(0, 500));
                       const result = JSON.parse(body);
-                      if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+                      
+                      console.log('📋 Gemini Response Structure:', JSON.stringify(result, null, 2).substring(0, 1000));
+                      
+                      if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0] && result.candidates[0].content.parts[0].text) {
                         resolve(result.candidates[0].content.parts[0].text);
+                      } else if (result.error) {
+                        console.error('❌ Gemini API Error:', result.error);
+                        reject(new Error('Gemini API error: ' + result.error.message));
                       } else {
-                        reject(new Error('Invalid Gemini API response'));
+                        console.error('❌ Unexpected response structure:', JSON.stringify(result));
+                        reject(new Error('Invalid Gemini API response structure'));
                       }
                     } catch (e) {
+                      console.error('❌ Failed to parse Gemini response:', body);
                       reject(e);
                     }
                   });
                 });
                 
-                req.on('error', reject);
+                req.on('error', (e) => {
+                  console.error('❌ Gemini request error:', e);
+                  reject(e);
+                });
+                
                 req.write(postData);
                 req.end();
               });
