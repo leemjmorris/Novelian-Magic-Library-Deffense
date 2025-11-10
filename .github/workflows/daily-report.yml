@@ -108,7 +108,7 @@ jobs:
                 
                 const req = https.request({
                   hostname: 'generativelanguage.googleapis.com',
-                  path: '/v1beta/models/gemini-1.5-flash:generateContent?key=' + geminiApiKey,
+                  path: '/v1beta/models/gemini-1.5-pro:generateContent?key=' + geminiApiKey,
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
