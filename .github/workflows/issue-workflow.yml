@@ -201,7 +201,8 @@ jobs:
                 
                 const safeTitle = sanitizeForSlack(issueTitle);
                 const safeSummary = summary ? sanitizeForSlack(summary) : null;
-                const assigneeName = assignee || '미지정';
+                const slackUserId = assignee ? userMapping[assignee] : null;
+                const assigneeName = slackUserId ? `<@${slackUserId}>` : (assignee || '미지정');
                 const labelsText = labels.length > 0 ? labels.join(', ') : '없음';
                 
                 console.log('📝 Safe title:', safeTitle.substring(0, 100));
@@ -302,7 +303,6 @@ jobs:
                     execSync(`git checkout -b ${branchName}`, { stdio: 'inherit' });
                     execSync(`git push origin ${branchName}`, { stdio: 'inherit' });
                     
-                    const slackUserId = userMapping[assignee];
                     const mention = slackUserId ? `<@${slackUserId}>` : assignee;
                     
                     await sendToSlack({
@@ -398,6 +398,9 @@ jobs:
               }
               
               if (action === 'reopened') {
+                const slackUserId = assignee ? userMapping[assignee] : null;
+                const assigneeName = slackUserId ? `<@${slackUserId}>` : (assignee || '미지정');
+                
                 await sendToSlack({
                   text: `Issue ${issueNumber} reopened`,
                   blocks: [
@@ -418,7 +421,7 @@ jobs:
                         },
                         {
                           type: 'mrkdwn',
-                          text: `*담당자*\n${assignee || '미지정'}`
+                          text: `*담당자*\n${assigneeName}`
                         }
                       ]
                     },
