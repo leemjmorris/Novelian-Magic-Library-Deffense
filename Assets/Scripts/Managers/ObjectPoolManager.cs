@@ -49,12 +49,6 @@ public class ObjectPoolManager
                 return false;
             }
 
-            if (handle.Status != AsyncOperationStatus.Succeeded)
-            {
-                Debug.LogError($"Failed to load addressable: {addressableKey}");
-                return false;
-            }
-
             GameObject prefab = handle.Result;
 
             if (prefab.GetComponent<T>() == null)
@@ -86,8 +80,6 @@ public class ObjectPoolManager
             Debug.LogError($"Failed to create pool for type '{type.Name}': {e.Message}");
             return false;
         }
-
-
     }
 
     private T CreatePooledObject<T>() where T : Component, IPoolable
@@ -157,8 +149,11 @@ public class ObjectPoolManager
 
     public void Despawn<T>(T component) where T : Component, IPoolable
     {
-        if (component == null) return;
-
+        if (component == null)
+        {
+            return;
+        } 
+            
         Type type = typeof(T);
 
         if (!pools.ContainsKey(type))

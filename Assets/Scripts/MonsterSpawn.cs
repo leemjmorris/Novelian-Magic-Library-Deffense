@@ -6,7 +6,7 @@ public class MonsterSpawner : MonoBehaviour
 {
     [SerializeField] private GameObject monsterPrefab;
     [SerializeField] private float spawnInterval = 2.0f;
-    [SerializeField] private int maxMonsterCount = 5;
+    [SerializeField] private int maxMonsterCount = 20;
 
     private float timer = 0f;
 
@@ -44,12 +44,12 @@ public class MonsterSpawner : MonoBehaviour
         //     timer += Time.deltaTime;
         //     if (timer >= spawnInterval)
         //     {
-        //         spawnMonster();
+        //         SpawnMonster();
         //         timer = 0f;
         //     }
         // }
 
-        if (monsterCount < maxMonsterCount)
+        if (ObjectPoolManager.Instance.GetActiveCount<Monster>() < maxMonsterCount)
         {
             timer += Time.deltaTime;
             
@@ -57,7 +57,6 @@ public class MonsterSpawner : MonoBehaviour
             {
                 SpawnMonster();
                 timer = 0f;
-                monsterCount++;
             }
         }
     }
