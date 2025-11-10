@@ -1,79 +1,9 @@
-name: Setup Labels
-
+# Disabled - will be recreated
+name: Disabled
 on:
   workflow_dispatch:
-
-permissions:
-  issues: write
-  contents: read
-
 jobs:
-  create-labels:
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - name: Create or update labels
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // LMJ : Define all required labels
-            const labels = [
-              // Backlog workflow labels
-              { name: 'backlog', description: 'Backlog items', color: 'd4c5f9' },
-              { name: 'ready', description: 'Ready to start', color: '0e8a16' },
-              { name: 'blocked', description: 'Blocked by dependency', color: 'b60205' },
-              
-              // Priority labels
-              { name: 'priority: critical', description: 'Critical priority', color: 'b60205' },
-              { name: 'priority: high', description: 'High priority', color: 'd93f0b' },
-              { name: 'priority: medium', description: 'Medium priority', color: 'fbca04' },
-              { name: 'priority: low', description: 'Low priority', color: '0e8a16' },
-              
-              // Keep existing useful labels (already exist, but update if needed)
-              { name: 'bug', description: 'Something isn\'t working', color: 'd73a4a' },
-              { name: 'documentation', description: 'Improvements or additions to documentation', color: '0075ca' },
-              { name: 'enhancement', description: 'New feature or request', color: 'a2eeef' },
-              { name: 'wontfix', description: 'This will not be worked on', color: 'ffffff' },
-              { name: 'question', description: 'Further information is requested', color: 'd876e3' }
-            ];
-            
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            
-            for (const label of labels) {
-              try {
-                // LMJ : Try to get existing label
-                await github.rest.issues.getLabel({
-                  owner,
-                  repo,
-                  name: label.name
-                });
-                
-                // LMJ : Label exists, update it
-                await github.rest.issues.updateLabel({
-                  owner,
-                  repo,
-                  name: label.name,
-                  description: label.description,
-                  color: label.color
-                });
-                
-                console.log(`✅ Updated label: ${label.name}`);
-              } catch (error) {
-                if (error.status === 404) {
-                  // LMJ : Label doesn't exist, create it
-                  await github.rest.issues.createLabel({
-                    owner,
-                    repo,
-                    name: label.name,
-                    description: label.description,
-                    color: label.color
-                  });
-                  
-                  console.log(`🆕 Created label: ${label.name}`);
-                } else {
-                  console.error(`❌ Error processing label ${label.name}:`, error);
-                }
-              }
-            }
-            
-            console.log('\n✅ All labels processed successfully!');
+      - run: echo 'Disabled'

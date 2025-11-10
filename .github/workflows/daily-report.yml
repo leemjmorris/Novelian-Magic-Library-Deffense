@@ -1,35 +1,9 @@
-name: Daily Report
-
+# Disabled - will be recreated
+name: Disabled
 on:
-  schedule:
-    # LMJ : Run at 00:00 UTC (09:00 KST) every day
-    - cron: '0 0 * * *'
   workflow_dispatch:
-
 jobs:
-  generate-report:
+  disabled:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Install dependencies
-        run: |
-          pip install requests google-generativeai PyGithub
-      
-      - name: Generate daily report
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
-          NOTION_REPORT_PAGE_ID: ${{ secrets.NOTION_REPORT_PAGE_ID }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: |
-          python .github/scripts/daily_report.py
+      - run: echo 'Disabled'

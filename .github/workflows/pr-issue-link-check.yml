@@ -1,74 +1,9 @@
-name: PR Issue Link Check
-
+# Disabled - will be recreated
+name: Disabled
 on:
-  pull_request:
-    types: [opened, edited, synchronize, reopened]
-
-permissions:
-  contents: read
-  issues: read
-  pull-requests: write
-
+  workflow_dispatch:
 jobs:
-  check-issue-link:
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - name: Check PR has linked issue
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const pr_number = context.payload.pull_request.number;
-            const pr_body = context.payload.pull_request.body || '';
-            const repo = context.repo;
-            
-            console.log(`🔍 Checking PR #${pr_number}`);
-            
-            const issueMatches = pr_body.match(/(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#(\d+)/gi);
-            
-            if (!issueMatches || issueMatches.length === 0) {
-              const comment = `⚠️ **PR에 연결된 Issue가 없습니다.**
-              
-PR을 Issue와 연결하려면 PR 설명에 다음 중 하나를 추가하세요:
-- \`Closes #123\`
-- \`Fixes #123\`
-- \`Resolves #123\`
-
-이렇게 하면 PR이 머지될 때 Issue가 자동으로 닫힙니다.`;
-              
-              await github.rest.issues.createComment({
-                ...repo,
-                issue_number: pr_number,
-                body: comment
-              });
-              
-              core.setFailed('PR must be linked to an issue');
-              return;
-            }
-            
-            const linkedIssues = issueMatches.map(match => {
-              const numberMatch = match.match(/#(\d+)/);
-              return numberMatch ? numberMatch[1] : null;
-            }).filter(Boolean);
-            
-            console.log(`📌 Linked issues: ${linkedIssues.join(', ')}`);
-            
-            for (const issueNumber of linkedIssues) {
-              try {
-                const { data: issue } = await github.rest.issues.get({
-                  ...repo,
-                  issue_number: parseInt(issueNumber)
-                });
-                
-                console.log(`✅ Issue #${issueNumber} exists (${issue.state})`);
-                
-                if (issue.state === 'closed') {
-                  console.log(`⚠️  Warning: Issue #${issueNumber} is already closed`);
-                }
-              } catch (error) {
-                console.error(`❌ Issue #${issueNumber} does not exist`);
-                core.setFailed(`Issue #${issueNumber} not found`);
-                return;
-              }
-            }
-            
-            console.log('✅ All linked issues verified');
+      - run: echo 'Disabled'

@@ -1,81 +1,9 @@
-name: Bulk Add Issues to Project
-
+# Disabled - will be recreated
+name: Disabled
 on:
   workflow_dispatch:
-    inputs:
-      start_issue:
-        description: 'Start issue number (e.g., 1)'
-        required: true
-        default: '1'
-      end_issue:
-        description: 'End issue number (e.g., 50)'
-        required: true
-        default: '50'
-
 jobs:
-  add-issues:
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - name: Add all open issues to project
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const startIssue = parseInt('${{ github.event.inputs.start_issue }}');
-            const endIssue = parseInt('${{ github.event.inputs.end_issue }}');
-            const projectUrl = 'https://github.com/users/leemjmorris/projects/5';
-            
-            console.log(`Processing issues from #${startIssue} to #${endIssue}`);
-            
-            // LMJ : Get all open issues in range
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              per_page: 100
-            });
-            
-            console.log(`Found ${issues.length} open issues`);
-            
-            // LMJ : Filter issues in range
-            const filteredIssues = issues.filter(issue => 
-              issue.number >= startIssue && 
-              issue.number <= endIssue &&
-              !issue.pull_request // Exclude PRs
-            );
-            
-            console.log(`Processing ${filteredIssues.length} issues in range #${startIssue}-#${endIssue}`);
-            
-            for (const issue of filteredIssues) {
-              try {
-                // LMJ : Add ready label if has milestone, backlog if not
-                const labels = issue.labels.map(l => l.name);
-                
-                if (issue.milestone && !labels.includes('ready')) {
-                  await github.rest.issues.addLabels({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issue.number,
-                    labels: ['ready']
-                  });
-                  console.log(`✅ Added 'ready' label to issue #${issue.number}`);
-                } else if (!issue.milestone && !labels.includes('backlog')) {
-                  await github.rest.issues.addLabels({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: issue.number,
-                    labels: ['backlog']
-                  });
-                  console.log(`✅ Added 'backlog' label to issue #${issue.number}`);
-                }
-                
-                console.log(`📌 Issue #${issue.number}: ${issue.title}`);
-              } catch (error) {
-                console.error(`❌ Error processing issue #${issue.number}:`, error.message);
-              }
-            }
-            
-            console.log('\n✅ Finished! Please manually add these issues to the project board:');
-            console.log(`Go to: ${projectUrl}`);
-            console.log('Click "+ Add item" → "Add item from repository"');
-            console.log(`Select issues #${startIssue}-#${endIssue} and add them.`);
+      - run: echo 'Disabled'

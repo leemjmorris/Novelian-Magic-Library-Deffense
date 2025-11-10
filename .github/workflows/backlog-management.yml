@@ -1,94 +1,9 @@
-name: Backlog Management
-
+# Disabled - will be recreated
+name: Disabled
 on:
-  issues:
-    types: [opened, reopened, milestoned, demilestoned]
-
+  workflow_dispatch:
 jobs:
-  manage-backlog:
+  disabled:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write
-      contents: read
-    
     steps:
-      - name: Auto-add backlog label for new issues without milestone
-        if: github.event.action == 'opened' && github.event.issue.milestone == null
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const issue_number = context.issue.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            
-            // LMJ : Add backlog label to new issues without milestone
-            await github.rest.issues.addLabels({
-              owner,
-              repo,
-              issue_number,
-              labels: ['backlog']
-            });
-            
-            console.log(`Added backlog label to issue #${issue_number}`);
-
-      - name: Remove backlog label when milestone is assigned
-        if: github.event.action == 'milestoned'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const issue_number = context.issue.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            
-            try {
-              // LMJ : Remove backlog label
-              await github.rest.issues.removeLabel({
-                owner,
-                repo,
-                issue_number,
-                name: 'backlog'
-              });
-              
-              // LMJ : Add ready label
-              await github.rest.issues.addLabels({
-                owner,
-                repo,
-                issue_number,
-                labels: ['ready']
-              });
-              
-              console.log(`Moved issue #${issue_number} from backlog to ready`);
-            } catch (error) {
-              console.log('Backlog label not found or already removed');
-            }
-
-      - name: Move back to backlog when milestone is removed
-        if: github.event.action == 'demilestoned'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const issue_number = context.issue.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            
-            try {
-              // LMJ : Remove ready label
-              await github.rest.issues.removeLabel({
-                owner,
-                repo,
-                issue_number,
-                name: 'ready'
-              });
-            } catch (error) {
-              console.log('Ready label not found');
-            }
-            
-            // LMJ : Add backlog label
-            await github.rest.issues.addLabels({
-              owner,
-              repo,
-              issue_number,
-              labels: ['backlog']
-            });
-            
-            console.log(`Moved issue #${issue_number} back to backlog`);
+      - run: echo 'Disabled'

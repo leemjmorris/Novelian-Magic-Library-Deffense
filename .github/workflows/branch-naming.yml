@@ -1,76 +1,9 @@
-# .github/workflows/branch-naming-convention.yml
-name: Branch Naming Convention
-
+# Disabled - will be recreated
+name: Disabled
 on:
-  create:
-  pull_request:
-    types: [opened, synchronize, reopened]
-
-permissions:
-  contents: read
-  issues: read
-  pull-requests: read
-
+  workflow_dispatch:
 jobs:
-  check-branch-name:
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - name: Check branch name
-        run: |
-          branch_name="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          
-          # LMJ : main branch always passes
-          if [[ "$branch_name" == "main" ]]; then
-            echo "✅ Main branch"
-            exit 0
-          fi
-          
-          # LMJ : Check branch naming convention (with issue number)
-          if [[ "$branch_name" =~ ^(feature|bugfix|hotfix|error-fix|fix|refactor|docs|csvs|test|chore|release)/[0-9]+-[a-z0-9-]+$ ]]; then
-            echo "✅ Branch name follows convention: $branch_name"
-            ISSUE_NUMBER=$(echo $branch_name | grep -oP '(?<=/)[0-9]+(?=-)')
-            BRANCH_TYPE=$(echo $branch_name | cut -d'/' -f1)
-            DESCRIPTION=$(echo $branch_name | cut -d'/' -f2 | cut -d'-' -f2-)
-            
-            echo "📋 Branch details:"
-            echo "  Type: $BRANCH_TYPE"
-            echo "  Issue: #$ISSUE_NUMBER"
-            echo "  Description: $DESCRIPTION"
-            
-            # LMJ : Note - Issue existence is validated by pr-issue-link-check.yml
-            echo ""
-            echo "💡 Issue existence will be validated by PR-Issue Link Check workflow"
-            
-          else
-            echo "❌ Branch name doesn't follow convention: $branch_name"
-            echo ""
-            echo "📝 Expected format: type/issue-number-description-with-hyphens"
-            echo ""
-            echo "✅ Valid types:"
-            echo "  • feature (새 기능)"
-            echo "  • bugfix (버그 수정)"
-            echo "  • hotfix (긴급 수정)"
-            echo "  • error-fix (에러 수정)"
-            echo "  • fix (수정)"
-            echo "  • refactor (코드 개선)"
-            echo "  • docs (문서 작업)"
-            echo "  • csvs (데이터 작업)"
-            echo "  • test (테스트 추가)"
-            echo "  • chore (기타 작업)"
-            echo "  • release (릴리즈)"
-            echo ""
-            echo "✅ Format rules:"
-            echo "  • Must include issue number after type"
-            echo "  • Only lowercase letters (a-z)"
-            echo "  • Numbers (0-9)"
-            echo "  • Hyphens (-) instead of spaces"
-            echo ""
-            echo "📌 Examples:"
-            echo "  • feature/123-user-authentication"
-            echo "  • bugfix/456-login-error-fix"
-            echo "  • fix/789-null-pointer-exception"
-            echo "  • csvs/42-update-character-stats"
-            exit 1
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - run: echo 'Disabled'

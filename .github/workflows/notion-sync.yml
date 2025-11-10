@@ -1,34 +1,9 @@
-name: Notion Sync
-
+# Disabled - will be recreated
+name: Disabled
 on:
-  issues:
-    types: [opened, closed, reopened, edited]
-  pull_request:
-    types: [opened, closed, reopened, ready_for_review]
-
+  workflow_dispatch:
 jobs:
-  sync-to-notion:
+  disabled:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-      
-      - name: Install dependencies
-        run: |
-          pip install requests
-      
-      - name: Sync to Notion
-        env:
-          NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-          GITHUB_EVENT: ${{ toJson(github.event) }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          EVENT_ACTION: ${{ github.event.action }}
-        run: |
-          python .github/scripts/notion_sync.py
+      - run: echo 'Disabled'
