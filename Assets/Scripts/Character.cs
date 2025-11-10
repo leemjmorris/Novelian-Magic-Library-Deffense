@@ -15,12 +15,23 @@ public class Character : MonoBehaviour
 
     private ITargetable currentTarget;
     private float timer = 0.0f;
-
+    private async void Start()
+    {
+        await ObjectPoolManager.Instance.CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
+        ObjectPoolManager.Instance.WarmUp<Projectile>(20);
+    }
     private void Update()
     {
         if (currentTarget == null || !currentTarget.IsAlive())
         {
-            currentTarget = TargetRegistry.Instance.FindTarget(transform.position, attackRange);
+            if (Input.GetKeyDown(KeyCode.S))
+            {
+                currentTarget = TargetRegistry.Instance.FindSkillTarget(transform.position, attackRange);
+            }
+            else
+            {
+                currentTarget = TargetRegistry.Instance.FindTarget(transform.position, attackRange);
+            }
         }
 
         if (currentTarget != null)
@@ -36,17 +47,6 @@ public class Character : MonoBehaviour
 
     private void Attack(ITargetable target)
     {
-        GameObject projectileObject = Instantiate(projectilePrefab, transform.position, Quaternion.identity);
-        var projectile = projectileObject.GetComponent<Projectile>();
-        projectile.SetTarget(target.GetTransform());
+        ObjectPoolManager.Instance.Spawn<Projectile>(transform.position).SetTarget(target.GetTransform());
     }
-    // private void OnTriggerEnter2D(Collider2D collision)
-    // {
-    //     if (collision.CompareTag("Monster"))
-    //     {
-    //         Debug.Log("몬스터 감지");
-    //         target = collision.transform;
-            
-    //     }
-    // }
 }
