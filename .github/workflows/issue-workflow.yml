@@ -181,7 +181,7 @@ jobs:
                 let summary = null;
                 if (issueBody && issueBody.trim().length > 0) {
                   console.log('📨 Calling Gemini API...');
-                  const prompt = '다음 GitHub Issue를 5-7줄 정도로 상세하게 요약해주세요.\n\n주요 내용:\n- 이슈의 핵심 목적이나 문제점\n- 구체적인 작업 내용이나 요구사항\n- 중요한 세부사항이나 제약조건\n\n각 항목은 줄바꿈으로 구분하고, 불렛 포인트(-)를 사용해서 작성해주세요.\n마크다운 강조는 사용하지 말고 평문으로 작성해주세요.\n\n제목: ' + issueTitle + '\n\n내용: ' + issueBody.substring(0, 3000);
+                  const prompt = '다음 GitHub Issue의 전체 내용을 파악하여 5-7문장 정도의 하나의 연속된 문단으로 요약해주세요. 구조화하지 말고 자연스러운 문단 형태로 작성하며, 핵심 목적, 주요 작업 내용, 중요한 제약사항을 포함해주세요. 마크다운 강조나 불렛 포인트 없이 평문으로만 작성해주세요.\n\n제목: ' + issueTitle + '\n\n내용: ' + issueBody.substring(0, 3000);
                   summary = await callGeminiAPI(prompt);
                   
                   if (summary) {
@@ -190,7 +190,7 @@ jobs:
                   } else {
                     console.log('⚠️ Gemini returned null, using fallback');
                     const lines = issueBody.split('\n').filter(line => line.trim().length > 0);
-                    summary = lines.slice(0, 5).join('\n').substring(0, 500);
+                    summary = lines.slice(0, 3).join(' ').substring(0, 500);
                   }
                 }
                 
