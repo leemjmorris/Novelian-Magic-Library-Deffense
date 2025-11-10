@@ -47,13 +47,19 @@ jobs:
               'JangYeJin1207': 'U09QAEF5FEJ'
             };
             
-            function sanitizeText(text) {
+            function sanitizeForSlack(text) {
               if (!text) return '';
               return text
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
-                .substring(0, 2000);
+                .replace(/`/g, '')
+                .replace(/\*/g, '')
+                .replace(/_/g, '')
+                .replace(/~/g, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim()
+                .substring(0, 500);
             }
             
             function callGeminiAPI(prompt) {
@@ -173,21 +179,29 @@ jobs:
                 
                 let summary = null;
                 if (issueBody && issueBody.trim().length > 0) {
-                  const prompt = `다음 GitHub Issue를 2-3줄로 간단히 요약해주세요. 핵심 내용만 포함하세요:\n\n제목: ${issueTitle}\n\n내용: ${issueBody.substring(0, 2000)}`;
+                  const prompt = `다음 GitHub Issue를 2-3줄로 간단히 요약해주세요. 특수문자나 마크다운 포맷팅 없이 평범한 텍스트로만 작성해주세요:\n\n제목: ${issueTitle}\n\n내용: ${issueBody.substring(0, 2000)}`;
                   summary = await callGeminiAPI(prompt);
+                  
+                  if (summary) {
+                    console.log('🤖 Gemini raw response:', summary);
+                    console.log('🤖 Gemini response length:', summary.length);
+                  }
                 }
                 
-                const safeTitle = sanitizeText(issueTitle);
-                const safeSummary = summary ? sanitizeText(summary) : null;
+                const safeTitle = sanitizeForSlack(issueTitle);
+                const safeSummary = summary ? sanitizeForSlack(summary) : null;
                 const assigneeName = assignee || '미지정';
                 const labelsText = labels.length > 0 ? labels.join(', ') : '없음';
+                
+                console.log('📝 Safe title:', safeTitle);
+                console.log('📝 Safe summary:', safeSummary);
                 
                 const blocks = [
                   {
                     type: 'header',
                     text: {
                       type: 'plain_text',
-                      text: `🆕 New Issue #${issueNumber}`,
+                      text: `New Issue #${issueNumber}`,
                       emoji: true
                     }
                   },
@@ -226,7 +240,7 @@ jobs:
                     type: 'section',
                     text: {
                       type: 'mrkdwn',
-                      text: `*🤖 AI 요약*\n${safeSummary}`
+                      text: `*AI 요약*\n${safeSummary}`
                     }
                   });
                 }
@@ -255,6 +269,7 @@ jobs:
                   blocks: blocks
                 };
                 
+                console.log('📨 Sending Slack message...');
                 await sendToSlack(slackMessage);
                 console.log('✅ Slack notification sent');
                 
@@ -282,7 +297,7 @@ jobs:
                           type: 'section',
                           text: {
                             type: 'mrkdwn',
-                            text: `✅ *Branch 생성 완료*\n\`${branchName}\`\n담당자: ${mention}`
+                            text: `Branch 생성 완료\n${branchName}\n담당자: ${mention}`
                           }
                         },
                         {
@@ -323,7 +338,7 @@ jobs:
                         type: 'header',
                         text: {
                           type: 'plain_text',
-                          text: '🌿 Branch Created',
+                          text: 'Branch Created',
                           emoji: true
                         }
                       },
@@ -332,7 +347,7 @@ jobs:
                         fields: [
                           {
                             type: 'mrkdwn',
-                            text: `*Branch*\n\`${branchName}\``
+                            text: `*Branch*\n${branchName}`
                           },
                           {
                             type: 'mrkdwn',
@@ -344,7 +359,7 @@ jobs:
                         type: 'section',
                         text: {
                           type: 'mrkdwn',
-                          text: `*Issue*\n${sanitizeText(issueTitle)}`
+                          text: `*Issue*\n${sanitizeForSlack(issueTitle)}`
                         }
                       },
                       {
@@ -375,7 +390,7 @@ jobs:
                       type: 'header',
                       text: {
                         type: 'plain_text',
-                        text: '🔄 Issue Reopened',
+                        text: 'Issue Reopened',
                         emoji: true
                       }
                     },
@@ -384,7 +399,7 @@ jobs:
                       fields: [
                         {
                           type: 'mrkdwn',
-                          text: `*Issue #${issueNumber}*\n${sanitizeText(issueTitle)}`
+                          text: `*Issue #${issueNumber}*\n${sanitizeForSlack(issueTitle)}`
                         },
                         {
                           type: 'mrkdwn',
@@ -418,13 +433,13 @@ jobs:
                 const mention = slackUserId ? `<@${slackUserId}>` : assignee;
                 
                 await sendToSlack({
-                  text: `🚨 Important Issue #${issueNumber} requires attention`,
+                  text: `Important Issue #${issueNumber} requires attention`,
                   blocks: [
                     {
                       type: 'header',
                       text: {
                         type: 'plain_text',
-                        text: '🚨 Important Issue Alert',
+                        text: 'Important Issue Alert',
                         emoji: true
                       }
                     },
@@ -440,7 +455,7 @@ jobs:
                       fields: [
                         {
                           type: 'mrkdwn',
-                          text: `*Issue #${issueNumber}*\n${sanitizeText(issueTitle)}`
+                          text: `*Issue #${issueNumber}*\n${sanitizeForSlack(issueTitle)}`
                         },
                         {
                           type: 'mrkdwn',
