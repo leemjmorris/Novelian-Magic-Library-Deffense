@@ -57,6 +57,7 @@ jobs:
                 .replace(/\*/g, '')
                 .replace(/_/g, '')
                 .replace(/~/g, '')
+                .replace(/:/g, '')
                 .replace(/\n{3,}/g, '\n\n')
                 .trim()
                 .substring(0, 500);
@@ -265,7 +266,7 @@ jobs:
                 });
                 
                 const slackMessage = {
-                  text: `New Issue #${issueNumber}: ${issueTitle}`,
+                  text: `New Issue #${issueNumber} - ${safeTitle}`,
                   blocks: blocks
                 };
                 
@@ -291,7 +292,7 @@ jobs:
                     const mention = slackUserId ? `<@${slackUserId}>` : assignee;
                     
                     await sendToSlack({
-                      text: `Branch created: ${branchName}`,
+                      text: `Branch created for issue ${issueNumber}`,
                       blocks: [
                         {
                           type: 'section',
@@ -332,7 +333,7 @@ jobs:
                   const mention = slackUserId ? `<@${slackUserId}>` : assignee;
                   
                   await sendToSlack({
-                    text: `Issue #${issueNumber} assigned and branch created`,
+                    text: `Issue ${issueNumber} assigned and branch created`,
                     blocks: [
                       {
                         type: 'header',
@@ -384,7 +385,7 @@ jobs:
               
               if (action === 'reopened') {
                 await sendToSlack({
-                  text: `Issue #${issueNumber} reopened`,
+                  text: `Issue ${issueNumber} reopened`,
                   blocks: [
                     {
                       type: 'header',
@@ -433,7 +434,7 @@ jobs:
                 const mention = slackUserId ? `<@${slackUserId}>` : assignee;
                 
                 await sendToSlack({
-                  text: `Important Issue #${issueNumber} requires attention`,
+                  text: `Important Issue ${issueNumber} requires attention`,
                   blocks: [
                     {
                       type: 'header',
