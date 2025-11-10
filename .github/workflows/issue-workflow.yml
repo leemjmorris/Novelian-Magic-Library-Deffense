@@ -127,7 +127,7 @@ jobs:
                     if (res.statusCode === 200 && body === 'ok') {
                       resolve(body);
                     } else {
-                      reject(new Error(`Slack: ${res.statusCode} - ${body}`));
+                      reject(new Error('Slack: ' + res.statusCode + ' - ' + body));
                     }
                   });
                 });
@@ -176,24 +176,12 @@ jobs:
             
             try {
               if (action === 'opened') {
-                console.log(`Processing Issue #${issueNumber}`);
+                console.log('Processing Issue #' + issueNumber);
                 
                 let summary = null;
                 if (issueBody && issueBody.trim().length > 0) {
                   console.log('📨 Calling Gemini API...');
-                  const prompt = `다음 GitHub Issue를 5-7줄 정도로 상세하게 요약해주세요.
-
-주요 내용:
-- 이슈의 핵심 목적이나 문제점
-- 구체적인 작업 내용이나 요구사항
-- 중요한 세부사항이나 제약조건
-
-각 항목은 줄바꿈으로 구분하고, 불렛 포인트(-)를 사용해서 작성해주세요.
-마크다운 강조(**bold**, *italic* 등)는 사용하지 말고 평문으로 작성해주세요.
-
-제목: ${issueTitle}
-
-내용: ${issueBody.substring(0, 3000)}`;
+                  const prompt = '다음 GitHub Issue를 5-7줄 정도로 상세하게 요약해주세요.\n\n주요 내용:\n- 이슈의 핵심 목적이나 문제점\n- 구체적인 작업 내용이나 요구사항\n- 중요한 세부사항이나 제약조건\n\n각 항목은 줄바꿈으로 구분하고, 불렛 포인트(-)를 사용해서 작성해주세요.\n마크다운 강조는 사용하지 말고 평문으로 작성해주세요.\n\n제목: ' + issueTitle + '\n\n내용: ' + issueBody.substring(0, 3000);
                   summary = await callGeminiAPI(prompt);
                   
                   if (summary) {
@@ -209,7 +197,7 @@ jobs:
                 const safeTitle = sanitizeForSlack(issueTitle);
                 const safeSummary = summary ? sanitizeForSlack(summary) : null;
                 const slackUserId = assignee ? userMapping[assignee] : null;
-                const assigneeName = slackUserId ? `<@${slackUserId}>` : (assignee || '미지정');
+                const assigneeName = slackUserId ? '<@' + slackUserId + '>' : (assignee || '미지정');
                 const labelsText = labels.length > 0 ? labels.join(', ') : '없음';
                 
                 console.log('📝 Safe title:', safeTitle.substring(0, 100));
@@ -221,7 +209,7 @@ jobs:
                     type: 'header',
                     text: {
                       type: 'plain_text',
-                      text: `🆕 New Issue #${issueNumber}`,
+                      text: '🆕 New Issue #' + issueNumber,
                       emoji: true
                     }
                   },
@@ -230,11 +218,11 @@ jobs:
                     fields: [
                       {
                         type: 'mrkdwn',
-                        text: `*제목*\n${safeTitle}`
+                        text: '*제목*\n' + safeTitle
                       },
                       {
                         type: 'mrkdwn',
-                        text: `*담당자*\n${assigneeName}`
+                        text: '*담당자*\n' + assigneeName
                       }
                     ]
                   }
@@ -246,7 +234,7 @@ jobs:
                     fields: [
                       {
                         type: 'mrkdwn',
-                        text: `*Labels*\n${labelsText}`
+                        text: '*Labels*\n' + labelsText
                       }
                     ]
                   });
@@ -260,7 +248,7 @@ jobs:
                     type: 'section',
                     text: {
                       type: 'mrkdwn',
-                      text: `*🤖 AI 요약*\n${safeSummary}`
+                      text: '*🤖 AI 요약*\n' + safeSummary
                     }
                   });
                   console.log('✅ Summary block added');
@@ -288,7 +276,7 @@ jobs:
                 });
                 
                 const slackMessage = {
-                  text: `New Issue #${issueNumber}`,
+                  text: 'New Issue #' + issueNumber,
                   blocks: blocks
                 };
                 
@@ -306,20 +294,20 @@ jobs:
                 
                 if (assignee) {
                   try {
-                    const branchName = `issue-${issueNumber}`;
-                    execSync(`git checkout -b ${branchName}`, { stdio: 'inherit' });
-                    execSync(`git push origin ${branchName}`, { stdio: 'inherit' });
+                    const branchName = 'issue-' + issueNumber;
+                    execSync('git checkout -b ' + branchName, { stdio: 'inherit' });
+                    execSync('git push origin ' + branchName, { stdio: 'inherit' });
                     
-                    const mention = slackUserId ? `<@${slackUserId}>` : assignee;
+                    const mention = slackUserId ? '<@' + slackUserId + '>' : assignee;
                     
                     await sendToSlack({
-                      text: `Branch created for issue ${issueNumber}`,
+                      text: 'Branch created for issue ' + issueNumber,
                       blocks: [
                         {
                           type: 'section',
                           text: {
                             type: 'mrkdwn',
-                            text: `✅ *Branch 생성 완료*\n\`${branchName}\`\n담당자: ${mention}`
+                            text: '✅ *Branch 생성 완료*\n`' + branchName + '`\n담당자: ' + mention
                           }
                         },
                         {
@@ -344,17 +332,17 @@ jobs:
               }
               
               if (action === 'assigned' && assignee) {
-                const branchName = `issue-${issueNumber}`;
+                const branchName = 'issue-' + issueNumber;
                 
                 try {
-                  execSync(`git checkout -b ${branchName}`, { stdio: 'inherit' });
-                  execSync(`git push origin ${branchName}`, { stdio: 'inherit' });
+                  execSync('git checkout -b ' + branchName, { stdio: 'inherit' });
+                  execSync('git push origin ' + branchName, { stdio: 'inherit' });
                   
                   const slackUserId = userMapping[assignee];
-                  const mention = slackUserId ? `<@${slackUserId}>` : assignee;
+                  const mention = slackUserId ? '<@' + slackUserId + '>' : assignee;
                   
                   await sendToSlack({
-                    text: `Issue ${issueNumber} assigned`,
+                    text: 'Issue ' + issueNumber + ' assigned',
                     blocks: [
                       {
                         type: 'header',
@@ -369,11 +357,11 @@ jobs:
                         fields: [
                           {
                             type: 'mrkdwn',
-                            text: `*Branch*\n\`${branchName}\``
+                            text: '*Branch*\n`' + branchName + '`'
                           },
                           {
                             type: 'mrkdwn',
-                            text: `*담당자*\n${mention}`
+                            text: '*담당자*\n' + mention
                           }
                         ]
                       },
@@ -381,7 +369,7 @@ jobs:
                         type: 'section',
                         text: {
                           type: 'mrkdwn',
-                          text: `*Issue*\n${sanitizeForSlack(issueTitle)}`
+                          text: '*Issue*\n' + sanitizeForSlack(issueTitle)
                         }
                       },
                       {
@@ -406,10 +394,10 @@ jobs:
               
               if (action === 'reopened') {
                 const slackUserId = assignee ? userMapping[assignee] : null;
-                const assigneeName = slackUserId ? `<@${slackUserId}>` : (assignee || '미지정');
+                const assigneeName = slackUserId ? '<@' + slackUserId + '>' : (assignee || '미지정');
                 
                 await sendToSlack({
-                  text: `Issue ${issueNumber} reopened`,
+                  text: 'Issue ' + issueNumber + ' reopened',
                   blocks: [
                     {
                       type: 'header',
@@ -424,11 +412,11 @@ jobs:
                       fields: [
                         {
                           type: 'mrkdwn',
-                          text: `*Issue #${issueNumber}*\n${sanitizeForSlack(issueTitle)}`
+                          text: '*Issue #' + issueNumber + '*\n' + sanitizeForSlack(issueTitle)
                         },
                         {
                           type: 'mrkdwn',
-                          text: `*담당자*\n${assigneeName}`
+                          text: '*담당자*\n' + assigneeName
                         }
                       ]
                     },
@@ -455,10 +443,10 @@ jobs:
               
               if (hasImportantLabel && assignee) {
                 const slackUserId = userMapping[assignee];
-                const mention = slackUserId ? `<@${slackUserId}>` : assignee;
+                const mention = slackUserId ? '<@' + slackUserId + '>' : assignee;
                 
                 await sendToSlack({
-                  text: `Important Issue ${issueNumber}`,
+                  text: 'Important Issue ' + issueNumber,
                   blocks: [
                     {
                       type: 'header',
@@ -472,7 +460,7 @@ jobs:
                       type: 'section',
                       text: {
                         type: 'mrkdwn',
-                        text: `${mention} 중요한 Issue가 할당되었습니다.`
+                        text: mention + ' 중요한 Issue가 할당되었습니다.'
                       }
                     },
                     {
@@ -480,11 +468,11 @@ jobs:
                       fields: [
                         {
                           type: 'mrkdwn',
-                          text: `*Issue #${issueNumber}*\n${sanitizeForSlack(issueTitle)}`
+                          text: '*Issue #' + issueNumber + '*\n' + sanitizeForSlack(issueTitle)
                         },
                         {
                           type: 'mrkdwn',
-                          text: `*Labels*\n${labels.join(', ')}`
+                          text: '*Labels*\n' + labels.join(', ')
                         }
                       ]
                     },
