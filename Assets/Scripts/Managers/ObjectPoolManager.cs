@@ -161,7 +161,11 @@ public class ObjectPoolManager
             Debug.LogError($"Pool for type '{type.Name}' does not exist.");
             return;
         }
-
+        if (!activeObjects.ContainsKey(type) || !activeObjects[type].Contains(component))
+        {
+            Debug.LogWarning($"Attempted to despawn an object of type '{type.Name}' that is not managed by the pool.");
+            return;
+        }
         ObjectPool<T> pool = pools[type] as ObjectPool<T>;
         pool.Release(component);
     }
