@@ -1,0 +1,228 @@
+name: Rebase Fork Branches
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_pattern:
+        description: 'Branch pattern to rebase'
+        required: true
+        type: choice
+        options:
+          - 'feature/*'
+          - 'bugfix/*'
+          - 'hotfix/*'
+          - 'all'
+        default: 'feature/*'
+      upstream_branch:
+        description: 'Upstream branch to rebase onto'
+        required: true
+        type: string
+        default: 'main'
+      force_push:
+        description: 'Force push after rebase'
+        required: true
+        type: boolean
+        default: true
+
+env:
+  UPSTREAM_REPO: 'OWNER/REPO'  # LMJ : Change this to your upstream repo
+
+jobs:
+  rebase-branches:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/${{ env.UPSTREAM_REPO }}.git || true
+          git fetch upstream
+          git fetch origin
+      
+      - name: Rebase branches
+        id: rebase
+        run: |
+          echo "## 🔄 Rebase Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # LMJ : Initialize result arrays
+          SUCCESS_BRANCHES=()
+          FAILED_BRANCHES=()
+          SKIPPED_BRANCHES=()
+          
+          # LMJ : Get branches based on pattern
+          if [ "${{ github.event.inputs.branch_pattern }}" = "all" ]; then
+            BRANCHES=$(git branch -r | grep 'origin/' | grep -v 'HEAD' | grep -v 'origin/${{ github.event.inputs.upstream_branch }}' | sed 's/origin\///')
+          else
+            BRANCHES=$(git branch -r | grep "origin/${{ github.event.inputs.branch_pattern }}" | sed 's/origin\///')
+          fi
+          
+          echo "**Target Branches:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "$BRANCHES" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # LMJ : Process each branch
+          for BRANCH in $BRANCHES; do
+            echo "Processing: $BRANCH"
+            
+            # LMJ : Checkout branch
+            if ! git checkout "$BRANCH" 2>/dev/null; then
+              echo "❌ Failed to checkout $BRANCH" >> $GITHUB_STEP_SUMMARY
+              FAILED_BRANCHES+=("$BRANCH (checkout failed)")
+              continue
+            fi
+            
+            # LMJ : Check for uncommitted changes
+            if ! git diff-index --quiet HEAD --; then
+              echo "⚠️ Skipped $BRANCH (uncommitted changes)" >> $GITHUB_STEP_SUMMARY
+              SKIPPED_BRANCHES+=("$BRANCH (uncommitted changes)")
+              continue
+            fi
+            
+            # LMJ : Attempt rebase
+            if git rebase upstream/${{ github.event.inputs.upstream_branch }}; then
+              # LMJ : Push if force_push enabled
+              if [ "${{ github.event.inputs.force_push }}" = "true" ]; then
+                if git push origin "$BRANCH" --force-with-lease; then
+                  echo "✅ $BRANCH - Rebased and pushed successfully" >> $GITHUB_STEP_SUMMARY
+                  SUCCESS_BRANCHES+=("$BRANCH")
+                else
+                  echo "❌ $BRANCH - Rebased but push failed" >> $GITHUB_STEP_SUMMARY
+                  FAILED_BRANCHES+=("$BRANCH (push failed)")
+                  git rebase --abort 2>/dev/null || true
+                fi
+              else
+                echo "✅ $BRANCH - Rebased (not pushed)" >> $GITHUB_STEP_SUMMARY
+                SUCCESS_BRANCHES+=("$BRANCH")
+              fi
+            else
+              echo "❌ $BRANCH - Rebase failed (conflicts detected)" >> $GITHUB_STEP_SUMMARY
+              FAILED_BRANCHES+=("$BRANCH (conflicts)")
+              git rebase --abort
+            fi
+            
+            git checkout ${{ github.event.inputs.upstream_branch }} 2>/dev/null || git checkout main
+          done
+          
+          # LMJ : Save results to environment
+          echo "success_count=${#SUCCESS_BRANCHES[@]}" >> $GITHUB_OUTPUT
+          echo "failed_count=${#FAILED_BRANCHES[@]}" >> $GITHUB_OUTPUT
+          echo "skipped_count=${#SKIPPED_BRANCHES[@]}" >> $GITHUB_OUTPUT
+          
+          # LMJ : Create detailed summary
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Success: ${#SUCCESS_BRANCHES[@]}" >> $GITHUB_STEP_SUMMARY
+          echo "- ❌ Failed: ${#FAILED_BRANCHES[@]}" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️ Skipped: ${#SKIPPED_BRANCHES[@]}" >> $GITHUB_STEP_SUMMARY
+          
+          # LMJ : Save for Slack notification
+          echo "SUCCESS_LIST=${SUCCESS_BRANCHES[*]}" >> $GITHUB_ENV
+          echo "FAILED_LIST=${FAILED_BRANCHES[*]}" >> $GITHUB_ENV
+          echo "SKIPPED_LIST=${SKIPPED_BRANCHES[*]}" >> $GITHUB_ENV
+      
+      - name: Send Slack notification
+        if: always()
+        run: |
+          # LMJ : Determine status emoji and color
+          if [ "${{ steps.rebase.outputs.failed_count }}" = "0" ] && [ "${{ steps.rebase.outputs.success_count }}" != "0" ]; then
+            STATUS_EMOJI="✅"
+            COLOR="#36a64f"
+            STATUS_TEXT="All Successful"
+          elif [ "${{ steps.rebase.outputs.success_count }}" = "0" ] && [ "${{ steps.rebase.outputs.failed_count }}" != "0" ]; then
+            STATUS_EMOJI="❌"
+            COLOR="#ff0000"
+            STATUS_TEXT="All Failed"
+          elif [ "${{ steps.rebase.outputs.success_count }}" = "0" ] && [ "${{ steps.rebase.outputs.skipped_count }}" != "0" ]; then
+            STATUS_EMOJI="⚠️"
+            COLOR="#ffcc00"
+            STATUS_TEXT="All Skipped"
+          else
+            STATUS_EMOJI="⚠️"
+            COLOR="#ffcc00"
+            STATUS_TEXT="Partial Success"
+          fi
+          
+          # LMJ : Build success list
+          SUCCESS_TEXT=""
+          if [ -n "$SUCCESS_LIST" ]; then
+            SUCCESS_TEXT="*✅ Successful (${{ steps.rebase.outputs.success_count }}):*\n"
+            for branch in $SUCCESS_LIST; do
+              SUCCESS_TEXT="${SUCCESS_TEXT}  • \`${branch}\`\n"
+            done
+          fi
+          
+          # LMJ : Build failed list
+          FAILED_TEXT=""
+          if [ -n "$FAILED_LIST" ]; then
+            FAILED_TEXT="*❌ Failed (${{ steps.rebase.outputs.failed_count }}):*\n"
+            for branch in $FAILED_LIST; do
+              FAILED_TEXT="${FAILED_TEXT}  • \`${branch}\`\n"
+            done
+          fi
+          
+          # LMJ : Build skipped list
+          SKIPPED_TEXT=""
+          if [ -n "$SKIPPED_LIST" ]; then
+            SKIPPED_TEXT="*⚠️ Skipped (${{ steps.rebase.outputs.skipped_count }}):*\n"
+            for branch in $SKIPPED_LIST; do
+              SKIPPED_TEXT="${SKIPPED_TEXT}  • \`${branch}\`\n"
+            done
+          fi
+          
+          # LMJ : Send to Slack
+          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"attachments\": [
+                {
+                  \"color\": \"${COLOR}\",
+                  \"title\": \"${STATUS_EMOJI} Fork Branch Rebase Results\",
+                  \"fields\": [
+                    {
+                      \"title\": \"Pattern\",
+                      \"value\": \"\`${{ github.event.inputs.branch_pattern }}\`\",
+                      \"short\": true
+                    },
+                    {
+                      \"title\": \"Upstream Branch\",
+                      \"value\": \"\`upstream/${{ github.event.inputs.upstream_branch }}\`\",
+                      \"short\": true
+                    },
+                    {
+                      \"title\": \"Status\",
+                      \"value\": \"${STATUS_TEXT}\",
+                      \"short\": true
+                    },
+                    {
+                      \"title\": \"Force Push\",
+                      \"value\": \"${{ github.event.inputs.force_push }}\",
+                      \"short\": true
+                    }
+                  ],
+                  \"text\": \"${SUCCESS_TEXT}${FAILED_TEXT}${SKIPPED_TEXT}\",
+                  \"footer\": \"GitHub Actions\",
+                  \"footer_icon\": \"https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png\",
+                  \"ts\": $(date +%s),
+                  \"actions\": [
+                    {
+                      \"type\": \"button\",
+                      \"text\": \"View Workflow\",
+                      \"url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"
+                    }
+                  ]
+                }
+              ]
+            }"
