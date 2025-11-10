@@ -25,6 +25,8 @@ jobs:
           script: |
             const https = require('https');
             
+            // LMJ : Get PR info (different structure for review events)
+            const isPRReview = context.eventName === 'pull_request_review';
             const prNumber = context.payload.pull_request.number;
             const prTitle = context.payload.pull_request.title;
             const prUrl = context.payload.pull_request.html_url;
@@ -186,12 +188,58 @@ jobs:
             }
             
             try {
-              console.log(`Action: ${action}`);
+              console.log(`Event: ${context.eventName}, Action: ${action}`);
+              
+              // ========================================
+              // LMJ : Handle PULL_REQUEST_REVIEW submitted event
+              // ========================================
+              if (isPRReview && action === 'submitted') {
+                console.log('📝 Review submitted');
+                
+                const review = context.payload.review;
+                const reviewer = review.user.login;
+                const reviewState = review.state;
+                const reviewBody = review.body || '';
+                
+                const reviewerMention = userMapping[reviewer] ? `<@${userMapping[reviewer]}>` : `@${reviewer}`;
+                
+                let statusEmoji = '💬';
+                let statusText = '코멘트';
+                let notionStatus = '리뷰 중';
+                
+                if (reviewState === 'approved') {
+                  statusEmoji = '✅';
+                  statusText = '승인';
+                  notionStatus = '승인됨';
+                } else if (reviewState === 'changes_requested') {
+                  statusEmoji = '🔄';
+                  statusText = '수정 요청';
+                  notionStatus = '수정 요청';
+                }
+                
+                // LMJ : Send Slack notification
+                const slackMessage = `${statusEmoji} *PR #${prNumber} ${statusText}*
+
+*${prTitle}*
+
+👤 *작성자:* ${authorMention}
+🔍 *리뷰어:* ${reviewerMention}
+${reviewBody ? `\n💬 *코멘트:* ${reviewBody.substring(0, 100)}${reviewBody.length > 100 ? '...' : ''}` : ''}
+
+🔗 <${prUrl}|PR 보기>`;
+                
+                await sendToSlack(slackMessage);
+                console.log('✅ Slack notification sent');
+                
+                // LMJ : Update Notion status
+                await updateNotionStatus(prUrl, notionStatus);
+                console.log(`✅ Notion status updated to ${notionStatus}`);
+              }
               
               // ========================================
               // LMJ : Handle OPENED event
               // ========================================
-              if (action === 'opened') {
+              else if (action === 'opened') {
                 console.log('🔀 PR opened');
                 
                 // LMJ : Extract linked issue numbers
