@@ -110,6 +110,9 @@ jobs:
                 const data = JSON.stringify(message);
                 const url = new URL(process.env.SLACK_WEBHOOK_URL);
                 
+                console.log('📨 Slack message JSON:', data);
+                console.log('📨 Message length:', data.length);
+                
                 const options = {
                   hostname: url.hostname,
                   path: url.pathname + url.search,
@@ -124,6 +127,8 @@ jobs:
                   let body = '';
                   res.on('data', (chunk) => body += chunk);
                   res.on('end', () => {
+                    console.log('📨 Slack response status:', res.statusCode);
+                    console.log('📨 Slack response body:', body);
                     if (res.statusCode === 200 && body === 'ok') {
                       resolve(body);
                     } else {
@@ -132,7 +137,10 @@ jobs:
                   });
                 });
                 
-                req.on('error', reject);
+                req.on('error', (err) => {
+                  console.log('📨 Slack request error:', err.message);
+                  reject(err);
+                });
                 req.write(data);
                 req.end();
               });
@@ -191,8 +199,8 @@ jobs:
                 
                 const safeTitle = sanitizeForSlack(issueTitle);
                 const safeSummary = summary ? sanitizeForSlack(summary) : null;
-                const assigneeName = assignee || '미지정';
-                const labelsText = labels.length > 0 ? labels.join(', ') : '없음';
+                const assigneeName = assignee || 'Unassigned';
+                const labelsText = labels.length > 0 ? labels.join(', ') : 'None';
                 
                 console.log('📝 Safe title:', safeTitle);
                 console.log('📝 Safe summary:', safeSummary);
@@ -211,11 +219,11 @@ jobs:
                     fields: [
                       {
                         type: 'mrkdwn',
-                        text: `*제목*\n${safeTitle}`
+                        text: `*Title*\n${safeTitle}`
                       },
                       {
                         type: 'mrkdwn',
-                        text: `*담당자*\n${assigneeName}`
+                        text: `*Assignee*\n${assigneeName}`
                       }
                     ]
                   }
@@ -241,7 +249,7 @@ jobs:
                     type: 'section',
                     text: {
                       type: 'mrkdwn',
-                      text: `*AI 요약*\n${safeSummary}`
+                      text: `*AI Summary*\n${safeSummary}`
                     }
                   });
                 }
@@ -266,7 +274,7 @@ jobs:
                 });
                 
                 const slackMessage = {
-                  text: `New Issue #${issueNumber} - ${safeTitle}`,
+                  text: `New Issue ${issueNumber}`,
                   blocks: blocks
                 };
                 
@@ -298,7 +306,7 @@ jobs:
                           type: 'section',
                           text: {
                             type: 'mrkdwn',
-                            text: `Branch 생성 완료\n${branchName}\n담당자: ${mention}`
+                            text: `Branch created\n${branchName}\nAssignee: ${mention}`
                           }
                         },
                         {
@@ -400,11 +408,11 @@ jobs:
                       fields: [
                         {
                           type: 'mrkdwn',
-                          text: `*Issue #${issueNumber}*\n${sanitizeForSlack(issueTitle)}`
+                          text: `*Issue*\n${sanitizeForSlack(issueTitle)}`
                         },
                         {
                           type: 'mrkdwn',
-                          text: `*Assignee*\n${assignee || '미지정'}`
+                          text: `*Assignee*\n${assignee || 'Unassigned'}`
                         }
                       ]
                     },
@@ -434,7 +442,7 @@ jobs:
                 const mention = slackUserId ? `<@${slackUserId}>` : assignee;
                 
                 await sendToSlack({
-                  text: `Important Issue ${issueNumber} requires attention`,
+                  text: `Important Issue ${issueNumber}`,
                   blocks: [
                     {
                       type: 'header',
@@ -448,7 +456,7 @@ jobs:
                       type: 'section',
                       text: {
                         type: 'mrkdwn',
-                        text: `${mention} 중요한 Issue가 할당되었습니다.`
+                        text: `${mention} An important issue has been assigned.`
                       }
                     },
                     {
@@ -456,7 +464,7 @@ jobs:
                       fields: [
                         {
                           type: 'mrkdwn',
-                          text: `*Issue #${issueNumber}*\n${sanitizeForSlack(issueTitle)}`
+                          text: `*Issue*\n${sanitizeForSlack(issueTitle)}`
                         },
                         {
                           type: 'mrkdwn',
