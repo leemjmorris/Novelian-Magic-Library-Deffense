@@ -6,19 +6,34 @@ public class Projectile : MonoBehaviour
     public float damage = 10f;
     private Vector3 direction;
     private Transform target;
-
+    private bool hasLostTarget = false; // JML: Track if the target has been lost
     private void Update()
     {
-        if (target != null)
+        if (target != null && !hasLostTarget)
         {
-            direction = (target.position - transform.position).normalized;
+            if (!target.gameObject.activeInHierarchy)
+            {
+                hasLostTarget = true; // JML: Mark that the target has been lost
+            }
+            else
+            {
+                direction = (target.position - transform.position).normalized;
+
+            }
+        }
+        
+        if (direction != Vector3.zero)
+        {
             transform.Translate(direction * speed * Time.deltaTime);
         }
     }
 
     public void SetTarget(Transform target)
     {
-        this.target = target;
+        if (!hasLostTarget)
+        {
+            this.target = target;
+        }
         
     }
     

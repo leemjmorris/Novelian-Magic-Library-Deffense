@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Pool;
-public class Monster : MonoBehaviour, IPoolable
+public class Monster : MonoBehaviour, IPoolable, ITargetable
 {
     [SerializeField] new Collider2D collider2D;
     public static event System.Action<Monster> OnMonsterDied;
@@ -14,6 +14,11 @@ public class Monster : MonoBehaviour, IPoolable
     private float currentHealth;
     private bool isWallHit = false;
 
+    // JML: ITargetable implementation
+    public Transform GetTransform() => transform;
+    public Vector3 GetPosition() => transform.position;
+    public bool IsAlive() => gameObject.activeInHierarchy && currentHealth > 0;
+    //--------------------------------
     private void OnEnable()
     {
         collider2D.enabled = true;
@@ -90,7 +95,7 @@ public class Monster : MonoBehaviour, IPoolable
         wall = null;
         attackTimer = 0f;
         
-        
+        TargetRegistry.Instance.RegisterTarget(this);
         Debug.Log("Monster spawned");
     }
 
@@ -99,7 +104,7 @@ public class Monster : MonoBehaviour, IPoolable
         isWallHit = false;
         wall = null;
         attackTimer = 0f;
-        
+        TargetRegistry.Instance.UnregisterTarget(this);
         Debug.Log("Monster despawned");
     }
 }
