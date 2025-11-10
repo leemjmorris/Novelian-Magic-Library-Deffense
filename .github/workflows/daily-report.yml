@@ -19,6 +19,7 @@ jobs:
         env:
           NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
           NOTION_REPORT_PAGE_ID: ${{ secrets.NOTION_REPORT_PAGE_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           script: |
             const https = require('https');
@@ -44,6 +45,111 @@ jobs:
               'bigwaterplz': '김민휘',
               'kimjiw8698-crypto': '김지원'
             };
+            
+            async function generateGeminiSummary(issues, prs) {
+              const geminiApiKey = process.env.GEMINI_API_KEY;
+              
+              const issuesList = issues.map(issue => {
+                const assignees = issue.assignees.map(a => userNames[a.login] || a.login).join(', ') || '미배정';
+                const labels = issue.labels.map(l => l.name).join(', ');
+                return `- #${issue.number} ${issue.title} (담당: ${assignees}) [${labels}] - ${issue.state}`;
+              }).join('\n');
+              
+              const prsList = prs.map(pr => {
+                const author = userNames[pr.user.login] || pr.user.login;
+                return `- #${pr.number} ${pr.title} (작성: ${author}) - ${pr.merged_at ? '머지됨' : pr.state}`;
+              }).join('\n');
+              
+              const prompt = `당신은 Unity 게임 개발 팀의 일일 보고서를 작성하는 AI입니다.
+아래의 GitHub Issues와 Pull Requests를 분석하여, 팀원별 작업 내용을 요약해주세요.
+
+**팀원 목록:**
+- 이명진 (팀장, 프로그래머)
+- 김재문 (프로그래머)
+- 이채빈 (프로그래머/디자이너)
+- 김동욱 (디자이너)
+- 김민휘 (디자이너)
+- 김지원 (기획자)
+
+**GitHub Issues (최근 24시간):**
+${issuesList || '없음'}
+
+**Pull Requests (최근 24시간):**
+${prsList || '없음'}
+
+**요구 사항:**
+1. 다음 형식으로 요약해주세요:
+
+# 이슈
+- (완료 또는 진행중) 담당자 - 작업 내용 요약
+
+---
+
+# 전일 보고
+## 완료
+- 담당자 - 완료한 작업 내용
+
+## 미완료 (사유, 처리)
+- 담당자 - 미완료 작업 및 사유
+
+---
+
+# 금일 보고
+## 오전
+- 담당자 - 오전 작업 계획
+
+## 오후
+- 담당자 - 오후 작업 계획
+
+## (야근)
+- 담당자 - 야근 작업 계획 (있는 경우에만)
+
+2. Issue의 label을 참고하여 작업의 우선순위와 중요도를 판단하세요.
+3. Issue의 상태(open/closed)를 참고하여 완료 여부를 판단하세요.
+4. PR의 merge 여부를 참고하여 작업 완료를 판단하세요.
+5. 간결하고 명확하게 작성하세요.
+6. 작업 내용이 없으면 해당 섹션을 생략하세요.
+7. 마크다운 형식으로 작성하되, 코드 블록(```)은 사용하지 마세요.
+
+요약을 시작하세요:`;
+
+              return new Promise((resolve, reject) => {
+                const postData = JSON.stringify({
+                  contents: [{
+                    parts: [{ text: prompt }]
+                  }]
+                });
+                
+                const req = https.request({
+                  hostname: 'generativelanguage.googleapis.com',
+                  path: `/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(postData)
+                  }
+                }, (res) => {
+                  let body = '';
+                  res.on('data', d => body += d);
+                  res.on('end', () => {
+                    try {
+                      const result = JSON.parse(body);
+                      if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+                        resolve(result.candidates[0].content.parts[0].text);
+                      } else {
+                        reject(new Error('Invalid Gemini API response'));
+                      }
+                    } catch (e) {
+                      reject(e);
+                    }
+                  });
+                });
+                
+                req.on('error', reject);
+                req.write(postData);
+                req.end();
+              });
+            }
             
             async function addToNotion(content) {
               const token = process.env.NOTION_API_TOKEN;
@@ -129,6 +235,8 @@ jobs:
                 new Date(issue.closed_at) >= new Date(yesterday)
               );
               
+              const allRecentIssues = issuesCreated.data.filter(issue => !issue.pull_request);
+              
               const prsCreated = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -158,6 +266,10 @@ jobs:
                 !issue.pull_request &&
                 issue.assignees.length > 0
               );
+              
+              console.log('🤖 Generating AI summary with Gemini...');
+              const aiSummary = await generateGeminiSummary(allRecentIssues, prsCreated.data);
+              console.log('✅ AI summary generated');
               
               const userStats = {};
               
@@ -201,7 +313,35 @@ jobs:
                 userStats[userName].prs++;
               }
               
-              const blocks = [
+              const blocks = [];
+              
+              blocks.push({
+                object: 'block',
+                type: 'heading_2',
+                heading_2: {
+                  rich_text: [{ text: { content: '🤖 AI 요약' } }]
+                }
+              });
+              
+              const summaryLines = aiSummary.split('\n');
+              for (const line of summaryLines) {
+                if (line.trim()) {
+                  blocks.push({
+                    object: 'block',
+                    type: 'paragraph',
+                    paragraph: {
+                      rich_text: [{ text: { content: line } }]
+                    }
+                  });
+                }
+              }
+              
+              blocks.push(
+                {
+                  object: 'block',
+                  type: 'divider',
+                  divider: {}
+                },
                 {
                   object: 'block',
                   type: 'heading_2',
@@ -271,7 +411,7 @@ jobs:
                     ]
                   }
                 }
-              ];
+              );
               
               if (Object.keys(userStats).length > 0) {
                 blocks.push(
