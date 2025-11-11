@@ -3,8 +3,6 @@ name: Auto Label Ready Issues
 on:
   issues:
     types: [opened, edited, assigned, labeled, unlabeled]
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
