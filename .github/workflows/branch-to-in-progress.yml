@@ -161,23 +161,17 @@ jobs:
                 return;
               }
               
-              console.log('🔍 Debugging status options:');
-              statusField.options.forEach((opt, idx) => {
-                const hasInProgress = opt.name.includes('In Progress');
-                console.log(`  [${idx}] "${opt.name}" - includes "In Progress": ${hasInProgress}`);
-              });
-              
               const inProgressOption = statusField.options.find(
-                opt => opt.name.includes('In Progress')
+                opt => opt.name === '🚀 In Progress'
               );
               
               if (!inProgressOption) {
-                console.log('❌ In Progress status not found after debug');
+                console.log('❌ In Progress status not found');
                 console.log('Available:', statusField.options.map(o => o.name).join(', '));
                 return;
               }
               
-              console.log(`✅ Found status: "${inProgressOption.name}"`);
+              console.log(`✅ Found status: ${inProgressOption.name}`);
               
               const mutation = `
                 mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $valueId: String!) {
