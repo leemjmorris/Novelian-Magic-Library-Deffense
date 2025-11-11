@@ -5,6 +5,7 @@ using UnityEngine.Pool;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using Cysharp.Threading.Tasks;
+using System.Linq;
 
 public class ObjectPoolManager
 {
@@ -244,6 +245,17 @@ public class ObjectPoolManager
 
     public void ClearAll()
     {
+        foreach (var type in activeObjects.Keys.ToList())
+        {
+            foreach (var obj in activeObjects[type].ToList())
+            {
+                if (obj != null)
+                {
+                    obj.gameObject.SetActive(false);
+                }   
+            }
+        }
+
         foreach (var pool in pools.Values)
         {
             (pool as IDisposable)?.Dispose();

@@ -1,10 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.Pool;
-public class Monster : MonoBehaviour, IPoolable, ITargetable
+public class Monster : MonsterBase, ITargetable
 {
     [SerializeField] new Collider2D collider2D;
     [SerializeField] private Rigidbody2D rb;
-    public static event System.Action<Monster> OnMonsterDied;
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackInterval = 0.7f;
@@ -77,10 +76,10 @@ public class Monster : MonoBehaviour, IPoolable, ITargetable
         }
     }
 
-    private void Die()
+    protected override void Die()
     {
-        Debug.Log("Monster died.");
-        OnMonsterDied?.Invoke(this);
+        base.Die();
+        ObjectPoolManager.Instance.Despawn(this);
     }
     
     private void OnTriggerEnter2D(Collider2D collision)
@@ -94,7 +93,7 @@ public class Monster : MonoBehaviour, IPoolable, ITargetable
         }
     }
 
-    public void OnSpawn()
+    public override void OnSpawn()
     {
         
         currentHealth = maxHealth;
@@ -107,7 +106,7 @@ public class Monster : MonoBehaviour, IPoolable, ITargetable
         Debug.Log("Monster spawned");
     }
 
-    public void OnDespawn()
+    public override void OnDespawn()
     {
         isWallHit = false;
         wall = null;
