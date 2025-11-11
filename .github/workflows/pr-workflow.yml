@@ -13,14 +13,22 @@ jobs:
   handle-pr:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/scripts/user-mapping.json
+          sparse-checkout-cone-mode: false
+
       - name: Handle PR Event
         uses: actions/github-script@v7
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           script: |
+            const fs = require('fs');
             const https = require('https');
-            
+
             const prNumber = context.payload.pull_request.number;
             const prTitle = context.payload.pull_request.title;
             const prUrl = context.payload.pull_request.html_url;
@@ -28,15 +36,13 @@ jobs:
             const author = context.payload.pull_request.user.login;
             const headBranch = context.payload.pull_request.head.ref;
             const baseBranch = context.payload.pull_request.base.ref;
-            
-            const userMapping = {
-              'leemjmorris': 'U09RR542WJ1',
-              'jaemoon23': 'U09RR5022KX',
-              'LeeChaeBin002': 'U09SP9SV37S',
-              'Kdwio': 'U09RCTQNJKZ',
-              'bigwaterplz': 'U09RY3FQE4C',
-              'kimjiw8698-crypto': 'U09RVE84DQS'
-            };
+
+            // Load user mapping from JSON file
+            const userMappingData = JSON.parse(fs.readFileSync('.github/scripts/user-mapping.json', 'utf8'));
+            const userMapping = {};
+            for (const [username, data] of Object.entries(userMappingData)) {
+              userMapping[username] = data.slackId;
+            }
             
             function sendToSlack(message) {
               return new Promise((resolve, reject) => {

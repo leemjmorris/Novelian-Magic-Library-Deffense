@@ -14,6 +14,13 @@ jobs:
   generate-daily-report:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/scripts/user-mapping.json
+          sparse-checkout-cone-mode: false
+
       - name: Generate Daily Report
         uses: actions/github-script@v7
         env:
@@ -23,36 +30,35 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           script: |
+            const fs = require('fs');
             const https = require('https');
-            
+
             const now = new Date();
             const kstOffset = 9 * 60 * 60 * 1000;
             const kstDate = new Date(now.getTime() + kstOffset);
             const dayOfWeek = kstDate.getDay();
-            
+
             const daysToLookBack = (dayOfWeek === 1) ? 3 : 1;
             const startDate = new Date(kstDate.getTime() - daysToLookBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             const today = kstDate.toISOString().split('T')[0];
-            
-            const dateStr = kstDate.toLocaleDateString('ko-KR', { 
-              year: 'numeric', 
-              month: 'long', 
+
+            const dateStr = kstDate.toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
               day: 'numeric',
               weekday: 'long'
             });
-            
-            const periodStr = (dayOfWeek === 1) 
-              ? '(주말 포함)' 
+
+            const periodStr = (dayOfWeek === 1)
+              ? '(주말 포함)'
               : '';
-            
-            const userNames = {
-              'leemjmorris': '이명진',
-              'jaemoon23': '이재문',
-              'LeeChaeBin002': '이채빈',
-              'Kdwio': '김동욱',
-              'bigwaterplz': '김민휘',
-              'kimjiw8698-crypto': '김지원'
-            };
+
+            // Load user mapping from JSON file
+            const userMappingData = JSON.parse(fs.readFileSync('.github/scripts/user-mapping.json', 'utf8'));
+            const userNames = {};
+            for (const [username, data] of Object.entries(userMappingData)) {
+              userNames[username] = data.koreanName;
+            }
 
             function sendToSlack(message) {
               return new Promise((resolve, reject) => {

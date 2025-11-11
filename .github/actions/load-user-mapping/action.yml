@@ -1,0 +1,28 @@
+name: 'Load User Mapping'
+description: 'Load user mapping from JSON and expose as output'
+
+outputs:
+  mapping:
+    description: 'User mapping JSON string'
+    value: ${{ steps.load.outputs.mapping }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        sparse-checkout: |
+          .github/scripts/user-mapping.json
+        sparse-checkout-cone-mode: false
+
+    - name: Load mapping
+      id: load
+      shell: bash
+      run: |
+        if [ -f ".github/scripts/user-mapping.json" ]; then
+          echo "mapping=$(cat .github/scripts/user-mapping.json | jq -c '.')" >> $GITHUB_OUTPUT
+        else
+          echo "❌ User mapping file not found"
+          exit 1
+        fi
