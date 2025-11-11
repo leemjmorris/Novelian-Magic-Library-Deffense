@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# LMJ : Automatically delete local branches that have been deleted on remote
+
+echo "🧹 Checking for stale local branches..."
+
+# LMJ : Prune remote tracking branches
+git fetch --prune > /dev/null 2>&1
+
+# LMJ : Get list of remote branches
+REMOTE_BRANCHES=$(git branch -r | grep -v 'HEAD' | sed 's/origin\///' | sed 's/^[[:space:]]*//')
+
+# LMJ : Get list of local branches (excluding current and main/master)
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+LOCAL_BRANCHES=$(git branch | grep -v '^\*' | sed 's/^[[:space:]]*//' | grep -v '^main$' | grep -v '^master$')
+
+# LMJ : Delete local branches that don't exist on remote
+DELETED_COUNT=0
+for LOCAL_BRANCH in $LOCAL_BRANCHES; do
+    if ! echo "$REMOTE_BRANCHES" | grep -q "^${LOCAL_BRANCH}$"; then
+        echo "  ❌ Deleting: $LOCAL_BRANCH (not on remote)"
+        git branch -D "$LOCAL_BRANCH"
+        DELETED_COUNT=$((DELETED_COUNT + 1))
+    fi
+done
+
+if [ $DELETED_COUNT -eq 0 ]; then
+    echo "  ✅ All local branches are up to date"
+else
+    echo "  ✅ Deleted $DELETED_COUNT stale branch(es)"
+fi
