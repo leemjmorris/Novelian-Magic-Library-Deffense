@@ -7,24 +7,18 @@ using UnityEngine;
 
 public class StageManager : MonoBehaviour
 {
-    // TODO: 몬스터 소환 관리 - WaveManager로 분리 고려
-    // TODO: 스테이지 진행 관리
-    // TODO: 보스 전투 관리
-    // TODO: 스테이지 클리어 조건 관리
-    // TODO: 플레이어 레벨업 관리
-    // TODO: 아이템 드랍 관리
-    // TODO: 캐릭터 배치
-    // TODO: BGM 전환 관리
-    // TODO: 스테이지별 특수 이벤트 관리
-
     [SerializeField] private WaveManger waveManager;
     public int CurrentStageId { get; private set; }
     private int maxExp = 100;
-    private int nextExp = 100;
+    private const int NEXT_EXP = 100;
     private int currentExp = 0;
     private int level = 0;
     private bool isStageCleared = false;
 
+    private void OnEnable()
+    {
+        Monster.OnMonsterDied += AddExp;
+    }
     private async UniTaskVoid Start()
     {
         await UniTask.DelayFrame(1);
@@ -39,14 +33,25 @@ public class StageManager : MonoBehaviour
 
     }
 
+    private void AddExp(Monster monster)
+    {
+        currentExp += monster.Exp;
+        Debug.Log($"Add {monster.Exp} EXP. CurrentExp: {currentExp}/{maxExp}");
+        if (currentExp >= maxExp)
+        {
+            LevelUp();
+        }
+    }
+
     private void LevelUp()
     {
-        while (currentExp > maxExp)
+        while (currentExp >= maxExp)
         {
             currentExp -= maxExp;
-            maxExp += nextExp;
+            maxExp += NEXT_EXP;
             level++;
             Debug.Log($"Level Up! New Level: {level}, CurrentExp: {currentExp}, MaxExp: {maxExp}");
+            // TODO: JML: Level Up Rewards
         }
     }
 }

@@ -9,6 +9,7 @@ public class Monster : MonoBehaviour, IPoolable, ITargetable
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackInterval = 0.7f;
     [SerializeField] private float maxHealth = 100f;
+    public int Exp { get; private set; } = 11; // JML: Example exp amount
 
     private float attackTimer = 0f;
     private Wall wall;
