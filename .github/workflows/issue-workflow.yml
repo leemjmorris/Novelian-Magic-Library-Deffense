@@ -2,7 +2,7 @@ name: Issue Workflow
 
 on:
   issues:
-    types: [opened, assigned, reopened]
+    types: [opened, assigned, reopened, labeled]
 
 permissions:
   contents: write
@@ -38,6 +38,7 @@ jobs:
             const assignees = context.payload.issue.assignees;
             const assignee = assignees.length > 0 ? assignees[0].login : null;
             const wasJustCreated = context.payload.issue.created_at === context.payload.issue.updated_at;
+            const addedLabel = action === 'labeled' ? context.payload.label : null;
             
             const userMapping = {
               'leemjmorris': 'U09RR542WJ1',
@@ -229,20 +230,6 @@ jobs:
                 const assigneeName = slackUserId ? '<@' + slackUserId + '>' : (assignee || '미지정');
                 const labelsText = labels.length > 0 ? labels.join(', ') : '없음';
                 
-                let branchName = null;
-                if (assignee) {
-                  try {
-                    branchName = 'feature/issue-' + issueNumber + '-' + assignee;
-                    console.log('🌿 Creating branch:', branchName);
-                    execSync('git checkout -b ' + branchName, { stdio: 'inherit' });
-                    execSync('git push origin ' + branchName, { stdio: 'inherit' });
-                    console.log('✅ Branch created successfully');
-                  } catch (error) {
-                    console.log('Branch creation failed:', error.message);
-                    branchName = null;
-                  }
-                }
-                
                 const blocks = [
                   {
                     type: 'header',
@@ -274,18 +261,6 @@ jobs:
                       {
                         type: 'mrkdwn',
                         text: '*Labels*\n' + labelsText
-                      }
-                    ]
-                  });
-                }
-                
-                if (branchName) {
-                  blocks.push({
-                    type: 'section',
-                    fields: [
-                      {
-                        type: 'mrkdwn',
-                        text: '*Branch*\n`' + branchName + '`'
                       }
                     ]
                   });
@@ -342,65 +317,82 @@ jobs:
                 });
               }
               
-              if (action === 'assigned' && assignee && !wasJustCreated) {
-                const branchName = 'feature/issue-' + issueNumber + '-' + assignee;
-                console.log('🌿 Creating branch:', branchName);
+              if (action === 'labeled' && addedLabel && addedLabel.name.toLowerCase() === 'ready') {
+                console.log('🏷️ Ready label added to Issue #' + issueNumber);
                 
-                try {
-                  execSync('git checkout -b ' + branchName, { stdio: 'inherit' });
-                  execSync('git push origin ' + branchName, { stdio: 'inherit' });
+                if (!assignee) {
+                  console.log('⚠️ No assignee found, skipping branch creation');
+                } else {
+                  const branchName = 'feature/issue-' + issueNumber + '-' + assignee;
+                  console.log('🌿 Creating branch:', branchName);
                   
-                  const slackUserId = userMapping[assignee];
-                  const mention = slackUserId ? '<@' + slackUserId + '>' : assignee;
-                  
-                  await sendToSlack({
-                    text: 'Issue ' + issueNumber + ' assigned',
-                    blocks: [
-                      {
-                        type: 'header',
-                        text: {
-                          type: 'plain_text',
-                          text: '🌿 Branch Created',
-                          emoji: true
-                        }
-                      },
-                      {
-                        type: 'section',
-                        fields: [
-                          {
-                            type: 'mrkdwn',
-                            text: '*Branch*\n`' + branchName + '`'
-                          },
-                          {
-                            type: 'mrkdwn',
-                            text: '*담당자*\n' + mention
+                  try {
+                    execSync('git checkout -b ' + branchName, { stdio: 'inherit' });
+                    execSync('git push origin ' + branchName, { stdio: 'inherit' });
+                    console.log('✅ Branch created successfully');
+                    
+                    const slackUserId = userMapping[assignee];
+                    const mention = slackUserId ? '<@' + slackUserId + '>' : assignee;
+                    
+                    await sendToSlack({
+                      text: 'Branch created for Issue ' + issueNumber,
+                      blocks: [
+                        {
+                          type: 'header',
+                          text: {
+                            type: 'plain_text',
+                            text: '🌿 Branch Created (Ready)',
+                            emoji: true
                           }
-                        ]
-                      },
-                      {
-                        type: 'section',
-                        text: {
-                          type: 'mrkdwn',
-                          text: '*Issue*\n' + sanitizeForSlack(issueTitle)
-                        }
-                      },
-                      {
-                        type: 'actions',
-                        elements: [
-                          {
-                            type: 'button',
-                            text: {
-                              type: 'plain_text',
-                              text: 'View Issue'
+                        },
+                        {
+                          type: 'section',
+                          fields: [
+                            {
+                              type: 'mrkdwn',
+                              text: '*Branch*\n`' + branchName + '`'
                             },
-                            url: issueUrl
+                            {
+                              type: 'mrkdwn',
+                              text: '*담당자*\n' + mention
+                            }
+                          ]
+                        },
+                        {
+                          type: 'section',
+                          text: {
+                            type: 'mrkdwn',
+                            text: '*Issue*\n' + sanitizeForSlack(issueTitle)
                           }
-                        ]
-                      }
-                    ]
-                  });
-                } catch (error) {
-                  console.log('Branch already exists or creation failed');
+                        },
+                        {
+                          type: 'context',
+                          elements: [
+                            {
+                              type: 'mrkdwn',
+                              text: '💡 Issue status가 Ready로 변경되어 브랜치가 생성되었습니다.'
+                            }
+                          ]
+                        },
+                        {
+                          type: 'actions',
+                          elements: [
+                            {
+                              type: 'button',
+                              text: {
+                                type: 'plain_text',
+                                text: 'View Issue'
+                              },
+                              url: issueUrl
+                            }
+                          ]
+                        }
+                      ]
+                    });
+                    console.log('✅ Slack notification sent');
+                  } catch (error) {
+                    console.log('❌ Branch creation failed:', error.message);
+                  }
                 }
               }
               
