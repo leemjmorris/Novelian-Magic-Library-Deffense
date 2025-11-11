@@ -8,7 +8,6 @@ on:
 permissions:
   issues: write
   contents: read
-  repository-projects: write
 
 jobs:
   update-status:
@@ -19,11 +18,10 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const https = require('https');
             const branchName = context.ref.replace('refs/heads/', '');
-            const projectNumber = 5;
             
             console.log(`Branch created: ${branchName}`);
             
@@ -91,32 +89,22 @@ jobs:
               });
               
               console.log(`Issue #${issueNumber}: ${issue.title}`);
-              
               const assignee = issue.assignees.length > 0 ? issue.assignees[0].login : null;
               
-              const projectQuery = `
+              let project = null;
+              
+              const userQuery = `
                 query($login: String!, $number: Int!) {
                   user(login: $login) {
                     projectV2(number: $number) {
                       id
+                      title
                       items(first: 100) {
                         nodes {
                           id
                           content {
                             ... on Issue {
                               number
-                            }
-                          }
-                          fieldValues(first: 10) {
-                            nodes {
-                              ... on ProjectV2ItemFieldSingleSelectValue {
-                                name
-                                field {
-                                  ... on ProjectV2SingleSelectField {
-                                    name
-                                  }
-                                }
-                              }
                             }
                           }
                         }
@@ -135,20 +123,27 @@ jobs:
                 }
               `;
               
-              console.log(`Querying project for user: ${context.repo.owner}, project: ${projectNumber}`);
+              try {
+                console.log('Querying user project...');
+                const result = await github.graphql(userQuery, {
+                  login: context.repo.owner,
+                  number: 5
+                });
+                
+                project = result.user?.projectV2;
+                if (project) {
+                  console.log(`✅ Found project: ${project.title}`);
+                }
+              } catch (error) {
+                console.log(`❌ Query failed: ${error.message}`);
+              }
               
-              const result = await github.graphql(projectQuery, {
-                login: context.repo.owner,
-                number: projectNumber
-              });
-              
-              if (!result.user || !result.user.projectV2) {
-                console.log('❌ Project not found or not accessible');
-                console.log('Make sure the project exists and the workflow has proper permissions');
+              if (!project) {
+                console.log('❌ Project not accessible');
+                console.log('Please ensure GH_PROJECT_TOKEN is set with project:read scope');
                 return;
               }
               
-              const project = result.user.projectV2;
               const projectItem = project.items.nodes.find(
                 item => item.content && item.content.number === issueNumber
               );
@@ -160,24 +155,19 @@ jobs:
               
               console.log(`Found project item: ${projectItem.id}`);
               
-              const currentStatus = projectItem.fieldValues.nodes.find(
-                fv => fv.field && fv.field.name === 'Status'
-              );
-              
-              console.log(`Current status: ${currentStatus?.name || 'None'}`);
-              
-              if (currentStatus && currentStatus.name === 'In Progress') {
-                console.log('✅ Already in In Progress status');
+              const statusField = project.field;
+              if (!statusField) {
+                console.log('❌ Status field not found');
                 return;
               }
               
-              const statusField = project.field;
               const inProgressOption = statusField.options.find(
                 opt => opt.name === 'In Progress'
               );
               
               if (!inProgressOption) {
-                console.log('❌ In Progress status not found in project');
+                console.log('❌ In Progress status not found');
+                console.log('Available:', statusField.options.map(o => o.name).join(', '));
                 return;
               }
               
