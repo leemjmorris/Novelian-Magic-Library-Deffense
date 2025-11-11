@@ -3,7 +3,7 @@ using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 
-public class WaveManger : MonoBehaviour
+public class WaveManager : MonoBehaviour
 {
     [SerializeField] TextMeshProUGUI monsterCountText;
     #region WaveData
@@ -64,7 +64,6 @@ public class WaveManger : MonoBehaviour
             rushProgressPoints.Add(currentProgress);
             currentProgress += rushInterval;
         }
-        
     }
 
     public async UniTaskVoid WaveLoop()
