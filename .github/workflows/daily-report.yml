@@ -751,5 +751,5 @@ jobs:
               
             } catch (error) {
               console.error('❌ Error:', error);
-              core.setFailed(error.message);
+              throw error;
             }
