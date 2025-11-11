@@ -2,7 +2,9 @@ name: Auto Label Ready Issues
 
 on:
   issues:
-    types: [opened, edited, assigned, labeled, unlabeled]
+    types: [opened, edited, assigned, labeled, unlabeled, milestoned, demilestoned]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
 
 permissions:
@@ -23,9 +25,12 @@ jobs:
             
             let issuesToCheck = [];
             
-            if (context.eventName === 'issues') {
-              issuesToCheck = [context.payload.issue.number];
-              console.log(`Checking single issue #${context.payload.issue.number}`);
+            if (context.eventName === 'issues' || context.eventName === 'issue_comment') {
+              const issueNumber = context.payload.issue ? context.payload.issue.number : null;
+              if (issueNumber) {
+                issuesToCheck = [issueNumber];
+                console.log(`Checking single issue #${issueNumber}`);
+              }
             } else {
               console.log('Checking all issues in project');
             }
@@ -97,6 +102,8 @@ jobs:
                 const statusField = item.fieldValues.nodes.find(
                   fv => fv.field && fv.field.name === 'Status'
                 );
+                
+                console.log(`Issue #${issueNumber}: Status = ${statusField?.name || 'None'}, Has ready label = ${hasReadyLabel}`);
                 
                 if (statusField && statusField.name === 'Ready' && !hasReadyLabel) {
                   console.log(`🏷️ Adding 'ready' label to Issue #${issueNumber}`);
