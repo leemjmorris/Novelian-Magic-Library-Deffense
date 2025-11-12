@@ -2,7 +2,8 @@ name: Daily Report
 
 on:
   schedule:
-    - cron: '0 0 * * 1-5'
+    - cron: '30 0 * * 1-5'  # KST 09:30 (1차 시도)
+    - cron: '0 1 * * 1-5'   # KST 10:00 (2차 시도, 1차 실패 시 백업)
   workflow_dispatch:
 
 permissions:
@@ -14,44 +15,139 @@ jobs:
   generate-daily-report:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/scripts/user-mapping.json
+          sparse-checkout-cone-mode: false
+
       - name: Generate Daily Report
         uses: actions/github-script@v7
         env:
           NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
           NOTION_REPORT_PAGE_ID: ${{ secrets.NOTION_REPORT_PAGE_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           script: |
+            const fs = require('fs');
             const https = require('https');
-            
+
             const now = new Date();
             const kstOffset = 9 * 60 * 60 * 1000;
             const kstDate = new Date(now.getTime() + kstOffset);
             const dayOfWeek = kstDate.getDay();
-            
+
             const daysToLookBack = (dayOfWeek === 1) ? 3 : 1;
             const startDate = new Date(kstDate.getTime() - daysToLookBack * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
             const today = kstDate.toISOString().split('T')[0];
-            
-            const dateStr = kstDate.toLocaleDateString('ko-KR', { 
-              year: 'numeric', 
-              month: 'long', 
+
+            const dateStr = kstDate.toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
               day: 'numeric',
               weekday: 'long'
             });
-            
-            const periodStr = (dayOfWeek === 1) 
-              ? '(주말 포함)' 
+
+            const periodStr = (dayOfWeek === 1)
+              ? '(주말 포함)'
               : '';
-            
-            const userNames = {
-              'leemjmorris': '이명진',
-              'jaemoon23': '이재문',
-              'LeeChaeBin002': '이채빈',
-              'Kdwio': '김동욱',
-              'bigwaterplz': '김민휘',
-              'kimjiw8698-crypto': '김지원'
-            };
+
+            // Load user mapping from JSON file
+            const userMappingData = JSON.parse(fs.readFileSync('.github/scripts/user-mapping.json', 'utf8'));
+            const userNames = {};
+            for (const [username, data] of Object.entries(userMappingData)) {
+              userNames[username] = data.koreanName;
+            }
+
+            function sendToSlack(message) {
+              return new Promise((resolve, reject) => {
+                if (!process.env.SLACK_WEBHOOK_URL) {
+                  console.log('⚠️ SLACK_WEBHOOK_URL not set, skipping Slack notification');
+                  resolve('skipped');
+                  return;
+                }
+
+                const data = JSON.stringify(message);
+                const url = new URL(process.env.SLACK_WEBHOOK_URL);
+
+                const options = {
+                  hostname: url.hostname,
+                  path: url.pathname + url.search,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(data)
+                  }
+                };
+
+                const req = https.request(options, (res) => {
+                  let body = '';
+                  res.on('data', (chunk) => body += chunk);
+                  res.on('end', () => {
+                    if (res.statusCode === 200 && body === 'ok') {
+                      resolve(body);
+                    } else {
+                      reject(new Error('Slack API error: ' + res.statusCode));
+                    }
+                  });
+                });
+
+                req.on('error', reject);
+                req.write(data);
+                req.end();
+              });
+            }
+
+            async function checkTodayReportExists(parentPageId, todayDateStr) {
+              const token = process.env.NOTION_API_TOKEN;
+
+              return new Promise((resolve, reject) => {
+                const req = https.request({
+                  hostname: 'api.notion.com',
+                  path: '/v1/blocks/' + parentPageId + '/children?page_size=100',
+                  method: 'GET',
+                  headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Notion-Version': '2022-06-28'
+                  }
+                }, (res) => {
+                  let body = '';
+                  res.on('data', d => body += d);
+                  res.on('end', () => {
+                    try {
+                      const result = JSON.parse(body);
+
+                      if (res.statusCode === 200 && result.results) {
+                        // Check if any child page has today's date in the title
+                        const existingPage = result.results.find(page => {
+                          if (page.type === 'child_page' && page.child_page && page.child_page.title) {
+                            return page.child_page.title.includes(todayDateStr);
+                          }
+                          return false;
+                        });
+
+                        resolve(existingPage ? true : false);
+                      } else {
+                        console.log('⚠️ Failed to check existing pages, proceeding with creation');
+                        resolve(false);
+                      }
+                    } catch (e) {
+                      console.error('⚠️ Error checking existing pages:', e);
+                      resolve(false);
+                    }
+                  });
+                });
+
+                req.on('error', (e) => {
+                  console.error('⚠️ Request error while checking:', e);
+                  resolve(false);
+                });
+
+                req.end();
+              });
+            }
             
             function parseAISummaryToBlocks(summary) {
               const blocks = [];
@@ -320,61 +416,65 @@ jobs:
             try {
               console.log('Generating daily report for ' + dateStr + '...');
               console.log('Looking back ' + daysToLookBack + ' days (since ' + startDate + ')');
-              
-              const issuesCreated = await github.rest.issues.listForRepo({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                since: startDate,
-                state: 'all',
-                per_page: 100
-              });
-              
-              const newIssues = issuesCreated.data.filter(issue => 
-                !issue.pull_request && 
-                new Date(issue.created_at) >= new Date(startDate)
-              );
-              
-              const closedIssues = issuesCreated.data.filter(issue => 
-                !issue.pull_request && 
+
+              // Check if today's report already exists
+              const parentPageId = process.env.NOTION_REPORT_PAGE_ID;
+              console.log('🔍 Checking if today\'s report already exists...');
+              const reportExists = await checkTodayReportExists(parentPageId, dateStr);
+
+              if (reportExists) {
+                console.log('✅ Today\'s report already exists. Skipping to prevent duplicate.');
+                console.log('📌 Report date: ' + dateStr);
+                return;
+              }
+
+              console.log('✅ No existing report found. Proceeding with creation...');
+
+              // Fetch all issues once (both open and closed)
+              const [allIssuesResponse, allPRsResponse] = await Promise.all([
+                github.rest.issues.listForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  since: startDate,
+                  state: 'all',
+                  per_page: 100
+                }),
+                github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: 'all',
+                  sort: 'created',
+                  direction: 'desc',
+                  per_page: 100
+                })
+              ]);
+
+              const startDateObj = new Date(startDate);
+
+              // Filter issues from the single API call
+              const allIssues = allIssuesResponse.data.filter(issue => !issue.pull_request);
+              const newIssues = allIssues.filter(issue => new Date(issue.created_at) >= startDateObj);
+              const closedIssues = allIssues.filter(issue =>
                 issue.state === 'closed' &&
                 issue.closed_at &&
-                new Date(issue.closed_at) >= new Date(startDate)
+                new Date(issue.closed_at) >= startDateObj
               );
-              
-              const allRecentIssues = issuesCreated.data.filter(issue => !issue.pull_request);
-              
-              const prsCreated = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'all',
-                sort: 'created',
-                direction: 'desc',
-                per_page: 100
-              });
-              
-              const newPRs = prsCreated.data.filter(pr => 
-                new Date(pr.created_at) >= new Date(startDate)
-              );
-              
-              const mergedPRs = prsCreated.data.filter(pr => 
-                pr.merged_at &&
-                new Date(pr.merged_at) >= new Date(startDate)
-              );
-              
-              const activeIssues = await github.rest.issues.listForRepo({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'open',
-                per_page: 100
-              });
-              
-              const inProgressIssues = activeIssues.data.filter(issue => 
-                !issue.pull_request &&
+              const inProgressIssues = allIssues.filter(issue =>
+                issue.state === 'open' &&
                 issue.assignees.length > 0
               );
+
+              // Filter PRs from the single API call
+              const newPRs = allPRsResponse.data.filter(pr => new Date(pr.created_at) >= startDateObj);
+              const mergedPRs = allPRsResponse.data.filter(pr =>
+                pr.merged_at &&
+                new Date(pr.merged_at) >= startDateObj
+              );
+
+              const allRecentIssues = allIssues;
               
               console.log('🤖 Generating AI summary with Gemini...');
-              const aiSummary = await generateGeminiSummary(allRecentIssues, prsCreated.data, dayOfWeek === 1);
+              const aiSummary = await generateGeminiSummary(allRecentIssues, allPRsResponse.data, dayOfWeek === 1);
               console.log('✅ AI summary generated');
               
               const userStats = {};
@@ -737,9 +837,31 @@ jobs:
               console.log('📤 Creating Notion page...');
               const page = await createNotionPage();
               const pageId = page.id;
-              
+
               console.log('📝 Total blocks to add:', blocks.length);
-              
+
+              // Notion has a limit of ~2000 blocks per page
+              const MAX_BLOCKS = 1900;
+              if (blocks.length > MAX_BLOCKS) {
+                console.log('⚠️ Warning: Block count (' + blocks.length + ') exceeds recommended limit (' + MAX_BLOCKS + ')');
+                console.log('⚠️ Truncating to ' + MAX_BLOCKS + ' blocks to prevent errors');
+                blocks.splice(MAX_BLOCKS);
+                blocks.push({
+                  object: 'block',
+                  type: 'callout',
+                  callout: {
+                    rich_text: [{
+                      text: {
+                        content: '⚠️ 일부 항목이 생략되었습니다. 전체 내용은 GitHub에서 확인하세요.'
+                      }
+                    }],
+                    icon: { emoji: '⚠️' },
+                    color: 'yellow_background'
+                  }
+                });
+              }
+
+              // Notion API allows max 100 blocks per request
               for (let i = 0; i < blocks.length; i += 100) {
                 const chunk = blocks.slice(i, i + 100);
                 console.log('📤 Adding blocks ' + (i + 1) + '-' + (i + chunk.length) + '...');
@@ -748,8 +870,126 @@ jobs:
               
               console.log('✅ Daily report added to Notion');
               console.log('✅ Daily report generation completed');
-              
+
+              console.log('📨 Sending Slack notification...');
+              try {
+                const notionPageUrl = page.url;
+
+                const slackMessage = {
+                  text: '일간 보고서 생성 완료',
+                  blocks: [
+                    {
+                      type: 'header',
+                      text: {
+                        type: 'plain_text',
+                        text: '📊 일간 보고서 생성 완료',
+                        emoji: true
+                      }
+                    },
+                    {
+                      type: 'section',
+                      fields: [
+                        {
+                          type: 'mrkdwn',
+                          text: '*날짜*\n' + dateStr + ' ' + periodStr
+                        },
+                        {
+                          type: 'mrkdwn',
+                          text: '*생성 시간*\n' + new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+                        }
+                      ]
+                    },
+                    {
+                      type: 'section',
+                      fields: [
+                        {
+                          type: 'mrkdwn',
+                          text: '*새 이슈*\n' + newIssues.length + '개'
+                        },
+                        {
+                          type: 'mrkdwn',
+                          text: '*완료 이슈*\n' + closedIssues.length + '개'
+                        },
+                        {
+                          type: 'mrkdwn',
+                          text: '*새 PR*\n' + newPRs.length + '개'
+                        },
+                        {
+                          type: 'mrkdwn',
+                          text: '*머지 PR*\n' + mergedPRs.length + '개'
+                        }
+                      ]
+                    },
+                    {
+                      type: 'divider'
+                    },
+                    {
+                      type: 'section',
+                      text: {
+                        type: 'mrkdwn',
+                        text: '📄 *상세 보고서*\nNotion에서 확인하세요'
+                      }
+                    },
+                    {
+                      type: 'actions',
+                      elements: [
+                        {
+                          type: 'button',
+                          text: {
+                            type: 'plain_text',
+                            text: 'Notion에서 보기',
+                            emoji: true
+                          },
+                          url: notionPageUrl,
+                          style: 'primary'
+                        }
+                      ]
+                    }
+                  ]
+                };
+
+                await sendToSlack(slackMessage);
+                console.log('✅ Slack notification sent');
+              } catch (slackError) {
+                console.error('⚠️ Failed to send Slack notification:', slackError.message);
+              }
+
             } catch (error) {
               console.error('❌ Error:', error);
-              core.setFailed(error.message);
+
+              try {
+                const errorMessage = {
+                  text: '일간 보고서 생성 실패',
+                  blocks: [
+                    {
+                      type: 'header',
+                      text: {
+                        type: 'plain_text',
+                        text: '❌ 일간 보고서 생성 실패',
+                        emoji: true
+                      }
+                    },
+                    {
+                      type: 'section',
+                      text: {
+                        type: 'mrkdwn',
+                        text: '*날짜*\n' + dateStr
+                      }
+                    },
+                    {
+                      type: 'section',
+                      text: {
+                        type: 'mrkdwn',
+                        text: '*오류 메시지*\n```' + error.message + '```'
+                      }
+                    }
+                  ]
+                };
+
+                await sendToSlack(errorMessage);
+              } catch (slackError) {
+                console.error('⚠️ Failed to send error notification to Slack:', slackError.message);
+              }
+
+              throw error;
             }

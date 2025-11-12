@@ -132,7 +132,14 @@ jobs:
       
       - name: Send Slack notification
         if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "⚠️ SLACK_WEBHOOK_URL not set, skipping notification"
+            exit 0
+          fi
+
           # LMJ : Determine status emoji and color
           if [ "${{ steps.rebase.outputs.failed_count }}" = "0" ] && [ "${{ steps.rebase.outputs.success_count }}" != "0" ]; then
             STATUS_EMOJI="✅"
@@ -180,7 +187,7 @@ jobs:
           fi
           
           # LMJ : Send to Slack
-          curl -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+          curl -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d "{
               \"attachments\": [

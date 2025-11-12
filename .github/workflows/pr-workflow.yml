@@ -2,24 +2,33 @@ name: PR Workflow
 
 on:
   pull_request:
-    types: [opened, review_requested]
+    types: [opened, review_requested, closed]
 
 permissions:
   contents: read
   pull-requests: read
+  issues: write
 
 jobs:
   handle-pr:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/scripts/user-mapping.json
+          sparse-checkout-cone-mode: false
+
       - name: Handle PR Event
         uses: actions/github-script@v7
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           script: |
+            const fs = require('fs');
             const https = require('https');
-            
+
             const prNumber = context.payload.pull_request.number;
             const prTitle = context.payload.pull_request.title;
             const prUrl = context.payload.pull_request.html_url;
@@ -27,37 +36,47 @@ jobs:
             const author = context.payload.pull_request.user.login;
             const headBranch = context.payload.pull_request.head.ref;
             const baseBranch = context.payload.pull_request.base.ref;
-            
-            const userMapping = {
-              'leemjmorris': 'U09R6F3CBHN',
-              'jaemoon23': 'U09QR380TLH',
-              'LeeChaeBin002': 'U09QFND0J20',
-              'Kdwio': 'U09LZ9Q6F3J',
-              'bunggoo0105': 'U09RL7QCYV7',
-              'JangYeJin1207': 'U09QAEF5FEJ'
-            };
+
+            // Load user mapping from JSON file
+            const userMappingData = JSON.parse(fs.readFileSync('.github/scripts/user-mapping.json', 'utf8'));
+            const userMapping = {};
+            for (const [username, data] of Object.entries(userMappingData)) {
+              userMapping[username] = data.slackId;
+            }
             
             function sendToSlack(message) {
               return new Promise((resolve, reject) => {
+                if (!process.env.SLACK_WEBHOOK_URL) {
+                  console.log('⚠️ SLACK_WEBHOOK_URL not set, skipping Slack notification');
+                  resolve('skipped');
+                  return;
+                }
+
                 const data = JSON.stringify(message);
                 const url = new URL(process.env.SLACK_WEBHOOK_URL);
-                
+
                 const options = {
                   hostname: url.hostname,
                   path: url.pathname + url.search,
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    'Content-Length': data.length
+                    'Content-Length': Buffer.byteLength(data)
                   }
                 };
-                
+
                 const req = https.request(options, (res) => {
                   let body = '';
                   res.on('data', (chunk) => body += chunk);
-                  res.on('end', () => resolve(body));
+                  res.on('end', () => {
+                    if (res.statusCode === 200 && body === 'ok') {
+                      resolve(body);
+                    } else {
+                      reject(new Error('Slack API error: ' + res.statusCode));
+                    }
+                  });
                 });
-                
+
                 req.on('error', reject);
                 req.write(data);
                 req.end();
@@ -93,7 +112,7 @@ jobs:
                     return slackUserId ? `<@${slackUserId}>` : r.login;
                   })
                   .join(', ');
-                
+
                 if (reviewerMentions) {
                   const slackMessage = {
                     text: 'PR 리뷰가 요청되었습니다',
@@ -107,12 +126,154 @@ jobs:
                       }
                     ]
                   };
-                  
+
+                  await sendToSlack(slackMessage);
+                }
+              }
+
+              if (action === 'closed') {
+                const merged = context.payload.pull_request.merged;
+                const slackUserId = userMapping[author];
+                const mentionText = slackUserId ? `<@${slackUserId}>` : author;
+
+                if (merged) {
+                  const mergedBy = context.payload.pull_request.merged_by?.login || author;
+                  const mergedBySlackId = userMapping[mergedBy];
+                  const mergedByMention = mergedBySlackId ? `<@${mergedBySlackId}>` : mergedBy;
+
+                  let closedIssue = null;
+
+                  const issueMatch = headBranch.match(/issue-(\d+)/i) || headBranch.match(/(\d+)-/);
+                  if (issueMatch) {
+                    const issueNumber = parseInt(issueMatch[1]);
+                    console.log(`📌 Found issue number in branch: ${issueNumber}`);
+
+                    try {
+                      const { data: issue } = await github.rest.issues.get({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: issueNumber
+                      });
+
+                      if (issue.state === 'open') {
+                        await github.rest.issues.update({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: issueNumber,
+                          state: 'closed',
+                          state_reason: 'completed'
+                        });
+
+                        await github.rest.issues.createComment({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: issueNumber,
+                          body: `✅ Automatically closed by merging PR #${prNumber}`
+                        });
+
+                        closedIssue = {
+                          number: issueNumber,
+                          title: issue.title,
+                          url: issue.html_url
+                        };
+
+                        console.log(`✅ Automatically closed issue #${issueNumber}`);
+                      } else {
+                        console.log(`ℹ️ Issue #${issueNumber} is already ${issue.state}`);
+                      }
+                    } catch (error) {
+                      console.error(`⚠️ Failed to close issue #${issueNumber}:`, error.message);
+                    }
+                  } else {
+                    console.log('ℹ️ No issue number found in branch name');
+                  }
+
+                  const slackMessage = {
+                    text: 'PR이 머지되었습니다',
+                    blocks: [
+                      {
+                        type: 'header',
+                        text: {
+                          type: 'plain_text',
+                          text: '✅ PR Merged',
+                          emoji: true
+                        }
+                      },
+                      {
+                        type: 'section',
+                        fields: [
+                          {
+                            type: 'mrkdwn',
+                            text: `*PR #${prNumber}*\n${prTitle}`
+                          },
+                          {
+                            type: 'mrkdwn',
+                            text: `*Branch*\n${headBranch} → ${baseBranch}`
+                          }
+                        ]
+                      },
+                      {
+                        type: 'section',
+                        fields: [
+                          {
+                            type: 'mrkdwn',
+                            text: `*작성자*\n${mentionText}`
+                          },
+                          {
+                            type: 'mrkdwn',
+                            text: `*머지한 사람*\n${mergedByMention}`
+                          }
+                        ]
+                      }
+                    ]
+                  };
+
+                  if (closedIssue) {
+                    slackMessage.blocks.push({
+                      type: 'section',
+                      text: {
+                        type: 'mrkdwn',
+                        text: `🎯 *자동으로 닫힌 Issue*\n<${closedIssue.url}|#${closedIssue.number} ${closedIssue.title}>`
+                      }
+                    });
+                  }
+
+                  slackMessage.blocks.push({
+                    type: 'actions',
+                    elements: [
+                      {
+                        type: 'button',
+                        text: {
+                          type: 'plain_text',
+                          text: 'View PR',
+                          emoji: true
+                        },
+                        url: prUrl,
+                        style: 'primary'
+                      }
+                    ]
+                  });
+
+                  await sendToSlack(slackMessage);
+                } else {
+                  const slackMessage = {
+                    text: 'PR이 닫혔습니다',
+                    blocks: [
+                      {
+                        type: 'section',
+                        text: {
+                          type: 'mrkdwn',
+                          text: `:x: *PR 닫힘* #${prNumber}\n*제목:* ${prTitle}\n*작성자:* ${mentionText}\n*Branch:* ${headBranch} → ${baseBranch}\n<${prUrl}|PR 보기>`
+                        }
+                      }
+                    ]
+                  };
+
                   await sendToSlack(slackMessage);
                 }
               }
               
             } catch (error) {
               console.error('Error:', error);
-              core.setFailed(error.message);
+              throw error;
             }

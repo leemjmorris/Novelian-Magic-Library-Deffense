@@ -1,13 +1,15 @@
 ﻿using UnityEngine;
 using UnityEngine.Pool;
-public class Monster : MonsterBase, ITargetable
+public class Monster : MonoBehaviour, IPoolable, ITargetable
 {
+    public static event System.Action<Monster> OnMonsterDied;
     [SerializeField] new Collider2D collider2D;
     [SerializeField] private Rigidbody2D rb;
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackInterval = 0.7f;
     [SerializeField] private float maxHealth = 100f;
+    public int Exp { get; private set; } = 11; // JML: Example exp amount
 
     private float attackTimer = 0f;
     private Wall wall;
@@ -76,10 +78,11 @@ public class Monster : MonsterBase, ITargetable
         }
     }
 
-    protected override void Die()
+    private void Die()
     {
-        base.Die();
-        ObjectPoolManager.Instance.Despawn(this);
+        OnMonsterDied?.Invoke(this);
+        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
+        NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
     
     private void OnTriggerEnter2D(Collider2D collision)
@@ -93,7 +96,7 @@ public class Monster : MonsterBase, ITargetable
         }
     }
 
-    public override void OnSpawn()
+    public void OnSpawn()
     {
         
         currentHealth = maxHealth;
@@ -106,7 +109,7 @@ public class Monster : MonsterBase, ITargetable
         Debug.Log("Monster spawned");
     }
 
-    public override void OnDespawn()
+    public void OnDespawn()
     {
         isWallHit = false;
         wall = null;

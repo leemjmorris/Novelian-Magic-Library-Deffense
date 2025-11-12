@@ -2,10 +2,9 @@ name: Issue Workflow
 
 on:
   issues:
-    types: [opened, assigned, reopened]
+    types: [opened, assigned, labeled, reopened]
 
 permissions:
-  contents: write
   issues: write
 
 jobs:
@@ -13,9 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          sparse-checkout: |
+            .github/scripts/user-mapping.json
+          sparse-checkout-cone-mode: false
 
       - name: Handle Issue Event
         uses: actions/github-script@v7
@@ -26,9 +27,9 @@ jobs:
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
         with:
           script: |
+            const fs = require('fs');
             const https = require('https');
-            const { execSync } = require('child_process');
-            
+
             const issueNumber = context.payload.issue.number;
             const issueTitle = context.payload.issue.title;
             const issueBody = context.payload.issue.body || '';
@@ -37,23 +38,23 @@ jobs:
             const labels = context.payload.issue.labels.map(l => l.name);
             const assignees = context.payload.issue.assignees;
             const assignee = assignees.length > 0 ? assignees[0].login : null;
-            const wasJustCreated = context.payload.issue.created_at === context.payload.issue.updated_at;
-            
-            const userMapping = {
-              'leemjmorris': 'U09RR542WJ1',
-              'jaemoon23': 'U09RR5022KX',
-              'LeeChaeBin002': 'U09SP9SV37S',
-              'Kdwio': 'U09RCTQNJKZ',
-              'bigwaterplz': 'U09RY3FQE4C',
-              'kimjiw8698-crypto': 'U09RVE84DQS'
-            };
+
+            // Load user mapping from JSON file
+            const userMappingData = JSON.parse(fs.readFileSync('.github/scripts/user-mapping.json', 'utf8'));
+            const userMapping = {};
+            for (const [username, data] of Object.entries(userMappingData)) {
+              userMapping[username] = data.slackId;
+            }
             
             function removeMarkdown(text) {
               if (!text) return '';
               let result = text;
+              result = result.replace(/```[\s\S]*?```/g, '');
               result = result.replace(/^#{1,6}\s+/gm, '');
+              result = result.replace(/^\s*[-*+]\s*\[[ xX]\]\s*/gm, '');
               result = result.replace(/\*\*\*(.+?)\*\*\*/g, '$1');
               result = result.replace(/\*\*(.+?)\*\*\*/g, '$1');
+              result = result.replace(/\*\*(.+?)\*\*/g, '$1');
               result = result.replace(/\*(.+?)\*/g, '$1');
               result = result.replace(/___(.+?)___/g, '$1');
               result = result.replace(/__(.+?)__/g, '$1');
@@ -65,7 +66,6 @@ jobs:
               result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
               result = result.replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1');
               result = result.replace(/>\s+/gm, '');
-              result = result.replace(/```[\s\S]*?```/g, '');
               result = result.replace(/`([^`]+)`/g, '$1');
               result = result.replace(/^\s*[-=]{3,}\s*$/gm, '');
               result = result.replace(/\|/g, '');
@@ -94,7 +94,7 @@ jobs:
                 
                 const options = {
                   hostname: 'generativelanguage.googleapis.com',
-                  path: '/v1beta/models/gemini-pro:generateContent?key=' + process.env.GEMINI_API_KEY,
+                  path: '/v1beta/models/gemini-2.5-flash:generateContent?key=' + process.env.GEMINI_API_KEY,
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -207,18 +207,45 @@ jobs:
                 let summary = null;
                 if (issueBody && issueBody.trim().length > 0) {
                   console.log('📨 Calling Gemini API...');
-                  const prompt = '아래 GitHub Issue를 읽고 핵심 내용만 추려서 5-7문장으로 요약해주세요.\n\n중요 규칙:\n1. 절대로 원본 텍스트를 복사하지 마세요. 반드시 당신의 언어로 다시 작성하세요.\n2. 마크다운 문법(#, -, *, **, ##, ###, 등)을 절대 사용하지 마세요.\n3. 평범한 문장으로만 작성하세요. 불렛 포인트나 섹션 헤더 없이.\n4. 하나의 자연스러운 문단으로 작성하세요.\n5. "이 이슈는..." 또는 "이 작업은..."으로 시작하세요.\n\n예시 형식:\n이 이슈는 [핵심 목적]을 위한 작업입니다. [주요 내용 1]과 [주요 내용 2]를 포함하며, [중요 제약사항]이 있습니다.\n\n이슈 제목: ' + issueTitle + '\n\n이슈 내용:\n' + issueBody.substring(0, 3000) + '\n\n위 규칙을 반드시 지켜서 요약해주세요.';
-                  
-                  const rawSummary = await callGeminiAPI(prompt);
-                  
-                  if (rawSummary) {
-                    console.log('🤖 Gemini raw response:', rawSummary.substring(0, 200));
-                    summary = removeMarkdown(rawSummary);
-                    console.log('🤖 After markdown removal:', summary.substring(0, 200));
-                    console.log('🤖 Final length:', summary.length);
-                  } else {
-                    console.log('⚠️ Gemini returned null, using fallback');
-                    const lines = issueBody.split('\n').filter(line => line.trim().length > 0 && !line.trim().startsWith('#'));
+                  const prompt = '아래 GitHub Issue를 읽고 핵심 내용만 추려서 3-5문장으로 간결하게 요약해주세요.\n\n🚨 절대 지켜야 할 규칙:\n1. 순수한 평문(plain text)으로만 작성하세요.\n2. 마크다운 문법을 절대 사용하지 마세요: #, ##, -, *, **, __, `, [], (), ~~ 등 모두 금지\n3. 체크박스 표시를 절대 사용하지 마세요: [ ], [x] 금지\n4. 불렛 포인트, 번호 매기기, 섹션 헤더를 사용하지 마세요.\n5. 하나의 자연스러운 문단으로 작성하세요.\n6. "이 이슈는..." 또는 "이 작업은..."으로 시작하세요.\n7. 원본 텍스트를 그대로 복사하지 말고, 당신의 언어로 다시 작성하세요.\n\n✅ 올바른 예시:\n이 이슈는 스테이지 타이머 시스템을 구현하는 작업입니다. 남은 시간을 계산하고 콘솔에 출력하는 기능을 추가하며, 타이머가 0이 되면 게임 오버 처리를 수행합니다. 타이머는 UI에도 표시되어야 합니다.\n\n❌ 잘못된 예시 (마크다운 사용):\nStage Timer Sys 구현 - [ ] 남은 시간 계산\n\n이슈 제목: ' + issueTitle + '\n\n이슈 내용:\n' + issueBody.substring(0, 3000) + '\n\n위 규칙을 반드시 지켜서 순수한 평문으로만 요약해주세요. 마크다운, 체크박스, 기호를 절대 사용하지 마세요.';
+
+                  try {
+                    const rawSummary = await callGeminiAPI(prompt);
+
+                    if (rawSummary && rawSummary.trim().length > 0) {
+                      console.log('🤖 Gemini raw response:', rawSummary.substring(0, 200));
+                      summary = removeMarkdown(rawSummary);
+
+                      // Validate summary quality
+                      if (summary.trim().length < 10) {
+                        console.log('⚠️ Summary too short after cleaning, using fallback');
+                        summary = null;
+                      } else if (summary.includes('```') || summary.includes('##')) {
+                        console.log('⚠️ Summary still contains markdown, cleaning again');
+                        summary = removeMarkdown(summary);
+                      }
+
+                      console.log('🤖 After markdown removal:', summary.substring(0, 200));
+                    } else {
+                      console.log('⚠️ Gemini returned empty response');
+                      summary = null;
+                    }
+                  } catch (error) {
+                    console.log('⚠️ Gemini API call failed:', error.message);
+                    summary = null;
+                  }
+
+                  // Fallback if summary is invalid
+                  if (!summary) {
+                    console.log('📝 Using fallback summary from issue body');
+                    const lines = issueBody.split('\n').filter(line => {
+                      const trimmed = line.trim();
+                      return trimmed.length > 0 &&
+                             !trimmed.startsWith('#') &&
+                             !trimmed.startsWith('-') &&
+                             !trimmed.startsWith('*') &&
+                             !trimmed.match(/^\[[ xX]\]/);
+                    });
                     summary = lines.slice(0, 3).join(' ').substring(0, 500);
                   }
                 }
@@ -228,20 +255,6 @@ jobs:
                 const slackUserId = assignee ? userMapping[assignee] : null;
                 const assigneeName = slackUserId ? '<@' + slackUserId + '>' : (assignee || '미지정');
                 const labelsText = labels.length > 0 ? labels.join(', ') : '없음';
-                
-                let branchName = null;
-                if (assignee) {
-                  try {
-                    branchName = 'feature/issue-' + issueNumber + '-' + assignee;
-                    console.log('🌿 Creating branch:', branchName);
-                    execSync('git checkout -b ' + branchName, { stdio: 'inherit' });
-                    execSync('git push origin ' + branchName, { stdio: 'inherit' });
-                    console.log('✅ Branch created successfully');
-                  } catch (error) {
-                    console.log('Branch creation failed:', error.message);
-                    branchName = null;
-                  }
-                }
                 
                 const blocks = [
                   {
@@ -279,18 +292,6 @@ jobs:
                   });
                 }
                 
-                if (branchName) {
-                  blocks.push({
-                    type: 'section',
-                    fields: [
-                      {
-                        type: 'mrkdwn',
-                        text: '*Branch*\n`' + branchName + '`'
-                      }
-                    ]
-                  });
-                }
-                
                 if (safeSummary && safeSummary.length > 0) {
                   blocks.push({
                     type: 'divider'
@@ -302,7 +303,6 @@ jobs:
                       text: '*🤖 AI 요약*\n' + safeSummary
                     }
                   });
-                  console.log('✅ Summary block added');
                 }
                 
                 blocks.push({
@@ -329,7 +329,7 @@ jobs:
                   blocks: blocks
                 };
                 
-                console.log('📨 Sending to Slack with', blocks.length, 'blocks');
+                console.log('📨 Sending to Slack');
                 await sendToSlack(slackMessage);
                 console.log('✅ Slack 알림 전송 완료');
                 
@@ -342,121 +342,14 @@ jobs:
                 });
               }
               
-              if (action === 'assigned' && assignee && !wasJustCreated) {
-                const branchName = 'feature/issue-' + issueNumber + '-' + assignee;
-                console.log('🌿 Creating branch:', branchName);
-                
-                try {
-                  execSync('git checkout -b ' + branchName, { stdio: 'inherit' });
-                  execSync('git push origin ' + branchName, { stdio: 'inherit' });
-                  
-                  const slackUserId = userMapping[assignee];
-                  const mention = slackUserId ? '<@' + slackUserId + '>' : assignee;
-                  
-                  await sendToSlack({
-                    text: 'Issue ' + issueNumber + ' assigned',
-                    blocks: [
-                      {
-                        type: 'header',
-                        text: {
-                          type: 'plain_text',
-                          text: '🌿 Branch Created',
-                          emoji: true
-                        }
-                      },
-                      {
-                        type: 'section',
-                        fields: [
-                          {
-                            type: 'mrkdwn',
-                            text: '*Branch*\n`' + branchName + '`'
-                          },
-                          {
-                            type: 'mrkdwn',
-                            text: '*담당자*\n' + mention
-                          }
-                        ]
-                      },
-                      {
-                        type: 'section',
-                        text: {
-                          type: 'mrkdwn',
-                          text: '*Issue*\n' + sanitizeForSlack(issueTitle)
-                        }
-                      },
-                      {
-                        type: 'actions',
-                        elements: [
-                          {
-                            type: 'button',
-                            text: {
-                              type: 'plain_text',
-                              text: 'View Issue'
-                            },
-                            url: issueUrl
-                          }
-                        ]
-                      }
-                    ]
-                  });
-                } catch (error) {
-                  console.log('Branch already exists or creation failed');
-                }
-              }
-              
-              if (action === 'reopened') {
-                const slackUserId = assignee ? userMapping[assignee] : null;
-                const assigneeName = slackUserId ? '<@' + slackUserId + '>' : (assignee || '미지정');
-                
-                await sendToSlack({
-                  text: 'Issue ' + issueNumber + ' reopened',
-                  blocks: [
-                    {
-                      type: 'header',
-                      text: {
-                        type: 'plain_text',
-                        text: '🔄 Issue Reopened',
-                        emoji: true
-                      }
-                    },
-                    {
-                      type: 'section',
-                      fields: [
-                        {
-                          type: 'mrkdwn',
-                          text: '*Issue #' + issueNumber + '*\n' + sanitizeForSlack(issueTitle)
-                        },
-                        {
-                          type: 'mrkdwn',
-                          text: '*담당자*\n' + assigneeName
-                        }
-                      ]
-                    },
-                    {
-                      type: 'actions',
-                      elements: [
-                        {
-                          type: 'button',
-                          text: {
-                            type: 'plain_text',
-                            text: 'View Issue'
-                          },
-                          url: issueUrl
-                        }
-                      ]
-                    }
-                  ]
-                });
-              }
-              
-              const hasImportantLabel = labels.some(label => 
+              const hasImportantLabel = labels.some(label =>
                 ['urgent', 'critical', 'bug', 'hotfix'].includes(label.toLowerCase())
               );
-              
+
               if (hasImportantLabel && assignee) {
                 const slackUserId = userMapping[assignee];
                 const mention = slackUserId ? '<@' + slackUserId + '>' : assignee;
-                
+
                 await sendToSlack({
                   text: 'Important Issue ' + issueNumber,
                   blocks: [
@@ -505,7 +398,60 @@ jobs:
                   ]
                 });
               }
-              
+
+              if (action === 'reopened') {
+                const slackUserId = assignee ? userMapping[assignee] : null;
+                const mention = slackUserId ? '<@' + slackUserId + '>' : (assignee || '미지정');
+
+                await sendToSlack({
+                  text: 'Issue Reopened #' + issueNumber,
+                  blocks: [
+                    {
+                      type: 'header',
+                      text: {
+                        type: 'plain_text',
+                        text: '🔄 Issue 재오픈',
+                        emoji: true
+                      }
+                    },
+                    {
+                      type: 'section',
+                      fields: [
+                        {
+                          type: 'mrkdwn',
+                          text: '*Issue #' + issueNumber + '*\n' + sanitizeForSlack(issueTitle)
+                        },
+                        {
+                          type: 'mrkdwn',
+                          text: '*담당자*\n' + mention
+                        }
+                      ]
+                    },
+                    {
+                      type: 'section',
+                      text: {
+                        type: 'mrkdwn',
+                        text: '⚠️ 완료된 Issue가 재오픈되었습니다. 추가 작업이 필요합니다.'
+                      }
+                    },
+                    {
+                      type: 'actions',
+                      elements: [
+                        {
+                          type: 'button',
+                          text: {
+                            type: 'plain_text',
+                            text: 'View Issue'
+                          },
+                          url: issueUrl,
+                          style: 'primary'
+                        }
+                      ]
+                    }
+                  ]
+                });
+              }
+
               console.log('✅ Workflow completed');
               
             } catch (error) {

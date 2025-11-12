@@ -1,3 +1,4 @@
+using NovelianMagicLibraryDefense.Managers;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -17,8 +18,9 @@ public class Character : MonoBehaviour
     private float timer = 0.0f;
     private async void Start()
     {
-        await ObjectPoolManager.Instance.CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
-        ObjectPoolManager.Instance.WarmUp<Projectile>(20);
+        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
+        await GameManager.Instance.Pool.CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
+        GameManager.Instance.Pool.WarmUp<Projectile>(20);
     }
     private void Update()
     {
@@ -47,6 +49,7 @@ public class Character : MonoBehaviour
 
     private void Attack(ITargetable target)
     {
-        ObjectPoolManager.Instance.Spawn<Projectile>(transform.position).SetTarget(target.GetTransform());
+        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
+        GameManager.Instance.Pool.Spawn<Projectile>(transform.position).SetTarget(target.GetTransform());
     }
 }

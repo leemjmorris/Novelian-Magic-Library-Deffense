@@ -1,0 +1,316 @@
+name: Branch to In Progress
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/scripts/user-mapping.json
+          sparse-checkout-cone-mode: false
+
+      - name: Parse Issue Number and Update Status
+        uses: actions/github-script@v7
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PROJECT_NUMBER: ${{ secrets.PROJECT_NUMBER || '5' }}
+        with:
+          github-token: ${{ secrets.GH_PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const https = require('https');
+            const branchName = context.ref.replace('refs/heads/', '');
+
+            console.log(`Branch created: ${branchName}`);
+
+            const match = branchName.match(/issue-(\d+)/i);
+            if (!match) {
+              console.log('⚠️ No issue number found in branch name');
+              return;
+            }
+
+            const issueNumber = parseInt(match[1]);
+            console.log(`📌 Found issue number: ${issueNumber}`);
+
+            // Load user mapping from JSON file
+            const userMappingData = JSON.parse(fs.readFileSync('.github/scripts/user-mapping.json', 'utf8'));
+            const userMapping = {};
+            for (const [username, data] of Object.entries(userMappingData)) {
+              userMapping[username] = data.slackId;
+            }
+            
+            function sendToSlack(message) {
+              return new Promise((resolve, reject) => {
+                if (!process.env.SLACK_WEBHOOK_URL) {
+                  resolve('skipped');
+                  return;
+                }
+                
+                const data = JSON.stringify(message);
+                const url = new URL(process.env.SLACK_WEBHOOK_URL);
+                
+                const options = {
+                  hostname: url.hostname,
+                  path: url.pathname + url.search,
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Content-Length': Buffer.byteLength(data)
+                  }
+                };
+                
+                const req = https.request(options, (res) => {
+                  let body = '';
+                  res.on('data', (chunk) => body += chunk);
+                  res.on('end', () => {
+                    if (res.statusCode === 200 && body === 'ok') {
+                      resolve(body);
+                    } else {
+                      reject(new Error('Slack: ' + res.statusCode));
+                    }
+                  });
+                });
+                
+                req.on('error', reject);
+                req.write(data);
+                req.end();
+              });
+            }
+            
+            try {
+              const { data: issue } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber
+              });
+              
+              console.log(`Issue #${issueNumber}: ${issue.title}`);
+              const assignee = issue.assignees.length > 0 ? issue.assignees[0].login : null;
+              
+              let project = null;
+              let projectItem = null;
+
+              const userQuery = `
+                query($login: String!, $number: Int!, $issueNumber: Int!) {
+                  user(login: $login) {
+                    projectV2(number: $number) {
+                      id
+                      title
+                      items(first: 20, orderBy: {field: POSITION, direction: DESC}) {
+                        nodes {
+                          id
+                          content {
+                            ... on Issue {
+                              number
+                            }
+                          }
+                        }
+                        pageInfo {
+                          hasNextPage
+                          endCursor
+                        }
+                      }
+                      field(name: "Status") {
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          options {
+                            id
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                  repository(owner: $login, name: "${context.repo.repo}") {
+                    issue(number: $issueNumber) {
+                      projectItems(first: 10) {
+                        nodes {
+                          id
+                          project {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `;
+              
+              try {
+                console.log('Querying user project...');
+                const projectNumber = parseInt(process.env.PROJECT_NUMBER) || 5;
+                console.log(`Using project number: ${projectNumber}`);
+                const result = await github.graphql(userQuery, {
+                  login: context.repo.owner,
+                  number: projectNumber,
+                  issueNumber: issueNumber
+                });
+
+                project = result.user?.projectV2;
+                if (project) {
+                  console.log(`✅ Found project: ${project.title}`);
+                }
+
+                // Try to find project item from issue's projectItems first (more efficient)
+                const issueProjectItems = result.repository?.issue?.projectItems?.nodes || [];
+
+                if (issueProjectItems.length > 0) {
+                  // Find the project item that belongs to our project
+                  const matchingItem = issueProjectItems.find(item => item.project.id === project.id);
+                  if (matchingItem) {
+                    projectItem = matchingItem;
+                    console.log('✅ Found project item via issue query (optimized)');
+                  }
+                }
+
+                // Fallback: search in project items if not found
+                if (!projectItem && project) {
+                  projectItem = project.items.nodes.find(
+                    item => item.content && item.content.number === issueNumber
+                  );
+
+                  if (projectItem) {
+                    console.log('✅ Found project item via project search');
+                  }
+                }
+
+                if (!projectItem) {
+                  console.log('⚠️ Issue not found in project');
+                  return;
+                }
+              } catch (error) {
+                console.log(`❌ Query failed: ${error.message}`);
+                console.log('Please ensure GH_PROJECT_TOKEN is set with project:read scope');
+                return;
+              }
+
+              if (!project) {
+                console.log('❌ Project not accessible');
+                return;
+              }
+              
+              console.log(`Found project item: ${projectItem.id}`);
+              
+              const statusField = project.field;
+              if (!statusField) {
+                console.log('❌ Status field not found');
+                return;
+              }
+              
+              const inProgressOption = statusField.options.find(
+                opt => opt.name === '🚀 In Progress'
+              );
+              
+              if (!inProgressOption) {
+                console.log('❌ In Progress status not found');
+                console.log('Available:', statusField.options.map(o => o.name).join(', '));
+                return;
+              }
+              
+              console.log(`✅ Found status: ${inProgressOption.name}`);
+              
+              const mutation = `
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $valueId: String!) {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: { singleSelectOptionId: $valueId }
+                    }
+                  ) {
+                    projectV2Item {
+                      id
+                    }
+                  }
+                }
+              `;
+              
+              await github.graphql(mutation, {
+                projectId: project.id,
+                itemId: projectItem.id,
+                fieldId: statusField.id,
+                valueId: inProgressOption.id
+              });
+              
+              console.log(`✅ Status updated to ${inProgressOption.name}`);
+              
+              const slackUserId = assignee ? userMapping[assignee] : null;
+              const mention = slackUserId ? `<@${slackUserId}>` : (assignee || '알 수 없음');
+              
+              await sendToSlack({
+                text: `Branch created for Issue ${issueNumber}`,
+                blocks: [
+                  {
+                    type: 'header',
+                    text: {
+                      type: 'plain_text',
+                      text: '🚀 Work Started',
+                      emoji: true
+                    }
+                  },
+                  {
+                    type: 'section',
+                    fields: [
+                      {
+                        type: 'mrkdwn',
+                        text: `*Branch*\n\`${branchName}\``
+                      },
+                      {
+                        type: 'mrkdwn',
+                        text: `*담당자*\n${mention}`
+                      }
+                    ]
+                  },
+                  {
+                    type: 'section',
+                    text: {
+                      type: 'mrkdwn',
+                      text: `*Issue #${issueNumber}*\n${issue.title}`
+                    }
+                  },
+                  {
+                    type: 'context',
+                    elements: [
+                      {
+                        type: 'mrkdwn',
+                        text: `💡 브랜치가 생성되어 작업이 시작되었습니다. Status → ${inProgressOption.name}`
+                      }
+                    ]
+                  },
+                  {
+                    type: 'actions',
+                    elements: [
+                      {
+                        type: 'button',
+                        text: {
+                          type: 'plain_text',
+                          text: 'View Issue'
+                        },
+                        url: issue.html_url
+                      }
+                    ]
+                  }
+                ]
+              });
+              
+              console.log('✅ Slack notification sent');
+              
+            } catch (error) {
+              console.error('❌ Error:', error.message);
+              if (error.errors) {
+                console.error('GraphQL errors:', JSON.stringify(error.errors, null, 2));
+              }
+              throw error;
+            }

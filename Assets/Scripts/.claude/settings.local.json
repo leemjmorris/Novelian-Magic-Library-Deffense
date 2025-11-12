@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 30 ping:*)",
+      "Bash(nul)",
+      "Bash(if exist nul del /f nul 2)",
+      "Bash(gh repo set-default:*)",
+      "Bash(gh api:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

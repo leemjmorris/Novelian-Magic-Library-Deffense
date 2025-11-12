@@ -1,4 +1,5 @@
 using System;
+using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
 public class Projectile : MonoBehaviour, IPoolable
@@ -35,7 +36,8 @@ public class Projectile : MonoBehaviour, IPoolable
             spawnTime += Time.deltaTime;
             if (spawnTime >= lifetime)
             {
-                ObjectPoolManager.Instance.Despawn(this);
+                // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
+                GameManager.Instance.Pool.Despawn(this);
                 spawnTime = 0f;
                 return;
             }
@@ -60,7 +62,8 @@ public class Projectile : MonoBehaviour, IPoolable
             {
                 monster.TakeDamage(damage);
             }
-            ObjectPoolManager.Instance.Despawn(this);
+            // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
+            GameManager.Instance.Pool.Despawn(this);
         }
         if (collision.CompareTag(Tag.BossMonster))
         {
@@ -69,7 +72,8 @@ public class Projectile : MonoBehaviour, IPoolable
             {
                 bossMonster.TakeDamage(damage);
             }
-            ObjectPoolManager.Instance.Despawn(this);
+            // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
+            GameManager.Instance.Pool.Despawn(this);
         }
     }
 

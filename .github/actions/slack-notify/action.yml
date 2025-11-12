@@ -1,0 +1,56 @@
+name: 'Send Slack Notification'
+description: 'Send a formatted message to Slack with user mapping'
+inputs:
+  webhook-url:
+    description: 'Slack webhook URL'
+    required: true
+  message:
+    description: 'Slack message JSON (blocks format)'
+    required: true
+  github-username:
+    description: 'GitHub username to map to Slack ID (optional)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Load user mapping
+      id: user-mapping
+      shell: bash
+      run: |
+        # Load user mapping from JSON file
+        MAPPING_FILE="${{ github.action_path }}/../../scripts/user-mapping.json"
+
+        if [ ! -f "$MAPPING_FILE" ]; then
+          echo "❌ User mapping file not found: $MAPPING_FILE"
+          exit 1
+        fi
+
+        echo "USER_MAPPING=$(cat $MAPPING_FILE | jq -c '.')" >> $GITHUB_OUTPUT
+
+    - name: Send to Slack
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook-url }}
+        MESSAGE: ${{ inputs.message }}
+      run: |
+        if [ -z "$WEBHOOK_URL" ]; then
+          echo "⚠️ SLACK_WEBHOOK_URL not set, skipping notification"
+          exit 0
+        fi
+
+        # Send message to Slack
+        RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$WEBHOOK_URL" \
+          -H "Content-Type: application/json; charset=utf-8" \
+          -d "$MESSAGE")
+
+        HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+        BODY=$(echo "$RESPONSE" | head -n-1)
+
+        if [ "$HTTP_CODE" = "200" ] && [ "$BODY" = "ok" ]; then
+          echo "✅ Slack notification sent successfully"
+        else
+          echo "❌ Slack API error: HTTP $HTTP_CODE - $BODY"
+          exit 1
+        fi

@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
 using UnityEngine.Pool;
-public class BossMonster : MonsterBase, ITargetable
+public class BossMonster : MonoBehaviour, IPoolable, ITargetable
 {
+    public static event System.Action<BossMonster> OnBossDied;
     [SerializeField] new Collider2D collider2D;
     [SerializeField] private Rigidbody2D rb;
     [SerializeField] private float moveSpeed = 2f;
@@ -75,10 +76,11 @@ public class BossMonster : MonsterBase, ITargetable
         }
     }
 
-    protected override void Die()
+    private void Die()
     {
-        base.Die();
-        ObjectPoolManager.Instance.Despawn(this);
+        OnBossDied?.Invoke(this);
+        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
+        NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
     
     private void OnTriggerEnter2D(Collider2D collision)
@@ -92,7 +94,7 @@ public class BossMonster : MonsterBase, ITargetable
         }
     }
 
-    public override void OnSpawn()
+    public void OnSpawn()
     {
         
         currentHealth = maxHealth;
@@ -104,7 +106,7 @@ public class BossMonster : MonsterBase, ITargetable
         Debug.Log("Monster spawned");
     }
 
-    public override void OnDespawn()
+    public void OnDespawn()
     {
         isWallHit = false;
         wall = null;
