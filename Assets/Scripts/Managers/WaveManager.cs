@@ -17,6 +17,9 @@ namespace NovelianMagicLibraryDefense.Managers
         private TextMeshProUGUI monsterCountText;
         private bool isPoolReady = false;
 
+        public static event System.Action OnAllMonstersDefeated;
+        public static event System.Action OnBossDefeated;
+
         #region WaveData
         // private int waveId;  // LMJ: Reserved for future use
         private int enemyCount = 50;
@@ -90,7 +93,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// LMJ: Initialize wave parameters
         /// </summary>
-        public void Initialize(int totalEnemies, float rushIntervalPercent, int bossCount = 0)
+        public void Initialize(int totalEnemies, int bossCount = 0)
         {
             enemyCount = totalEnemies;
             // rushInterval = rushIntervalPercent;  // LMJ: RushSpawn disabled
@@ -129,13 +132,19 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void HandleMonsterDied(Monster monster)
         {
-            if (enemyCount <= 0) return;
+            // if (enemyCount <= 0) return;
 
             enemyCount--;
 
             if (monsterCountText != null)
             {
                 monsterCountText.text = $"Monster Count: {enemyCount}";
+            }
+
+            if (enemyCount == 0 && bossCount == 0)
+            {
+                Debug.Log("[WaveManager] All monsters defeated!");
+                OnAllMonstersDefeated?.Invoke();
             }
         }
 
@@ -147,15 +156,17 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 monsterCountText.text = $"Stage Cleared!";
             }
+
+            Debug.Log("[WaveManager] Boss defeated!");
+            OnBossDefeated?.Invoke();
         }
 
         private async UniTaskVoid SpawnEnemy()
         {
             int totalMonsters = enemyCount;
             int spawnedCount = 0;
-            // int rushIndex = 0;  // LMJ: RushSpawn disabled
 
-            while (enemyCount > 0)
+            while (spawnedCount < totalMonsters)
             {
                 // LMJ: RushSpawn feature disabled
                 /*
@@ -176,6 +187,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 poolManager.Spawn<Monster>(spawnPos);
 
                 spawnedCount++;
+                Debug.Log($"[WaveManager] Spawned monster {spawnedCount}/{totalMonsters}");
                 await UniTask.Delay((int)(spawnInterval * 1000));
             }
 
@@ -183,13 +195,6 @@ namespace NovelianMagicLibraryDefense.Managers
             if (bossCount > 0)
             {
                 SpawnBoss();
-            }
-            else
-            {
-                if (monsterCountText != null)
-                {
-                    monsterCountText.text = "Stage Cleared!";
-                }
             }
         }
 
@@ -235,5 +240,16 @@ namespace NovelianMagicLibraryDefense.Managers
             poolManager.DespawnAll<Monster>();
         }
         */
+
+        public bool HasRemainingEnemies()
+        {
+            return enemyCount > 0;
+        }
+
+        public bool HasBoss()
+        {
+            return bossCount > 0;
+        }
     }
+
 }

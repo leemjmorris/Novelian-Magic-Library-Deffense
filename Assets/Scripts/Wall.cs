@@ -1,8 +1,11 @@
+using System;
 using UnityEngine;
 
 public class Wall : MonoBehaviour
 {
     private float health = 200f;
+
+    public static event Action OnWallDestroyed;
     public void TakeDamage(float damage)
     {
         health -= damage;
@@ -15,6 +18,6 @@ public class Wall : MonoBehaviour
     private void GameOver()
     {
         Debug.Log("Game Over!");
-        Time.timeScale = 0f; // JML: Stop the game
+        OnWallDestroyed?.Invoke();
     }
 }

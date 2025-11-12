@@ -17,10 +17,14 @@ namespace NovelianMagicLibraryDefense.Managers
         [Header("UI References")]
         [SerializeField] private TextMeshProUGUI monsterCountText;
 
+        [Header("Stage References")]
+        [SerializeField] private Wall wallReference;
+
         // LMJ: Explicit manager references for type-safe access
         private ObjectPoolManager poolManager;
         private WaveManager waveManager;
         private StageManager stageManager;
+        private StageStateManager stageStateManager;
 
         // LMJ: List management for batch operations
         private List<IManager> managers = new List<IManager>();
@@ -29,6 +33,7 @@ namespace NovelianMagicLibraryDefense.Managers
         public ObjectPoolManager Pool => poolManager;
         public WaveManager Wave => waveManager;
         public StageManager Stage => stageManager;
+        public StageStateManager StageState => stageStateManager;
         public TextMeshProUGUI MonsterCountText => monsterCountText;
 
         private void Awake()
@@ -55,7 +60,8 @@ namespace NovelianMagicLibraryDefense.Managers
             RegisterManager(poolManager = new ObjectPoolManager());
             RegisterManager(waveManager = new WaveManager(poolManager, monsterCountText));
             RegisterManager(stageManager = new StageManager(waveManager));
-
+            RegisterManager(stageStateManager = new StageStateManager(waveManager, stageManager, wallReference));
+            
             // LMJ: Initialize all managers in registration order
             InitializeAll();
         }

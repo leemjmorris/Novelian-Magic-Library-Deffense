@@ -27,10 +27,12 @@ namespace NovelianMagicLibraryDefense.Managers
 
         #region Timer
         // LMJ: Stage duration can be loaded from CSV in the future
-        private float stageDuration = 600f; // Default: 10 minutes
+        private float stageDuration = 600; // Default: 10 minutes
         private float RemainingTime { get; set; }
         private bool isStageCleared = false;
         private CancellationTokenSource timerCts;
+
+        public static event Action OnTimeUp;
         #endregion
 
         /// <summary>
@@ -58,7 +60,7 @@ namespace NovelianMagicLibraryDefense.Managers
             Monster.OnMonsterDied += AddExp;
 
             // LMJ: Initialize wave manager with hardcoded values (can be loaded from CSV later)
-            waveManager.Initialize(totalEnemies: 2000, rushIntervalPercent: 0.05f, bossCount: 1);
+            waveManager.Initialize(totalEnemies: 5, bossCount: 0);
             waveManager.WaveLoop().Forget();
 
             // LMJ: Start stage timer using UniTask (no MonoBehaviour required!)
@@ -122,11 +124,12 @@ namespace NovelianMagicLibraryDefense.Managers
                     int minutes = Mathf.FloorToInt(RemainingTime / 60f);
                     int seconds = Mathf.FloorToInt(RemainingTime % 60f);
                     Debug.Log($"[StageManager] TIME {minutes:00}:{seconds:00}");
+                    Debug.Log($"[StageManager] Remaining Time: {RemainingTime} seconds");
 
-                    if (RemainingTime <= 0)
+                    if ((int)RemainingTime <= 0)
                     {
                         RemainingTime = 0;
-                        OnTimeUp();
+                        HandleTimeUp();
                         break;
                     }
 
@@ -140,10 +143,10 @@ namespace NovelianMagicLibraryDefense.Managers
             }
         }
 
-        private void OnTimeUp()
+        public void HandleTimeUp()
         {
             Debug.Log("[StageManager] Time's Up! Stage Failed");
-            // TODO: LMJ Game Over Logic
+            OnTimeUp?.Invoke();
         }
 
         /// <summary>
