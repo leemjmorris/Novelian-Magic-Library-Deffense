@@ -16,6 +16,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         [Header("UI References")]
         [SerializeField] private TextMeshProUGUI monsterCountText;
+        [SerializeField] private GameObject cardPanel; //LCB: Card panel reference for activation
 
         [Header("Stage References")]
         [SerializeField] private Wall wallReference;
@@ -36,6 +37,15 @@ namespace NovelianMagicLibraryDefense.Managers
         public StageStateManager StageState => stageStateManager;
         public TextMeshProUGUI MonsterCountText => monsterCountText;
 
+        
+        private void Start()
+        {   //LCB: Ensure card panel is active at runtime
+            if (cardPanel != null)
+            {
+                cardPanel.SetActive(true);
+                //Debug.Log("[GameManager] Card panel activated at runtime");
+            }
+        }
         private void Awake()
         {
             if (instance != null && instance != this)
