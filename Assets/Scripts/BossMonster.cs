@@ -63,12 +63,8 @@ public class BossMonster : BaseEntity, ITargetable
 
     public override void TakeDamage(float damage)
     {
-        currentHealth -= damage;
-        Debug.Log($"Monster took {damage} damage. current Health: {currentHealth}");
-        if (currentHealth <= 0)
-        {
-            Die();
-        }
+        Debug.Log($"BossMonster took {damage} damage. current Health: {currentHealth - damage}");
+        base.TakeDamage(damage);
     }
 
     public override void Die()

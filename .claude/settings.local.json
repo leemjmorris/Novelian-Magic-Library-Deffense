@@ -9,7 +9,9 @@
       "Bash(gh issue view:*)",
       "Bash(gh workflow:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Improve workflow automation and filtering\n\n- Update branch-to-in-progress workflow to support all branch patterns (not just feature/**)\n- Add first-push detection to prevent duplicate Slack notifications\n- Filter daily report to include only developers (exclude planners)\n- Fix developer GitHub usernames (jaemoon23 instead of JaeMoonL)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Improve workflow automation and filtering\n\n- Update branch-to-in-progress workflow to support all branch patterns (not just feature/**)\n- Add first-push detection to prevent duplicate Slack notifications\n- Filter daily report to include only developers (exclude planners)\n- Fix developer GitHub usernames (jaemoon23 instead of JaeMoonL)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(gh issue create:*)",
+      "Bash(gh label list:*)"
     ],
     "deny": [],
     "ask": []
