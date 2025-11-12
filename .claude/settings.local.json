@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(gh issue list:*)",
-      "Bash(timeout /t 3)"
+      "Bash(timeout /t 3)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git remote set-url:*)"
     ],
     "deny": [],
     "ask": []

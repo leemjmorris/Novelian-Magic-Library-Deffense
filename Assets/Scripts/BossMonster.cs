@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Pool;
-public class BossMonster : MonoBehaviour, IPoolable, ITargetable, IEntity
+public class BossMonster : BaseEntity, ITargetable
 {
     public static event System.Action<BossMonster> OnBossDied;
     [SerializeField] new Collider2D collider2D;
@@ -8,22 +8,13 @@ public class BossMonster : MonoBehaviour, IPoolable, ITargetable, IEntity
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackInterval = 0.7f;
-    [SerializeField] private float maxHealth = 1000f;
 
     private float attackTimer = 0f;
     private Wall wall;
-    private float currentHealth;
     private bool isWallHit = false;
 
     // JML: ITargetable implementation
-    public Transform GetTransform() => transform;
-    public Vector3 GetPosition() => transform.position;
-    public bool IsAlive() => gameObject.activeInHierarchy && currentHealth > 0;
     public float Weight { get; private set; } = 5f; // Example weight value
-
-    // IEntity implementation
-    public float GetHealth() => currentHealth;
-    public float GetMaxHealth() => maxHealth;
     //--------------------------------
     private void OnEnable()
     {
@@ -70,7 +61,7 @@ public class BossMonster : MonoBehaviour, IPoolable, ITargetable, IEntity
         }
     }
 
-    public void TakeDamage(float damage)
+    public override void TakeDamage(float damage)
     {
         currentHealth -= damage;
         Debug.Log($"Monster took {damage} damage. current Health: {currentHealth}");
@@ -80,7 +71,7 @@ public class BossMonster : MonoBehaviour, IPoolable, ITargetable, IEntity
         }
     }
 
-    public void Die()
+    public override void Die()
     {
         OnBossDied?.Invoke(this);
         // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
@@ -98,10 +89,10 @@ public class BossMonster : MonoBehaviour, IPoolable, ITargetable, IEntity
         }
     }
 
-    public void OnSpawn()
+    public override void OnSpawn()
     {
-        
-        currentHealth = maxHealth;
+        base.OnSpawn(); // Initialize health
+
         isWallHit = false;
         wall = null;
         attackTimer = 0f;
@@ -110,7 +101,7 @@ public class BossMonster : MonoBehaviour, IPoolable, ITargetable, IEntity
         Debug.Log("Monster spawned");
     }
 
-    public void OnDespawn()
+    public override void OnDespawn()
     {
         isWallHit = false;
         wall = null;
