@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class Wall : MonoBehaviour, IEntity
 {
+    public static event Action OnWallDestroyed;
+
     [SerializeField] private float maxHealth = 200f;
     private float health;
 
