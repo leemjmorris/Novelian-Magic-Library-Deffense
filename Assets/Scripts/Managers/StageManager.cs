@@ -15,6 +15,7 @@ namespace NovelianMagicLibraryDefense.Managers
     public class StageManager : BaseManager
     {
         private WaveManager waveManager;
+        private UIManager uiManager;
 
         public int CurrentStageId { get; private set; }
 
@@ -36,11 +37,12 @@ namespace NovelianMagicLibraryDefense.Managers
         #endregion
 
         /// <summary>
-        /// LMJ: Constructor injection for WaveManager dependency
+        /// LMJ: Constructor injection for dependencies
         /// </summary>
-        public StageManager(WaveManager wave)
+        public StageManager(WaveManager wave, UIManager ui)
         {
             waveManager = wave;
+            uiManager = ui;
         }
 
         /// <summary>
@@ -120,10 +122,12 @@ namespace NovelianMagicLibraryDefense.Managers
                 {
                     RemainingTime = endTime - Time.time;
 
-                    // LMJ: Display remaining time in MM:SS format
-                    int minutes = Mathf.FloorToInt(RemainingTime / 60f);
-                    int seconds = Mathf.FloorToInt(RemainingTime % 60f);
-                    Debug.Log($"[StageManager] TIME {minutes:00}:{seconds:00}");
+                    // LMJ: Update UI timer display
+                    if (uiManager != null)
+                    {
+                        uiManager.UpdateWaveTimer(RemainingTime);
+                    }
+
                     Debug.Log($"[StageManager] Remaining Time: {RemainingTime} seconds");
 
                     if ((int)RemainingTime <= 0)

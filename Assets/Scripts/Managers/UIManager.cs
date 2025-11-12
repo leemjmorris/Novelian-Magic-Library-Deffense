@@ -6,74 +6,96 @@ using NovelianMagicLibraryDefense.Core;
 namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
-    /// LCB: Central UI manager that handles all UI elements and button interactions
-    /// Manages monster count, wave timer, barrier HP, and skill list displays
+    /// LCB/LMJ: Central UI manager that handles all UI elements and button interactions
+    /// Refactored to BaseManager pattern for consistency with other managers
+    /// Manages monster count, wave timer, barrier HP, and button interactions
     /// </summary>
-    public class UIManager : MonoBehaviour, IManager
+    [System.Serializable]
+    public class UIManager : BaseManager
     {
-        private static UIManager instance;
-        public static UIManager Instance => instance;
+        // UI References injected from GameManager
+        private readonly TextMeshProUGUI monsterCountText;
+        private readonly TextMeshProUGUI waveTimerText;
+        private readonly Slider barrierHPSlider;
+        private readonly TextMeshProUGUI barrierHPText;
+        private readonly GameObject cardPanel;
 
-        [Header("Monster Display")]
-        [SerializeField] private TextMeshProUGUI monsterCountText;
+        private readonly Button pauseButton;
+        private readonly Button settingsButton;
+        private readonly Button skillButton1;
+        private readonly Button skillButton2;
+        private readonly Button skillButton3;
+        private readonly Button skillButton4;
 
-        [Header("Wave Timer Display")]
-        [SerializeField] private TextMeshProUGUI waveTimerText;
-
-        [Header("Barrier HP Display")]
-        [SerializeField] private Slider barrierHPSlider;
-        [SerializeField] private TextMeshProUGUI barrierHPText;
-        [SerializeField] private Wall wallReference;
-
-        [Header("Skill List Display")]
-        [SerializeField] private Transform skillListContainer;
-        [SerializeField] private GameObject skillItemPrefab;
-
-        [Header("Button References")]
-        [SerializeField] private Button pauseButton;
-        [SerializeField] private Button settingsButton;
-        [SerializeField] private Button skillButton1;
-        [SerializeField] private Button skillButton2;
-        [SerializeField] private Button skillButton3;
-        [SerializeField] private Button skillButton4;
-
-        private void Awake()
+        /// <summary>
+        /// LMJ: Constructor injection for UI dependencies
+        /// </summary>
+        public UIManager(
+            TextMeshProUGUI monsterCount,
+            TextMeshProUGUI waveTimer,
+            Slider barrierSlider,
+            TextMeshProUGUI barrierText,
+            GameObject cardPanelRef,
+            Button pause,
+            Button settings,
+            Button skill1,
+            Button skill2,
+            Button skill3,
+            Button skill4)
         {
-            //LCB: Singleton pattern for global UI access
-            if (instance != null && instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            instance = this;
+            monsterCountText = monsterCount;
+            waveTimerText = waveTimer;
+            barrierHPSlider = barrierSlider;
+            barrierHPText = barrierText;
+            cardPanel = cardPanelRef;
+            pauseButton = pause;
+            settingsButton = settings;
+            skillButton1 = skill1;
+            skillButton2 = skill2;
+            skillButton3 = skill3;
+            skillButton4 = skill4;
         }
 
-        public void Initialize()
+        protected override void OnInitialize()
         {
-            //LCB: Setup button listeners on initialization
+            Debug.Log("[UIManager] Initializing UI");
+
+            // Activate card panel at initialization
+            if (cardPanel != null)
+            {
+                cardPanel.SetActive(true);
+                Debug.Log("[UIManager] Card panel activated");
+            }
+
+            // Setup button listeners
             SetupButtonListeners();
+
+            // Subscribe to Wall HP changes (event-based, not Update loop)
+            Wall.OnHealthChanged += UpdateBarrierHP;
+
             Debug.Log("[UIManager] Initialized");
         }
 
-        public void Reset()
+        protected override void OnReset()
         {
-            //LCB: Reset all UI elements to initial state
+            Debug.Log("[UIManager] Resetting UI");
             UpdateMonsterCount(0);
             UpdateWaveTimer(0f);
-            Debug.Log("[UIManager] Reset");
         }
 
-        public void Dispose()
+        protected override void OnDispose()
         {
-            //LCB: Cleanup button listeners on disposal
+            Debug.Log("[UIManager] Disposing UI");
+
+            // Unsubscribe from events
+            Wall.OnHealthChanged -= UpdateBarrierHP;
+
+            // Remove button listeners
             RemoveButtonListeners();
-            Debug.Log("[UIManager] Disposed");
         }
 
         #region Button Setup
 
-        //LCB: Setup all button click listeners
         private void SetupButtonListeners()
         {
             if (pauseButton != null)
@@ -93,9 +115,10 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (skillButton4 != null)
                 skillButton4.onClick.AddListener(() => OnSkillButtonClicked(4));
+
+            Debug.Log("[UIManager] Button listeners setup complete");
         }
 
-        //LCB: Remove all button click listeners
         private void RemoveButtonListeners()
         {
             if (pauseButton != null)
@@ -115,27 +138,26 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (skillButton4 != null)
                 skillButton4.onClick.RemoveAllListeners();
+
+            Debug.Log("[UIManager] Button listeners removed");
         }
 
         #endregion
 
         #region Button Callbacks
 
-        //LCB: Handle pause button click - to be implemented with pause logic
         private void OnPauseButtonClicked()
         {
             Debug.Log("[UIManager] Pause button clicked - Logic to be implemented");
             //TODO: Implement pause/resume game logic
         }
 
-        //LCB: Handle settings button click - to be implemented with settings menu
         private void OnSettingsButtonClicked()
         {
             Debug.Log("[UIManager] Settings button clicked - Logic to be implemented");
             //TODO: Implement settings menu logic
         }
 
-        //LCB: Handle skill button clicks with skill index parameter
         private void OnSkillButtonClicked(int skillIndex)
         {
             Debug.Log($"[UIManager] Skill button {skillIndex} clicked - Logic to be implemented");
@@ -146,7 +168,9 @@ namespace NovelianMagicLibraryDefense.Managers
 
         #region Monster Count Display
 
-        //LCB: Update monster count display with current remaining monsters
+        /// <summary>
+        /// LMJ: Update monster count display - called by WaveManager
+        /// </summary>
         public void UpdateMonsterCount(int count)
         {
             if (monsterCountText != null)
@@ -155,18 +179,25 @@ namespace NovelianMagicLibraryDefense.Managers
             }
         }
 
-        //LCB: Get current monster count from text (if needed for calculations)
-        public int GetCurrentMonsterCount()
+        /// <summary>
+        /// LMJ: Display custom monster text - called by WaveManager for special states
+        /// </summary>
+        public void SetMonsterText(string text)
         {
-            //TODO: Implement logic to get actual monster count from game state
-            return 0;
+            if (monsterCountText != null)
+            {
+                monsterCountText.text = text;
+            }
         }
 
         #endregion
 
         #region Wave Timer Display
 
-        //LCB: Update wave timer display with remaining time in seconds
+        /// <summary>
+        /// LMJ: Update wave timer display with remaining time in seconds
+        /// Called by StageManager
+        /// </summary>
         public void UpdateWaveTimer(float timeInSeconds)
         {
             if (waveTimerText != null)
@@ -177,26 +208,14 @@ namespace NovelianMagicLibraryDefense.Managers
             }
         }
 
-        //LCB: Start wave timer countdown
-        public void StartWaveTimer(float duration)
-        {
-            //TODO: Implement timer countdown logic using coroutine or update
-            Debug.Log($"[UIManager] Wave timer started for {duration} seconds");
-        }
-
-        //LCB: Stop wave timer
-        public void StopWaveTimer()
-        {
-            //TODO: Implement timer stop logic
-            Debug.Log("[UIManager] Wave timer stopped");
-        }
-
         #endregion
 
         #region Barrier HP Display
 
-        //LCB: Update barrier HP slider and text with current and max values
-        public void UpdateBarrierHP(float currentHP, float maxHP)
+        /// <summary>
+        /// LMJ: Update barrier HP slider and text - event-driven from Wall
+        /// </summary>
+        private void UpdateBarrierHP(float currentHP, float maxHP)
         {
             if (barrierHPSlider != null)
             {
@@ -208,84 +227,6 @@ namespace NovelianMagicLibraryDefense.Managers
                 barrierHPText.text = $"결계 HP: {currentHP:F0}/{maxHP:F0}";
             }
         }
-
-        //LCB: Get wall reference for HP monitoring
-        public void SetWallReference(Wall wall)
-        {
-            wallReference = wall;
-            Debug.Log("[UIManager] Wall reference set");
-        }
-
-        //LCB: Manually refresh barrier HP from wall reference
-        public void RefreshBarrierHP()
-        {
-            if (wallReference != null)
-            {
-                //TODO: Access wall's current HP and update display
-                Debug.Log("[UIManager] Barrier HP refreshed");
-            }
-        }
-
-        #endregion
-
-        #region Skill List Management
-
-        // //LCB: Add skill item to skill list container
-        // public void AddSkillToList(string skillName, Sprite skillIcon)
-        // {
-        //     if (skillListContainer == null || skillItemPrefab == null)
-        //     {
-        //         Debug.LogWarning("[UIManager] Skill list container or prefab is null");
-        //         return;
-        //     }
-
-        //     //TODO: Instantiate skill item prefab and populate with data
-        //     Debug.Log($"[UIManager] Added skill to list: {skillName}");
-        // }
-
-        // //LCB: Remove skill item from skill list
-        // public void RemoveSkillFromList(int index)
-        // {
-        //     if (skillListContainer == null || index < 0 || index >= skillListContainer.childCount)
-        //     {
-        //         Debug.LogWarning("[UIManager] Invalid skill list index");
-        //         return;
-        //     }
-
-        //     //TODO: Remove skill item at index
-        //     Debug.Log($"[UIManager] Removed skill from list at index: {index}");
-        // }
-
-        // //LCB: Clear all skills from skill list
-        // public void ClearSkillList()
-        // {
-        //     if (skillListContainer == null) return;
-
-        //     foreach (Transform child in skillListContainer)
-        //     {
-        //         Destroy(child.gameObject);
-        //     }
-
-        //     Debug.Log("[UIManager] Skill list cleared");
-        // }
-
-        // //LCB: Update skill button state (enabled/disabled)
-        // public void SetSkillButtonState(int skillIndex, bool isEnabled)
-        // {
-        //     Button targetButton = skillIndex switch
-        //     {
-        //         1 => skillButton1,
-        //         2 => skillButton2,
-        //         3 => skillButton3,
-        //         4 => skillButton4,
-        //         _ => null
-        //     };
-
-        //     if (targetButton != null)
-        //     {
-        //         targetButton.interactable = isEnabled;
-        //     }
-        // }
 
         #endregion
     }

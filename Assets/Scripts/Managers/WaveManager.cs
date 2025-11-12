@@ -14,7 +14,7 @@ namespace NovelianMagicLibraryDefense.Managers
     public class WaveManager : BaseManager
     {
         private ObjectPoolManager poolManager;
-        private TextMeshProUGUI monsterCountText;
+        private UIManager uiManager;
         private bool isPoolReady = false;
 
         public static event System.Action OnAllMonstersDefeated;
@@ -36,10 +36,10 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// LMJ: Constructor injection for dependencies
         /// </summary>
-        public WaveManager(ObjectPoolManager pool, TextMeshProUGUI ui)
+        public WaveManager(ObjectPoolManager pool, UIManager ui)
         {
             poolManager = pool;
-            monsterCountText = ui;
+            uiManager = ui;
         }
 
         protected override void OnInitialize()
@@ -111,9 +111,9 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             */
 
-            if (monsterCountText != null)
+            if (uiManager != null)
             {
-                monsterCountText.text = $"Monster Count: {enemyCount}";
+                uiManager.UpdateMonsterCount(enemyCount);
             }
 
             Debug.Log($"[WaveManager] Wave initialized - Enemies: {totalEnemies}, Bosses: {bossCount}");
@@ -136,9 +136,9 @@ namespace NovelianMagicLibraryDefense.Managers
 
             enemyCount--;
 
-            if (monsterCountText != null)
+            if (uiManager != null)
             {
-                monsterCountText.text = $"Monster Count: {enemyCount}";
+                uiManager.UpdateMonsterCount(enemyCount);
             }
 
             if (enemyCount == 0 && bossCount == 0)
@@ -152,9 +152,9 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             bossCount--;
 
-            if (monsterCountText != null)
+            if (uiManager != null)
             {
-                monsterCountText.text = $"Stage Cleared!";
+                uiManager.SetMonsterText("Stage Cleared!");
             }
 
             Debug.Log("[WaveManager] Boss defeated!");
@@ -200,9 +200,9 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void SpawnBoss()
         {
-            if (monsterCountText != null)
+            if (uiManager != null)
             {
-                monsterCountText.text = "Boss!!";
+                uiManager.SetMonsterText("Boss!!");
             }
 
             Vector3 bossSpawnPos = new Vector3(0f, 2f, -7.5f);
