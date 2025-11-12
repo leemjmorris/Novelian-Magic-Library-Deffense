@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Pool;
-public class Monster : MonoBehaviour, IPoolable, ITargetable
+public class Monster : MonoBehaviour, IPoolable, ITargetable, IEntity
 {
     public static event System.Action<Monster> OnMonsterDied;
     [SerializeField] new Collider2D collider2D;
@@ -21,6 +21,10 @@ public class Monster : MonoBehaviour, IPoolable, ITargetable
     public Vector3 GetPosition() => transform.position;
     public bool IsAlive() => gameObject.activeInHierarchy && currentHealth > 0;
     public float Weight { get; private set; } = 1f; // Example weight value
+
+    // IEntity implementation
+    public float GetHealth() => currentHealth;
+    public float GetMaxHealth() => maxHealth;
     //--------------------------------
     private void OnEnable()
     {
@@ -78,7 +82,7 @@ public class Monster : MonoBehaviour, IPoolable, ITargetable
         }
     }
 
-    private void Die()
+    public void Die()
     {
         OnMonsterDied?.Invoke(this);
         // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool

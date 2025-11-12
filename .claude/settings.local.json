@@ -1,23 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx:*)",
-      "Bash(node:*)",
-      "Bash(dir %APPDATA%Claudelogs /b /o-d 2)",
-      "Bash(nul)",
-      "Bash(powershell -Command:*)",
-      "Bash(dir:*)",
-      "Bash(gh issue view:*)",
-      "Bash(done)",
-      "Bash(gh:*)",
-      "Bash(where gh:*)",
-      "Bash(git rm:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(for file in *.yml)",
-      "Bash(do echo \"=== Validating $file ===\")",
-      "Bash(yamllint:*)"
+      "Bash(gh issue list:*)",
+      "Bash(timeout /t 3)"
     ],
     "deny": [],
     "ask": []
