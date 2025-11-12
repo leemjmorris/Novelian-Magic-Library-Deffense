@@ -82,7 +82,7 @@ public class Monster : MonoBehaviour, IPoolable, ITargetable, IEntity
         }
     }
 
-    private void Die()
+    public void Die()
     {
         OnMonsterDied?.Invoke(this);
         // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
