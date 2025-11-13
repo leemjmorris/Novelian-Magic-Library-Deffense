@@ -63,6 +63,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnInitialize()
         {
+            expSlider.value = 0f;
             Debug.Log("[UIManager] Initializing UI");
             speedButtonText.text = "X1";
 

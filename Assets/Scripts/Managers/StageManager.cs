@@ -85,7 +85,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             // LMJ: Initialize wave manager with hardcoded values (can be loaded from CSV later)
-            waveManager.Initialize(totalEnemies: 1000, bossCount: 0);
+            waveManager.Initialize(totalEnemies: 20, bossCount: 0);
             waveManager.WaveLoop().Forget();
 
             // LMJ: Start stage timer using UniTask (no MonoBehaviour required!)

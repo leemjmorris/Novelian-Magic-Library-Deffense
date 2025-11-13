@@ -25,7 +25,7 @@ namespace NovelianMagicLibraryDefense.Managers
         private int enemyCount;
         private int initialEnemyCount;
         private int bossCount;
-        private float spawnInterval = 1f;
+        private float spawnInterval = 2f;
 
         // LMJ: RushSpawn feature disabled
         // private float rushSpawnInterval = 0.5f;
