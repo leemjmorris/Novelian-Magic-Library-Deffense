@@ -1,22 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh issue list:*)",
-      "Bash(timeout /t 3)",
-      "Bash(git push:*)",
-      "Bash(gh pr create:*)",
-      "Bash(git remote set-url:*)",
-      "Bash(gh issue view:*)",
-      "Bash(gh workflow:*)",
-      "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Improve workflow automation and filtering\n\n- Update branch-to-in-progress workflow to support all branch patterns (not just feature/**)\n- Add first-push detection to prevent duplicate Slack notifications\n- Filter daily report to include only developers (exclude planners)\n- Fix developer GitHub usernames (jaemoon23 instead of JaeMoonL)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(gh issue create:*)",
-      "Bash(gh label list:*)",
-      "Bash(echo:*)",
-      "Bash(if exist Library rmdir /s /q Library)",
-      "Bash(if exist Temp rmdir /s /q Temp)",
-      "Bash(if exist obj rmdir /s /q obj)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfix: GitHub Actions workflow syntax error\n\n- Fix ''branches'' and ''branches-ignore'' conflict\n- Use negation pattern (!main, !master, !develop) instead\n- Workflow now triggers on all branches except main/master/develop\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(powershell.exe -Command \"gh issue edit 146 --title ''[Feature] Manager Scene + Additive Scene 아키텍처 전환 (CSV/Firebase 데이터 영속성 확보)'' --body-file /tmp/issue_body.txt\")",
+      "Bash(cat:*)",
+      "Bash(powershell.exe -NoProfile -Command \"$env:PATH += '';C:\\Program Files\\GitHub CLI''; gh issue edit 146 --title ''[Feature] Manager Scene + Additive Scene 아키텍처 전환 (CSV/Firebase 데이터 영속성 확보)'' --body-file C:\\Users\\LMJ\\AppData\\Local\\Temp\\issue_body.txt\")",
+      "Bash(powershell.exe -Command:*)",
+      "Bash(\"/c/Program Files (x86)/GitHub CLI/gh.exe\" issue edit 146 --title \"[Feature] Manager Scene + Additive Scene 아키텍처 전환 (CSV/Firebase 데이터 영속성 확보)\" --body-file /tmp/issue_body.txt)",
+      "Bash(\"/c/Program Files (x86)/GitHub CLI/gh.exe\" issue edit 146 --title \"[Feature] Manager Scene + Additive Scene 아키텍처 + Service Locator 패턴 도입\" --body-file /tmp/issue_body_updated.txt)"
     ],
     "deny": [],
     "ask": []
