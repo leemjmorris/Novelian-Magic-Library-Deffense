@@ -50,6 +50,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private Wall wallReference;
 
         // LMJ: Explicit manager references for type-safe access
+        private InputManager inputManager;
         private UIManager uiManager;
         private ObjectPoolManager poolManager;
         private WaveManager waveManager;
@@ -60,6 +61,7 @@ namespace NovelianMagicLibraryDefense.Managers
         private List<IManager> managers = new List<IManager>();
 
         // LMJ: Public accessors for type-safe manager access
+        public InputManager Input => inputManager;
         public UIManager UI => uiManager;
         public ObjectPoolManager Pool => poolManager;
         public WaveManager Wave => waveManager;
@@ -82,11 +84,14 @@ namespace NovelianMagicLibraryDefense.Managers
 
         /// <summary>
         /// LMJ: Initialize all managers in dependency order
-        /// Order matters: UI -> Pool -> Wave -> Stage -> StageState
+        /// Order matters: Input -> UI -> Pool -> Wave -> Stage -> StageState
         /// </summary>
         private void InitializeManagers()
         {
-            // LMJ: Create UIManager first with all UI references
+            // LMJ: Create InputManager first (no dependencies)
+            RegisterManager(inputManager = new InputManager());
+
+            // LMJ: Create UIManager with all UI references
             uiManager = new UIManager(
                 monsterCountText,
                 waveTimerText,
