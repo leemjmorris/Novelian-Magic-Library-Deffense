@@ -1,6 +1,7 @@
 using System;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
+using NovelianMagicLibraryDefense.UI;
 using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Managers
@@ -17,17 +18,21 @@ namespace NovelianMagicLibraryDefense.Managers
     {
         private WaveManager waveManager;
         private StageManager stageManager;
+        private WinLosePanel winLosePanel;
         private Wall wall;
 
         public StageState CurrentState { get; private set; }
+       
+        
 
         public static event Action<StageState> OnStageStateChanged;
 
-        public StageStateManager(WaveManager wave, StageManager stage, Wall wallRef)
+        public StageStateManager(WaveManager wave, StageManager stage, Wall wallRef, WinLosePanel panel)
         {
             waveManager = wave;
             stageManager = stage;
             wall = wallRef;
+            winLosePanel = panel;
         }
 
         protected override void OnInitialize()
@@ -35,7 +40,7 @@ namespace NovelianMagicLibraryDefense.Managers
             Debug.Log("[StageStateManager] Initializing stage state");
 
             CurrentState = StageState.Playing;
-
+            
             WaveManager.OnAllMonstersDefeated += HandleAllMonstersDefeated;
             WaveManager.OnBossDefeated += HandleBossDefeated;
 
@@ -121,7 +126,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         #endregion
 
-        private void SetStageState(StageState newState)
+        public void SetStageState(StageState newState)
         {
             CurrentState = newState;
             Time.timeScale = 0f;
@@ -129,6 +134,19 @@ namespace NovelianMagicLibraryDefense.Managers
             OnStageStateChanged?.Invoke(newState);
 
             Debug.Log($"[StageStateManager] Stage State Changed: {newState}");
+
+            if (newState == StageState.Cleared)
+            {
+                //JML: ShowVictoryPanel 
+                //TODO JML: Rank calculation logic to be implemented
+                winLosePanel.ShowVictoryPanel("S",stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetKillCount(), stageManager.GetReward());
+            }
+            else if (newState == StageState.Failed)
+            {
+                //JML: ShowDefeatPanel
+                //TODO JML: Rank calculation logic to be implemented
+                winLosePanel.ShowDefeatPanel("F", stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetRemainderCount());
+            }
         }
 
         public StageState GetCurrentState()

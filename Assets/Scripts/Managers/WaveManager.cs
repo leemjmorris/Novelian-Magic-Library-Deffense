@@ -22,7 +22,8 @@ namespace NovelianMagicLibraryDefense.Managers
 
         #region WaveData
         // private int waveId;  // LMJ: Reserved for future use
-        private int enemyCount = 50;
+        private int enemyCount;
+        private int initialEnemyCount;
         private int bossCount;
         private float spawnInterval = 1f;
 
@@ -96,6 +97,7 @@ namespace NovelianMagicLibraryDefense.Managers
         public void Initialize(int totalEnemies, int bossCount = 0)
         {
             enemyCount = totalEnemies;
+            initialEnemyCount = totalEnemies;
             // rushInterval = rushIntervalPercent;  // LMJ: RushSpawn disabled
             this.bossCount = bossCount;
 
@@ -144,6 +146,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (enemyCount == 0 && bossCount == 0)
             {
                 Debug.Log("[WaveManager] All monsters defeated!");
+                WaveClear();
                 OnAllMonstersDefeated?.Invoke();
             }
         }
@@ -151,11 +154,6 @@ namespace NovelianMagicLibraryDefense.Managers
         private void HandleBossDied(BossMonster boss)
         {
             bossCount--;
-
-            if (uiManager != null)
-            {
-                uiManager.SetMonsterText("Stage Cleared!");
-            }
 
             Debug.Log("[WaveManager] Boss defeated!");
             OnBossDefeated?.Invoke();
@@ -187,7 +185,6 @@ namespace NovelianMagicLibraryDefense.Managers
                 poolManager.Spawn<Monster>(spawnPos);
 
                 spawnedCount++;
-                Debug.Log($"[WaveManager] Spawned monster {spawnedCount}/{totalMonsters}");
                 await UniTask.Delay((int)(spawnInterval * 1000));
             }
 
@@ -200,11 +197,6 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void SpawnBoss()
         {
-            if (uiManager != null)
-            {
-                uiManager.SetMonsterText("Boss!!");
-            }
-
             Vector3 bossSpawnPos = new Vector3(0f, 2f, -7.5f);
             poolManager.Spawn<BossMonster>(bossSpawnPos);
 
@@ -240,7 +232,10 @@ namespace NovelianMagicLibraryDefense.Managers
             poolManager.DespawnAll<Monster>();
         }
         */
-
+        public void WaveClear()
+        {
+            poolManager.ClearAll();
+        }
         public bool HasRemainingEnemies()
         {
             return enemyCount > 0;
@@ -249,6 +244,16 @@ namespace NovelianMagicLibraryDefense.Managers
         public bool HasBoss()
         {
             return bossCount > 0;
+        }
+
+        public int GetKillCount()
+        {
+            return initialEnemyCount - Mathf.Max(0, enemyCount);
+        }
+
+        public int GetRemainderCount()
+        {
+            return enemyCount;
         }
     }
 

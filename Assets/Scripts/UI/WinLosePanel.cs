@@ -16,17 +16,19 @@ namespace NovelianMagicLibraryDefense.UI
 
         [Header("Victory UI Elements")]
         [SerializeField] private TextMeshProUGUI victoryStageText;
+        [SerializeField] private TextMeshProUGUI victoryRankText;
         [SerializeField] private TextMeshProUGUI victoryTimeText;
         [SerializeField] private TextMeshProUGUI victoryRewardText;
-        [SerializeField] private Button victoryNextButton;
-        [SerializeField] private Button victoryStageSelectButton;
+        [SerializeField] private Button victoryLobbyButton;
+        [SerializeField] private Button stageSelectButton;
 
         [Header("Defeat UI Elements")]
         [SerializeField] private TextMeshProUGUI defeatStageText;
         [SerializeField] private TextMeshProUGUI defeatTimeText;
-        [SerializeField] private TextMeshProUGUI defeatRewardText;
+        [SerializeField] private TextMeshProUGUI defeatRankText;
+        [SerializeField] private TextMeshProUGUI remainderText;
         [SerializeField] private Button defeatRetryButton;
-        [SerializeField] private Button defeatStageSelectButton;
+        [SerializeField] private Button defeatLobbyButton;
 
         private void Awake()
         {
@@ -48,33 +50,33 @@ namespace NovelianMagicLibraryDefense.UI
         //LCB: Setup all button click listeners for both panels
         private void SetupButtonListeners()
         {
-            if (victoryNextButton != null)
-                victoryNextButton.onClick.AddListener(OnVictoryNextButtonClicked);
+            if (victoryLobbyButton != null)
+                victoryLobbyButton.onClick.AddListener(OnLobbyButtonClicked);
 
-            if (victoryStageSelectButton != null)
-                victoryStageSelectButton.onClick.AddListener(OnVictoryStageSelectButtonClicked);
+            if (stageSelectButton != null)
+                stageSelectButton.onClick.AddListener(OnStageSelectButtonClicked);
 
             if (defeatRetryButton != null)
                 defeatRetryButton.onClick.AddListener(OnDefeatRetryButtonClicked);
 
-            if (defeatStageSelectButton != null)
-                defeatStageSelectButton.onClick.AddListener(OnDefeatStageSelectButtonClicked);
+            if (defeatLobbyButton != null)
+                defeatLobbyButton.onClick.AddListener(OnLobbyButtonClicked);
         }
 
         //LCB: Remove all button click listeners
         private void RemoveButtonListeners()
         {
-            if (victoryNextButton != null)
-                victoryNextButton.onClick.RemoveListener(OnVictoryNextButtonClicked);
+            if (victoryLobbyButton != null)
+                victoryLobbyButton.onClick.RemoveListener(OnLobbyButtonClicked);
 
-            if (victoryStageSelectButton != null)
-                victoryStageSelectButton.onClick.RemoveListener(OnVictoryStageSelectButtonClicked);
+            if (stageSelectButton != null)
+                stageSelectButton.onClick.RemoveListener(OnStageSelectButtonClicked);
 
             if (defeatRetryButton != null)
                 defeatRetryButton.onClick.RemoveListener(OnDefeatRetryButtonClicked);
 
-            if (defeatStageSelectButton != null)
-                defeatStageSelectButton.onClick.RemoveListener(OnDefeatStageSelectButtonClicked);
+            if (defeatLobbyButton != null)
+                defeatLobbyButton.onClick.RemoveListener(OnLobbyButtonClicked);
         }
 
         #endregion
@@ -82,26 +84,33 @@ namespace NovelianMagicLibraryDefense.UI
         #region Victory Panel Methods
 
         //LCB: Show victory panel with stage completion data
-        public void ShowVictoryPanel(string stageName, float clearTime, int reward)
+        public void ShowVictoryPanel(string Rnak, string stageName, float clearTime, int killCount, int reward)
         {
-            if (victoryPanel != null)
-            {
-                victoryPanel.SetActive(true);
-                UpdateVictoryInfo(stageName, clearTime, reward);
-                Debug.Log("[WinLosePanel] Victory panel displayed");
-            }
+            gameObject.SetActive(true);
 
             if (defeatPanel != null)
             {
                 defeatPanel.SetActive(false);
             }
 
+            if (victoryPanel != null)
+            {
+                UpdateVictoryInfo(Rnak, stageName, clearTime, killCount, reward);
+                
+                victoryPanel.SetActive(true);
+
+                Debug.Log("[WinLosePanel] Victory panel displayed");
+            }
             //TODO: Implement victory logic (animations, sounds, etc.)
         }
 
         //LCB: Update victory panel information
-        private void UpdateVictoryInfo(string stageName, float clearTime, int reward)
+        private void UpdateVictoryInfo(string Rnak, string stageName, float clearTime, int killCount, int reward)
         {
+            if (victoryRankText != null)
+            {
+                victoryRankText.text = Rnak;
+            }
             if (victoryStageText != null)
             {
                 victoryStageText.text = stageName;
@@ -111,24 +120,24 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 int minutes = Mathf.FloorToInt(clearTime / 60f);
                 int seconds = Mathf.FloorToInt(clearTime % 60f);
-                victoryTimeText.text = $"전투시간 : {minutes:00}:{seconds:00}";
+                victoryTimeText.text = $"진행시간 : {minutes:00}:{seconds:00}\n처치 몬스터 : {killCount}마리";
             }
 
             if (victoryRewardText != null)
             {
-                victoryRewardText.text = $"처치 몬스터 : {reward}마리";
+                victoryRewardText.text = $"보상: {reward}G";
             }
         }
 
         //LCB: Handle victory next stage button click
-        private void OnVictoryNextButtonClicked()
+        private void OnLobbyButtonClicked()
         {
-            Debug.Log("[WinLosePanel] Victory Next button clicked - Logic to be implemented");
-            //TODO: Implement next stage logic
+            Debug.Log("[WinLosePanel] Lobby button clicked - Logic to be implemented");
+            //TODO: Implement Lobby scene loaded logic
         }
 
         //LCB: Handle victory stage select button click
-        private void OnVictoryStageSelectButtonClicked()
+        private void OnStageSelectButtonClicked()
         {
             Debug.Log("[WinLosePanel] Victory Stage Select button clicked - Logic to be implemented");
             //TODO: Implement stage select logic
@@ -139,26 +148,35 @@ namespace NovelianMagicLibraryDefense.UI
         #region Defeat Panel Methods
 
         //LCB: Show defeat panel with stage failure data
-        public void ShowDefeatPanel(string stageName, float survivalTime, int monstersKilled)
+        public void ShowDefeatPanel(string Rnak, string stageName, float survivalTime, int RemainderCount)
         {
-            if (defeatPanel != null)
-            {
-                defeatPanel.SetActive(true);
-                UpdateDefeatInfo(stageName, survivalTime, monstersKilled);
-                Debug.Log("[WinLosePanel] Defeat panel displayed");
-            }
+            gameObject.SetActive(true);
 
             if (victoryPanel != null)
             {
                 victoryPanel.SetActive(false);
             }
 
+            if (defeatPanel != null)
+            {
+                
+                defeatPanel.SetActive(true);
+                UpdateDefeatInfo(Rnak, stageName, survivalTime, RemainderCount);
+                Debug.Log("[WinLosePanel] Defeat panel displayed");
+            }
+
+            
+
             //TODO: Implement defeat logic (animations, sounds, etc.)
         }
 
         //LCB: Update defeat panel information
-        private void UpdateDefeatInfo(string stageName, float survivalTime, int monstersKilled)
+        private void UpdateDefeatInfo(string Rnak, string stageName, float survivalTime, int RemainderCount)
         {
+            if (defeatRankText != null)
+            {
+                defeatRankText.text = Rnak;
+            }
             if (defeatStageText != null)
             {
                 defeatStageText.text = stageName;
@@ -171,9 +189,9 @@ namespace NovelianMagicLibraryDefense.UI
                 defeatTimeText.text = $"전투시간 : {minutes:00}:{seconds:00}";
             }
 
-            if (defeatRewardText != null)
+            if (defeatRankText != null)
             {
-                defeatRewardText.text = $"처치 몬스터 : {monstersKilled}마리";
+                remainderText.text = $"남은 몬스터 : {RemainderCount}마리";
             }
         }
 
@@ -182,13 +200,6 @@ namespace NovelianMagicLibraryDefense.UI
         {
             Debug.Log("[WinLosePanel] Defeat Retry button clicked - Logic to be implemented");
             //TODO: Implement retry stage logic
-        }
-
-        //LCB: Handle defeat stage select button click
-        private void OnDefeatStageSelectButtonClicked()
-        {
-            Debug.Log("[WinLosePanel] Defeat Stage Select button clicked - Logic to be implemented");
-            //TODO: Implement stage select logic
         }
 
         #endregion
@@ -207,6 +218,7 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 defeatPanel.SetActive(false);
             }
+            gameObject.SetActive(false);
 
             Debug.Log("[WinLosePanel] All panels hidden");
         }

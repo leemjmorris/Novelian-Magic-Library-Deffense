@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,6 +32,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         [Header("UI References - Panels")]
         [SerializeField] private GameObject cardPanel;
+        [SerializeField] private WinLosePanel winLosePanel;
 
         [Header("UI References - SpeedButtonText")]
         [SerializeField] private TextMeshProUGUI speedButtonText;
@@ -106,7 +108,7 @@ namespace NovelianMagicLibraryDefense.Managers
             RegisterManager(poolManager = new ObjectPoolManager());
             RegisterManager(waveManager = new WaveManager(poolManager, uiManager));
             RegisterManager(stageManager = new StageManager(waveManager, uiManager));
-            RegisterManager(stageStateManager = new StageStateManager(waveManager, stageManager, wallReference));
+            RegisterManager(stageStateManager = new StageStateManager(waveManager, stageManager, wallReference, winLosePanel));
 
             // LMJ: Initialize all managers in registration order
             InitializeAll();

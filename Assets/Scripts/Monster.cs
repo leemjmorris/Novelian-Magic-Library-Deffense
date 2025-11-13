@@ -20,12 +20,10 @@ public class Monster : BaseEntity, ITargetable
     private void OnEnable()
     {
         collider2D.enabled = true;
-        Debug.Log("Collider Enabled");
     }
     private void OnDisable()
     {
         collider2D.enabled = false;
-        Debug.Log("Collider Disabled");
     }
 
     void Start()
@@ -65,7 +63,6 @@ public class Monster : BaseEntity, ITargetable
 
     public override void TakeDamage(float damage)
     {
-        Debug.Log($"Monster took {damage} damage. current Health: {currentHealth - damage}");
         base.TakeDamage(damage);
     }
 
@@ -80,9 +77,7 @@ public class Monster : BaseEntity, ITargetable
     {
         if (collision.CompareTag(Tag.Wall))
         {
-            Debug.Log("Monster hit the wall.");
             wall = collision.GetComponent<Wall>();
-            
             isWallHit = true;
         }
     }
@@ -97,7 +92,6 @@ public class Monster : BaseEntity, ITargetable
         Weight = 1f;
 
         TargetRegistry.Instance.RegisterTarget(this);
-        Debug.Log("Monster spawned");
     }
 
     public override void OnDespawn()
@@ -107,6 +101,5 @@ public class Monster : BaseEntity, ITargetable
         attackTimer = 0f;
         Weight = 1f;
         TargetRegistry.Instance.UnregisterTarget(this);
-        Debug.Log("Monster despawned");
     }
 }

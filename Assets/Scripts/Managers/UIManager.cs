@@ -202,17 +202,6 @@ namespace NovelianMagicLibraryDefense.Managers
             }
         }
 
-        /// <summary>
-        /// LMJ: Display custom monster text - called by WaveManager for special states
-        /// </summary>
-        public void SetMonsterText(string text)
-        {
-            if (monsterCountText != null)
-            {
-                monsterCountText.text = text;
-            }
-        }
-
         #endregion
 
         #region Wave Timer Display

@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.UI;
 using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Managers
@@ -14,10 +15,13 @@ namespace NovelianMagicLibraryDefense.Managers
     [System.Serializable]  // LMJ: Prevents Unity from treating this as a Component
     public class StageManager : BaseManager
     {
+        
         private WaveManager waveManager;
         private UIManager uiManager;
 
+
         public int CurrentStageId { get; private set; }
+        public string StageName { get; private set; }
 
         #region PlayerStageLevel
         private int maxExp = 100;
@@ -57,6 +61,8 @@ namespace NovelianMagicLibraryDefense.Managers
         protected override void OnInitialize()
         {
             Debug.Log("[StageManager] Initializing stage");
+
+            StageName = $"Stage 1-1"; //TODO JML: CSV Loaded
 
             // LMJ: Subscribe to monster death event for exp
             Monster.OnMonsterDied += AddExp;
@@ -132,8 +138,6 @@ namespace NovelianMagicLibraryDefense.Managers
                         uiManager.UpdateWaveTimer(RemainingTime);
                     }
 
-                    Debug.Log($"[StageManager] Remaining Time: {RemainingTime} seconds");
-
                     if ((int)RemainingTime <= 0)
                     {
                         RemainingTime = 0;
@@ -154,6 +158,7 @@ namespace NovelianMagicLibraryDefense.Managers
         public void HandleTimeUp()
         {
             Debug.Log("[StageManager] Time's Up! Stage Failed");
+            waveManager.WaveClear();
             OnTimeUp?.Invoke();
         }
 
@@ -224,6 +229,30 @@ namespace NovelianMagicLibraryDefense.Managers
         public float GetExpProgress()
         {
             return (float)currentExp / maxExp;
+        }
+
+        /// <summary>
+        /// JML: Get remaining time
+        /// </summary>
+        public float GetRemainderTime()
+        {
+            return RemainingTime;
+        }
+
+        /// <summary>
+        /// JML: Get Progress time
+        /// </summary>
+        public float GetProgressTime()
+        {
+            return stageDuration - RemainingTime;
+        }
+
+        public int GetReward()
+        {
+            // JML: Example reward calculation based on level and time
+            int baseReward = 100;
+            int timeBonus = (int)(stageDuration - RemainingTime) / 10;
+            return baseReward + (level * 50) + timeBonus;
         }
     }
 }
