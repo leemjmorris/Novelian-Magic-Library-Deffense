@@ -16,7 +16,15 @@
       "Bash(if exist Library rmdir /s /q Library)",
       "Bash(if exist Temp rmdir /s /q Temp)",
       "Bash(if exist obj rmdir /s /q obj)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nfix: GitHub Actions workflow syntax error\n\n- Fix ''branches'' and ''branches-ignore'' conflict\n- Use negation pattern (!main, !master, !develop) instead\n- Workflow now triggers on all branches except main/master/develop\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: GitHub Actions workflow syntax error\n\n- Fix ''branches'' and ''branches-ignore'' conflict\n- Use negation pattern (!main, !master, !develop) instead\n- Workflow now triggers on all branches except main/master/develop\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" issue create:*)",
+      "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" --version)",
+      "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" auth status)",
+      "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" repo view leemjmorris/Novelian-Magic-Library-Deffense --json name,owner)",
+      "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" issue view 159 --repo leemjmorris/Novelian-Magic-Library-Deffense --json title,body,labels,assignees,state,comments)",
+      "Bash(del \"C:\\Users\\LMJ\\Desktop\\Unity_Project\\Novelian-Magic-Library-Deffense\\Assets\\Scripts\\Managers\\SceneManager.cs\")",
+      "Bash(powershell -Command \"(Get-Content ''''Assets\\Scenes\\LobbyScene.unity'''') -match ''''GameManager''''\")",
+      "Bash(powershell -Command \"(Get-Content ''Assets\\Scenes\\GameScene.unity'') -match ''CardManager'' | Select-Object -First 3\")"
     ],
     "deny": [],
     "ask": []

@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using NovelianMagicLibraryDefense.Managers;
+using Cysharp.Threading.Tasks;
 
 namespace NovelianMagicLibraryDefense.UI
 {
@@ -132,8 +134,15 @@ namespace NovelianMagicLibraryDefense.UI
         //LCB: Handle victory next stage button click
         private void OnLobbyButtonClicked()
         {
-            Debug.Log("[WinLosePanel] Lobby button clicked - Logic to be implemented");
-            //TODO: Implement Lobby scene loaded logic
+            Debug.Log("[WinLosePanel] Lobby button clicked - Loading LobbyScene");
+            LoadLobbySceneAsync().Forget();
+        }
+
+        //LCB: Load lobby scene asynchronously with fade effect
+        private async UniTaskVoid LoadLobbySceneAsync()
+        {
+            Time.timeScale = 1f; // Restore time scale
+            await NovelianMagicLibraryDefense.Core.FadeController.Instance.LoadSceneWithFade("LobbyScene");
         }
 
         //LCB: Handle victory stage select button click
@@ -198,8 +207,15 @@ namespace NovelianMagicLibraryDefense.UI
         //LCB: Handle defeat retry button click
         private void OnDefeatRetryButtonClicked()
         {
-            Debug.Log("[WinLosePanel] Defeat Retry button clicked - Logic to be implemented");
-            //TODO: Implement retry stage logic
+            Debug.Log("[WinLosePanel] Defeat Retry button clicked - Retrying stage");
+            RetryStageAsync().Forget();
+        }
+
+        //LCB: Retry current stage asynchronously with fade effect
+        private async UniTaskVoid RetryStageAsync()
+        {
+            Time.timeScale = 1f; // Restore time scale
+            await NovelianMagicLibraryDefense.Core.FadeController.Instance.LoadSceneWithFade("GameScene");
         }
 
         #endregion

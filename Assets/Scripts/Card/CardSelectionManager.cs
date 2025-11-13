@@ -182,7 +182,14 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     public void OnCard1Selected()
     {
-        if (isCardSelected) return;
+        Debug.Log($"[CardSelectionManager] OnCard1Selected 호출! isCardSelected={isCardSelected}");
+
+        if (isCardSelected)
+        {
+            Debug.LogWarning("[CardSelectionManager] 이미 카드가 선택되었습니다.");
+            return;
+        }
+
         isCardSelected = true;
 
         // 타이머 즉시 취소 및 0초 표시
@@ -192,6 +199,7 @@ public class CardSelectionManager : MonoBehaviour
             timerText.text = "0s";
         }
 
+        Debug.Log($"[CardSelectionManager] Card 1 선택 처리 시작 - Data: {selectedCard1Data?.characterName}");
         SelectCard(selectedCard1Data, card1);
     }
 
@@ -200,7 +208,14 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     public void OnCard2Selected()
     {
-        if (isCardSelected) return;
+        Debug.Log($"[CardSelectionManager] OnCard2Selected 호출! isCardSelected={isCardSelected}");
+
+        if (isCardSelected)
+        {
+            Debug.LogWarning("[CardSelectionManager] 이미 카드가 선택되었습니다.");
+            return;
+        }
+
         isCardSelected = true;
 
         // 타이머 즉시 취소 및 0초 표시
@@ -210,6 +225,7 @@ public class CardSelectionManager : MonoBehaviour
             timerText.text = "0s";
         }
 
+        Debug.Log($"[CardSelectionManager] Card 2 선택 처리 시작 - Data: {selectedCard2Data?.characterName}");
         SelectCard(selectedCard2Data, card2);
     }
 
@@ -218,36 +234,41 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     void SelectCard(CharacterData data, GameObject cardObj)
     {
+        Debug.Log($"[CardSelectionManager] SelectCard 시작 - data null? {data == null}, cardObj null? {cardObj == null}");
+
         if (data == null)
         {
-            Debug.LogError("선택된 데이터가 없습니다!");
+            Debug.LogError("[CardSelectionManager] 선택된 데이터가 없습니다!");
             return;
         }
 
         CharacterCard charCard = cardObj?.GetComponent<CharacterCard>();
         if (charCard == null || charCard.characterImage == null)
         {
-            Debug.LogError("카드 컴포넌트 또는 이미지가 null입니다!");
+            Debug.LogError($"[CardSelectionManager] 카드 컴포넌트 또는 이미지가 null입니다! charCard null? {charCard == null}");
             return;
         }
 
         Sprite cardSprite = charCard.characterImage.sprite;
         if (cardSprite == null)
         {
-            Debug.LogError("카드 이미지가 null입니다!");
+            Debug.LogError("[CardSelectionManager] 카드 이미지가 null입니다!");
             return;
         }
+
+        Debug.Log($"[CardSelectionManager] playerSlots count: {playerSlots?.Count ?? 0}");
 
         // 빈 슬롯 찾아서 배치
         PlayerSlot emptySlot = FindNextEmptySlot();
         if (emptySlot != null)
         {
+            Debug.Log($"[CardSelectionManager] 빈 슬롯 찾음! 슬롯 인덱스: {emptySlot.slotIndex}");
             emptySlot.AssignCharacterSprite(cardSprite, data.genreType);
-            Debug.Log($"슬롯에 배치: {data.characterName}, 스프라이트: {cardSprite.name}");
+            Debug.Log($"[CardSelectionManager] 슬롯에 배치 완료: {data.characterName}, 스프라이트: {cardSprite.name}");
         }
         else
         {
-            Debug.LogWarning("빈 슬롯이 없습니다!");
+            Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
         }
     }
 

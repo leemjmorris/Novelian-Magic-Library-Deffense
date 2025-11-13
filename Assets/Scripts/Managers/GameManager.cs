@@ -11,6 +11,7 @@ namespace NovelianMagicLibraryDefense.Managers
     /// LMJ: Central manager that controls all other managers lifecycle
     /// Implements hybrid pattern: explicit references + list management
     /// Refactored to properly manage UIManager and remove UI responsibilities from GameManager
+    /// Each scene has its own independent GameManager (no DontDestroyOnLoad)
     /// </summary>
     public class GameManager : MonoBehaviour
     {
@@ -48,6 +49,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         [Header("Stage References")]
         [SerializeField] private Wall wallReference;
+        [SerializeField] private CardSelectionManager cardSelectionManager;
 
         // LMJ: Explicit manager references for type-safe access
         private InputManager inputManager;
@@ -70,50 +72,69 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void Awake()
         {
+            // LMJ: Simple singleton without DontDestroyOnLoad
+            // Each scene has its own independent GameManager
             if (instance != null && instance != this)
             {
+                Debug.LogWarning("[GameManager] Multiple GameManagers detected in scene! Destroying duplicate.");
                 Destroy(gameObject);
                 return;
             }
 
             instance = this;
-            DontDestroyOnLoad(gameObject);
-
             InitializeManagers();
         }
 
         /// <summary>
         /// LMJ: Initialize all managers in dependency order
         /// Order matters: Input -> UI -> Pool -> Wave -> Stage -> StageState
+        /// Note: SceneManager is removed (scene transitions now handled by FadeController)
+        /// Some managers are optional and only created when required references exist (for LobbyScene support)
         /// </summary>
         private void InitializeManagers()
         {
             // LMJ: Create InputManager first (no dependencies)
             RegisterManager(inputManager = new InputManager());
 
-            // LMJ: Create UIManager with all UI references
-            uiManager = new UIManager(
-                monsterCountText,
-                waveTimerText,
-                barrierHPSlider,
-                barrierHPText,
-                expSlider,
-                cardPanel,
-                speedButton,
-                speedButtonText,
-                settingsButton,
-                skillButton1,
-                skillButton2,
-                skillButton3,
-                skillButton4
-            );
-            RegisterManager(uiManager);
+            // LMJ: Create UIManager only if UI references exist (GameScene)
+            if (monsterCountText != null || waveTimerText != null || barrierHPSlider != null)
+            {
+                uiManager = new UIManager(
+                    monsterCountText,
+                    waveTimerText,
+                    barrierHPSlider,
+                    barrierHPText,
+                    expSlider,
+                    cardPanel,
+                    speedButton,
+                    speedButtonText,
+                    settingsButton,
+                    skillButton1,
+                    skillButton2,
+                    skillButton3,
+                    skillButton4
+                );
+                RegisterManager(uiManager);
+                Debug.Log("[GameManager] UIManager created (GameScene mode)");
+            }
+            else
+            {
+                Debug.Log("[GameManager] UIManager skipped (LobbyScene mode)");
+            }
 
-            // LMJ: Create other managers with proper dependencies
-            RegisterManager(poolManager = new ObjectPoolManager());
-            RegisterManager(waveManager = new WaveManager(poolManager, uiManager));
-            RegisterManager(stageManager = new StageManager(waveManager, uiManager));
-            RegisterManager(stageStateManager = new StageStateManager(waveManager, stageManager, wallReference, winLosePanel));
+            // LMJ: Create game managers only if UIManager exists (GameScene)
+            if (uiManager != null)
+            {
+                RegisterManager(poolManager = new ObjectPoolManager());
+                RegisterManager(waveManager = new WaveManager(poolManager, uiManager));
+                RegisterManager(stageManager = new StageManager(waveManager, uiManager, cardSelectionManager));
+
+                // LMJ: Create StageStateManager only if wall reference exists
+                if (wallReference != null && winLosePanel != null)
+                {
+                    RegisterManager(stageStateManager = new StageStateManager(waveManager, stageManager, wallReference, winLosePanel));
+                }
+            }
 
             // LMJ: Initialize all managers in registration order
             InitializeAll();

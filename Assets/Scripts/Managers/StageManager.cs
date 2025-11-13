@@ -19,6 +19,7 @@ namespace NovelianMagicLibraryDefense.Managers
         private WaveManager waveManager;
         private UIManager uiManager;
         private LevelUpCardUI levelUpCardUI; // LCB: Cache LevelUpCardUI reference to avoid FindWithTag on inactive objects
+        private CardSelectionManager cardSelectionManager; // LMJ: Direct reference to CardSelectionManager
 
         public int CurrentStageId { get; private set; }
         public string StageName { get; private set; }
@@ -45,9 +46,10 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// LMJ: Constructor injection for dependencies
         /// </summary>
-        public StageManager(WaveManager wave, UIManager ui)
+        public StageManager(WaveManager wave, UIManager ui, CardSelectionManager cardSelection = null)
         {
             waveManager = wave;
+            cardSelectionManager = cardSelection;
             uiManager = ui;
         }
 
@@ -105,17 +107,15 @@ namespace NovelianMagicLibraryDefense.Managers
             Time.timeScale = 0f;//LCB: pause
             Debug.Log("[StageManager] Game paused for start card selection");
 
-            // 2. Find and show start card selection UI
-            GameObject cardUIObj = GameObject.FindWithTag("Manager");
-            CardSelectionManager cardManager = cardUIObj != null ? cardUIObj.GetComponent<CardSelectionManager>() : null;
-
-            if (cardManager != null)
+            // 2. Show start card selection UI using direct reference
+            if (cardSelectionManager != null)
             {
-                await cardManager.ShowStartCards();
+                await cardSelectionManager.ShowStartCards();
+                Debug.Log("[StageManager] Start card selection completed");
             }
             else
             {
-                Debug.LogWarning("[StageManager]Manager not found! Skipping start card selection.");
+                Debug.LogWarning("[StageManager] CardSelectionManager not found! Skipping start card selection.");
             }
 
             // 3. Resume the game

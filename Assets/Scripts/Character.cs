@@ -23,6 +23,13 @@ public class Character : MonoBehaviour
     private float timer = 0.0f;
     private async void Start()
     {
+        // LMJ: Skip initialization if Pool manager doesn't exist (e.g., in LobbyScene)
+        if (GameManager.Instance == null || GameManager.Instance.Pool == null)
+        {
+            Debug.Log("[Character] Pool manager not available, skipping projectile pool initialization");
+            return;
+        }
+
         // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
         await GameManager.Instance.Pool.CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
         GameManager.Instance.Pool.WarmUp<Projectile>(20);

@@ -66,12 +66,9 @@ namespace NovelianMagicLibraryDefense.Managers
             expSlider.value = 0f;
             Debug.Log("[UIManager] Initializing UI");
             speedButtonText.text = "X1";
-            // Activate card panel at initialization
-            if (cardPanel != null)
-            {
-                cardPanel.SetActive(true);
-                Debug.Log("[UIManager] Card panel activated");
-            }
+
+            // LMJ: Card panel activation is now handled by game logic (StartSelectionManager)
+            // No longer managing card panel activation here
 
             // Setup button listeners
             SetupButtonListeners();

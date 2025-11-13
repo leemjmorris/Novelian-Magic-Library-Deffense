@@ -39,6 +39,9 @@ public class LevelUpCardUI : MonoBehaviour
     // public List<CardData> debuffCards;        // 5 debuff cards
     // public List<CardData> skillCards;         // 5 skill cards
 
+    [Header("Card Selection Manager")]
+    public CardSelectionManager cardSelectionManager; // LMJ: Direct reference to CardSelectionManager
+
     // Card selection timeout (Issue spec: 20 seconds)
     private const float SELECTION_TIME = 20f;
 
@@ -347,18 +350,15 @@ public class LevelUpCardUI : MonoBehaviour
         CharacterData selectedChar = characterCards[index];
         Debug.Log($"[LevelUpCardUI] Character selected: {selectedChar.characterName}");
 
-        // Connect with existing CardSelectionManager to add character to slot
-        GameObject managerObj = GameObject.FindWithTag("Manager");
-        CardSelectionManager manager = managerObj != null ? managerObj.GetComponent<CardSelectionManager>() : null;
-
-        if (manager != null)
+        // Use direct reference to CardSelectionManager
+        if (cardSelectionManager != null)
         {
-            // Add selected character to player slot
-            manager.AddCharacterToSlot(selectedChar);
+            Debug.Log($"[LevelUpCardUI] Adding character to slot via CardSelectionManager");
+            cardSelectionManager.AddCharacterToSlot(selectedChar);
         }
         else
         {
-            Debug.LogWarning("[LevelUpCardUI] CardSelectionManager not found!");
+            Debug.LogWarning("[LevelUpCardUI] CardSelectionManager reference is null! Please assign in Inspector.");
         }
     }
 }
