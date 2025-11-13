@@ -63,13 +63,21 @@ public class Projectile : MonoBehaviour, IPoolable
     //JML: Handle collision with monsters
     private void OnTriggerEnter2D(Collider2D collision)
     {
+        Debug.Log($"[Projectile] OnTriggerEnter2D - Tag: {collision.tag}, damage={damage}"); // LCB: Debug collision
         if (collision.CompareTag(Tag.Monster))
         {
+            Debug.Log("[Projectile] Hit Monster!"); // LCB: Debug monster hit
             var monster = collision.GetComponent<Monster>();
             if (monster != null)
             {
+                Debug.Log($"[Projectile] Calling TakeDamage({damage}) on Monster"); // LCB: Debug damage call
                 monster.TakeDamage(damage);
             }
+            else
+            {
+                Debug.LogWarning("[Projectile] Monster component not found!"); // LCB: Debug warning
+            }
+            // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
             GameManager.Instance.Pool.Despawn(this);
         }
         if (collision.CompareTag(Tag.BossMonster))

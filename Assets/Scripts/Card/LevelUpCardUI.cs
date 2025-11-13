@@ -22,6 +22,7 @@ public class LevelUpCardUI : MonoBehaviour
 {
     [Header("Existing Card Panel (Assign in Hierarchy)")]
     public GameObject cardPanel; // cardPanel referenced by UIManager
+    public CanvasGroup canvasGroup; // LCB: For show/hide without SetActive (keeps FindWithTag working)
 
     [Header("2 Cards (Assign in Hierarchy)")]
     public GameObject card1; // First card object
@@ -30,8 +31,13 @@ public class LevelUpCardUI : MonoBehaviour
     [Header("Timer Text (Optional)")]
     public TextMeshProUGUI timerText; // 20 second timer display (optional)
 
-    [Header("Character Card Data")]
-    public List<CharacterData> characterCards; // 5 genre character data
+    [Header("Card Data (Assign 5 cards for each type)")]
+    public List<CharacterData> characterCards; // 5 character cards
+    // TODO: Create CardData ScriptableObject and uncomment below
+    // public List<CardData> statCards;          // 5 stat buff cards
+    // public List<CardData> buffCards;          // 5 buff cards
+    // public List<CardData> debuffCards;        // 5 debuff cards
+    // public List<CardData> skillCards;         // 5 skill cards
 
     // Card selection timeout (Issue spec: 20 seconds)
     private const float SELECTION_TIME = 20f;
@@ -50,10 +56,16 @@ public class LevelUpCardUI : MonoBehaviour
 
     void Start()
     {
-        
-        // Initially deactivate panel
-        if (cardPanel != null)
+        // LCB: Initially hide panel using CanvasGroup (keeps GameObject active for FindWithTag)
+        if (canvasGroup != null)
         {
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+        }
+        else if (cardPanel != null)
+        {
+            // LCB: Fallback to SetActive if CanvasGroup not assigned
             cardPanel.SetActive(false);
         }
     }
@@ -64,12 +76,25 @@ public class LevelUpCardUI : MonoBehaviour
     /// <param name="currentLevel">Current level (1 means first level up)</param>
     public async UniTask ShowCards(int currentLevel)
     {
+        Debug.Log($"[LevelUpCardUI] ShowCards() called! Level: {currentLevel}");
         isCardSelected = false;
 
-        // 1. Activate panel
-        if (cardPanel != null)
+        // LCB: Show panel using CanvasGroup (preferred) or SetActive (fallback)
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = 1f;
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+            Debug.Log("[LevelUpCardUI] Card panel shown via CanvasGroup");
+        }
+        else if (cardPanel != null)
         {
             cardPanel.SetActive(true);
+            Debug.Log("[LevelUpCardUI] Card panel activated via SetActive");
+        }
+        else
+        {
+            Debug.LogError("[LevelUpCardUI] cardPanel and canvasGroup are both null!");
         }
 
         // 2. Load 2 cards
@@ -88,10 +113,18 @@ public class LevelUpCardUI : MonoBehaviour
         // 3. Start 20 second timer & wait for selection
         await WaitForSelection();
 
-        // 4. Deactivate panel
-        if (cardPanel != null)
+        // LCB: Hide panel using CanvasGroup (preferred) or SetActive (fallback)
+        if (canvasGroup != null)
         {
-            cardPanel.SetActive(false);  // ← 패널 즉시 비활성화
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+            Debug.Log("[LevelUpCardUI] Card panel hidden via CanvasGroup");
+        }
+        else if (cardPanel != null)
+        {
+            cardPanel.SetActive(false);
+            Debug.Log("[LevelUpCardUI] Card panel deactivated via SetActive");
         }
     }
 

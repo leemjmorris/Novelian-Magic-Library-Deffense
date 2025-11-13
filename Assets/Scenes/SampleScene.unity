@@ -1146,6 +1146,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 5442908317707548115, guid: 31d158047417c094090b62a2d42718db, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 504945496}
+    - target: {fileID: 5442908317707548115, guid: 31d158047417c094090b62a2d42718db, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: OnCard2Click
+      objectReference: {fileID: 0}
     - target: {fileID: 5484778242997979845, guid: 31d158047417c094090b62a2d42718db, type: 3}
       propertyPath: m_Name
       value: SkillSlot (0)
@@ -1304,7 +1312,7 @@ PrefabInstance:
       objectReference: {fileID: 504945496}
     - target: {fileID: 7154057550577499225, guid: 31d158047417c094090b62a2d42718db, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: OnCard2Click
+      value: OnCard1Click
       objectReference: {fileID: 0}
     - target: {fileID: 7263654479726167750, guid: 31d158047417c094090b62a2d42718db, type: 3}
       propertyPath: m_AnchorMax.y
@@ -1464,7 +1472,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7962161812395593798, guid: 31d158047417c094090b62a2d42718db, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7962161812395593798, guid: 31d158047417c094090b62a2d42718db, type: 3}
       propertyPath: m_TagString
@@ -1734,6 +1742,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7962161812395593798, guid: 31d158047417c094090b62a2d42718db, type: 3}
       insertIndex: -1
       addedObject: {fileID: 504945496}
+    - targetCorrespondingSourceObject: {fileID: 7962161812395593798, guid: 31d158047417c094090b62a2d42718db, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 504945499}
   m_SourcePrefab: {fileID: 100100000, guid: 31d158047417c094090b62a2d42718db, type: 3}
 --- !u!114 &160505235 stripped
 MonoBehaviour:
@@ -2753,6 +2764,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cardPanel: {fileID: 504945492}
+  canvasGroup: {fileID: 504945499}
   card1: {fileID: 65498611}
   card2: {fileID: 1213473269}
   timerText: {fileID: 288723131}
@@ -2762,6 +2774,18 @@ MonoBehaviour:
   - {fileID: 11400000, guid: d8cc912668f7e8942bf87f447a85ae95, type: 2}
   - {fileID: 11400000, guid: 3c1f038d695487043969fad335a10d2c, type: 2}
   - {fileID: 11400000, guid: 20c61ac07b6ecf8438426b5b765ecc63, type: 2}
+--- !u!225 &504945499
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 504945492}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &556877905
 GameObject:
   m_ObjectHideFlags: 0

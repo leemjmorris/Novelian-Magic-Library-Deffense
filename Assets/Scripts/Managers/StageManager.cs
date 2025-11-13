@@ -18,7 +18,7 @@ namespace NovelianMagicLibraryDefense.Managers
         
         private WaveManager waveManager;
         private UIManager uiManager;
-
+        private LevelUpCardUI levelUpCardUI; // LCB: Cache LevelUpCardUI reference to avoid FindWithTag on inactive objects
 
         public int CurrentStageId { get; private set; }
         public string StageName { get; private set; }
@@ -28,6 +28,8 @@ namespace NovelianMagicLibraryDefense.Managers
         private const int NEXT_EXP = 100;
         private int currentExp = 0;
         private int level = 0;
+
+        // LCB: Debug - Press 'L' key to instantly level up (add 100 exp)
         #endregion
 
         #region Timer
@@ -66,6 +68,19 @@ namespace NovelianMagicLibraryDefense.Managers
 
             // LMJ: Subscribe to monster death event for exp
             Monster.OnMonsterDied += AddExp;
+
+            // LCB: Find and cache LevelUpCardUI using FindWithTag (faster than FindFirstObjectByType)
+            // LCB: Now works because LevelUpPanel stays active with CanvasGroup controlling visibility
+            GameObject cardUIObj = GameObject.FindWithTag("CardUI");
+            levelUpCardUI = cardUIObj != null ? cardUIObj.GetComponent<LevelUpCardUI>() : null;
+            if (levelUpCardUI == null)
+            {
+                Debug.LogError("[StageManager] LevelUpCardUI not found! Make sure 'CardUI' tag is assigned.");
+            }
+            else
+            {
+                Debug.Log("[StageManager] LevelUpCardUI found and cached via FindWithTag");
+            }
 
             // LMJ: Initialize wave manager with hardcoded values (can be loaded from CSV later)
             waveManager.Initialize(totalEnemies: 1000, bossCount: 0);
@@ -198,9 +213,11 @@ namespace NovelianMagicLibraryDefense.Managers
         private void AddExp(Monster monster)
         {
             currentExp += monster.Exp;
+            Debug.Log($"[StageManager] Exp +{monster.Exp} -> {currentExp}/{maxExp}"); // LCB: Debug exp gain
             uiManager.UpdateExperience(currentExp, maxExp);
             if (currentExp >= maxExp)
             {
+                Debug.Log($"[StageManager] Level up triggered! currentExp={currentExp}, maxExp={maxExp}"); // LCB: Debug level up trigger
                 LevelUp().Forget();
             }
         }
@@ -224,12 +241,16 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 Time.timeScale = 0f; // Pause the game for level up
 
-                // LCB: Display card selection UI (pass level to determine first level-up)
-                GameObject cardUIObj = GameObject.FindWithTag("CardUI");
-                LevelUpCardUI cardUI = cardUIObj != null ? cardUIObj.GetComponent<LevelUpCardUI>() : null;
-                if (cardUI != null)
+                // LCB: Display card selection UI using cached reference (works even if object is inactive)
+                Debug.Log($"[StageManager] Level up to {level}, using cached LevelUpCardUI...");
+                if (levelUpCardUI != null)
                 {
-                    await cardUI.ShowCards(level); // level 1 means first level-up
+                    Debug.Log($"[StageManager] Calling ShowCards(level={level})");
+                    await levelUpCardUI.ShowCards(level); // level 1 means first level-up
+                }
+                else
+                {
+                    Debug.LogError("[StageManager] LevelUpCardUI is null! Was it destroyed or not found on Initialize?");
                 }
             }
             Time.timeScale = previousTimeScale; // Resume game
