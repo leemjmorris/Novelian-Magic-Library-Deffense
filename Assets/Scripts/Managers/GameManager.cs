@@ -119,11 +119,25 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// LMJ: Register manager to the list while maintaining explicit reference
+        /// LMJ: Register manager to the list and ServiceLocator
         /// </summary>
         private void RegisterManager(IManager manager)
         {
             managers.Add(manager);
+
+            // LMJ: Register to ServiceLocator for decoupled access
+            if (manager is UIManager ui)
+                ServiceLocator.Register(ui);
+            else if (manager is ObjectPoolManager pool)
+                ServiceLocator.Register(pool);
+            else if (manager is WaveManager wave)
+                ServiceLocator.Register(wave);
+            else if (manager is StageManager stage)
+                ServiceLocator.Register(stage);
+            else if (manager is StageStateManager stageState)
+                ServiceLocator.Register(stageState);
+            else if (manager is DataManager data)
+                ServiceLocator.Register(data);
         }
 
         /// <summary>
@@ -183,6 +197,9 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             managers.Clear();
+
+            // LMJ: Clear ServiceLocator to prevent dangling references
+            ServiceLocator.Clear();
         }
     }
 }

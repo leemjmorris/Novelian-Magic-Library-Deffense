@@ -1,4 +1,5 @@
 using System;
+using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
@@ -36,8 +37,8 @@ public class Projectile : MonoBehaviour, IPoolable
             spawnTime += Time.deltaTime;
             if (spawnTime >= lifetime)
             {
-                // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-                GameManager.Instance.Pool.Despawn(this);
+                // LMJ: Use ServiceLocator for decoupled manager access
+                ServiceLocator.Get<ObjectPoolManager>().Despawn(this);
                 spawnTime = 0f;
                 return;
             }
@@ -62,8 +63,8 @@ public class Projectile : MonoBehaviour, IPoolable
             {
                 monster.TakeDamage(damage);
             }
-            // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-            GameManager.Instance.Pool.Despawn(this);
+            // LMJ: Use ServiceLocator for decoupled manager access
+            ServiceLocator.Get<ObjectPoolManager>().Despawn(this);
         }
         if (collision.CompareTag(Tag.BossMonster))
         {
@@ -72,8 +73,8 @@ public class Projectile : MonoBehaviour, IPoolable
             {
                 bossMonster.TakeDamage(damage);
             }
-            // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-            GameManager.Instance.Pool.Despawn(this);
+            // LMJ: Use ServiceLocator for decoupled manager access
+            ServiceLocator.Get<ObjectPoolManager>().Despawn(this);
         }
     }
 

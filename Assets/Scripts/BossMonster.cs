@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.Managers;
+using UnityEngine;
 using UnityEngine.Pool;
 public class BossMonster : BaseEntity, ITargetable
 {
@@ -70,8 +72,8 @@ public class BossMonster : BaseEntity, ITargetable
     public override void Die()
     {
         OnBossDied?.Invoke(this);
-        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-        NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
+        // LMJ: Use ServiceLocator for decoupled manager access
+        ServiceLocator.Get<ObjectPoolManager>().Despawn(this);
     }
     
     private void OnTriggerEnter2D(Collider2D collision)

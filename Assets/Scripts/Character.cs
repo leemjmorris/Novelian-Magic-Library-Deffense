@@ -1,3 +1,4 @@
+using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -18,9 +19,9 @@ public class Character : MonoBehaviour
     private float timer = 0.0f;
     private async void Start()
     {
-        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-        await GameManager.Instance.Pool.CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
-        GameManager.Instance.Pool.WarmUp<Projectile>(20);
+        // LMJ: Use ServiceLocator for decoupled manager access
+        await ServiceLocator.Get<ObjectPoolManager>().CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
+        ServiceLocator.Get<ObjectPoolManager>().WarmUp<Projectile>(20);
     }
     private void Update()
     {
@@ -49,7 +50,7 @@ public class Character : MonoBehaviour
 
     private void Attack(ITargetable target)
     {
-        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-        GameManager.Instance.Pool.Spawn<Projectile>(transform.position).SetTarget(target.GetTransform());
+        // LMJ: Use ServiceLocator for decoupled manager access
+        ServiceLocator.Get<ObjectPoolManager>().Spawn<Projectile>(transform.position).SetTarget(target.GetTransform());
     }
 }
