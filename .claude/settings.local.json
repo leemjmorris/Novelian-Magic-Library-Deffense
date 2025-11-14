@@ -27,7 +27,14 @@
       "Bash(powershell -Command \"(Get-Content ''Assets\\Scenes\\GameScene.unity'') -match ''CardManager'' | Select-Object -First 3\")",
       "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" issue list --limit 50 --state all)",
       "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" pr list --limit 20 --state all)",
-      "Bash(del \"c:\\Users\\LMJ\\Desktop\\Unity_Project\\Novelian-Magic-Library-Deffense\\Assets\\MarkDowns\\주간 빌드 결과 보고.md\")"
+      "Bash(del \"c:\\Users\\LMJ\\Desktop\\Unity_Project\\Novelian-Magic-Library-Deffense\\Assets\\MarkDowns\\주간 빌드 결과 보고.md\")",
+      "Bash(powershell -Command \"(Get-Content ''Assets\\Scenes\\GameScene.unity'') -match ''Collider'' | Select-Object -First 20\")",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell:*)",
+      "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" issue view 170 --repo leemjmorris/Novelian-Magic-Library-Deffense --json title,body,labels,assignees,state,comments)",
+      "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" issue edit 170 --repo leemjmorris/Novelian-Magic-Library-Deffense --body \"## 버그 설명\nProjectile을 연속으로 빠르게 발사할 때, 발사체들이 뱀처럼 줄지어 날아가는데, 중간 부분(몸통)이 갑자기 사라지는 현상이 발생합니다.\n\n## 현재 동작\n- Projectile이 캐릭터 슬롯에서 정상적으로 연속 발사됨\n- 발사체들이 뱀처럼 줄지어 몬스터를 향해 이동함\n- **중간에 있는 Projectile들이 갑자기 사라져서 \"\"뱀의 몸통이 끊어진 것처럼\"\" 보임**\n- 꼬리 부분과 머리 부분은 남아있는데 중간이 사라짐\n\n## 예상 동작\nProjectile은 다음 3가지 조건에서만 사라져야 함:\n1. **몬스터와 충돌했을 때** (데미지를 주고 소멸)\n2. **특정 범위 밖으로 이동했을 때** (메모리 관리)\n3. **특정 시간(lifetime)이 지난 후** (메모리 관리)\n\n위 조건에 해당하지 않는데도 중간 발사체가 사라지면 안 됨.\n\n## 재현 단계\n1. 게임 실행 (GameScene)\n2. 캐릭터 슬롯에 캐릭터 배치\n3. 몬스터 웨이브 시작\n4. 빠른 공격 속도로 Projectile을 연속 발사\n5. 뱀처럼 이어진 발사체 줄의 **중간 부분이 갑자기 사라지는 현상** 확인\n\n## 우선순위\n🟠 High (빠른 수정 필요)\n\n## 마일스톤\n프로토타입\n\n## 추가 정보\n### 분석된 원인:\n**ObjectPool maxSize 제한 문제 (가장 유력)**\n- Character.cs:33에서 ObjectPool 생성 시 maxSize=20으로 설정됨\n- 21번째 Projectile이 Spawn될 때, Unity ObjectPool이 가장 오래된(첫 번째) 발사체를 강제로 Despawn시킴\n- 이로 인해 연속 발사된 발사체 줄의 앞부분(머리 쪽)이 사라지면서 \"\"뱀의 몸통이 끊어진\"\" 것처럼 보임\n\n### 관련 파일:\n- Assets/Scripts/Character.cs (Line 33: ObjectPool 생성, maxSize=20)\n- Assets/Scripts/Managers/ObjectPoolManager.cs\n- Assets/Scripts/Projectile.cs (Line 11-37: lifetime 로직)\n- Assets/Prefabs/Projectile.prefab\")",
+      "Bash(\"C:\\Program Files (x86)\\GitHub CLI\\gh.exe\" issue edit:*)"
     ],
     "deny": [],
     "ask": []

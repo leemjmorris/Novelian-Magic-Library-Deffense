@@ -33,7 +33,6 @@ public class Projectile : MonoBehaviour, IPoolable
         if (spawnTime >= lifetime)
         {
             GameManager.Instance.Pool.Despawn(this);
-            spawnTime = 0f;
         }
     }
 
@@ -94,6 +93,7 @@ public class Projectile : MonoBehaviour, IPoolable
         target = null;
         direction = Vector3.zero;
         rb.linearVelocity = Vector2.zero;
+        spawnTime = 0f;  // Reset spawn time for pool reuse
     }
 
     //JML: Clean up projectile state on despawn
@@ -103,5 +103,6 @@ public class Projectile : MonoBehaviour, IPoolable
         target = null;
         direction = Vector3.zero;
         rb.linearVelocity = Vector2.zero;
+        spawnTime = 0f;  // Reset spawn time
     }
 }
