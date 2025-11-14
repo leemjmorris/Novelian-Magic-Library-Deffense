@@ -307,11 +307,30 @@ public class CardSelectionManager : MonoBehaviour
 
     PlayerSlot FindNextEmptySlot()
     {
+        // 빈 슬롯들을 모두 찾기
+        System.Collections.Generic.List<PlayerSlot> emptySlots = new System.Collections.Generic.List<PlayerSlot>();
         foreach (PlayerSlot slot in playerSlots)
         {
-            if (slot.IsEmpty()) return slot;
+            if (slot.IsEmpty())
+            {
+                emptySlots.Add(slot);
+            }
         }
-        return null;
+
+        // 빈 슬롯이 없으면 null 반환
+        if (emptySlots.Count == 0)
+        {
+            Debug.Log("[CardSelectionManager] 빈 슬롯이 없습니다!");
+            return null;
+        }
+
+        // 빈 슬롯 중에서 랜덤하게 선택
+        int randomIndex = UnityEngine.Random.Range(0, emptySlots.Count);
+        PlayerSlot selectedSlot = emptySlots[randomIndex];
+
+        Debug.Log($"[CardSelectionManager] 빈 슬롯 개수: {emptySlots.Count}, 선택된 랜덤 인덱스: {randomIndex}, 슬롯 번호: {selectedSlot.slotIndex}");
+
+        return selectedSlot;
     }
 
     public void ShowCardPanel()
