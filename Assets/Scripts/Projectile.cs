@@ -12,23 +12,10 @@ public class Projectile : MonoBehaviour, IPoolable
     private float spawnTime;
 
     private Vector3 direction;
-    private Transform target;
-    private bool hasLostTarget = false;
-    //JML: Update target direction in Update
+
+    //JML: Update for lifetime management only
     private void Update()
     {
-        if (target != null && !hasLostTarget)
-        {
-            if (!target.gameObject.activeInHierarchy)
-            {
-                hasLostTarget = true;
-            }
-            else
-            {
-                direction = (target.position - transform.position).normalized;
-            }
-        }
-
         spawnTime += Time.deltaTime;
         if (spawnTime >= lifetime)
         {
@@ -51,11 +38,38 @@ public class Projectile : MonoBehaviour, IPoolable
 
     public void SetTarget(Transform target)
     {
-        if (!hasLostTarget)
+        if (target != null)
         {
-            this.target = target;
+            Vector3 targetPosition = target.position;
+
+            Debug.Log($"[Projectile] SetTarget - Projectile Pos: {transform.position}, Target Pos: {targetPosition}");
+
+            // Try to predict target's future position based on velocity
+            Rigidbody2D targetRb = target.GetComponent<Rigidbody2D>();
+            if (targetRb != null && targetRb.linearVelocity.sqrMagnitude > 0.01f)
+            {
+                Vector3 targetVelocity = targetRb.linearVelocity;
+
+                // Simple prediction: use 50% of estimated time to reduce over-prediction
+                float distance = Vector3.Distance(transform.position, targetPosition);
+                float timeToReach = (distance / speed) * 0.5f;
+
+                // Predict where target will be after that time
+                Vector3 predictedPosition = targetPosition + (targetVelocity * timeToReach);
+
+                // Aim at predicted position for better accuracy
+                direction = (predictedPosition - transform.position).normalized;
+
+                Debug.Log($"[Projectile] Prediction - Velocity: {targetVelocity}, Time: {timeToReach:F2}s, Predicted: {predictedPosition}, Direction: {direction}");
+            }
+            else
+            {
+                // Fallback: direct aim if target has no Rigidbody2D or is stationary
+                direction = (targetPosition - transform.position).normalized;
+
+                Debug.Log($"[Projectile] Direct aim - Direction: {direction}");
+            }
         }
-        
     }
     
     //JML: Handle collision with monsters
@@ -89,8 +103,6 @@ public class Projectile : MonoBehaviour, IPoolable
     //JML: Reset projectile state on spawn
     public void OnSpawn()
     {
-        hasLostTarget = false;
-        target = null;
         direction = Vector3.zero;
         rb.linearVelocity = Vector2.zero;
         spawnTime = 0f;  // Reset spawn time for pool reuse
@@ -99,8 +111,6 @@ public class Projectile : MonoBehaviour, IPoolable
     //JML: Clean up projectile state on despawn
     public void OnDespawn()
     {
-        hasLostTarget = false;
-        target = null;
         direction = Vector3.zero;
         rb.linearVelocity = Vector2.zero;
         spawnTime = 0f;  // Reset spawn time
