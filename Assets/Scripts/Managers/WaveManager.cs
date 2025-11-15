@@ -19,6 +19,7 @@ namespace NovelianMagicLibraryDefense.Managers
         private MonsterEvents monsterEvents;
         private StageEvents stageEvents;
         private bool isPoolReady = false;
+        private SpawnArea spawnArea;
 
         #region WaveData
         // private int waveId;  // LMJ: Reserved for future use
@@ -37,10 +38,11 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// LMJ: Constructor injection for dependencies
         /// </summary>
-        public WaveManager(ObjectPoolManager pool, UIManager ui, MonsterEvents monsterEvts, StageEvents stageEvts)
+        public WaveManager(ObjectPoolManager pool, UIManager ui, SpawnArea spawnArea, MonsterEvents monsterEvts, StageEvents stageEvts)
         {
             poolManager = pool;
             uiManager = ui;
+            this.spawnArea = spawnArea;
             monsterEvents = monsterEvts;
             stageEvents = stageEvts;
         }
@@ -206,7 +208,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 // LMJ: Normal spawn
                 float randomX = Random.Range(-0.4f, 0.4f);
                 Vector3 spawnPos = new Vector3(randomX, 3f, -7.5f);
-                poolManager.Spawn<Monster>(spawnPos);
+                poolManager.Spawn<Monster>(spawnArea.GetRandomPosition());
 
                 spawnedCount++;
                 await UniTask.Delay((int)(spawnInterval * 1000));
