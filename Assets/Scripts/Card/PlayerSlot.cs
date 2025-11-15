@@ -2,43 +2,44 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 개별 플레이어 슬롯을 관리
-/// 선택된 캐릭터의 스프라이트를 표시
+/// LCB: Manages individual player slots
+/// Displays the sprite of the selected character
 /// </summary>
 public class PlayerSlot : MonoBehaviour
 {
-    [Header("슬롯 정보")]
-    public int slotIndex;             // 슬롯 번호 (0-9)
-    public bool isOccupied = false;   // 슬롯이 차있는지 여부
+    [Header("Slot Information")]
+    public int slotIndex;             // LCB: Slot number (0-9)
+    public bool isOccupied = false;   // LCB: Whether the slot is occupied
 
-    [Header("UI 요소")]
-    public Image characterImage;      // 캐릭터 이미지를 표시할 Image (자식 Image)
-    public Image slotBackgroundImage; // 슬롯 배경 이미지 (PlayerSlot 자체의 Image)
-    public GameObject emptySlotVisual; // 빈 슬롯 표시 (선택사항)
+    [Header("UI Elements")]
+    public Image characterImage;      // LCB: Image to display character image (child Image)
+    public Image slotBackgroundImage; // LCB: Slot background image (PlayerSlot's own Image)
+    public GameObject emptySlotVisual; // LCB: Empty slot visual (optional)
 
-    [Header("현재 캐릭터")]
-    private GenreType currentGenreType; // 현재 슬롯의 장르 타입
-    private GameObject instantiatedCharacter; // 생성된 캐릭터 오브젝트
+    [Header("Current Character")]
+    private GenreType currentGenreType; // LCB: Current slot's genre type
+    private GameObject instantiatedCharacter; // LCB: Instantiated character object (physics object)
+    private CharacterData currentCharacterData; // LCB: Current character data
 
     void Start()
     {
-        // slotBackgroundImage 자동 설정 - PlayerSlot 자체의 Image
+        // LCB: Auto-assign slotBackgroundImage - PlayerSlot's own Image
         if (slotBackgroundImage == null)
         {
             slotBackgroundImage = GetComponent<Image>();
         }
 
-        // characterImage가 설정되지 않았으면 찾기 - 자식 Image만 (선택사항)
+        // LCB: Find characterImage if not set - child Image only (optional)
         if (characterImage == null)
         {
-            // 자식들 중에서 "Image"라는 이름을 가진 GameObject 찾기
+            // LCB: Find GameObject named "Image" among children
             Transform imageTransform = transform.Find("Image");
             if (imageTransform != null)
             {
                 characterImage = imageTransform.GetComponent<Image>();
             }
 
-            // 못 찾았으면 자식에서 찾기 (자신은 제외)
+            // LCB: If not found, search in children (excluding self)
             if (characterImage == null)
             {
                 Image[] images = GetComponentsInChildren<Image>();
@@ -54,19 +55,19 @@ public class PlayerSlot : MonoBehaviour
 
             if (characterImage != null)
             {
-                Debug.Log($"슬롯 {slotIndex}: Character Image 자동 연결됨 - {characterImage.gameObject.name}");
+                Debug.Log($"Slot {slotIndex}: Character Image auto-connected - {characterImage.gameObject.name}");
             }
-            // else: characterImage가 없어도 괜찮음 (프리팹 방식 사용)
+            // LCB: else: It's okay if characterImage is not found (using prefab method)
         }
 
-        // 슬롯 배경은 항상 활성화 상태 유지
+        // LCB: Slot background is always kept active
         if (slotBackgroundImage != null)
         {
             slotBackgroundImage.enabled = true;
             slotBackgroundImage.gameObject.SetActive(true);
         }
 
-        // 자식 Image GameObject는 런타임 시작 시 비활성화 (있는 경우에만)
+        // LCB: Child Image GameObject is deactivated at runtime start (only if it exists)
         if (characterImage != null && characterImage.gameObject != gameObject)
         {
             characterImage.gameObject.SetActive(false);
@@ -76,23 +77,123 @@ public class PlayerSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// 슬롯에 캐릭터 프리팹과 스프라이트 배치 (오브젝트 인스턴스화 버전)
+    /// LCB: Place physics object in slot based on character data (new method)
+    /// </summary>
+    public void AssignCharacterData(CharacterData characterData)
+    {
+        if (characterData == null)
+        {
+            Debug.LogWarning($"Slot {slotIndex}: CharacterData is null!");
+            return;
+        }
+
+        if (characterData.characterPrefab == null)
+        {
+            Debug.LogWarning($"Slot {slotIndex}: characterPrefab is null! CharacterData: {characterData.characterName}");
+            return;
+        }
+
+        // LCB: Remove existing character object if exists
+        if (instantiatedCharacter != null)
+        {
+            Destroy(instantiatedCharacter);
+        }
+
+        currentCharacterData = characterData;
+        currentGenreType = characterData.genreType;
+        isOccupied = true;
+
+        // LCB: Instantiate character prefab in world space (at slot position)
+        Vector3 worldPosition = GetWorldPositionFromSlot();
+        instantiatedCharacter = Instantiate(characterData.characterPrefab, worldPosition, Quaternion.identity);
+        instantiatedCharacter.name = $"Character_{characterData.characterName}_{slotIndex}";
+
+        // LCB: Set data to Character script
+        Character characterScript = instantiatedCharacter.GetComponent<Character>();
+        if (characterScript != null)
+        {
+            characterScript.Initialize(characterData);
+            Debug.Log($"Slot {slotIndex} physics object created and initialized: {characterData.characterName} at {worldPosition}");
+        }
+        else
+        {
+            Debug.LogWarning($"Slot {slotIndex}: Cannot find Character script! Add Character component to prefab.");
+        }
+
+        // LCB: Completely hide UI image (only show physics object)
+        if (characterImage != null)
+        {
+            characterImage.enabled = false;
+            characterImage.sprite = null;
+            characterImage.gameObject.SetActive(false);
+            Debug.Log($"Slot {slotIndex}: UI image deactivation completed");
+        }
+
+        // LCB: Slot background is always active
+        if (slotBackgroundImage != null)
+        {
+            slotBackgroundImage.enabled = true;
+            slotBackgroundImage.gameObject.SetActive(true);
+        }
+
+        gameObject.SetActive(true);
+        UpdateSlotVisual();
+    }
+
+    /// <summary>
+    /// LCB: Convert UI slot position to world coordinates
+    /// </summary>
+    private Vector3 GetWorldPositionFromSlot()
+    {
+        RectTransform rectTransform = transform as RectTransform;
+        if (rectTransform == null)
+        {
+            Debug.LogWarning($"Slot {slotIndex}: No RectTransform!");
+            return Vector3.zero;
+        }
+
+        // LCB: Convert UI position to world coordinates
+        Vector3 screenPoint = rectTransform.position;
+
+        // LCB: Z plane where game object will be placed (same value as Character.cs)
+        float targetZ = -7.5f;
+
+        // LCB: Calculate distance from camera
+        if (Camera.main == null)
+        {
+            Debug.LogError("Cannot find main camera!");
+            return Vector3.zero;
+        }
+
+        float distanceFromCamera = targetZ - Camera.main.transform.position.z;
+
+        // LCB: Convert to world coordinates
+        Vector3 worldPoint = Camera.main.ScreenToWorldPoint(new Vector3(screenPoint.x, screenPoint.y, distanceFromCamera));
+        worldPoint.z = targetZ;
+
+        Debug.Log($"[PlayerSlot {slotIndex}] Screen: {screenPoint} -> World: {worldPoint}");
+
+        return worldPoint;
+    }
+
+    /// <summary>
+    /// LCB: Place character prefab and sprite in slot (legacy - UI method)
     /// </summary>
     public void AssignCharacter(GameObject characterPrefab, Sprite characterSprite, GenreType genreType)
     {
         if (characterPrefab == null)
         {
-            Debug.LogWarning($"슬롯 {slotIndex}: 캐릭터 프리팹이 null입니다!");
+            Debug.LogWarning($"Slot {slotIndex}: Character prefab is null!");
             return;
         }
 
         if (characterSprite == null)
         {
-            Debug.LogWarning($"슬롯 {slotIndex}: 캐릭터 스프라이트가 null입니다!");
+            Debug.LogWarning($"Slot {slotIndex}: Character sprite is null!");
             return;
         }
 
-        // 기존 캐릭터 오브젝트가 있다면 제거
+        // LCB: Remove existing character object if exists
         if (instantiatedCharacter != null)
         {
             Destroy(instantiatedCharacter);
@@ -101,25 +202,25 @@ public class PlayerSlot : MonoBehaviour
         currentGenreType = genreType;
         isOccupied = true;
 
-        // 캐릭터 프리팹 인스턴스화 (슬롯의 자식으로 생성)
+        // LCB: Instantiate character prefab (create as child of slot)
         instantiatedCharacter = Instantiate(characterPrefab, transform);
         instantiatedCharacter.name = $"Character_{genreType}";
 
-        // 생성된 오브젝트 내에서 Image 컴포넌트 찾기
+        // LCB: Find Image component in created object
         Image charImage = instantiatedCharacter.GetComponentInChildren<Image>();
         if (charImage != null)
         {
             charImage.sprite = characterSprite;
             charImage.enabled = true;
             charImage.color = new Color(1, 1, 1, 1);
-            Debug.Log($"슬롯 {slotIndex}에 프리팹 생성 및 이미지 설정 완료: {characterSprite.name}");
+            Debug.Log($"Slot {slotIndex} prefab creation and image setup completed: {characterSprite.name}");
         }
         else
         {
-            Debug.LogWarning($"슬롯 {slotIndex}: 생성된 프리팹에서 Image를 찾을 수 없습니다!");
+            Debug.LogWarning($"Slot {slotIndex}: Cannot find Image in created prefab!");
         }
 
-        // 슬롯 배경은 항상 활성화
+        // LCB: Slot background is always active
         if (slotBackgroundImage != null)
         {
             slotBackgroundImage.enabled = true;
@@ -131,63 +232,63 @@ public class PlayerSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// 슬롯에 캐릭터 스프라이트 배치 (간소화 버전 - 레거시 호환용)
+    /// LCB: Place character sprite in slot (simplified version - legacy compatibility)
     /// </summary>
     public void AssignCharacterSprite(Sprite characterSprite, GenreType genreType)
     {
         if (characterSprite == null)
         {
-            Debug.LogWarning("캐릭터 스프라이트가 null입니다!");
+            Debug.LogWarning("Character sprite is null!");
             return;
         }
 
         currentGenreType = genreType;
         isOccupied = true;
 
-        // 슬롯 배경은 항상 활성화 및 보이는 상태 유지
+        // LCB: Slot background is always active and visible
         if (slotBackgroundImage != null)
         {
             slotBackgroundImage.enabled = true;
             slotBackgroundImage.gameObject.SetActive(true);
         }
 
-        // 캐릭터 스프라이트 설정
+        // LCB: Set character sprite
         if (characterImage != null)
         {
             characterImage.sprite = characterSprite;
             characterImage.enabled = true;
-            characterImage.color = new Color(1, 1, 1, 1); // 완전 불투명
+            characterImage.color = new Color(1, 1, 1, 1); // LCB: Fully opaque
 
-            // GameObject 활성화
+            // LCB: Activate GameObject
             characterImage.gameObject.SetActive(true);
 
-            // Raycast Target 비활성화 - 클릭이 슬롯 배경까지 전달되도록
+            // LCB: Disable Raycast Target - allow clicks to pass through to slot background
             characterImage.raycastTarget = false;
 
-            // RectTransform 확인
+            // LCB: Check RectTransform
             RectTransform rect = characterImage.GetComponent<RectTransform>();
             if (rect != null)
             {
-                Debug.Log($"슬롯 {slotIndex} Image 크기: {rect.rect.width}x{rect.rect.height}");
+                Debug.Log($"Slot {slotIndex} Image size: {rect.rect.width}x{rect.rect.height}");
             }
 
-            Debug.Log($"슬롯 {slotIndex}에 장르 {genreType} 캐릭터 배치됨 - Image active: {characterImage.gameObject.activeSelf}, enabled: {characterImage.enabled}");
+            Debug.Log($"Slot {slotIndex} genre {genreType} character placed - Image active: {characterImage.gameObject.activeSelf}, enabled: {characterImage.enabled}");
         }
 
-        // PlayerSlot GameObject 자체는 항상 활성화 상태 유지
+        // LCB: PlayerSlot GameObject itself is always kept active
         gameObject.SetActive(true);
 
         UpdateSlotVisual();
     }
 
     /// <summary>
-    /// 슬롯 비우기
+    /// LCB: Clear slot
     /// </summary>
     public void ClearSlot()
     {
         isOccupied = false;
 
-        // 인스턴스화된 캐릭터 오브젝트 제거
+        // LCB: Remove instantiated character object
         if (instantiatedCharacter != null)
         {
             Destroy(instantiatedCharacter);
@@ -204,21 +305,21 @@ public class PlayerSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// 슬롯 비주얼 업데이트
+    /// LCB: Update slot visual
     /// </summary>
     void UpdateSlotVisual()
     {
-        // 슬롯 배경(slotBackgroundImage)은 항상 보이도록 유지
+        // LCB: Slot background (slotBackgroundImage) is always kept visible
         if (slotBackgroundImage != null)
         {
             slotBackgroundImage.enabled = true;
             slotBackgroundImage.gameObject.SetActive(true);
         }
 
-        // emptySlotVisual은 항상 활성화 상태 유지 (반투명 배경)
-        // 제거: emptySlotVisual.SetActive(!isOccupied);
+        // LCB: emptySlotVisual is always kept active (semi-transparent background)
+        // LCB: Removed: emptySlotVisual.SetActive(!isOccupied);
 
-        // 자식 Image GameObject만 활성화/비활성화 (PlayerSlot 자체는 항상 활성화)
+        // LCB: Only child Image GameObject is activated/deactivated (PlayerSlot itself is always active)
         if (characterImage != null && characterImage.gameObject != gameObject)
         {
             characterImage.gameObject.SetActive(isOccupied);
@@ -226,7 +327,7 @@ public class PlayerSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// 슬롯이 비어있는지 확인
+    /// LCB: Check if slot is empty
     /// </summary>
     public bool IsEmpty()
     {
@@ -234,7 +335,7 @@ public class PlayerSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// 현재 장르 타입 반환
+    /// LCB: Return current genre type
     /// </summary>
     public GenreType GetGenreType()
     {

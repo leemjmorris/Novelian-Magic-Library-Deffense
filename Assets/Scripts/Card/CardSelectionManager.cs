@@ -200,7 +200,7 @@ public class CardSelectionManager : MonoBehaviour
         }
 
         Debug.Log($"[CardSelectionManager] Card 1 선택 처리 시작 - Data: {selectedCard1Data?.characterName}");
-        SelectCard(selectedCard1Data, card1);
+        SelectCard(selectedCard1Data);
     }
 
     /// <summary>
@@ -226,15 +226,15 @@ public class CardSelectionManager : MonoBehaviour
         }
 
         Debug.Log($"[CardSelectionManager] Card 2 선택 처리 시작 - Data: {selectedCard2Data?.characterName}");
-        SelectCard(selectedCard2Data, card2);
+        SelectCard(selectedCard2Data);
     }
 
     /// <summary>
-    /// 카드 선택 처리
+    /// 카드 선택 처리 - 물리 오브젝트 기반
     /// </summary>
-    void SelectCard(CharacterData data, GameObject cardObj)
+    void SelectCard(CharacterData data)
     {
-        Debug.Log($"[CardSelectionManager] SelectCard 시작 - data null? {data == null}, cardObj null? {cardObj == null}");
+        Debug.Log($"[CardSelectionManager] SelectCard 시작 - data null? {data == null}");
 
         if (data == null)
         {
@@ -242,29 +242,15 @@ public class CardSelectionManager : MonoBehaviour
             return;
         }
 
-        CharacterCard charCard = cardObj?.GetComponent<CharacterCard>();
-        if (charCard == null || charCard.characterImage == null)
-        {
-            Debug.LogError($"[CardSelectionManager] 카드 컴포넌트 또는 이미지가 null입니다! charCard null? {charCard == null}");
-            return;
-        }
-
-        Sprite cardSprite = charCard.characterImage.sprite;
-        if (cardSprite == null)
-        {
-            Debug.LogError("[CardSelectionManager] 카드 이미지가 null입니다!");
-            return;
-        }
-
         Debug.Log($"[CardSelectionManager] playerSlots count: {playerSlots?.Count ?? 0}");
 
-        // 빈 슬롯 찾아서 배치
+        // 빈 슬롯 찾아서 물리 오브젝트 배치
         PlayerSlot emptySlot = FindNextEmptySlot();
         if (emptySlot != null)
         {
             Debug.Log($"[CardSelectionManager] 빈 슬롯 찾음! 슬롯 인덱스: {emptySlot.slotIndex}");
-            emptySlot.AssignCharacterSprite(cardSprite, data.genreType);
-            Debug.Log($"[CardSelectionManager] 슬롯에 배치 완료: {data.characterName}, 스프라이트: {cardSprite.name}");
+            emptySlot.AssignCharacterData(data);
+            Debug.Log($"[CardSelectionManager] 슬롯에 물리 오브젝트 배치 완료: {data.characterName}");
         }
         else
         {
