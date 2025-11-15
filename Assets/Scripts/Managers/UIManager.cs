@@ -1,101 +1,98 @@
+using NovelianMagicLibraryDefense.Events;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using NovelianMagicLibraryDefense.Core;
 
 namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
     /// LCB/LMJ: Central UI manager that handles all UI elements and button interactions
-    /// Refactored to BaseManager pattern for consistency with other managers
+    /// Converted to MonoBehaviour for Inspector integration and event system compatibility
     /// Manages monster count, wave timer, barrier HP, and button interactions
     /// </summary>
-    [System.Serializable]
-    public class UIManager : BaseManager
+    public class UIManager : MonoBehaviour
     {
-        // UI References injected from GameManager
-        private readonly TextMeshProUGUI monsterCountText;
-        private readonly TextMeshProUGUI waveTimerText;
-        private readonly Slider barrierHPSlider;
-        private readonly Slider expSlider;
-        private readonly TextMeshProUGUI barrierHPText;
-        private readonly GameObject cardPanel;
-        private readonly TextMeshProUGUI speedButtonText;
-        private readonly Button speedButton;
-        private readonly Button settingsButton;
-        private readonly Button skillButton1;
-        private readonly Button skillButton2;
-        private readonly Button skillButton3;
-        private readonly Button skillButton4;
+        [Header("Event Channels")]
+        [SerializeField] private WallEvents wallEvents;
+
+        [Header("UI References - Monster Display")]
+        [SerializeField] private TextMeshProUGUI monsterCountText;
+
+        [Header("UI References - Timer Display")]
+        [SerializeField] private TextMeshProUGUI waveTimerText;
+
+        [Header("UI References - Barrier HP")]
+        [SerializeField] private Slider barrierHPSlider;
+        [SerializeField] private TextMeshProUGUI barrierHPText;
+
+        [Header("UI References - Exp Slider")]
+        [SerializeField] private Slider expSlider;
+
+        [Header("UI References - Panels")]
+        [SerializeField] private GameObject cardPanel;
+
+        [Header("UI References - SpeedButtonText")]
+        [SerializeField] private TextMeshProUGUI speedButtonText;
+
+        [Header("UI References - Buttons")]
+        [SerializeField] private Button speedButton;
+        [SerializeField] private Button settingsButton;
+        [SerializeField] private Button skillButton1;
+        [SerializeField] private Button skillButton2;
+        [SerializeField] private Button skillButton3;
+        [SerializeField] private Button skillButton4;
 
         /// <summary>
-        /// LMJ: Constructor injection for UI dependencies
+        /// LMJ: Initialize UI elements and setup button listeners
         /// </summary>
-        public UIManager(
-            TextMeshProUGUI monsterCount,
-            TextMeshProUGUI waveTimer,
-            Slider barrierSlider,
-            TextMeshProUGUI barrierText,
-            Slider expSlider,
-            GameObject cardPanelRef,
-            Button speed,
-            TextMeshProUGUI speedButtonText,
-            Button settings,
-            Button skill1,
-            Button skill2,
-            Button skill3,
-            Button skill4)
+        public void Initialize()
         {
-            monsterCountText = monsterCount;
-            waveTimerText = waveTimer;
-            barrierHPSlider = barrierSlider;
-            barrierHPText = barrierText;
-            this.expSlider = expSlider;
-            cardPanel = cardPanelRef;
-            speedButton = speed;
-            this.speedButtonText = speedButtonText;
-            settingsButton = settings;
-            skillButton1 = skill1;
-            skillButton2 = skill2;
-            skillButton3 = skill3;
-            skillButton4 = skill4;
-        }
+            if (expSlider != null)
+                expSlider.value = 0f;
+            if (barrierHPSlider != null)
+                barrierHPSlider.value = 1f;
+            if (speedButtonText != null)
+                speedButtonText.text = "X1";
 
-        protected override void OnInitialize()
-        {
-            expSlider.value = 0f;
-            barrierHPSlider.value = 1f;
             Debug.Log("[UIManager] Initializing UI");
-            speedButtonText.text = "X1";
-
-            // LMJ: Card panel activation is now handled by game logic (StartSelectionManager)
-            // No longer managing card panel activation here
 
             // Setup button listeners
             SetupButtonListeners();
 
-            // Subscribe to Wall HP changes (event-based, not Update loop)
-            Wall.OnHealthChanged += UpdateBarrierHP;
+            // LMJ: Subscribe to Wall HP changes via EventChannel
+            if (wallEvents != null)
+            {
+                wallEvents.AddHealthChangedListener(UpdateBarrierHP);
+            }
 
             Debug.Log("[UIManager] Initialized");
         }
 
-        protected override void OnReset()
+        /// <summary>
+        /// LMJ: Reset UI to initial state
+        /// </summary>
+        public void Reset()
         {
             Debug.Log("[UIManager] Resetting UI");
             UpdateMonsterCount(0);
             UpdateWaveTimer(0f);
-            expSlider.value = 0f;
-            barrierHPSlider.value = 1f;
-            speedButtonText.text = "X1";
+            if (expSlider != null)
+                expSlider.value = 0f;
+            if (barrierHPSlider != null)
+                barrierHPSlider.value = 1f;
+            if (speedButtonText != null)
+                speedButtonText.text = "X1";
         }
 
-        protected override void OnDispose()
+        private void OnDestroy()
         {
             Debug.Log("[UIManager] Disposing UI");
 
-            // Unsubscribe from events
-            Wall.OnHealthChanged -= UpdateBarrierHP;
+            // LMJ: Unsubscribe from EventChannel
+            if (wallEvents != null)
+            {
+                wallEvents.RemoveHealthChangedListener(UpdateBarrierHP);
+            }
 
             // Remove button listeners
             RemoveButtonListeners();

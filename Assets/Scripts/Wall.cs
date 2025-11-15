@@ -1,10 +1,10 @@
-using System;
+using NovelianMagicLibraryDefense.Events;
 using UnityEngine;
 
 public class Wall : MonoBehaviour, IEntity
 {
-    public static event Action OnWallDestroyed;
-    public static event Action<float, float> OnHealthChanged; // (currentHP, maxHP)
+    [Header("Event Channels")]
+    [SerializeField] private WallEvents wallEvents;
 
     [SerializeField] private float maxHealth = 200f;
     private float health;
@@ -12,7 +12,12 @@ public class Wall : MonoBehaviour, IEntity
     private void Awake()
     {
         health = maxHealth;
-        OnHealthChanged?.Invoke(health, maxHealth);
+
+        // LMJ: Use EventChannel instead of static event
+        if (wallEvents != null)
+        {
+            wallEvents.RaiseHealthChanged(health, maxHealth);
+        }
     }
 
     // IEntity Implementation
@@ -20,7 +25,12 @@ public class Wall : MonoBehaviour, IEntity
     {
         health -= damage;
         Debug.Log($"Wall took {damage} damage. current Health: {health}");
-        OnHealthChanged?.Invoke(health, maxHealth);
+
+        // LMJ: Use EventChannel instead of static event
+        if (wallEvents != null)
+        {
+            wallEvents.RaiseHealthChanged(health, maxHealth);
+        }
 
         if (health <= 0)
         {
@@ -42,6 +52,11 @@ public class Wall : MonoBehaviour, IEntity
     private void GameOver()
     {
         Debug.Log("Game Over!");
-        OnWallDestroyed?.Invoke();
+
+        // LMJ: Use EventChannel instead of static event
+        if (wallEvents != null)
+        {
+            wallEvents.RaiseWallDestroyed();
+        }
     }
 }

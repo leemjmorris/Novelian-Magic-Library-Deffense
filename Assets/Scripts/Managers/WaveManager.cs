@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.Events;
 using TMPro;
 using UnityEngine;
 
@@ -15,10 +16,9 @@ namespace NovelianMagicLibraryDefense.Managers
     {
         private ObjectPoolManager poolManager;
         private UIManager uiManager;
+        private MonsterEvents monsterEvents;
+        private StageEvents stageEvents;
         private bool isPoolReady = false;
-
-        public static event System.Action OnAllMonstersDefeated;
-        public static event System.Action OnBossDefeated;
 
         #region WaveData
         // private int waveId;  // LMJ: Reserved for future use
@@ -37,19 +37,24 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// LMJ: Constructor injection for dependencies
         /// </summary>
-        public WaveManager(ObjectPoolManager pool, UIManager ui)
+        public WaveManager(ObjectPoolManager pool, UIManager ui, MonsterEvents monsterEvts, StageEvents stageEvts)
         {
             poolManager = pool;
             uiManager = ui;
+            monsterEvents = monsterEvts;
+            stageEvents = stageEvts;
         }
 
         protected override void OnInitialize()
         {
             Debug.Log("[WaveManager] Initializing pools and warm up");
 
-            // LMJ: Subscribe to events first
-            Monster.OnMonsterDied += HandleMonsterDied;
-            BossMonster.OnBossDied += HandleBossDied;
+            // LMJ: Subscribe to EventChannels
+            if (monsterEvents != null)
+            {
+                monsterEvents.AddMonsterDiedListener(HandleMonsterDied);
+                monsterEvents.AddBossDiedListener(HandleBossDied);
+            }
 
             // LMJ: Initialize pools asynchronously
             InitializePoolsAsync().Forget();
@@ -86,9 +91,12 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             Debug.Log("[WaveManager] Disposing and unsubscribing events");
 
-            // LMJ: Unsubscribe from events
-            Monster.OnMonsterDied -= HandleMonsterDied;
-            BossMonster.OnBossDied -= HandleBossDied;
+            // LMJ: Unsubscribe from EventChannels
+            if (monsterEvents != null)
+            {
+                monsterEvents.RemoveMonsterDiedListener(HandleMonsterDied);
+                monsterEvents.RemoveBossDiedListener(HandleBossDied);
+            }
         }
 
         /// <summary>
@@ -147,7 +155,12 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 Debug.Log("[WaveManager] All monsters defeated!");
                 WaveClear();
-                OnAllMonstersDefeated?.Invoke();
+
+                // LMJ: Use EventChannel instead of static event
+                if (stageEvents != null)
+                {
+                    stageEvents.RaiseAllMonstersDefeated();
+                }
             }
         }
 
@@ -156,7 +169,12 @@ namespace NovelianMagicLibraryDefense.Managers
             bossCount--;
 
             Debug.Log("[WaveManager] Boss defeated!");
-            OnBossDefeated?.Invoke();
+
+            // LMJ: Use EventChannel instead of static event
+            if (stageEvents != null)
+            {
+                stageEvents.RaiseBossDefeated();
+            }
         }
 
         private async UniTaskVoid SpawnEnemy()

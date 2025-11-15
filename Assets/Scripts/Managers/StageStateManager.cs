@@ -1,5 +1,6 @@
 using System;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.Managers;
 using NovelianMagicLibraryDefense.UI;
 using UnityEngine;
@@ -20,19 +21,19 @@ namespace NovelianMagicLibraryDefense.Managers
         private StageManager stageManager;
         private WinLosePanel winLosePanel;
         private Wall wall;
+        private StageEvents stageEvents;
+        private WallEvents wallEvents;
 
         public StageState CurrentState { get; private set; }
-       
-        
 
-        public static event Action<StageState> OnStageStateChanged;
-
-        public StageStateManager(WaveManager wave, StageManager stage, Wall wallRef, WinLosePanel panel)
+        public StageStateManager(WaveManager wave, StageManager stage, Wall wallRef, WinLosePanel panel, StageEvents stageEvts, WallEvents wallEvts)
         {
             waveManager = wave;
             stageManager = stage;
             wall = wallRef;
             winLosePanel = panel;
+            stageEvents = stageEvts;
+            wallEvents = wallEvts;
         }
 
         protected override void OnInitialize()
@@ -40,12 +41,19 @@ namespace NovelianMagicLibraryDefense.Managers
             Debug.Log("[StageStateManager] Initializing stage state");
 
             CurrentState = StageState.Playing;
-            
-            WaveManager.OnAllMonstersDefeated += HandleAllMonstersDefeated;
-            WaveManager.OnBossDefeated += HandleBossDefeated;
 
-            Wall.OnWallDestroyed += HandleWallDestroyed;
-            StageManager.OnTimeUp += HandleTimeUp;
+            // LMJ: Subscribe to EventChannels instead of static events
+            if (stageEvents != null)
+            {
+                stageEvents.AddAllMonstersDefeatedListener(HandleAllMonstersDefeated);
+                stageEvents.AddBossDefeatedListener(HandleBossDefeated);
+                stageEvents.AddTimeUpListener(HandleTimeUp);
+            }
+
+            if (wallEvents != null)
+            {
+                wallEvents.AddWallDestroyedListener(HandleWallDestroyed);
+            }
 
             Debug.Log("[StageStateManager] Subscribed to all stage events");
         }
@@ -61,10 +69,18 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             Debug.Log("[StageStateManager] Disposing and unsubscribing events");
 
-            WaveManager.OnAllMonstersDefeated -= HandleAllMonstersDefeated;
-            WaveManager.OnBossDefeated -= HandleBossDefeated;
-            Wall.OnWallDestroyed -= HandleWallDestroyed;
-            StageManager.OnTimeUp -= HandleTimeUp;
+            // LMJ: Unsubscribe from EventChannels
+            if (stageEvents != null)
+            {
+                stageEvents.RemoveAllMonstersDefeatedListener(HandleAllMonstersDefeated);
+                stageEvents.RemoveBossDefeatedListener(HandleBossDefeated);
+                stageEvents.RemoveTimeUpListener(HandleTimeUp);
+            }
+
+            if (wallEvents != null)
+            {
+                wallEvents.RemoveWallDestroyedListener(HandleWallDestroyed);
+            }
         }
 
         #region Victory Conditions
@@ -131,7 +147,11 @@ namespace NovelianMagicLibraryDefense.Managers
             CurrentState = newState;
             Time.timeScale = 0f;
 
-            OnStageStateChanged?.Invoke(newState);
+            // LMJ: Use EventChannel instead of static event
+            if (stageEvents != null)
+            {
+                stageEvents.RaiseStageStateChanged(newState);
+            }
 
             Debug.Log($"[StageStateManager] Stage State Changed: {newState}");
 

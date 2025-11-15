@@ -1,8 +1,11 @@
-﻿using UnityEngine;
+﻿using NovelianMagicLibraryDefense.Events;
+using UnityEngine;
 //JML: Boss monster entity with enhanced stats and wall attack behavior
 public class BossMonster : BaseEntity, ITargetable, IMovable
 {
-    public static event System.Action<BossMonster> OnBossDied;
+    [Header("Event Channels")]
+    [SerializeField] private MonsterEvents monsterEvents;
+
     [SerializeField] new Collider2D collider2D;
     [SerializeField] private Rigidbody2D rb;
     [SerializeField] private float moveSpeed = 2f;
@@ -62,7 +65,15 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
 
     public override void Die()
     {
-        OnBossDied?.Invoke(this);
+        // LMJ: Unregister BEFORE despawning to prevent accessing destroyed object
+        TargetRegistry.Instance.UnregisterTarget(this);
+
+        // LMJ: Use EventChannel instead of static event
+        if (monsterEvents != null)
+        {
+            monsterEvents.RaiseBossDied(this);
+        }
+
         // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
         NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
@@ -97,6 +108,9 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         wall = null;
         attackTimer = 0f;
         Weight = 5f;
+
+        // JML: Redundant safety check - should already be unregistered in Die()
+        // But kept as failsafe for edge cases
         TargetRegistry.Instance.UnregisterTarget(this);
     }
 }

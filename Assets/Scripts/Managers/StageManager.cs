@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.UI;
 using UnityEngine;
 
@@ -15,9 +16,11 @@ namespace NovelianMagicLibraryDefense.Managers
     [System.Serializable]  // LMJ: Prevents Unity from treating this as a Component
     public class StageManager : BaseManager
     {
-        
+
         private WaveManager waveManager;
         private UIManager uiManager;
+        private MonsterEvents monsterEvents;
+        private StageEvents stageEvents;
         private LevelUpCardUI levelUpCardUI; // LCB: Cache LevelUpCardUI reference to avoid FindWithTag on inactive objects
         private CardSelectionManager cardSelectionManager; // LMJ: Direct reference to CardSelectionManager
 
@@ -39,18 +42,18 @@ namespace NovelianMagicLibraryDefense.Managers
         private float RemainingTime { get; set; }
         private bool isStageCleared = false;
         private CancellationTokenSource timerCts;
-
-        public static event Action OnTimeUp;
         #endregion
 
         /// <summary>
         /// LMJ: Constructor injection for dependencies
         /// </summary>
-        public StageManager(WaveManager wave, UIManager ui, CardSelectionManager cardSelection = null)
+        public StageManager(WaveManager wave, UIManager ui, MonsterEvents monsterEvts, StageEvents stageEvts, CardSelectionManager cardSelection = null)
         {
             waveManager = wave;
             cardSelectionManager = cardSelection;
             uiManager = ui;
+            monsterEvents = monsterEvts;
+            stageEvents = stageEvts;
         }
 
         /// <summary>
@@ -68,8 +71,11 @@ namespace NovelianMagicLibraryDefense.Managers
 
             StageName = $"Stage 1-1"; //TODO JML: CSV Loaded
 
-            // LMJ: Subscribe to monster death event for exp
-            Monster.OnMonsterDied += AddExp;
+            // LMJ: Subscribe to monster death event for exp via EventChannel
+            if (monsterEvents != null)
+            {
+                monsterEvents.AddMonsterDiedListener(AddExp);
+            }
 
             // LCB: Find and cache LevelUpCardUI using FindWithTag (faster than FindFirstObjectByType)
             // LCB: Now works because LevelUpPanel stays active with CanvasGroup controlling visibility
@@ -132,8 +138,11 @@ namespace NovelianMagicLibraryDefense.Managers
             timerCts?.Dispose();
             timerCts = null;
 
-            // LMJ: Unsubscribe events
-            Monster.OnMonsterDied -= AddExp;
+            // LMJ: Unsubscribe events via EventChannel
+            if (monsterEvents != null)
+            {
+                monsterEvents.RemoveMonsterDiedListener(AddExp);
+            }
 
             // LMJ: Reset stage data
             currentExp = 0;
@@ -154,8 +163,11 @@ namespace NovelianMagicLibraryDefense.Managers
             timerCts?.Dispose();
             timerCts = null;
 
-            // LMJ: Unsubscribe events
-            Monster.OnMonsterDied -= AddExp;
+            // LMJ: Unsubscribe events via EventChannel
+            if (monsterEvents != null)
+            {
+                monsterEvents.RemoveMonsterDiedListener(AddExp);
+            }
 
             // JML: Ensure time scale reset
             Time.timeScale = 1f;
@@ -204,7 +216,12 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             Debug.Log("[StageManager] Time's Up! Stage Failed");
             waveManager.WaveClear();
-            OnTimeUp?.Invoke();
+
+            // LMJ: Use EventChannel instead of static event
+            if (stageEvents != null)
+            {
+                stageEvents.RaiseTimeUp();
+            }
         }
 
         /// <summary>

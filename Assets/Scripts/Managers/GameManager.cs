@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.UI;
 using TMPro;
 using UnityEngine;
@@ -18,42 +19,21 @@ namespace NovelianMagicLibraryDefense.Managers
         private static GameManager instance;
         public static GameManager Instance => instance;
 
-        #region UI References (To be injected into UIManager)
-        [Header("UI References - Monster Display")]
-        [SerializeField] private TextMeshProUGUI monsterCountText;
+        [Header("Manager References")]
+        [SerializeField] private UIManager uiManager;
 
-        [Header("UI References - Timer Display")]
-        [SerializeField] private TextMeshProUGUI waveTimerText;
-
-        [Header("UI References - Barrier HP")]
-        [SerializeField] private Slider barrierHPSlider;
-        [SerializeField] private TextMeshProUGUI barrierHPText;
-        [Header("UI References - Exp Slider")]
-        [SerializeField] private Slider expSlider;
-
-        [Header("UI References - Panels")]
-        [SerializeField] private GameObject cardPanel;
-        [SerializeField] private WinLosePanel winLosePanel;
-
-        [Header("UI References - SpeedButtonText")]
-        [SerializeField] private TextMeshProUGUI speedButtonText;
-
-        [Header("UI References - Buttons")]
-        [SerializeField] private Button speedButton;
-        [SerializeField] private Button settingsButton;
-        [SerializeField] private Button skillButton1;
-        [SerializeField] private Button skillButton2;
-        [SerializeField] private Button skillButton3;
-        [SerializeField] private Button skillButton4;
-        #endregion
+        [Header("Event Channels")]
+        [SerializeField] private MonsterEvents monsterEvents;
+        [SerializeField] private WallEvents wallEvents;
+        [SerializeField] private StageEvents stageEvents;
 
         [Header("Stage References")]
         [SerializeField] private Wall wallReference;
         [SerializeField] private CardSelectionManager cardSelectionManager;
+        [SerializeField] private WinLosePanel winLosePanel;
 
         // LMJ: Explicit manager references for type-safe access
         private InputManager inputManager;
-        private UIManager uiManager;
         private ObjectPoolManager poolManager;
         private WaveManager waveManager;
         private StageManager stageManager;
@@ -89,55 +69,42 @@ namespace NovelianMagicLibraryDefense.Managers
         /// LMJ: Initialize all managers in dependency order
         /// Order matters: Input -> UI -> Pool -> Wave -> Stage -> StageState
         /// Note: SceneManager is removed (scene transitions now handled by FadeController)
-        /// Some managers are optional and only created when required references exist (for LobbyScene support)
+        /// UIManager is now a MonoBehaviour component
         /// </summary>
         private void InitializeManagers()
         {
             // LMJ: Create InputManager first (no dependencies)
             RegisterManager(inputManager = new InputManager());
 
-            // LMJ: Create UIManager only if UI references exist (GameScene)
-            if (monsterCountText != null || waveTimerText != null || barrierHPSlider != null)
-            {
-                uiManager = new UIManager(
-                    monsterCountText,
-                    waveTimerText,
-                    barrierHPSlider,
-                    barrierHPText,
-                    expSlider,
-                    cardPanel,
-                    speedButton,
-                    speedButtonText,
-                    settingsButton,
-                    skillButton1,
-                    skillButton2,
-                    skillButton3,
-                    skillButton4
-                );
-                RegisterManager(uiManager);
-                Debug.Log("[GameManager] UIManager created (GameScene mode)");
-            }
-            else
-            {
-                Debug.Log("[GameManager] UIManager skipped (LobbyScene mode)");
-            }
-
-            // LMJ: Create game managers only if UIManager exists (GameScene)
+            // LMJ: UIManager is now a MonoBehaviour - check if it exists in scene
             if (uiManager != null)
             {
+                Debug.Log("[GameManager] UIManager found (GameScene mode)");
+
+                // LMJ: Create game managers only if UIManager exists (GameScene)
                 RegisterManager(poolManager = new ObjectPoolManager());
-                RegisterManager(waveManager = new WaveManager(poolManager, uiManager));
-                RegisterManager(stageManager = new StageManager(waveManager, uiManager, cardSelectionManager));
+                RegisterManager(waveManager = new WaveManager(poolManager, uiManager, monsterEvents, stageEvents));
+                RegisterManager(stageManager = new StageManager(waveManager, uiManager, monsterEvents, stageEvents, cardSelectionManager));
 
                 // LMJ: Create StageStateManager only if wall reference exists
                 if (wallReference != null && winLosePanel != null)
                 {
-                    RegisterManager(stageStateManager = new StageStateManager(waveManager, stageManager, wallReference, winLosePanel));
+                    RegisterManager(stageStateManager = new StageStateManager(waveManager, stageManager, wallReference, winLosePanel, stageEvents, wallEvents));
                 }
+            }
+            else
+            {
+                Debug.Log("[GameManager] UIManager not found (LobbyScene mode)");
             }
 
             // LMJ: Initialize all managers in registration order
             InitializeAll();
+
+            // LMJ: Initialize UIManager separately (it's MonoBehaviour now)
+            if (uiManager != null)
+            {
+                uiManager.Initialize();
+            }
         }
 
         /// <summary>
@@ -170,6 +137,12 @@ namespace NovelianMagicLibraryDefense.Managers
             foreach (var manager in managers)
             {
                 manager.Reset();
+            }
+
+            // LMJ: Reset UIManager separately (it's MonoBehaviour now)
+            if (uiManager != null)
+            {
+                uiManager.Reset();
             }
         }
 

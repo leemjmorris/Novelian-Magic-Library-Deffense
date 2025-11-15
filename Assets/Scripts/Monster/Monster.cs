@@ -1,9 +1,11 @@
-﻿using UnityEngine;
+﻿using NovelianMagicLibraryDefense.Events;
+using UnityEngine;
 
 //JML: Monster entity with movement and wall attack behavior
 public class Monster : BaseEntity, ITargetable, IMovable
 {
-    public static event System.Action<Monster> OnMonsterDied;
+    [Header("Event Channels")]
+    [SerializeField] private MonsterEvents monsterEvents;
 
 
     [Header("References")]
@@ -77,7 +79,12 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // JML: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);
 
-        OnMonsterDied?.Invoke(this);
+        // LMJ: Use EventChannel instead of static event
+        if (monsterEvents != null)
+        {
+            monsterEvents.RaiseMonsterDied(this);
+        }
+
         // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
         NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
