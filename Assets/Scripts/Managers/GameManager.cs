@@ -31,6 +31,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private Wall wallReference;
         [SerializeField] private CardSelectionManager cardSelectionManager;
         [SerializeField] private WinLosePanel winLosePanel;
+        [SerializeField] private SpawnArea spawnArea;
 
         // LMJ: Explicit manager references for type-safe access
         private InputManager inputManager;
@@ -83,7 +84,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 // LMJ: Create game managers only if UIManager exists (GameScene)
                 RegisterManager(poolManager = new ObjectPoolManager());
-                RegisterManager(waveManager = new WaveManager(poolManager, uiManager, monsterEvents, stageEvents));
+                RegisterManager(waveManager = new WaveManager(poolManager, uiManager, spawnArea, monsterEvents, stageEvents));
                 RegisterManager(stageManager = new StageManager(waveManager, uiManager, monsterEvents, stageEvents, cardSelectionManager));
 
                 // LMJ: Create StageStateManager only if wall reference exists
