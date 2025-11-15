@@ -179,6 +179,12 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private async UniTaskVoid SpawnEnemy()
         {
+            // LMJ: Wait for pools to be ready before spawning
+            while (!isPoolReady)
+            {
+                await UniTask.Yield();
+            }
+
             int totalMonsters = enemyCount;
             int spawnedCount = 0;
 
