@@ -88,7 +88,19 @@ namespace NovelianMagicLibraryDefense.UI
         //LCB: Show victory panel with stage completion data
         public void ShowVictoryPanel(string Rnak, string stageName, float clearTime, int killCount, int reward)
         {
+            // Debug.Log($"[WinLosePanel] ShowVictoryPanel 호출! victoryPanel null? {victoryPanel == null}");
+
             gameObject.SetActive(true);
+
+            // Force enable CanvasGroup if exists
+            CanvasGroup cg = GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.alpha = 1f;
+                cg.interactable = true;
+                cg.blocksRaycasts = true;
+                // Debug.Log($"[WinLosePanel] CanvasGroup 강제 활성화 완료! alpha: {cg.alpha}");
+            }
 
             if (defeatPanel != null)
             {
@@ -98,12 +110,13 @@ namespace NovelianMagicLibraryDefense.UI
             if (victoryPanel != null)
             {
                 UpdateVictoryInfo(Rnak, stageName, clearTime, killCount, reward);
-                
                 victoryPanel.SetActive(true);
-
-                Debug.Log("[WinLosePanel] Victory panel displayed");
+                // Debug.Log($"[WinLosePanel] Victory panel 활성화 완료! activeSelf: {victoryPanel.activeSelf}");
             }
-            //TODO: Implement victory logic (animations, sounds, etc.)
+            else
+            {
+                Debug.LogError("[WinLosePanel] victoryPanel이 null입니다! Inspector에서 할당해주세요.");
+            }
         }
 
         //LCB: Update victory panel information
@@ -134,7 +147,6 @@ namespace NovelianMagicLibraryDefense.UI
         //LCB: Handle victory next stage button click
         private void OnLobbyButtonClicked()
         {
-            Debug.Log("[WinLosePanel] Lobby button clicked - Loading LobbyScene");
             LoadLobbySceneAsync().Forget();
         }
 
@@ -148,7 +160,6 @@ namespace NovelianMagicLibraryDefense.UI
         //LCB: Handle victory stage select button click
         private void OnStageSelectButtonClicked()
         {
-            Debug.Log("[WinLosePanel] Victory Stage Select button clicked - Logic to be implemented");
             //TODO: Implement stage select logic
         }
 
@@ -159,7 +170,19 @@ namespace NovelianMagicLibraryDefense.UI
         //LCB: Show defeat panel with stage failure data
         public void ShowDefeatPanel(string Rnak, string stageName, float survivalTime, int RemainderCount)
         {
+            // Debug.Log($"[WinLosePanel] ShowDefeatPanel 호출! defeatPanel null? {defeatPanel == null}");
+
             gameObject.SetActive(true);
+
+            // Force enable CanvasGroup if exists
+            CanvasGroup cg = GetComponent<CanvasGroup>();
+            if (cg != null)
+            {
+                cg.alpha = 1f;
+                cg.interactable = true;
+                cg.blocksRaycasts = true;
+                // Debug.Log($"[WinLosePanel] CanvasGroup 강제 활성화 완료! alpha: {cg.alpha}");
+            }
 
             if (victoryPanel != null)
             {
@@ -168,15 +191,14 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (defeatPanel != null)
             {
-                
                 defeatPanel.SetActive(true);
                 UpdateDefeatInfo(Rnak, stageName, survivalTime, RemainderCount);
-                Debug.Log("[WinLosePanel] Defeat panel displayed");
+                // Debug.Log($"[WinLosePanel] Defeat panel 활성화 완료! activeSelf: {defeatPanel.activeSelf}");
             }
-
-            
-
-            //TODO: Implement defeat logic (animations, sounds, etc.)
+            else
+            {
+                Debug.LogError("[WinLosePanel] defeatPanel이 null입니다! Inspector에서 할당해주세요.");
+            }
         }
 
         //LCB: Update defeat panel information
@@ -207,7 +229,6 @@ namespace NovelianMagicLibraryDefense.UI
         //LCB: Handle defeat retry button click
         private void OnDefeatRetryButtonClicked()
         {
-            Debug.Log("[WinLosePanel] Defeat Retry button clicked - Retrying stage");
             RetryStageAsync().Forget();
         }
 
@@ -235,8 +256,6 @@ namespace NovelianMagicLibraryDefense.UI
                 defeatPanel.SetActive(false);
             }
             gameObject.SetActive(false);
-
-            Debug.Log("[WinLosePanel] All panels hidden");
         }
 
         //LCB: Check if any panel is currently visible

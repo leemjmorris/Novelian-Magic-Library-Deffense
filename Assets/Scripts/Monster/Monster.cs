@@ -67,14 +67,14 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     public override void TakeDamage(float damage)
     {
-        Debug.Log($"[Monster] TakeDamage({damage}) - HP: {currentHealth}/{maxHealth}"); // LCB: Debug damage
+        // Debug.Log($"[Monster] TakeDamage({damage}) - HP: {currentHealth}/{maxHealth}"); // LCB: Debug damage
         base.TakeDamage(damage);
-        Debug.Log($"[Monster] After damage - HP: {currentHealth}/{maxHealth}"); // LCB: Debug HP after damage
+        // Debug.Log($"[Monster] After damage - HP: {currentHealth}/{maxHealth}"); // LCB: Debug HP after damage
     }
 
     public override void Die()
     {
-        Debug.Log($"[Monster] Die() called! Exp={Exp}"); // LCB: Debug monster death
+        // Debug.Log($"[Monster] Die() called! Exp={Exp}"); // LCB: Debug monster death
 
         // JML: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);

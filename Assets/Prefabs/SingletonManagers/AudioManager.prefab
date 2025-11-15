@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &7061644205705537821
+--- !u!1 &1155963201028108975
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,22 +8,22 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2801356794214785454}
-  - component: {fileID: 2221020418108975691}
+  - component: {fileID: 6066848863808946623}
+  - component: {fileID: 3454097583772599659}
   m_Layer: 0
-  m_Name: GameManager
-  m_TagString: Manager
+  m_Name: AudioManager
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2801356794214785454
+--- !u!4 &6066848863808946623
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7061644205705537821}
+  m_GameObject: {fileID: 1155963201028108975}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -32,22 +32,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2221020418108975691
+--- !u!114 &3454097583772599659
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7061644205705537821}
+  m_GameObject: {fileID: 1155963201028108975}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a142757f4b063c040abbbee3669c9c4e, type: 3}
+  m_Script: {fileID: 11500000, guid: 87b3362a79b2ca24d91014a52c135567, type: 3}
   m_Name: 
-  m_EditorClassIdentifier:
-  uiManager: {fileID: 0}
-  monsterEvents: {fileID: 0}
-  wallEvents: {fileID: 0}
-  stageEvents: {fileID: 0}
-  wallReference: {fileID: 0}
-  cardSelectionManager: {fileID: 0}
-  winLosePanel: {fileID: 0}
+  m_EditorClassIdentifier: 
+  audioMixer: {fileID: 24100000, guid: 9a29770f8235e564f8623cc67024b384, type: 2}
+  bgmSource: {fileID: 0}
+  sfxPoolSize: 10

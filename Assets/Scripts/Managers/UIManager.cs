@@ -1,3 +1,4 @@
+using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,7 +11,7 @@ namespace NovelianMagicLibraryDefense.Managers
     /// Converted to MonoBehaviour for Inspector integration and event system compatibility
     /// Manages monster count, wave timer, barrier HP, and button interactions
     /// </summary>
-    public class UIManager : MonoBehaviour
+    public class UIManager : BaseManager
     {
         [Header("Event Channels")]
         [SerializeField] private WallEvents wallEvents;
@@ -45,16 +46,31 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// LMJ: Initialize UI elements and setup button listeners
         /// </summary>
-        public void Initialize()
+        protected override void OnInitialize()
         {
             if (expSlider != null)
                 expSlider.value = 0f;
             if (barrierHPSlider != null)
+            {
                 barrierHPSlider.value = 1f;
+                Debug.Log($"[UIManager] OnInitialize - barrierHPSlider assigned: {barrierHPSlider != null}");
+            }
+            else
+            {
+                Debug.LogError("[UIManager] OnInitialize - barrierHPSlider is null! Inspector 할당 확인 필요!");
+            }
+
+            if (speedButton != null)
+            {
+                Debug.Log($"[UIManager] OnInitialize - speedButton assigned: {speedButton != null}");
+            }
+            else
+            {
+                Debug.LogError("[UIManager] OnInitialize - speedButton is null! Inspector 할당 확인 필요!");
+            }
+
             if (speedButtonText != null)
                 speedButtonText.text = "X1";
-
-            Debug.Log("[UIManager] Initializing UI");
 
             // Setup button listeners
             SetupButtonListeners();
@@ -63,17 +79,19 @@ namespace NovelianMagicLibraryDefense.Managers
             if (wallEvents != null)
             {
                 wallEvents.AddHealthChangedListener(UpdateBarrierHP);
+                Debug.Log("[UIManager] WallEvents listener 등록 완료");
             }
-
-            Debug.Log("[UIManager] Initialized");
+            else
+            {
+                Debug.LogError("[UIManager] wallEvents is null! Inspector에서 할당해주세요.");
+            }
         }
 
         /// <summary>
         /// LMJ: Reset UI to initial state
         /// </summary>
-        public void Reset()
+        protected override void OnReset()
         {
-            Debug.Log("[UIManager] Resetting UI");
             UpdateMonsterCount(0);
             UpdateWaveTimer(0f);
             if (expSlider != null)
@@ -84,10 +102,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 speedButtonText.text = "X1";
         }
 
-        private void OnDestroy()
+        protected override void OnDispose()
         {
-            Debug.Log("[UIManager] Disposing UI");
-
             // LMJ: Unsubscribe from EventChannel
             if (wallEvents != null)
             {
@@ -103,7 +119,14 @@ namespace NovelianMagicLibraryDefense.Managers
         private void SetupButtonListeners()
         {
             if (speedButton != null)
+            {
                 speedButton.onClick.AddListener(OnSpeedButtonClicked);
+                Debug.Log("[UIManager] Speed button listener 등록 완료");
+            }
+            else
+            {
+                Debug.LogError("[UIManager] speedButton is null! Inspector에서 할당해주세요.");
+            }
 
             if (settingsButton != null)
                 settingsButton.onClick.AddListener(OnSettingsButtonClicked);
@@ -119,8 +142,6 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (skillButton4 != null)
                 skillButton4.onClick.AddListener(() => OnSkillButtonClicked(4));
-
-            Debug.Log("[UIManager] Button listeners setup complete");
         }
 
         private void RemoveButtonListeners()
@@ -142,8 +163,6 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (skillButton4 != null)
                 skillButton4.onClick.RemoveAllListeners();
-
-            Debug.Log("[UIManager] Button listeners removed");
         }
 
         #endregion
@@ -152,27 +171,35 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void OnSpeedButtonClicked()
         {
-            Debug.Log("[UIManager] Speed button clicked - Logic to be implemented");
+            Debug.Log($"[UIManager] Speed button clicked! Current Time.timeScale: {Time.timeScale}");
+
             switch (Time.timeScale)
             {
                 case 1f:
                     Time.timeScale = 1.5f;
-                    speedButtonText.text = "X1.5";
+                    if (speedButtonText != null) speedButtonText.text = "X1.5";
+                    Debug.Log("[UIManager] Speed changed to X1.5");
                     break;
                 case 1.5f:
                     Time.timeScale = 2f;
-                    speedButtonText.text = "X2";
+                    if (speedButtonText != null) speedButtonText.text = "X2";
+                    Debug.Log("[UIManager] Speed changed to X2");
                     break;
                 case 2f:
                     Time.timeScale = 1f;
-                    speedButtonText.text = "X1";
+                    if (speedButtonText != null) speedButtonText.text = "X1";
+                    Debug.Log("[UIManager] Speed changed to X1");
+                    break;
+                default:
+                    Time.timeScale = 1f;
+                    if (speedButtonText != null) speedButtonText.text = "X1";
+                    Debug.Log($"[UIManager] Unexpected timeScale {Time.timeScale}, reset to X1");
                     break;
             }
         }
 
         private void OnSettingsButtonClicked()
         {
-            Debug.Log("[UIManager] Settings button clicked - Logic to be implemented");
             var previousTimeScale = Time.timeScale;
             Time.timeScale = 0f; //JML: Pause the game when settings is opened
 
@@ -181,7 +208,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void OnSkillButtonClicked(int skillIndex)
         {
-            Debug.Log($"[UIManager] Skill button {skillIndex} clicked - Logic to be implemented");
+            // TODO: Implement skill logic
         }
 
         #endregion
@@ -226,9 +253,17 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void UpdateBarrierHP(float currentHP, float maxHP)
         {
+            float sliderValue = currentHP / maxHP;
+            Debug.Log($"[UIManager] UpdateBarrierHP 호출! currentHP={currentHP}, maxHP={maxHP}, sliderValue={sliderValue}, barrierHPSlider null? {barrierHPSlider == null}");
+
             if (barrierHPSlider != null)
             {
-                barrierHPSlider.value = currentHP / maxHP;
+                barrierHPSlider.value = sliderValue;
+                Debug.Log($"[UIManager] Slider value 설정 완료: {barrierHPSlider.value}");
+            }
+            else
+            {
+                Debug.LogError("[UIManager] barrierHPSlider is null! Inspector에서 할당해주세요.");
             }
 
             if (barrierHPText != null)

@@ -77,7 +77,6 @@ public class LevelUpCardUI : MonoBehaviour
     /// <param name="currentLevel">Current level (1 means first level up)</param>
     public async UniTask ShowCards(int currentLevel)
     {
-        Debug.Log($"[LevelUpCardUI] ShowCards() called! Level: {currentLevel}");
         isCardSelected = false;
 
         // LCB: Show panel using CanvasGroup (preferred) or SetActive (fallback)
@@ -86,28 +85,24 @@ public class LevelUpCardUI : MonoBehaviour
             canvasGroup.alpha = 1f;
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
-            Debug.Log("[LevelUpCardUI] Card panel shown via CanvasGroup");
         }
         else if (cardPanel != null)
         {
             cardPanel.SetActive(true);
-            Debug.Log("[LevelUpCardUI] Card panel activated via SetActive");
         }
         else
         {
-            Debug.LogError("[LevelUpCardUI] cardPanel and canvasGroup are both null!");
+            // Debug.LogError("[LevelUpCardUI] cardPanel and canvasGroup are both null!");
         }
 
         // 2. Load 2 cards
         bool isFirstLevelUp = (currentLevel == 0);
         if (isFirstLevelUp)
         {
-            Debug.Log("[LevelUpCardUI] First level up: 2 character cards");
             LoadTwoCharacterCards();
         }
         else
         {
-            Debug.Log("[LevelUpCardUI] Regular level up: 2 random cards");
             LoadTwoRandomCards();
         }
 
@@ -120,12 +115,10 @@ public class LevelUpCardUI : MonoBehaviour
             canvasGroup.alpha = 0f;
             canvasGroup.interactable = false;
             canvasGroup.blocksRaycasts = false;
-            Debug.Log("[LevelUpCardUI] Card panel hidden via CanvasGroup");
         }
         else if (cardPanel != null)
         {
             cardPanel.SetActive(false);
-            Debug.Log("[LevelUpCardUI] Card panel deactivated via SetActive");
         }
     }
 
@@ -136,7 +129,7 @@ public class LevelUpCardUI : MonoBehaviour
     {
         if (characterCards == null || characterCards.Count < 2)
         {
-            Debug.LogError("[LevelUpCardUI] Character data has less than 2 entries!");
+            // Debug.LogError("[LevelUpCardUI] Character data has less than 2 entries!");
             return;
         }
 
@@ -159,8 +152,6 @@ public class LevelUpCardUI : MonoBehaviour
 
         // Update card 2 UI
         UpdateCharacterCardUI(card2, characterCards[idx2]);
-
-        Debug.Log($"[LevelUpCardUI] Character cards loaded: {characterCards[idx1].characterName}, {characterCards[idx2].characterName}");
     }
 
     /// <summary>
@@ -172,8 +163,6 @@ public class LevelUpCardUI : MonoBehaviour
         // TODO: Temporarily loading only character cards (Issue #139 expansion planned)
         // Future: Add CardType.Stat, Buff, Debuff, Skill
         LoadTwoCharacterCards();
-
-        Debug.Log("[LevelUpCardUI] Random cards loaded (Current: Characters only)");
     }
 
     /// <summary>
@@ -222,13 +211,13 @@ public class LevelUpCardUI : MonoBehaviour
             // 50% auto-select on timeout
             if (!isCardSelected)
             {
-                Debug.Log("[LevelUpCardUI] 20 second timeout!");
+                // Debug.Log("[LevelUpCardUI] 20 second timeout!");
                 AutoSelectCard();
             }
         }
         catch (OperationCanceledException)
         {
-            Debug.Log("[LevelUpCardUI] Selection timer cancelled");
+            // Debug.Log("[LevelUpCardUI] Selection timer cancelled");
         }
 
         finally
@@ -248,12 +237,12 @@ public class LevelUpCardUI : MonoBehaviour
 
         if (random < 0.5f)
         {
-            Debug.Log("[LevelUpCardUI] Auto-select: Card 1");
+            // Debug.Log("[LevelUpCardUI] Auto-select: Card 1");
             OnCard1Click();
         }
         else
         {
-            Debug.Log("[LevelUpCardUI] Auto-select: Card 2");
+            // Debug.Log("[LevelUpCardUI] Auto-select: Card 2");
             OnCard2Click();
         }
     }
@@ -263,7 +252,13 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     public void OnCard1Click()
     {
-        if (isCardSelected) return; // Prevent duplicate clicks
+        // Debug.Log($"[LevelUpCardUI] OnCard1Click() called! isCardSelected: {isCardSelected}");
+
+        if (isCardSelected)
+        {
+            // Debug.LogWarning("[LevelUpCardUI] Card already selected, ignoring click");
+            return; // Prevent duplicate clicks
+        }
 
         isCardSelected = true;
 
@@ -271,11 +266,14 @@ public class LevelUpCardUI : MonoBehaviour
         if (isCardSelected)
         {
             selectionCts?.Cancel();
-            timerText.text = "0s";
+            if (timerText != null)
+            {
+                timerText.text = "0s";
+            }
         }
 
 
-        Debug.Log($"[LevelUpCardUI] Card 1 selected (Type: {selectedCard1Type})");
+        // Debug.Log($"[LevelUpCardUI] Card 1 selected (Type: {selectedCard1Type}, Index: {selectedCard1Index})");
 
         // Apply card effect
         ApplyCardEffect(selectedCard1Type, selectedCard1Index);
@@ -286,15 +284,24 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     public void OnCard2Click()
     {
-        if (isCardSelected) return; // Prevent duplicate clicks
+        // Debug.Log($"[LevelUpCardUI] OnCard2Click() called! isCardSelected: {isCardSelected}");
+
+        if (isCardSelected)
+        {
+            // Debug.LogWarning("[LevelUpCardUI] Card already selected, ignoring click");
+            return; // Prevent duplicate clicks
+        }
 
         isCardSelected = true;
 
         // Cancel timer immediately and reset timer text to 0
         selectionCts?.Cancel();
-    
+        if (timerText != null)
+        {
+            timerText.text = "0s";
+        }
 
-        Debug.Log($"[LevelUpCardUI] Card 2 selected (Type: {selectedCard2Type})");
+        // Debug.Log($"[LevelUpCardUI] Card 2 selected (Type: {selectedCard2Type}, Index: {selectedCard2Index})");
 
         // Apply card effect
         ApplyCardEffect(selectedCard2Type, selectedCard2Index);
@@ -339,24 +346,27 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     void ApplyCharacterCard(int index)
     {
+        // Debug.Log($"[LevelUpCardUI] ApplyCharacterCard() called with index: {index}");
+
         if (index < 0 || index >= characterCards.Count)
         {
-            Debug.LogError($"[LevelUpCardUI] Invalid character index: {index}");
+            Debug.LogError($"[LevelUpCardUI] Invalid character index: {index} (characterCards.Count: {characterCards?.Count ?? 0})");
             return;
         }
 
         CharacterData selectedChar = characterCards[index];
-        Debug.Log($"[LevelUpCardUI] Character selected: {selectedChar.characterName}");
+        // Debug.Log($"[LevelUpCardUI] Character selected: {selectedChar?.characterName ?? "NULL"}");
 
         // Use direct reference to CardSelectionManager
         if (cardSelectionManager != null)
         {
-            Debug.Log($"[LevelUpCardUI] Adding character to slot via CardSelectionManager");
+            // Debug.Log($"[LevelUpCardUI] Calling CardSelectionManager.AddCharacterToSlot()");
             cardSelectionManager.AddCharacterToSlot(selectedChar);
+            // Debug.Log($"[LevelUpCardUI] Character added to slot successfully");
         }
         else
         {
-            Debug.LogWarning("[LevelUpCardUI] CardSelectionManager reference is null! Please assign in Inspector.");
+            Debug.LogError("[LevelUpCardUI] CardSelectionManager reference is null! Inspector에서 CardManager GameObject를 할당해주세요.");
         }
     }
 }

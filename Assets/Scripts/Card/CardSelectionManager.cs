@@ -52,6 +52,10 @@ public class CardSelectionManager : MonoBehaviour
         {
             cardPanel.SetActive(true);
         }
+        else
+        {
+            Debug.LogError("[CardSelectionManager] cardPanel이 null입니다! Inspector에서 할당해주세요.");
+        }
 
         // 2. 2개 랜덤 캐릭터 로드
         LoadTwoRandomCharacters();
@@ -93,13 +97,12 @@ public class CardSelectionManager : MonoBehaviour
             // 타임아웃 시 50% 확률 자동 선택
             if (!isCardSelected)
             {
-                Debug.Log("[StartSelectionManager] 20초 타임아웃! 자동 선택");
                 AutoSelectCard();
             }
         }
         catch (OperationCanceledException)
         {
-            Debug.Log("[StartSelectionManager] 타이머 취소됨");
+            // Timer cancelled (normal when card selected)
         }
         finally
         {
@@ -136,7 +139,7 @@ public class CardSelectionManager : MonoBehaviour
         // Card 2 업데이트
         UpdateCardUI(card2, selectedCard2Data);
 
-        Debug.Log($"랜덤 캐릭터 로드: {selectedCard1Data.characterName}, {selectedCard2Data.characterName}");
+        // Debug.Log($"랜덤 캐릭터 로드: {selectedCard1Data.characterName}, {selectedCard2Data.characterName}");
     }
 
     /// <summary>
@@ -167,12 +170,10 @@ public class CardSelectionManager : MonoBehaviour
 
         if (random < 0.5f)
         {
-            Debug.Log("[StartSelectionManager] 자동 선택: Card 1");
             OnCard1Selected();
         }
         else
         {
-            Debug.Log("[StartSelectionManager] 자동 선택: Card 2");
             OnCard2Selected();
         }
     }
@@ -182,13 +183,7 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     public void OnCard1Selected()
     {
-        Debug.Log($"[CardSelectionManager] OnCard1Selected 호출! isCardSelected={isCardSelected}");
-
-        if (isCardSelected)
-        {
-            Debug.LogWarning("[CardSelectionManager] 이미 카드가 선택되었습니다.");
-            return;
-        }
+        if (isCardSelected) return;
 
         isCardSelected = true;
 
@@ -199,7 +194,6 @@ public class CardSelectionManager : MonoBehaviour
             timerText.text = "0s";
         }
 
-        Debug.Log($"[CardSelectionManager] Card 1 선택 처리 시작 - Data: {selectedCard1Data?.characterName}");
         SelectCard(selectedCard1Data, card1);
     }
 
@@ -208,13 +202,7 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     public void OnCard2Selected()
     {
-        Debug.Log($"[CardSelectionManager] OnCard2Selected 호출! isCardSelected={isCardSelected}");
-
-        if (isCardSelected)
-        {
-            Debug.LogWarning("[CardSelectionManager] 이미 카드가 선택되었습니다.");
-            return;
-        }
+        if (isCardSelected) return;
 
         isCardSelected = true;
 
@@ -225,7 +213,6 @@ public class CardSelectionManager : MonoBehaviour
             timerText.text = "0s";
         }
 
-        Debug.Log($"[CardSelectionManager] Card 2 선택 처리 시작 - Data: {selectedCard2Data?.characterName}");
         SelectCard(selectedCard2Data, card2);
     }
 
@@ -234,8 +221,6 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     void SelectCard(CharacterData data, GameObject cardObj)
     {
-        Debug.Log($"[CardSelectionManager] SelectCard 시작 - data null? {data == null}, cardObj null? {cardObj == null}");
-
         if (data == null)
         {
             Debug.LogError("[CardSelectionManager] 선택된 데이터가 없습니다!");
@@ -245,7 +230,7 @@ public class CardSelectionManager : MonoBehaviour
         CharacterCard charCard = cardObj?.GetComponent<CharacterCard>();
         if (charCard == null || charCard.characterImage == null)
         {
-            Debug.LogError($"[CardSelectionManager] 카드 컴포넌트 또는 이미지가 null입니다! charCard null? {charCard == null}");
+            Debug.LogError($"[CardSelectionManager] 카드 컴포넌트 또는 이미지가 null입니다!");
             return;
         }
 
@@ -256,19 +241,16 @@ public class CardSelectionManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[CardSelectionManager] playerSlots count: {playerSlots?.Count ?? 0}");
-
         // 빈 슬롯 찾아서 배치
         PlayerSlot emptySlot = FindNextEmptySlot();
         if (emptySlot != null)
         {
-            Debug.Log($"[CardSelectionManager] 빈 슬롯 찾음! 슬롯 인덱스: {emptySlot.slotIndex}");
             emptySlot.AssignCharacterSprite(cardSprite, data.genreType);
-            Debug.Log($"[CardSelectionManager] 슬롯에 배치 완료: {data.characterName}, 스프라이트: {cardSprite.name}");
+            // Debug.Log($"[CardSelectionManager] 슬롯에 배치 완료: {data.characterName}");
         }
         else
         {
-            Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
+            // Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
         }
     }
 
@@ -297,11 +279,11 @@ public class CardSelectionManager : MonoBehaviour
         if (emptySlot != null)
         {
             emptySlot.AssignCharacterSprite(data.characterSprite, data.genreType);
-            Debug.Log($"[CardSelectionManager] Character added to slot: {data.characterName}");
+            // Debug.Log($"[CardSelectionManager] Character added to slot: {data.characterName}");
         }
         else
         {
-            Debug.LogWarning("[CardSelectionManager] No empty slot available!");
+            // Debug.LogWarning("[CardSelectionManager] No empty slot available!");
         }
     }
 

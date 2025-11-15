@@ -2,16 +2,13 @@ using System.Collections.Generic;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.UI;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
-    /// LMJ: Central manager that controls all other managers lifecycle
-    /// Implements hybrid pattern: explicit references + list management
-    /// Refactored to properly manage UIManager and remove UI responsibilities from GameManager
+    /// Central manager that controls all other managers lifecycle
+    /// All managers are now MonoBehaviour components
     /// Each scene has its own independent GameManager (no DontDestroyOnLoad)
     /// </summary>
     public class GameManager : MonoBehaviour
@@ -20,43 +17,27 @@ namespace NovelianMagicLibraryDefense.Managers
         public static GameManager Instance => instance;
 
         [Header("Manager References")]
+        [SerializeField] private InputManager inputManager;
+        [SerializeField] private ObjectPoolManager poolManager;
         [SerializeField] private UIManager uiManager;
+        [SerializeField] private WaveManager waveManager;
+        [SerializeField] private StageManager stageManager;
+        [SerializeField] private StageStateManager stageStateManager;
 
-        [Header("Event Channels")]
-        [SerializeField] private MonsterEvents monsterEvents;
-        [SerializeField] private WallEvents wallEvents;
-        [SerializeField] private StageEvents stageEvents;
-
-        [Header("Stage References")]
-        [SerializeField] private Wall wallReference;
-        [SerializeField] private CardSelectionManager cardSelectionManager;
-        [SerializeField] private WinLosePanel winLosePanel;
-
-        // LMJ: Explicit manager references for type-safe access
-        private InputManager inputManager;
-        private ObjectPoolManager poolManager;
-        private WaveManager waveManager;
-        private StageManager stageManager;
-        private StageStateManager stageStateManager;
-
-        // LMJ: List management for batch operations
-        private List<IManager> managers = new List<IManager>();
-
-        // LMJ: Public accessors for type-safe manager access
+        // Public accessors for type-safe manager access
         public InputManager Input => inputManager;
-        public UIManager UI => uiManager;
         public ObjectPoolManager Pool => poolManager;
+        public UIManager UI => uiManager;
         public WaveManager Wave => waveManager;
         public StageManager Stage => stageManager;
         public StageStateManager StageState => stageStateManager;
 
         private void Awake()
         {
-            // LMJ: Simple singleton without DontDestroyOnLoad
+            // Simple singleton without DontDestroyOnLoad
             // Each scene has its own independent GameManager
             if (instance != null && instance != this)
             {
-                Debug.LogWarning("[GameManager] Multiple GameManagers detected in scene! Destroying duplicate.");
                 Destroy(gameObject);
                 return;
             }
@@ -66,100 +47,61 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// LMJ: Initialize all managers in dependency order
-        /// Order matters: Input -> UI -> Pool -> Wave -> Stage -> StageState
-        /// Note: SceneManager is removed (scene transitions now handled by FadeController)
-        /// UIManager is now a MonoBehaviour component
+        /// Initialize all managers in dependency order
+        /// Order matters: Input -> Pool -> UI -> Wave -> Stage -> StageState
         /// </summary>
         private void InitializeManagers()
         {
-            // LMJ: Create InputManager first (no dependencies)
-            RegisterManager(inputManager = new InputManager());
-
-            // LMJ: UIManager is now a MonoBehaviour - check if it exists in scene
-            if (uiManager != null)
+            // Initialize in dependency order
+            if (inputManager != null)
             {
-                Debug.Log("[GameManager] UIManager found (GameScene mode)");
-
-                // LMJ: Create game managers only if UIManager exists (GameScene)
-                RegisterManager(poolManager = new ObjectPoolManager());
-                RegisterManager(waveManager = new WaveManager(poolManager, uiManager, monsterEvents, stageEvents));
-                RegisterManager(stageManager = new StageManager(waveManager, uiManager, monsterEvents, stageEvents, cardSelectionManager));
-
-                // LMJ: Create StageStateManager only if wall reference exists
-                if (wallReference != null && winLosePanel != null)
-                {
-                    RegisterManager(stageStateManager = new StageStateManager(waveManager, stageManager, wallReference, winLosePanel, stageEvents, wallEvents));
-                }
-            }
-            else
-            {
-                Debug.Log("[GameManager] UIManager not found (LobbyScene mode)");
+                inputManager.Initialize();
             }
 
-            // LMJ: Initialize all managers in registration order
-            InitializeAll();
+            if (poolManager != null)
+            {
+                poolManager.Initialize();
+            }
 
-            // LMJ: Initialize UIManager separately (it's MonoBehaviour now)
             if (uiManager != null)
             {
                 uiManager.Initialize();
             }
-        }
 
-        /// <summary>
-        /// LMJ: Register manager to the list while maintaining explicit reference
-        /// </summary>
-        private void RegisterManager(IManager manager)
-        {
-            managers.Add(manager);
-        }
-
-        /// <summary>
-        /// LMJ: Initialize all managers in order
-        /// </summary>
-        private void InitializeAll()
-        {
-            foreach (var manager in managers)
+            if (waveManager != null)
             {
-                manager.Initialize();
-                Debug.Log($"[GameManager] {manager.GetType().Name} initialized");
+                waveManager.Initialize();
+            }
+
+            if (stageManager != null)
+            {
+                stageManager.Initialize();
+            }
+
+            if (stageStateManager != null)
+            {
+                stageStateManager.Initialize();
             }
         }
 
         /// <summary>
-        /// LMJ: Reset all managers to initial state
+        /// Reset all managers to initial state
         /// Useful for game restart without scene reload
         /// </summary>
         public void ResetAll()
         {
-            Debug.Log("[GameManager] Resetting all managers");
-            foreach (var manager in managers)
-            {
-                manager.Reset();
-            }
-
-            // LMJ: Reset UIManager separately (it's MonoBehaviour now)
-            if (uiManager != null)
-            {
-                uiManager.Reset();
-            }
+            inputManager?.Reset();
+            poolManager?.Reset();
+            uiManager?.Reset();
+            waveManager?.Reset();
+            stageManager?.Reset();
+            stageStateManager?.Reset();
         }
 
-        /// <summary>
-        /// LMJ: Clean up all managers in reverse order (safe dependency cleanup)
-        /// </summary>
         private void OnDestroy()
         {
             if (instance != this) return;
-
-            Debug.Log("[GameManager] Disposing all managers");
-            for (int i = managers.Count - 1; i >= 0; i--)
-            {
-                managers[i].Dispose();
-            }
-
-            managers.Clear();
+            instance = null;
         }
     }
 }

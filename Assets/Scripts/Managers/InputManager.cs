@@ -11,8 +11,8 @@ namespace NovelianMagicLibraryDefense.Managers
     /// Input System 기반 터치/마우스 입력 처리 매니저
     /// Android: 터치 입력 (싱글 터치만)
     /// Unity Editor: 마우스 입력 (#if UNITY_EDITOR)
+    /// MonoBehaviour 기반 Manager (VContainer 지원)
     /// </summary>
-    [System.Serializable]
     public class InputManager : BaseManager
     {
         // Input Actions

@@ -14,32 +14,23 @@ namespace NovelianMagicLibraryDefense.Managers
         Failed      // Stage failed (wall destroyed or time up with enemies remaining)
     }
 
-    [Serializable]
+    /// <summary>
+    /// MonoBehaviour 기반 Manager (VContainer 지원)
+    /// </summary>
     public class StageStateManager : BaseManager
     {
-        private WaveManager waveManager;
-        private StageManager stageManager;
-        private WinLosePanel winLosePanel;
-        private Wall wall;
-        private StageEvents stageEvents;
-        private WallEvents wallEvents;
+        [Header("Dependencies")]
+        [SerializeField] private WaveManager waveManager;
+        [SerializeField] private StageManager stageManager;
+        [SerializeField] private WinLosePanel winLosePanel;
+        [SerializeField] private Wall wall;
+        [SerializeField] private StageEvents stageEvents;
+        [SerializeField] private WallEvents wallEvents;
 
         public StageState CurrentState { get; private set; }
 
-        public StageStateManager(WaveManager wave, StageManager stage, Wall wallRef, WinLosePanel panel, StageEvents stageEvts, WallEvents wallEvts)
-        {
-            waveManager = wave;
-            stageManager = stage;
-            wall = wallRef;
-            winLosePanel = panel;
-            stageEvents = stageEvts;
-            wallEvents = wallEvts;
-        }
-
         protected override void OnInitialize()
         {
-            Debug.Log("[StageStateManager] Initializing stage state");
-
             CurrentState = StageState.Playing;
 
             // LMJ: Subscribe to EventChannels instead of static events
@@ -54,21 +45,16 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 wallEvents.AddWallDestroyedListener(HandleWallDestroyed);
             }
-
-            Debug.Log("[StageStateManager] Subscribed to all stage events");
         }
 
         protected override void OnReset()
         {
-            Debug.Log("[StageStateManager] Resetting stage state");
             CurrentState = StageState.Playing;
             Time.timeScale = 1f;
         }
 
         protected override void OnDispose()
         {
-            Debug.Log("[StageStateManager] Disposing and unsubscribing events");
-
             // LMJ: Unsubscribe from EventChannels
             if (stageEvents != null)
             {
@@ -88,28 +74,19 @@ namespace NovelianMagicLibraryDefense.Managers
         private void HandleAllMonstersDefeated()
         {
             if (CurrentState != StageState.Playing) return;
-
-            Debug.Log("All monsters defeated!");
             CheckVictoryCondition();
         }
 
         private void HandleBossDefeated()
         {
             if (CurrentState != StageState.Playing) return;
-
-            Debug.Log("Boss defeated!");
             CheckVictoryCondition();
         }
         private void CheckVictoryCondition()
         {
             if (!waveManager.HasRemainingEnemies() && !waveManager.HasBoss())
             {
-                Debug.Log("[StageStateManager] All enemies defeated - Stage Cleared!");
                 SetStageState(StageState.Cleared);
-            }
-            else
-            {
-                Debug.Log($"[StageStateManager] Not yet cleared - Enemies: {waveManager.HasRemainingEnemies()}, Boss: {waveManager.HasBoss()}");
             }
         }
         #endregion
@@ -119,8 +96,6 @@ namespace NovelianMagicLibraryDefense.Managers
         private void HandleWallDestroyed()
         {
             if (CurrentState != StageState.Playing) return;
-
-            Debug.Log("Wall destroyed!");
             SetStageState(StageState.Failed);
         }
 
@@ -130,12 +105,10 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (waveManager.HasRemainingEnemies() || waveManager.HasBoss())
             {
-                Debug.Log("TimeOut Game Over!");
                 SetStageState(StageState.Failed);
             }
             else
             {
-                Debug.Log("Stage Cleared!");
                 SetStageState(StageState.Cleared);
             }
         }
@@ -153,19 +126,33 @@ namespace NovelianMagicLibraryDefense.Managers
                 stageEvents.RaiseStageStateChanged(newState);
             }
 
-            Debug.Log($"[StageStateManager] Stage State Changed: {newState}");
-
             if (newState == StageState.Cleared)
             {
-                //JML: ShowVictoryPanel 
+                // Debug.Log("[StageStateManager] Stage Cleared!");
+                //JML: ShowVictoryPanel
                 //TODO JML: Rank calculation logic to be implemented
-                winLosePanel.ShowVictoryPanel("S",stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetKillCount(), stageManager.GetReward());
+                if (winLosePanel != null)
+                {
+                    winLosePanel.ShowVictoryPanel("S",stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetKillCount(), stageManager.GetReward());
+                }
+                else
+                {
+                    Debug.LogError("[StageStateManager] WinLosePanel is null! Inspector에서 할당해주세요.");
+                }
             }
             else if (newState == StageState.Failed)
             {
+                // Debug.Log("[StageStateManager] Stage Failed!");
                 //JML: ShowDefeatPanel
                 //TODO JML: Rank calculation logic to be implemented
-                winLosePanel.ShowDefeatPanel("F", stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetRemainderCount());
+                if (winLosePanel != null)
+                {
+                    winLosePanel.ShowDefeatPanel("F", stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetRemainderCount());
+                }
+                else
+                {
+                    Debug.LogError("[StageStateManager] WinLosePanel is null! Inspector에서 할당해주세요.");
+                }
             }
         }
 

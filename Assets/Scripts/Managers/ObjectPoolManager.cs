@@ -12,9 +12,8 @@ namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
     /// LMJ: Manages object pooling using Unity's ObjectPool and Addressables
-    /// Refactored to use BaseManager pattern instead of Singleton
+    /// MonoBehaviour 기반 Manager (VContainer 지원)
     /// </summary>
-    [System.Serializable]  // LMJ: Prevents Unity from treating this as a Component
     public class ObjectPoolManager : BaseManager
     {
         private Dictionary<Type, object> pools = new Dictionary<Type, object>();
@@ -24,18 +23,18 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnInitialize()
         {
-            Debug.Log("[ObjectPoolManager] Initialized");
+            // Debug.Log("[ObjectPoolManager] Initialized");
         }
 
         protected override void OnReset()
         {
-            Debug.Log("[ObjectPoolManager] Resetting all pools");
+            // Debug.Log("[ObjectPoolManager] Resetting all pools");
             ClearAll();
         }
 
         protected override void OnDispose()
         {
-            Debug.Log("[ObjectPoolManager] Disposing all pools");
+            // Debug.Log("[ObjectPoolManager] Disposing all pools");
             ClearAll();
         }
 
@@ -88,7 +87,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 );
 
                 pools[type] = pool;
-                Debug.Log($"[ObjectPoolManager] Pool created for {type.Name} (capacity: {defaultCapacity}, max: {maxSize})");
+                // Debug.Log($"[ObjectPoolManager] Pool created for {type.Name} (capacity: {defaultCapacity}, max: {maxSize})");
                 return true;
             }
             catch (Exception e)
@@ -270,7 +269,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 pool.Release(obj);
             }
 
-            Debug.Log($"[ObjectPoolManager] Warmed up {count} objects of type {type.Name}");
+            // Debug.Log($"[ObjectPoolManager] Warmed up {count} objects of type {type.Name}");
         }
 
         /// <summary>

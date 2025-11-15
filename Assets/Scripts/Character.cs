@@ -25,13 +25,16 @@ public class Character : MonoBehaviour
         // LMJ: Skip initialization if Pool manager doesn't exist (e.g., in LobbyScene)
         if (GameManager.Instance == null || GameManager.Instance.Pool == null)
         {
-            Debug.Log("[Character] Pool manager not available, skipping projectile pool initialization");
+            // Debug.Log("[Character] Pool manager not available, skipping projectile pool initialization");
             return;
         }
 
-        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-        await GameManager.Instance.Pool.CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
-        GameManager.Instance.Pool.WarmUp<Projectile>(20);
+        // LMJ: Only create pool if it doesn't exist yet
+        if (!GameManager.Instance.Pool.HasPool<Projectile>())
+        {
+            await GameManager.Instance.Pool.CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
+            GameManager.Instance.Pool.WarmUp<Projectile>(20);
+        }
     }
     private void Update()
     {
@@ -78,7 +81,7 @@ public class Character : MonoBehaviour
         // z 좌표를 정확히 게임 오브젝트 평면으로 설정
         worldPoint.z = targetZ;
 
-        Debug.Log($"[Character] Screen: {screenPoint}, Distance: {distanceFromCamera}, World: {worldPoint}, Camera: {Camera.main.transform.position}");
+        // Debug.Log($"[Character] Screen: {screenPoint}, Distance: {distanceFromCamera}, World: {worldPoint}, Camera: {Camera.main.transform.position}");
 
         return worldPoint;
     }

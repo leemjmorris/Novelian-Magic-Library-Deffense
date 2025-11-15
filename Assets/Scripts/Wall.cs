@@ -12,8 +12,11 @@ public class Wall : MonoBehaviour, IEntity
     private void Awake()
     {
         health = maxHealth;
+    }
 
-        // LMJ: Use EventChannel instead of static event
+    private void Start()
+    {
+        // LMJ: Raise initial health after all managers are initialized
         if (wallEvents != null)
         {
             wallEvents.RaiseHealthChanged(health, maxHealth);
@@ -24,7 +27,7 @@ public class Wall : MonoBehaviour, IEntity
     public void TakeDamage(float damage)
     {
         health -= damage;
-        Debug.Log($"Wall took {damage} damage. current Health: {health}");
+        // Debug.Log($"Wall took {damage} damage. current Health: {health}");
 
         // LMJ: Use EventChannel instead of static event
         if (wallEvents != null)
@@ -51,7 +54,7 @@ public class Wall : MonoBehaviour, IEntity
 
     private void GameOver()
     {
-        Debug.Log("Game Over!");
+        // Debug.Log("Game Over!");
 
         // LMJ: Use EventChannel instead of static event
         if (wallEvents != null)
