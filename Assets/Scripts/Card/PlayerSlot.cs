@@ -16,13 +16,27 @@ public class PlayerSlot : MonoBehaviour
     public Image slotBackgroundImage; // LCB: Slot background image (PlayerSlot's own Image)
     public GameObject emptySlotVisual; // LCB: Empty slot visual (optional)
 
+    [Header("Device Specific Offset")]
+    public bool useAspectAdjust = true;    // LCB: Enable/disable per-aspect Y adjustment
+    public float ipad34ExtraY = 0.3f;      // LCB: Extra Y offset for 3:4 iPad (world units)
+
     [Header("Current Character")]
     private GenreType currentGenreType; // LCB: Current slot's genre type
     private GameObject instantiatedCharacter; // LCB: Instantiated character object (physics object)
     private CharacterData currentCharacterData; // LCB: Current character data
 
+    [Header("Position Manager")]
+    private DynamicSlotPositionManager positionManager; // Dynamic position manager reference
+
     void Start()
     {
+        // Find DynamicSlotPositionManager
+        positionManager = FindFirstObjectByType<DynamicSlotPositionManager>();
+        if (positionManager == null)
+        {
+            Debug.LogWarning($"[PlayerSlot {slotIndex}] DynamicSlotPositionManager not found! Using fallback positioning.");
+        }
+
         // LCB: Auto-assign slotBackgroundImage - PlayerSlot's own Image
         if (slotBackgroundImage == null)
         {
@@ -97,12 +111,12 @@ public class PlayerSlot : MonoBehaviour
         if (instantiatedCharacter != null)
         {
             Destroy(instantiatedCharacter);
+             instantiatedCharacter = null;
         }
 
         currentCharacterData = characterData;
         currentGenreType = characterData.genreType;
-        isOccupied = true;
-
+    
         // LCB: Instantiate character prefab in world space (at slot position)
         Vector3 worldPosition = GetWorldPositionFromSlot();
         instantiatedCharacter = Instantiate(characterData.characterPrefab, worldPosition, Quaternion.identity);
@@ -119,7 +133,7 @@ public class PlayerSlot : MonoBehaviour
         {
             Debug.LogWarning($"Slot {slotIndex}: Cannot find Character script! Add Character component to prefab.");
         }
-
+            isOccupied = (instantiatedCharacter != null);
         // LCB: Completely hide UI image (only show physics object)
         if (characterImage != null)
         {
@@ -142,6 +156,7 @@ public class PlayerSlot : MonoBehaviour
 
     /// <summary>
     /// LCB: Convert UI slot position to world coordinates
+    /// Uses DynamicSlotPositionManager if available, otherwise fallback to legacy method
     /// </summary>
     private Vector3 GetWorldPositionFromSlot()
     {
@@ -152,28 +167,103 @@ public class PlayerSlot : MonoBehaviour
             return Vector3.zero;
         }
 
-        // LCB: Convert UI position to world coordinates
-        Vector3 screenPoint = rectTransform.position;
+        // Use DynamicSlotPositionManager if available (NEW METHOD)
+        if (positionManager != null)
+        {
+            // Try to get cached position first
+            Vector3 cachedPos = positionManager.GetCachedPosition(slotIndex);
+            if (cachedPos != Vector3.zero)
+            {
+                Debug.Log($"[PlayerSlot {slotIndex}] Using cached position: {cachedPos}");
+                return ApplyAspectAdjust(cachedPos);    // LCB: Apply device-specific adjust
+            }
 
-        // LCB: Z plane where game object will be placed (same value as Character.cs)
-        float targetZ = -7.5f;
+            // Calculate new position using raycast
+            Vector3 calculatedPos = positionManager.CalculateWorldPositionForSlot(rectTransform);
 
-        // LCB: Calculate distance from camera
+            // Cache for future use
+            positionManager.CacheSlotPosition(slotIndex, calculatedPos);
+
+            Debug.Log($"[PlayerSlot {slotIndex}] Calculated position via raycast: {calculatedPos}");
+            return ApplyAspectAdjust(calculatedPos);    // LCB: Apply device-specific adjust
+        }
+
+        // FALLBACK: Legacy method (if DynamicSlotPositionManager not found)
+        Debug.LogWarning($"[PlayerSlot {slotIndex}] Using legacy position calculation");
+        return ApplyAspectAdjust(GetWorldPositionFromSlot_Legacy()); // LCB: Apply adjust even for legacy
+    }
+    // LCB: Adjust world position only for specific aspect ratios (e.g., 3:4 iPad)
+    private Vector3 ApplyAspectAdjust(Vector3 worldPos)
+    {
+        if (!useAspectAdjust)
+            return worldPos; // LCB: Skip adjustment if disabled
+
+        float aspect = (float)Screen.width / Screen.height;
+
+        // LCB: 3:4 iPad has aspect ≈ 0.75
+        if (Mathf.Abs(aspect - 0.75f) <= 0.02f)
+        {
+            // LCB: Raise character a bit so it doesn't go too low on this device
+            worldPos.y += ipad34ExtraY;
+        }
+
+        return worldPos;
+    }
+    /// <summary>
+    /// Legacy position calculation method (fallback)
+    /// </summary>
+    private Vector3 GetWorldPositionFromSlot_Legacy()
+    {
+        RectTransform rectTransform = transform as RectTransform;
+        if (rectTransform == null) return Vector3.zero;
+
+        // LCB: Check if camera exists
         if (Camera.main == null)
         {
             Debug.LogError("Cannot find main camera!");
             return Vector3.zero;
         }
 
-        float distanceFromCamera = targetZ - Camera.main.transform.position.z;
+        // LCB: Get Canvas to check render mode
+        Canvas canvas = GetComponentInParent<Canvas>();
+        if (canvas == null)
+        {
+            Debug.LogError($"Slot {slotIndex}: Cannot find parent Canvas!");
+            return Vector3.zero;
+        }
 
-        // LCB: Convert to world coordinates
-        Vector3 worldPoint = Camera.main.ScreenToWorldPoint(new Vector3(screenPoint.x, screenPoint.y, distanceFromCamera));
-        worldPoint.z = targetZ;
+        Vector3 worldPosition;
 
-        Debug.Log($"[PlayerSlot {slotIndex}] Screen: {screenPoint} -> World: {worldPoint}");
+        // LCB: Convert based on Canvas render mode
+        if (canvas.renderMode == RenderMode.ScreenSpaceCamera)
+        {
+            // LCB: For Screen Space - Camera mode, use canvas camera
+            Camera canvasCamera = canvas.worldCamera;
+            if (canvasCamera == null)
+            {
+                Debug.LogError($"Slot {slotIndex}: Canvas has no camera assigned!");
+                return Vector3.zero;
+            }
 
-        return worldPoint;
+            // LCB: Get screen position of UI element
+            Vector3 screenPos = RectTransformUtility.WorldToScreenPoint(canvasCamera, rectTransform.position);
+
+            // LCB: Convert screen position to world position at target Z depth
+            float targetZ = -7.5f;
+            Vector3 worldPosAtZ = Camera.main.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, Camera.main.WorldToScreenPoint(new Vector3(0, 0, targetZ)).z));
+            worldPosition = worldPosAtZ;
+
+            Debug.Log($"[PlayerSlot {slotIndex}] Screen Space Camera - Screen: {screenPos}, World: {worldPosition}");
+        }
+        else
+        {
+            // LCB: For other modes, use direct position
+            worldPosition = rectTransform.position;
+            worldPosition.z = -7.5f;
+            Debug.Log($"[PlayerSlot {slotIndex}] Direct Position - World: {worldPosition}");
+        }
+
+        return worldPosition;
     }
 
     /// <summary>
@@ -286,7 +376,7 @@ public class PlayerSlot : MonoBehaviour
     /// </summary>
     public void ClearSlot()
     {
-        isOccupied = false;
+       
 
         // LCB: Remove instantiated character object
         if (instantiatedCharacter != null)
@@ -294,13 +384,15 @@ public class PlayerSlot : MonoBehaviour
             Destroy(instantiatedCharacter);
             instantiatedCharacter = null;
         }
+        currentCharacterData = null;
+        currentGenreType = default;
 
         if (characterImage != null)
         {
             characterImage.sprite = null;
             characterImage.enabled = false;
         }
-
+        isOccupied = false;
         UpdateSlotVisual();
     }
 
@@ -331,7 +423,9 @@ public class PlayerSlot : MonoBehaviour
     /// </summary>
     public bool IsEmpty()
     {
-        return !isOccupied;
+          bool empty = (instantiatedCharacter == null) && (isOccupied == false);
+        Debug.Log($"[PlayerSlot {slotIndex}] IsEmpty? {empty} (instantiatedCharacter null? {instantiatedCharacter == null}, isOccupied={isOccupied})");
+        return empty;
     }
 
     /// <summary>

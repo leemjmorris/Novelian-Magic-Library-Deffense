@@ -234,27 +234,24 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     void SelectCard(CharacterData data)
     {
-        Debug.Log($"[CardSelectionManager] SelectCard 시작 - data null? {data == null}");
+        Debug.Log($"[카드선택] SelectCard 시작 - data null? {data == null}");
 
         if (data == null)
         {
-            Debug.LogError("[CardSelectionManager] 선택된 데이터가 없습니다!");
+            Debug.LogError("[카드선택] 선택된 데이터가 없습니다!");
             return;
         }
 
-        Debug.Log($"[CardSelectionManager] playerSlots count: {playerSlots?.Count ?? 0}");
+        
+        bool added = AddCharacterToSlot(data);
 
-        // 빈 슬롯 찾아서 물리 오브젝트 배치
-        PlayerSlot emptySlot = FindNextEmptySlot();
-        if (emptySlot != null)
+        if (!added)
         {
-            Debug.Log($"[CardSelectionManager] 빈 슬롯 찾음! 슬롯 인덱스: {emptySlot.slotIndex}");
-            emptySlot.AssignCharacterData(data);
-            Debug.Log($"[CardSelectionManager] 슬롯에 물리 오브젝트 배치 완료: {data.characterName}");
+            Debug.LogWarning("[카드선택] 시작 카드 선택에서 사용할 빈 슬롯이 없습니다!");
         }
         else
         {
-            Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
+            Debug.Log($"[카드선택] 시작 카드 선택으로 캐릭터 배치 완료: {data.characterName}");
         }
     }
 
@@ -270,51 +267,66 @@ public class CardSelectionManager : MonoBehaviour
     /// <summary>
     /// 특정 캐릭터를 슬롯에 추가 (LevelUpCardUI에서 호출)
     /// </summary>
-    public void AddCharacterToSlot(CharacterData data)
+    public bool AddCharacterToSlot(CharacterData data)
     {
-        if (data == null)
+        int slotIndex = FindNextEmptySlotIndex();
+        if (slotIndex < 0)
         {
-            Debug.LogError("[CardSelectionManager] CharacterData is null!");
-            return;
+            Debug.LogWarning("[카드선택] 레벨업 시 사용할 빈 슬롯이 없습니다! → 캐릭터 추가 안함");
+            return false;
         }
 
-        // 빈 슬롯 찾아서 배치
-        PlayerSlot emptySlot = FindNextEmptySlot();
-        if (emptySlot != null)
-        {
-            emptySlot.AssignCharacterSprite(data.characterSprite, data.genreType);
-            Debug.Log($"[CardSelectionManager] Character added to slot: {data.characterName}");
-        }
-        else
-        {
-            Debug.LogWarning("[CardSelectionManager] No empty slot available!");
-        }
+        var slot = playerSlots[slotIndex];
+
+        Debug.Log($"[카드선택] 레벨업용 빈 슬롯 발견! 슬롯 인덱스: {slotIndex}");
+        slot.AssignCharacterData(data);
+
+        Debug.Log($"[카드선택] 레벨업으로 캐릭터 생성 완료: {data.name}, slot={slotIndex}");
+        return true;
     }
+    private int FindNextEmptySlotIndex()
+    {
+        // 슬롯 0부터 순서대로 빈 슬롯 찾기
+        for (int i = 0; i < playerSlots.Count; i++)
+        {
+            if (playerSlots[i].IsEmpty())
+                return i;
+        }
 
+        // 없으면 -1
+        Debug.Log("[카드선택] FindNextEmptySlotIndex → 사용 가능한 빈 슬롯 없음");
+        return -1;
+    }
     PlayerSlot FindNextEmptySlot()
     {
-        // 빈 슬롯들을 모두 찾기
-        System.Collections.Generic.List<PlayerSlot> emptySlots = new System.Collections.Generic.List<PlayerSlot>();
+        List<PlayerSlot> emptySlots = new List<PlayerSlot>();
+
         foreach (PlayerSlot slot in playerSlots)
         {
+            if (slot == null)
+                continue;
+
+            // LCB: Use slot's state flag
             if (slot.IsEmpty())
             {
                 emptySlots.Add(slot);
             }
+            else
+            {
+                Debug.Log($"[카드선택] 슬롯 {slot.slotIndex} 은(는) 이미 사용중");
+            }
         }
 
-        // 빈 슬롯이 없으면 null 반환
         if (emptySlots.Count == 0)
         {
-            Debug.Log("[CardSelectionManager] 빈 슬롯이 없습니다!");
+            Debug.Log("[카드선택] FindNextEmptySlot → 사용 가능한 빈 슬롯 없음");
             return null;
         }
 
-        // 빈 슬롯 중에서 랜덤하게 선택
         int randomIndex = UnityEngine.Random.Range(0, emptySlots.Count);
         PlayerSlot selectedSlot = emptySlots[randomIndex];
 
-        Debug.Log($"[CardSelectionManager] 빈 슬롯 개수: {emptySlots.Count}, 선택된 랜덤 인덱스: {randomIndex}, 슬롯 번호: {selectedSlot.slotIndex}");
+        Debug.Log($"[카드선택] 빈 슬롯 개수: {emptySlots.Count}, 선택 인덱스: {randomIndex}, 최종 슬롯 번호: {selectedSlot.slotIndex}");
 
         return selectedSlot;
     }

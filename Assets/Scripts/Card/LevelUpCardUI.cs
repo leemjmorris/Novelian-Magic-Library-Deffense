@@ -263,21 +263,24 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     public void OnCard1Click()
     {
-        if (isCardSelected) return; // Prevent duplicate clicks
+        Debug.Log("[LevelUpCardUI] OnCard1Click pressed");  // LCB: debug click
+
+        if (isCardSelected) 
+        {
+            Debug.Log("[LevelUpCardUI] OnCard1Click ignored because already selected");
+            return; // LCB: Prevent duplicate clicks
+        }
 
         isCardSelected = true;
 
-        // Cancel timer immediately and reset timer text to 0
-        if (isCardSelected)
-        {
-            selectionCts?.Cancel();
+        // LCB: Cancel timer and set to 0
+        selectionCts?.Cancel();
+        if (timerText != null)
             timerText.text = "0s";
-        }
 
+        Debug.Log($"[LevelUpCardUI] Card 1 selected (Type: {selectedCard1Type}, Index: {selectedCard1Index})");
 
-        Debug.Log($"[LevelUpCardUI] Card 1 selected (Type: {selectedCard1Type})");
-
-        // Apply card effect
+        // LCB: Apply card effect
         ApplyCardEffect(selectedCard1Type, selectedCard1Index);
     }
 
@@ -286,18 +289,25 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     public void OnCard2Click()
     {
-        if (isCardSelected) return; // Prevent duplicate clicks
+            Debug.Log("[LevelUpCardUI] OnCard2Click pressed");  // LCB: debug click
 
-        isCardSelected = true;
+            if (isCardSelected)
+            {
+                Debug.Log("[LevelUpCardUI] OnCard2Click ignored because already selected");
+                return; // LCB: Prevent duplicate clicks
+            }
 
-        // Cancel timer immediately and reset timer text to 0
-        selectionCts?.Cancel();
-    
+            isCardSelected = true;
 
-        Debug.Log($"[LevelUpCardUI] Card 2 selected (Type: {selectedCard2Type})");
+            // LCB: Cancel timer and set to 0
+            selectionCts?.Cancel();
+            if (timerText != null)
+                timerText.text = "0s";
 
-        // Apply card effect
-        ApplyCardEffect(selectedCard2Type, selectedCard2Index);
+            Debug.Log($"[LevelUpCardUI] Card 2 selected (Type: {selectedCard2Type}, Index: {selectedCard2Index})");
+
+            // LCB: Apply card effect
+            ApplyCardEffect(selectedCard2Type, selectedCard2Index);
     }
 
     /// <summary>
@@ -338,25 +348,33 @@ public class LevelUpCardUI : MonoBehaviour
     /// LCB: Apply character card effect (Add character to slot via CardSelectionManager)
     /// </summary>
     void ApplyCharacterCard(int index)
+{
+    Debug.Log($"[LevelUpCardUI] ApplyCharacterCard called. index={index}");
+
+    if (index < 0 || index >= characterCards.Count)
     {
-        if (index < 0 || index >= characterCards.Count)
-        {
-            Debug.LogError($"[LevelUpCardUI] Invalid character index: {index}");
-            return;
-        }
-
-        CharacterData selectedChar = characterCards[index];
-        Debug.Log($"[LevelUpCardUI] Character selected: {selectedChar.characterName}");
-
-        // Use direct reference to CardSelectionManager
-        if (cardSelectionManager != null)
-        {
-            Debug.Log($"[LevelUpCardUI] Adding character to slot via CardSelectionManager");
-            cardSelectionManager.AddCharacterToSlot(selectedChar);
-        }
-        else
-        {
-            Debug.LogWarning("[LevelUpCardUI] CardSelectionManager reference is null! Please assign in Inspector.");
-        }
+        Debug.LogError($"[LevelUpCardUI] Invalid character index: {index}, listCount={characterCards.Count}");
+        return;
     }
+
+    CharacterData selectedChar = characterCards[index];
+    if (selectedChar == null)
+    {
+        Debug.LogError("[LevelUpCardUI] selectedChar is null!");
+        return;
+    }
+
+    Debug.Log($"[LevelUpCardUI] Character selected: {selectedChar.characterName}, prefab null? {selectedChar.characterPrefab == null}");
+
+    // LCB: Use CardSelectionManager to place in slot
+    if (cardSelectionManager != null)
+    {
+        Debug.Log("[LevelUpCardUI] Calling CardSelectionManager.AddCharacterToSlot");
+        cardSelectionManager.AddCharacterToSlot(selectedChar);
+    }
+    else
+    {
+        Debug.LogWarning("[LevelUpCardUI] CardSelectionManager reference is null! Please assign in Inspector.");
+    }
+}
 }

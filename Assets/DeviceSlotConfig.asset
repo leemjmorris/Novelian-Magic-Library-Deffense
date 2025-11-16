@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8430503eef3e82f4dbe53fd16411eff8, type: 3}
+  m_Name: DeviceSlotConfig
+  m_EditorClassIdentifier: 
+  baseZPosition: -7.5
+  defaultOffset: {x: 0, y: 0}
+  aspectRatioOffsets:
+  - aspectRatio: 1.777778
+    description: 16:9 (Most common)
+    offset: {x: 0, y: 0}
+  - aspectRatio: 2
+    description: 18:9 (Galaxy S8, S9)
+    offset: {x: 0, y: 0.2}
+  - aspectRatio: 2.166667
+    description: 19.5:9 (iPhone X, 11, 12 Landscape)
+    offset: {x: 0, y: 0.3}
+  - aspectRatio: 2.222222
+    description: 20:9 (Galaxy S20, S21)
+    offset: {x: 0, y: 0.35}
+  - aspectRatio: 1.333333
+    description: 4:3 (iPad Landscape)
+    offset: {x: 0, y: -0.5}
+  - aspectRatio: 0.75
+    description: 3:4 (iPad Portrait)
+    offset: {x: 0, y: -0.5}
+  - aspectRatio: 0.5625
+    description: 9:16 (Galaxy J7, most portrait)
+    offset: {x: 0, y: 0}
+  - aspectRatio: 0.461538
+    description: 9:19.5 (iPhone X, 11, 12 Portrait)
+    offset: {x: 0, y: 0}
+  aspectRatioTolerance: 0.05
+  useScreenSizeScaling: 1
+  referenceScreenHeight: 1080

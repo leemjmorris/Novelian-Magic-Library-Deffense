@@ -48,7 +48,7 @@ public class Character : MonoBehaviour
             spriteRenderer.sprite = characterData.characterSprite;
             spriteRenderer.sortingLayerName = "Default"; // LCB: Use Default sorting layer
             spriteRenderer.sortingOrder = 1000; // LCB: Very high order to render above UI Canvas
-            Debug.Log($"[Character] {characterData.characterName} 초기화 완료 - Sorting Order: {spriteRenderer.sortingOrder}");
+            //Debug.Log($"[Character] {characterData.characterName} 초기화 완료 - Sorting Order: {spriteRenderer.sortingOrder}");
         }
         else
         {
@@ -80,7 +80,7 @@ public class Character : MonoBehaviour
     {
         if (!enablePhysics)
         {
-            Debug.Log($"[Character] {gameObject.name}: 물리 충돌 비활성화됨");
+            //Debug.Log($"[Character] {gameObject.name}: 물리 충돌 비활성화됨");
             return;
         }
 
@@ -91,11 +91,11 @@ public class Character : MonoBehaviour
             boxCollider = gameObject.AddComponent<BoxCollider2D>();
             boxCollider.size = colliderSize;
             boxCollider.isTrigger = false;  // 물리 충돌 활성화 (벽처럼 동작)
-            Debug.Log($"[Character] {gameObject.name}: BoxCollider2D 추가됨 (size: {colliderSize})");
+            //Debug.Log($"[Character] {gameObject.name}: BoxCollider2D 추가됨 (size: {colliderSize})");
         }
         else
         {
-            Debug.Log($"[Character] {gameObject.name}: 기존 BoxCollider2D 사용");
+            //Debug.Log($"[Character] {gameObject.name}: 기존 BoxCollider2D 사용");
         }
 
         // Rigidbody2D 추가 (물리 엔진에서 인식되도록)
@@ -105,7 +105,7 @@ public class Character : MonoBehaviour
             rb = gameObject.AddComponent<Rigidbody2D>();
             rb.bodyType = RigidbodyType2D.Kinematic;  // Kinematic: 스크립트로 제어, 물리 충돌은 감지
             rb.gravityScale = 0f;  // 중력 비활성화
-            Debug.Log($"[Character] {gameObject.name}: Rigidbody2D 추가됨 (Kinematic)");
+            //Debug.Log($"[Character] {gameObject.name}: Rigidbody2D 추가됨 (Kinematic)");
         }
     }
     private void Update()
