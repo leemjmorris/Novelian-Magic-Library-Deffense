@@ -39,6 +39,18 @@ public class CardSelectionManager : MonoBehaviour
     // 타이머 취소 토큰
     private CancellationTokenSource selectionCts;
 
+    // CharacterPlacementManager 캐싱
+    private CharacterPlacementManager placementManager;
+
+    private void Awake()
+    {
+        // CharacterPlacementManager를 태그로 찾아서 캐싱
+        GameObject managerObj = GameObject.FindGameObjectWithTag("CharacterPlacementManager");
+        if (managerObj != null)
+        {
+            placementManager = managerObj.GetComponent<CharacterPlacementManager>();
+        }
+    }
 
     /// <summary>
     /// 게임 시작 시 카드 선택 (StageManager에서 호출)
@@ -241,16 +253,25 @@ public class CardSelectionManager : MonoBehaviour
             return;
         }
 
-        // 빈 슬롯 찾아서 배치
-        PlayerSlot emptySlot = FindNextEmptySlot();
-        if (emptySlot != null)
+        // CharacterPlacementManager를 사용한 월드 좌표 배치 (TestScene 전용)
+        if (placementManager != null)
         {
-            emptySlot.AssignCharacterSprite(cardSprite, data.genreType);
-            // Debug.Log($"[CardSelectionManager] 슬롯에 배치 완료: {data.characterName}");
+            placementManager.SpawnCharacterAtRandomSlot(cardSprite);
+            Debug.Log($"[CardSelectionManager] 월드 좌표에 캐릭터 배치 완료: {data.characterName}");
         }
         else
         {
-            // Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
+            // 기존 UI 기반 슬롯 시스템 (다른 씬 호환)
+            PlayerSlot emptySlot = FindNextEmptySlot();
+            if (emptySlot != null)
+            {
+                emptySlot.AssignCharacterSprite(cardSprite, data.genreType);
+                // Debug.Log($"[CardSelectionManager] 슬롯에 배치 완료: {data.characterName}");
+            }
+            else
+            {
+                // Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
+            }
         }
     }
 
@@ -274,16 +295,25 @@ public class CardSelectionManager : MonoBehaviour
             return;
         }
 
-        // 빈 슬롯 찾아서 배치
-        PlayerSlot emptySlot = FindNextEmptySlot();
-        if (emptySlot != null)
+        // CharacterPlacementManager를 사용한 월드 좌표 배치 (TestScene 전용)
+        if (placementManager != null)
         {
-            emptySlot.AssignCharacterSprite(data.characterSprite, data.genreType);
-            // Debug.Log($"[CardSelectionManager] Character added to slot: {data.characterName}");
+            placementManager.SpawnCharacterAtRandomSlot(data.characterSprite);
+            Debug.Log($"[CardSelectionManager] 월드 좌표에 캐릭터 추가 완료: {data.characterName}");
         }
         else
         {
-            // Debug.LogWarning("[CardSelectionManager] No empty slot available!");
+            // 기존 UI 기반 슬롯 시스템 (다른 씬 호환)
+            PlayerSlot emptySlot = FindNextEmptySlot();
+            if (emptySlot != null)
+            {
+                emptySlot.AssignCharacterSprite(data.characterSprite, data.genreType);
+                // Debug.Log($"[CardSelectionManager] Character added to slot: {data.characterName}");
+            }
+            else
+            {
+                // Debug.LogWarning("[CardSelectionManager] No empty slot available!");
+            }
         }
     }
 

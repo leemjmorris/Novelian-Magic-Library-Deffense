@@ -162,6 +162,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 // 2초 완료: 롱프레스 상태로 전환
                 isLongPressCompleted = true;
                 Debug.Log($"[InputManager] Long press completed at {pressStartPosition}");
+                Debug.Log($"[InputManager] OnLongPressStart 구독자 수: {OnLongPressStart?.GetInvocationList().Length ?? 0}");
                 OnLongPressStart?.Invoke(pressStartPosition);
 
                 // 드래그 감지 시작
