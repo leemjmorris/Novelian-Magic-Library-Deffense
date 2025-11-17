@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class Character : MonoBehaviour, IPoolable
 {
+    [Header("Character Animator")]
+    [SerializeField] private Animator characterAnimator;
     [Header("Character Obj")]
     [SerializeField] private GameObject characterObj;
     [Header("Prefab References")]
@@ -61,6 +63,7 @@ public class Character : MonoBehaviour, IPoolable
 
         Vector3 spawnPosition = transform.position;
         GameManager.Instance.Pool.Spawn<Projectile>(spawnPosition).SetTarget(target.GetTransform());
+        characterAnimator.SetTrigger("2_Attack");
     }
 
     public void OnSpawn()
