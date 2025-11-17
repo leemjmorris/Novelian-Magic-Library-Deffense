@@ -4,6 +4,7 @@ using UnityEngine;
 public class MonsterMove : MonoBehaviour
 {
     [SerializeField] private Rigidbody2D rb;
+    [SerializeField] private Animator monsterAnimator;
 
     //JML: Generic movement method using velocity-based physics
     public void Move<T>(T entity, float speed) where T : IMovable
@@ -11,10 +12,12 @@ public class MonsterMove : MonoBehaviour
         if (!entity.IsWallHit)
         {
             rb.linearVelocity = Vector2.down * speed;
+            monsterAnimator.SetBool("1_Move", true);
         }
         else
         {
             //rb.linearVelocity = Vector2.zero;
+            monsterAnimator.SetBool("1_Move", false);
         }
     }
 
