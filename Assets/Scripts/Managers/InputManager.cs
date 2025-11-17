@@ -4,17 +4,83 @@ using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
     /// Input System 기반 터치/마우스 입력 처리 매니저
     /// Android: 터치 입력 (싱글 터치만)
-    /// Unity Editor: 마우스 입력 (#if UNITY_EDITOR)
+    /// Unity Editor: 마우스 입력 (기본) 또는 터치 시뮬레이션
     /// MonoBehaviour 기반 Manager (VContainer 지원)
+    /// Singleton 패턴으로 어디서든 접근 가능
     /// </summary>
     public class InputManager : BaseManager
     {
+        // Singleton Instance
+        [Header("Singleton Settings")]
+        [Tooltip("인스펙터에서 직접 할당 가능 (옵션). 비어있으면 자동으로 찾습니다.")]
+        [SerializeField] private InputManager manualInstance;
+
+        private static InputManager instance;
+        public static InputManager Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    // 1순위: 인스펙터에서 직접 할당된 인스턴스
+                    InputManager[] allInstances = FindObjectsByType<InputManager>(FindObjectsSortMode.None);
+                    foreach (var mgr in allInstances)
+                    {
+                        if (mgr.manualInstance != null)
+                        {
+                            instance = mgr.manualInstance;
+                            break;
+                        }
+                    }
+
+                    // 2순위: Tag로 찾기
+                    if (instance == null)
+                    {
+                        GameObject managerObj = GameObject.FindGameObjectWithTag("Manager");
+                        if (managerObj != null)
+                        {
+                            instance = managerObj.GetComponent<InputManager>();
+                        }
+                    }
+
+                    // 3순위: Tag 없으면 이름으로 찾기
+                    if (instance == null)
+                    {
+                        GameObject managerObj = GameObject.Find("InputManger"); // 씬에 있는 오브젝트 이름
+                        if (managerObj != null)
+                        {
+                            instance = managerObj.GetComponent<InputManager>();
+                        }
+                    }
+
+                    // 4순위: FindFirstObjectByType으로 찾기
+                    if (instance == null)
+                    {
+                        instance = FindFirstObjectByType<InputManager>();
+                    }
+
+                    if (instance == null)
+                    {
+                        Debug.LogError("[InputManager] Instance not found in scene! Make sure InputManager GameObject has 'Manager' tag or assign it manually in Inspector.");
+                    }
+                }
+                return instance;
+            }
+        }
+
+#if UNITY_EDITOR
+        [Header("Editor Test Settings")]
+        [Tooltip("체크하면 에디터에서 터치 입력 시뮬레이션 (Android 테스트용)")]
+        [SerializeField] private bool simulateTouchInEditor = false;
+#endif
+
         // Input Actions
         private InputActions inputActions;
 
@@ -25,7 +91,7 @@ namespace NovelianMagicLibraryDefense.Managers
         private CancellationTokenSource longPressCts;
 
         // 드래그 감지 설정
-        private const float LONG_PRESS_DURATION = 2f; // 2초
+        private const float LONG_PRESS_DURATION = 1f; // 1초
         private const float DRAG_THRESHOLD = 10f; // 드래그 감지 최소 이동 거리 (픽셀)
 
         #region Events
@@ -52,16 +118,34 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnInitialize()
         {
+            // Singleton 설정
+            if (instance != null && instance != this)
+            {
+                Debug.LogWarning("[InputManager] Duplicate instance detected! Destroying this instance.");
+                Destroy(gameObject);
+                return;
+            }
+            instance = this;
+
             Debug.Log("[InputManager] Initializing Input System");
 
             // Input Actions 생성
             inputActions = new InputActions();
 
 #if UNITY_EDITOR
-            // Unity Editor: 마우스 입력 설정
-            SetupMouseInput();
-            inputActions.Mouse.Enable();
-            Debug.Log("[InputManager] Mouse input enabled (Unity Editor)");
+            // Unity Editor: 테스트 모드에 따라 입력 전환
+            if (simulateTouchInEditor)
+            {
+                SetupTouchInput();
+                inputActions.Touch.Enable();
+                Debug.Log("[InputManager] Touch input enabled (Unity Editor - Simulation Mode)");
+            }
+            else
+            {
+                SetupMouseInput();
+                inputActions.Mouse.Enable();
+                Debug.Log("[InputManager] Mouse input enabled (Unity Editor)");
+            }
 #else
             // Android 빌드: 터치 입력 설정
             SetupTouchInput();
@@ -70,31 +154,45 @@ namespace NovelianMagicLibraryDefense.Managers
 #endif
         }
 
-#if UNITY_EDITOR
         /// <summary>
-        /// Unity Editor 전용: 마우스 입력 설정
+        /// 마우스 입력 설정
         /// </summary>
         private void SetupMouseInput()
         {
+            Debug.Log("[InputManager] SetupMouseInput() - 마우스 이벤트 등록 중...");
             inputActions.Mouse.Click.started += OnPointerDown;
             inputActions.Mouse.Click.canceled += OnPointerUp;
+            Debug.Log("[InputManager] SetupMouseInput() - 마우스 이벤트 등록 완료!");
         }
-#else
+
         /// <summary>
-        /// Android 빌드: 터치 입력 설정
+        /// 터치 입력 설정
         /// </summary>
         private void SetupTouchInput()
         {
+            Debug.Log("[InputManager] SetupTouchInput() - 터치 이벤트 등록 중...");
             inputActions.Touch.TouchPress.started += OnPointerDown;
             inputActions.Touch.TouchPress.canceled += OnPointerUp;
+            Debug.Log("[InputManager] SetupTouchInput() - 터치 이벤트 등록 완료!");
         }
-#endif
 
         /// <summary>
         /// 입력 시작 (터치 다운 / 마우스 클릭 다운)
         /// </summary>
         private void OnPointerDown(InputAction.CallbackContext context)
         {
+            Debug.Log($"[InputManager] 🔵 OnPointerDown 호출됨! context.phase={context.phase}");
+
+            // UI 클릭 감지: EventSystem이 UI 위에서 클릭했는지 확인
+            bool isOverUI = IsPointerOverUI();
+            Debug.Log($"[InputManager] UI 위에 있는가? {isOverUI}");
+
+            if (isOverUI)
+            {
+                Debug.Log("[InputManager] Click on UI detected, ignoring input");
+                return;
+            }
+
             // 멀티터치 차단: 이미 입력이 활성화되어 있으면 무시
             if (isInputActive)
             {
@@ -210,9 +308,54 @@ namespace NovelianMagicLibraryDefense.Managers
         private Vector2 GetCurrentPosition()
         {
 #if UNITY_EDITOR
-            return inputActions.Mouse.MousePosition.ReadValue<Vector2>();
+            if (simulateTouchInEditor)
+            {
+                return inputActions.Touch.TouchPosition.ReadValue<Vector2>();
+            }
+            else
+            {
+                return inputActions.Mouse.MousePosition.ReadValue<Vector2>();
+            }
 #else
             return inputActions.Touch.TouchPosition.ReadValue<Vector2>();
+#endif
+        }
+
+        /// <summary>
+        /// 포인터가 UI 위에 있는지 확인 (EventSystem 사용)
+        /// </summary>
+        private bool IsPointerOverUI()
+        {
+            // EventSystem이 없으면 UI 체크 불가능
+            if (EventSystem.current == null)
+            {
+                return false;
+            }
+
+#if UNITY_EDITOR
+            if (simulateTouchInEditor)
+            {
+                // 터치 시뮬레이션 모드: 터치 입력으로 UI 체크
+                if (UnityEngine.InputSystem.EnhancedTouch.Touch.activeTouches.Count > 0)
+                {
+                    int touchId = UnityEngine.InputSystem.EnhancedTouch.Touch.activeTouches[0].finger.index;
+                    return EventSystem.current.IsPointerOverGameObject(touchId);
+                }
+                return false;
+            }
+            else
+            {
+                // 마우스 모드: 마우스 위치로 UI 체크
+                return EventSystem.current.IsPointerOverGameObject();
+            }
+#else
+            // Android: 터치 입력으로 UI 체크
+            if (UnityEngine.InputSystem.EnhancedTouch.Touch.activeTouches.Count > 0)
+            {
+                int touchId = UnityEngine.InputSystem.EnhancedTouch.Touch.activeTouches[0].finger.index;
+                return EventSystem.current.IsPointerOverGameObject(touchId);
+            }
+            return false;
 #endif
         }
 
@@ -232,28 +375,42 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             Debug.Log("[InputManager] Disposing Input System");
 
+            // Singleton 정리
+            if (instance == this)
+            {
+                instance = null;
+            }
+
             // 타이머 정리
             longPressCts?.Cancel();
             longPressCts?.Dispose();
             longPressCts = null;
 
+            // 입력 이벤트 해제 및 비활성화
+            if (inputActions != null)
+            {
 #if UNITY_EDITOR
-            // 마우스 입력 해제
-            if (inputActions != null)
-            {
-                inputActions.Mouse.Click.started -= OnPointerDown;
-                inputActions.Mouse.Click.canceled -= OnPointerUp;
-                inputActions.Mouse.Disable();
-            }
+                if (simulateTouchInEditor)
+                {
+                    // 터치 입력 해제
+                    inputActions.Touch.TouchPress.started -= OnPointerDown;
+                    inputActions.Touch.TouchPress.canceled -= OnPointerUp;
+                    inputActions.Touch.Disable();
+                }
+                else
+                {
+                    // 마우스 입력 해제
+                    inputActions.Mouse.Click.started -= OnPointerDown;
+                    inputActions.Mouse.Click.canceled -= OnPointerUp;
+                    inputActions.Mouse.Disable();
+                }
 #else
-            // 터치 입력 해제
-            if (inputActions != null)
-            {
+                // 터치 입력 해제
                 inputActions.Touch.TouchPress.started -= OnPointerDown;
                 inputActions.Touch.TouchPress.canceled -= OnPointerUp;
                 inputActions.Touch.Disable();
-            }
 #endif
+            }
 
             // Input Actions 정리
             inputActions?.Dispose();
