@@ -136,9 +136,11 @@ namespace NovelianMagicLibraryDefense.Managers
             // Unity Editor: 테스트 모드에 따라 입력 전환
             if (simulateTouchInEditor)
             {
+                // Enable EnhancedTouch for proper touch simulation in Editor
+                UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
                 SetupTouchInput();
                 inputActions.Touch.Enable();
-                Debug.Log("[InputManager] Touch input enabled (Unity Editor - Simulation Mode)");
+                Debug.Log("[InputManager] Touch input enabled (Unity Editor - Simulation Mode with EnhancedTouch)");
             }
             else
             {
@@ -148,6 +150,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 #else
             // Android 빌드: 터치 입력 설정
+            UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
             SetupTouchInput();
             inputActions.Touch.Enable();
             Debug.Log("[InputManager] Touch input enabled (Android)");
@@ -397,6 +400,8 @@ namespace NovelianMagicLibraryDefense.Managers
                     inputActions.Touch.TouchPress.started -= OnPointerDown;
                     inputActions.Touch.TouchPress.canceled -= OnPointerUp;
                     inputActions.Touch.Disable();
+                    // Disable EnhancedTouch
+                    UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
                 }
                 else
                 {
@@ -410,6 +415,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 inputActions.Touch.TouchPress.started -= OnPointerDown;
                 inputActions.Touch.TouchPress.canceled -= OnPointerUp;
                 inputActions.Touch.Disable();
+                // Disable EnhancedTouch
+                UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
 #endif
             }
 

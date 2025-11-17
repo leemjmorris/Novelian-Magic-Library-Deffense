@@ -211,10 +211,11 @@ public class CharacterPlacementManager : MonoBehaviour
         Debug.Log($"[CharacterPlacementManager] HandleLongPressStart called! screenPosition={screenPosition}");
 
         // Convert screen coordinates to world coordinates
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, 10f));
-        worldPosition.z = 0f;
+        // Use absolute distance from camera to character plane
+        float distanceToCharacterPlane = Mathf.Abs(mainCamera.transform.position.z - gridStartPosition.z);
+        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, distanceToCharacterPlane));
 
-        Debug.Log($"[CharacterPlacementManager] worldPosition={worldPosition}");
+        Debug.Log($"[CharacterPlacementManager] worldPosition={worldPosition}, camera.z={mainCamera.transform.position.z}, distance={distanceToCharacterPlane}");
 
         // Detect character with Raycast2D
         RaycastHit2D hit = Physics2D.Raycast(worldPosition, Vector2.zero);
@@ -248,8 +249,8 @@ public class CharacterPlacementManager : MonoBehaviour
         if (draggingCharacter == null) return;
 
         // Convert screen coordinates to world coordinates
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, 10f));
-        worldPosition.z = 0f;
+        float distanceToCharacterPlane = Mathf.Abs(mainCamera.transform.position.z - gridStartPosition.z);
+        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, distanceToCharacterPlane));
 
         // Update character position
         draggingCharacter.transform.position = worldPosition;
@@ -261,8 +262,8 @@ public class CharacterPlacementManager : MonoBehaviour
         if (draggingCharacter == null) return;
 
         // Convert screen coordinates to world coordinates
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, 10f));
-        worldPosition.z = 0f;
+        float distanceToCharacterPlane = Mathf.Abs(mainCamera.transform.position.z - gridStartPosition.z);
+        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, distanceToCharacterPlane));
 
         // Check if there's a GridSlot at drop position
         GridSlot targetSlot = FindSlotAtPosition(worldPosition);
