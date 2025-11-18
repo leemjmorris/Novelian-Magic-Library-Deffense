@@ -8,7 +8,10 @@ public class Character : MonoBehaviour, IPoolable
     [Header("Character Obj")]
     [SerializeField] private GameObject characterObj;
     [Header("Prefab References")]
-    [SerializeField] private GameObject projectilePrefab;
+    [SerializeField] private GameObject projectilePrefab;  // JML: Legacy - will be replaced by SkillConfig
+
+    [Header("Skill Configuration")]
+    [SerializeField] private SkillConfig skillConfig;  // JML: CSV-based skill configuration
 
     [Header("Targeting")]
     [SerializeField] private Transform target;
@@ -22,7 +25,8 @@ public class Character : MonoBehaviour, IPoolable
 
     private ITargetable currentTarget;
     private float timer = 0.0f;
-    private async void Start()
+
+    private void Start()
     {
         // LMJ: Skip initialization if Pool manager doesn't exist (e.g., in LobbyScene)
         if (GameManager.Instance == null || GameManager.Instance.Pool == null)
@@ -31,11 +35,14 @@ public class Character : MonoBehaviour, IPoolable
             return;
         }
 
-        // LMJ: Only create pool if it doesn't exist yet
-        if (!GameManager.Instance.Pool.HasPool<Projectile>())
+        // JML: Create pool using direct prefab reference from SkillConfig
+        if (skillConfig != null && skillConfig.hasProjectile && skillConfig.projectilePrefab != null)
         {
-            await GameManager.Instance.Pool.CreatePoolAsync<Projectile>(AddressableKey.Projectile, defaultCapacity: 5, maxSize: 20);
-            GameManager.Instance.Pool.WarmUp<Projectile>(20);
+            if (!GameManager.Instance.Pool.HasPool<Projectile>())
+            {
+                GameManager.Instance.Pool.CreatePool<Projectile>(skillConfig.projectilePrefab, defaultCapacity: 5, maxSize: 20);
+                GameManager.Instance.Pool.WarmUp<Projectile>(20);
+            }
         }
     }
     private void Update()
@@ -43,6 +50,14 @@ public class Character : MonoBehaviour, IPoolable
         if (currentTarget == null || !currentTarget.IsAlive())
         {
             currentTarget = TargetRegistry.Instance.FindTarget(transform.position, attackRange);
+            if (currentTarget != null)
+            {
+                Debug.Log($"[Character] Found target at position: {currentTarget.GetPosition()}");
+            }
+            else
+            {
+                Debug.Log($"[Character] No target found. Character position: {transform.position}, AttackRange: {attackRange}");
+            }
         }
 
         if (currentTarget != null)
@@ -61,8 +76,17 @@ public class Character : MonoBehaviour, IPoolable
         if (!characterObj.activeSelf)
             return;
 
-        Vector3 spawnPosition = transform.position;
-        GameManager.Instance.Pool.Spawn<Projectile>(spawnPosition).SetTarget(target.GetTransform());
+        // JML: Ensure Z position is 0 for 2D
+        Vector3 spawnPosition = new Vector3(transform.position.x, transform.position.y, 0f);
+        var projectile = GameManager.Instance.Pool.Spawn<Projectile>(spawnPosition);
+
+        // JML: Initialize projectile with SkillConfig values if available
+        if (skillConfig != null && skillConfig.hasProjectile)
+        {
+            projectile.Initialize(skillConfig.projectileSpeed, skillConfig.projectileDuration);
+        }
+
+        projectile.SetTarget(target.GetTransform());
         characterAnimator.SetTrigger("2_Attack");
     }
 
