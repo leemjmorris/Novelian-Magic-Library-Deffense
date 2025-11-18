@@ -170,6 +170,14 @@ public class Projectile : MonoBehaviour, IPoolable
         rb.linearVelocity = Vector2.zero;
         spawnTime = 0f;  // Reset spawn time for pool reuse
         isInitialized = false;  // JML: Reset initialization flag
+
+        // JML: Ensure all particle systems follow the projectile
+        ParticleSystem[] particleSystems = GetComponentsInChildren<ParticleSystem>();
+        foreach (var ps in particleSystems)
+        {
+            var main = ps.main;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+        }
     }
 
     //JML: Clean up projectile state on despawn
