@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using TMPro;
 
 /// <summary>
@@ -25,16 +26,19 @@ public class CardSelectionManager : MonoBehaviour
     [Header("슬롯")]
     public List<PlayerSlot> playerSlots;
 
-    [Header("캐릭터 데이터")]
-    public List<CharacterData> allCharacterData; // 5개 장르
+    [Header("사용 가능한 캐릭터 ID")]
+    [SerializeField] private List<int> availableCharacterIds = new List<int> { 1, 2, 3, 4, 5 };
 
     // 카드 선택 타임아웃 (20초)
     private const float SELECTION_TIME = 20f;
 
-    // 선택된 카드 데이터
-    private CharacterData selectedCard1Data;
-    private CharacterData selectedCard2Data;
+    // 선택된 캐릭터 ID
+    private int selectedCard1Id;
+    private int selectedCard2Id;
     private bool isCardSelected = false;
+
+    // 카드 스프라이트 캐시 (Addressable로 로드)
+    private Dictionary<int, Sprite> cardSprites = new Dictionary<int, Sprite>();
 
     // 타이머 취소 토큰
     private CancellationTokenSource selectionCts;
@@ -52,12 +56,49 @@ public class CardSelectionManager : MonoBehaviour
         }
     }
 
+    private async void Start()
+    {
+        // 카드 스프라이트 사전 로드
+        await PreloadCardSprites();
+    }
+
+    /// <summary>
+    /// 카드 스프라이트 사전 로드 (Addressable)
+    /// </summary>
+    private async UniTask PreloadCardSprites()
+    {
+        Debug.Log("[CardSelectionManager] Preloading card sprites...");
+
+        foreach (int characterId in availableCharacterIds)
+        {
+            try
+            {
+                string spriteKey = AddressableKey.GetCardSpriteKey(characterId);
+                Sprite sprite = await Addressables.LoadAssetAsync<Sprite>(spriteKey).Task;
+                cardSprites[characterId] = sprite;
+                Debug.Log($"[CardSelectionManager] Loaded card sprite for ID {characterId}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[CardSelectionManager] Failed to load card sprite for ID {characterId}: {e.Message}");
+            }
+        }
+
+        Debug.Log($"[CardSelectionManager] Preloaded {cardSprites.Count}/{availableCharacterIds.Count} card sprites");
+    }
+
     /// <summary>
     /// 게임 시작 시 카드 선택 (StageManager에서 호출)
     /// </summary>
     public async UniTask ShowStartCards()
     {
         isCardSelected = false;
+
+        // 0. 스프라이트 로드 대기 (Start()에서 로드 중일 수 있음)
+        while (cardSprites.Count < availableCharacterIds.Count)
+        {
+            await UniTask.Yield();
+        }
 
         // 1. 카드 패널 활성화
         if (cardPanel != null)
@@ -128,48 +169,79 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     void LoadTwoRandomCharacters()
     {
-        if (allCharacterData == null || allCharacterData.Count < 2)
+        if (availableCharacterIds == null || availableCharacterIds.Count < 2)
         {
-            Debug.LogError("CharacterData가 2개 미만입니다!");
+            Debug.LogError("[CardSelectionManager] 사용 가능한 캐릭터 ID가 2개 미만입니다!");
             return;
         }
 
         // 랜덤 선택 (중복 방지)
-        int idx1 = UnityEngine.Random.Range(0, allCharacterData.Count);
+        int idx1 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
         int idx2 = idx1;
-        while (idx2 == idx1 && allCharacterData.Count > 1)
+        while (idx2 == idx1 && availableCharacterIds.Count > 1)
         {
-            idx2 = UnityEngine.Random.Range(0, allCharacterData.Count);
+            idx2 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
         }
 
-        selectedCard1Data = allCharacterData[idx1];
-        selectedCard2Data = allCharacterData[idx2];
+        selectedCard1Id = availableCharacterIds[idx1];
+        selectedCard2Id = availableCharacterIds[idx2];
 
         // Card 1 업데이트
-        UpdateCardUI(card1, selectedCard1Data);
+        UpdateCardUI(card1, selectedCard1Id);
 
         // Card 2 업데이트
-        UpdateCardUI(card2, selectedCard2Data);
+        UpdateCardUI(card2, selectedCard2Id);
 
-        // Debug.Log($"랜덤 캐릭터 로드: {selectedCard1Data.characterName}, {selectedCard2Data.characterName}");
+        Debug.Log($"[CardSelectionManager] 랜덤 캐릭터 선택: ID {selectedCard1Id}, ID {selectedCard2Id}");
     }
 
     /// <summary>
-    /// 카드 UI 업데이트
+    /// 카드 UI 업데이트 (CharacterID 기반)
     /// </summary>
-    void UpdateCardUI(GameObject cardObj, CharacterData data)
+    void UpdateCardUI(GameObject cardObj, int characterId)
     {
-        if (cardObj == null || data == null) return;
+        if (cardObj == null) return;
 
         CharacterCard charCard = cardObj.GetComponent<CharacterCard>();
-        if (charCard != null && data.characterSprite != null)
+        if (charCard == null) return;
+
+        // 캐릭터 데이터 가져오기 (임시: 하드코딩, 나중에 CSV로 대체)
+        string characterName = GetCharacterName(characterId);
+        GenreType genreType = GetCharacterGenre(characterId);
+        Sprite cardSprite = cardSprites.ContainsKey(characterId) ? cardSprites[characterId] : null;
+
+        if (cardSprite == null)
         {
-            charCard.UpdateCharacter(
-                data.characterSprite,
-                data.characterName,
-                data.genreType
-            );
+            Debug.LogWarning($"[CardSelectionManager] 캐릭터 ID {characterId}의 카드 스프라이트가 로드되지 않았습니다!");
         }
+
+        charCard.UpdateCharacter(cardSprite, characterName, genreType);
+    }
+
+    /// <summary>
+    /// 캐릭터 이름 가져오기 (임시: 하드코딩, 나중에 CSV로 대체)
+    /// </summary>
+    string GetCharacterName(int characterId)
+    {
+        // 나중에 CSV 연동: return CSVLoader.Get<CharacterTableData>(characterId).CharacterName;
+        switch (characterId)
+        {
+            case 1: return "Horror Warrior";
+            case 2: return "Romance Mage";
+            case 3: return "Adventure Ranger";
+            case 4: return "Comedy Jester";
+            case 5: return "Mystery Detective";
+            default: return "Unknown Character";
+        }
+    }
+
+    /// <summary>
+    /// 캐릭터 장르 가져오기 (임시: 하드코딩, 나중에 CSV로 대체)
+    /// </summary>
+    GenreType GetCharacterGenre(int characterId)
+    {
+        // 나중에 CSV 연동: return (GenreType)CSVLoader.Get<CharacterTableData>(characterId).GenreType;
+        return (GenreType)characterId; // 1=Horror, 2=Romance, 3=Adventure, 4=Comedy, 5=Mystery
     }
 
 
@@ -206,7 +278,7 @@ public class CardSelectionManager : MonoBehaviour
             timerText.text = "0s";
         }
 
-        SelectCard(selectedCard1Data, card1);
+        SelectCard(selectedCard1Id);
     }
 
     /// <summary>
@@ -225,52 +297,48 @@ public class CardSelectionManager : MonoBehaviour
             timerText.text = "0s";
         }
 
-        SelectCard(selectedCard2Data, card2);
+        SelectCard(selectedCard2Id);
     }
 
     /// <summary>
     /// 카드 선택 처리
     /// </summary>
-    void SelectCard(CharacterData data, GameObject cardObj)
+    void SelectCard(int characterId)
     {
-        if (data == null)
+        if (characterId <= 0)
         {
-            Debug.LogError("[CardSelectionManager] 선택된 데이터가 없습니다!");
+            Debug.LogError("[CardSelectionManager] 유효하지 않은 캐릭터 ID입니다!");
             return;
         }
 
-        CharacterCard charCard = cardObj?.GetComponent<CharacterCard>();
-        if (charCard == null || charCard.characterImage == null)
-        {
-            Debug.LogError($"[CardSelectionManager] 카드 컴포넌트 또는 이미지가 null입니다!");
-            return;
-        }
-
-        Sprite cardSprite = charCard.characterImage.sprite;
-        if (cardSprite == null)
-        {
-            Debug.LogError("[CardSelectionManager] 카드 이미지가 null입니다!");
-            return;
-        }
-
-        // CharacterPlacementManager를 사용한 월드 좌표 배치 (TestScene 전용)
+        // CharacterPlacementManager를 사용한 월드 좌표 배치
         if (placementManager != null)
         {
-            placementManager.SpawnCharacterAtRandomSlot(cardSprite);
-            Debug.Log($"[CardSelectionManager] 월드 좌표에 캐릭터 배치 완료: {data.characterName}");
+            placementManager.SpawnCharacterById(characterId);
+            Debug.Log($"[CardSelectionManager] 월드 좌표에 캐릭터 배치 완료: ID {characterId}");
         }
         else
         {
-            // 기존 UI 기반 슬롯 시스템 (다른 씬 호환)
+            // 레거시 UI 기반 슬롯 시스템 (다른 씬 호환)
             PlayerSlot emptySlot = FindNextEmptySlot();
             if (emptySlot != null)
             {
-                emptySlot.AssignCharacterSprite(cardSprite, data.genreType);
-                // Debug.Log($"[CardSelectionManager] 슬롯에 배치 완료: {data.characterName}");
+                Sprite cardSprite = cardSprites.ContainsKey(characterId) ? cardSprites[characterId] : null;
+                GenreType genreType = GetCharacterGenre(characterId);
+
+                if (cardSprite != null)
+                {
+                    emptySlot.AssignCharacterSprite(cardSprite, genreType);
+                    Debug.Log($"[CardSelectionManager] UI 슬롯에 배치 완료: ID {characterId}");
+                }
+                else
+                {
+                    Debug.LogError($"[CardSelectionManager] 캐릭터 ID {characterId}의 스프라이트가 없습니다!");
+                }
             }
             else
             {
-                // Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
+                Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
             }
         }
     }
@@ -287,34 +355,16 @@ public class CardSelectionManager : MonoBehaviour
     /// <summary>
     /// 특정 캐릭터를 슬롯에 추가 (LevelUpCardUI에서 호출)
     /// </summary>
-    public void AddCharacterToSlot(CharacterData data)
+    public void AddCharacterToSlot(int characterId)
     {
-        if (data == null)
+        if (characterId <= 0)
         {
-            Debug.LogError("[CardSelectionManager] CharacterData is null!");
+            Debug.LogError("[CardSelectionManager] 유효하지 않은 캐릭터 ID입니다!");
             return;
         }
 
-        // CharacterPlacementManager를 사용한 월드 좌표 배치 (TestScene 전용)
-        if (placementManager != null)
-        {
-            placementManager.SpawnCharacterAtRandomSlot(data.characterSprite);
-            Debug.Log($"[CardSelectionManager] 월드 좌표에 캐릭터 추가 완료: {data.characterName}");
-        }
-        else
-        {
-            // 기존 UI 기반 슬롯 시스템 (다른 씬 호환)
-            PlayerSlot emptySlot = FindNextEmptySlot();
-            if (emptySlot != null)
-            {
-                emptySlot.AssignCharacterSprite(data.characterSprite, data.genreType);
-                // Debug.Log($"[CardSelectionManager] Character added to slot: {data.characterName}");
-            }
-            else
-            {
-                // Debug.LogWarning("[CardSelectionManager] No empty slot available!");
-            }
-        }
+        // SelectCard와 동일한 로직 사용
+        SelectCard(characterId);
     }
 
     PlayerSlot FindNextEmptySlot()

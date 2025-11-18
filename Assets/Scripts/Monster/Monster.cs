@@ -7,7 +7,8 @@ public class Monster : BaseEntity, ITargetable, IMovable
     [Header("Event Channels")]
     [SerializeField] private MonsterEvents monsterEvents;
 
-
+    [Header("Monster Animator")]
+    [SerializeField] private Animator monsterAnimator;
     [Header("References")]
     [SerializeField] private MonsterMove monsterMove;
     [SerializeField] private Rigidbody2D rb;
@@ -24,7 +25,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private float attackTimer = 0f;
     private bool isWallHit = false;
     public bool IsWallHit => isWallHit;
-
+    private bool isDead = false;
     public float Weight { get; private set; } = 1f; // Example weight value
 
 
@@ -40,6 +41,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
     //JML: Physics-based movement in FixedUpdate
     private void FixedUpdate()
     {
+        if (isDead) return;
         monsterMove.Move(this, moveSpeed);
     }
 
@@ -52,6 +54,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
             if (attackInterval <= attackTimer)
             {
                 wall.TakeDamage(damage);
+                monsterAnimator.SetTrigger("2_Attack");
                 attackTimer = 0f;
             }
         }
@@ -62,11 +65,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         // Debug.Log($"[Monster] TakeDamage({damage}) - HP: {currentHealth}/{maxHealth}"); // LCB: Debug damage
         base.TakeDamage(damage);
+        monsterAnimator.SetTrigger("3_Damaged");
         // Debug.Log($"[Monster] After damage - HP: {currentHealth}/{maxHealth}"); // LCB: Debug HP after damage
     }
 
     public override void Die()
     {
+        isDead = true;
+        monsterAnimator.SetTrigger("4_Death");
+        collider2D.enabled = false;
         // Debug.Log($"[Monster] Die() called! Exp={Exp}"); // LCB: Debug monster death
 
         // JML: Unregister BEFORE despawning to prevent accessing destroyed object
@@ -77,11 +84,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             monsterEvents.RaiseMonsterDied(this);
         }
-
+        Invoke(nameof(DespawnMonster), 0.5f);
+        
         // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
+        //NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
+    }
+    private void DespawnMonster()
+    {
         NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
-    
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.CompareTag(Tag.Wall))
@@ -94,11 +105,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public override void OnSpawn()
     {
         base.OnSpawn(); // Initialize health
-
+        isDead = false;
         isWallHit = false;
         wall = null;
         attackTimer = 0f;
         Weight = 1f;
+
+        //TODO: JML: Monster Data Initialization
 
         TargetRegistry.Instance.RegisterTarget(this);
     }
@@ -109,7 +122,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         wall = null;
         attackTimer = 0f;
         Weight = 1f;
-
+        CancelInvoke(nameof(DespawnMonster));
         // JML: Redundant safety check - should already be unregistered in Die()
         // But kept as failsafe for edge cases
         TargetRegistry.Instance.UnregisterTarget(this);

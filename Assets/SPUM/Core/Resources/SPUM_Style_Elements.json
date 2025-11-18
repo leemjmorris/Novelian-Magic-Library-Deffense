@@ -1,0 +1,490 @@
+{
+  "categories_list": [
+    {
+      "id": "quality",
+      "name": "Grade (등급)",
+      "styles": [
+        {
+          "id": "broken",
+          "description": "심하게 손상된 상태. 거의 사용 불가능"
+        },
+        {
+          "id": "common",
+          "description": "기본 등급. 일반적인 성능과 쉬운 획득"
+        },
+        {
+          "id": "rare",
+          "description": "향상된 성능과 소수의 특수 효과 보유"
+        },
+        {
+          "id": "epic",
+          "description": "강력한 스탯과 고유 스킬을 가진 상급 등급"
+        },
+        {
+          "id": "legendary",
+          "description": "희귀하고 독특한 능력을 지닌 전설급"
+        },
+        {
+          "id": "mythic",
+          "description": "신화적 힘을 가진 최고 등급"
+        }
+      ]
+    },
+    {
+      "id": "elements",
+      "name": "원소 속성",
+      "styles": [
+        {
+          "id": "fire",
+          "description": "불 속성"
+        },
+        {
+          "id": "dark",
+          "description": "어둠 속성"
+        },
+        {
+          "id": "water",
+          "description": "물 속성"
+        },
+        {
+          "id": "Light",
+          "description": "빛 속성"
+        },
+        {
+          "id": "wind",
+          "description": "바람 속성"
+        },
+        {
+          "id": "earth",
+          "description": "땅 속성"
+        }
+      ]
+    },
+    {
+      "id": "expression",
+      "name": "표정",
+      "styles": [
+        {
+          "id": "neutral",
+          "description": "중립적인 표정"
+        },
+        {
+          "id": "closed",
+          "description": "감은 눈"
+        },
+        {
+          "id": "angry",
+          "description": "화난 표정"
+        },
+        {
+          "id": "sad",
+          "description": "슬픈 표정"
+        },
+        {
+          "id": "calm",
+          "description": "차분한 표정"
+        },
+        {
+          "id": "serious",
+          "description": "진지한 표정"
+        },
+        {
+          "id": "smug",
+          "description": "거만한 표정"
+        },
+        {
+          "id": "smiling",
+          "description": "웃는 표정"
+        },
+        {
+          "id": "tired",
+          "description": "피곤한 표정"
+        },
+        {
+          "id": "vacant",
+          "description": "멍한 표정"
+        }
+      ]
+    },
+    {
+      "id": "facial_hair",
+      "name": "수염",
+      "styles": [
+        {
+          "id": "beard",
+          "description": "수염"
+        },
+        {
+          "id": "mustache",
+          "description": "콧수염"
+        },
+        {
+          "id": "goatee",
+          "description": "염소수염"
+        },
+        {
+          "id": "full_beard",
+          "description": "풍성한 수염"
+        },
+        {
+          "id": "tusks",
+          "description": "엄니 (오크)"
+        },
+        {
+          "id": "mouth",
+          "description": "입 형태"
+        }
+      ]
+    },
+    {
+      "id": "hairstyle",
+      "name": "헤어스타일",
+      "styles": [
+        {
+          "id": "short",
+          "description": "짧은 머리"
+        },
+        {
+          "id": "medium",
+          "description": "중간 머리"
+        },
+        {
+          "id": "long",
+          "description": "긴 머리"
+        },
+        {
+          "id": "ponytail",
+          "description": "포니테일"
+        },
+        {
+          "id": "braid",
+          "description": "땋은 머리"
+        },
+        {
+          "id": "curly",
+          "description": "곱슬머리"
+        },
+        {
+          "id": "spiky",
+          "description": "뾰족한 머리"
+        },
+        {
+          "id": "bald",
+          "description": "대머리"
+        },
+        {
+          "id": "mohawk",
+          "description": "모히칸"
+        },
+        {
+          "id": "wavy",
+          "description": "웨이브"
+        }
+      ]
+    },
+    {
+      "id": "role",
+      "name": "RPG 역할",
+      "styles": [
+        {
+          "id": "tank",
+          "description": "적의 공격을 받아내는 방어 역할"
+        },
+        {
+          "id": "damage",
+          "description": "적에게 피해를 입히는 공격 역할"
+        },
+        {
+          "id": "support",
+          "description": "팀원을 지원하는 보조 역할"
+        },
+        {
+          "id": "stealth",
+          "description": "은밀한 접근과 기습 공격"
+        },
+        {
+          "id": "buff",
+          "description": "아군에게 긍정적 효과 부여"
+        },
+        {
+          "id": "debuff",
+          "description": "적에게 부정적 효과 부여"
+        },
+        {
+          "id": "summoner",
+          "description": "소환수를 통한 전투 참여"
+        }
+      ]
+    },
+    {
+      "id": "distance_type",
+      "name": "거리 타입",
+      "styles": [
+        {
+          "id": "melee",
+          "description": "근거리 전투. 적과 직접 맞서 싸움"
+        },
+        {
+          "id": "ranged",
+          "description": "원거리 전투. 멀리서 공격"
+        }
+      ]
+    },
+    {
+      "id": "attack_type",
+      "name": "공격 타입",
+      "styles": [
+        {
+          "id": "physical",
+          "description": "물리 공격. 무기나 신체를 이용한 공격"
+        },
+        {
+          "id": "magical",
+          "description": "마법 공격. 마나나 정신력을 이용한 공격"
+        }
+      ]
+    },
+    {
+      "id": "weapon_melee",
+      "name": "근거리 무기",
+      "styles": [
+        {
+          "id": "sword",
+          "description": "검"
+        },
+        {
+          "id": "axe",
+          "description": "도끼"
+        },
+        {
+          "id": "hammer",
+          "description": "망치"
+        },
+        {
+          "id": "mace",
+          "description": "철퇴"
+        },
+        {
+          "id": "spear",
+          "description": "창"
+        },
+        {
+          "id": "dagger",
+          "description": "단검"
+        }
+      ]
+    },
+    {
+      "id": "weapon_ranged",
+      "name": "원거리 무기",
+      "styles": [
+        {
+          "id": "bow",
+          "description": "활"
+        },
+        {
+          "id": "crossbow",
+          "description": "석궁"
+        },
+        {
+          "id": "throwing",
+          "description": "투척 무기"
+        }
+      ]
+    },
+    {
+      "id": "weapon_magic",
+      "name": "마법 무기",
+      "styles": [
+        {
+          "id": "staff",
+          "description": "지팡이"
+        },
+        {
+          "id": "wand",
+          "description": "마법봉"
+        },
+        {
+          "id": "orb",
+          "description": "수정구"
+        },
+        {
+          "id": "spellbook",
+          "description": "마법서"
+        },
+        {
+          "id": "symbol",
+          "description": "성물"
+        }
+      ]
+    },
+    {
+      "id": "armor_heavy",
+      "name": "중갑 방어구",
+      "styles": [
+        {
+          "id": "plate",
+          "description": "판금 갑옷"
+        },
+        {
+          "id": "chain_mail",
+          "description": "사슬 갑옷"
+        },
+        {
+          "id": "scale_mail",
+          "description": "비늘 갑옷"
+        },
+        {
+          "id": "heavy",
+          "description": "중갑"
+        }
+      ]
+    },
+    {
+      "id": "armor_light",
+      "name": "경갑 방어구",
+      "styles": [
+        {
+          "id": "leather",
+          "description": "가죽 갑옷"
+        },
+        {
+          "id": "studded_leather",
+          "description": "징박힌 가죽 갑옷"
+        },
+        {
+          "id": "hide",
+          "description": "짐승 가죽 갑옷"
+        },
+        {
+          "id": "light",
+          "description": "경갑"
+        }
+      ]
+    },
+    {
+      "id": "armor_cloth",
+      "name": "천 방어구",
+      "styles": [
+        {
+          "id": "robe",
+          "description": "로브"
+        },
+        {
+          "id": "cloth",
+          "description": "천 갑옷"
+        },
+        {
+          "id": "tunic",
+          "description": "튜닉"
+        },
+        {
+          "id": "silk",
+          "description": "비단 갑옷"
+        }
+      ]
+    },
+    {
+      "id": "defensive",
+      "name": "방어 장비",
+      "styles": [
+        {
+          "id": "shield",
+          "description": "방패"
+        },
+        {
+          "id": "buckler",
+          "description": "소형 방패"
+        },
+        {
+          "id": "tower_shield",
+          "description": "대형 방패"
+        }
+      ]
+    },
+    {
+      "id": "accessory",
+      "name": "액세서리",
+      "styles": [
+        {
+          "id": "cape",
+          "description": "망토"
+        },
+        {
+          "id": "scarf",
+          "description": "스카프"
+        },
+        {
+          "id": "banner",
+          "description": "깃발"
+        },
+        {
+          "id": "quiver",
+          "description": "화살통"
+        },
+        {
+          "id": "backpack",
+          "description": "배낭"
+        }
+      ]
+    },
+    {
+      "id": "helmet",
+      "name": "투구",
+      "styles": [
+        {
+          "id": "cloth_cap",
+          "description": "천 모자"
+        },
+        {
+          "id": "leather_cap",
+          "description": "가죽 모자"
+        },
+        {
+          "id": "iron_helm",
+          "description": "철 투구"
+        },
+        {
+          "id": "steel_helm",
+          "description": "강철 투구"
+        },
+        {
+          "id": "gold_helm",
+          "description": "황금 투구"
+        },
+        {
+          "id": "horned",
+          "description": "뿔 달린 투구"
+        },
+        {
+          "id": "winged",
+          "description": "날개 달린 투구"
+        },
+        {
+          "id": "spiked",
+          "description": "가시 달린 투구"
+        },
+        {
+          "id": "ornate",
+          "description": "장식된 투구"
+        },
+        {
+          "id": "full_helm",
+          "description": "전면 투구"
+        },
+        {
+          "id": "great_helm",
+          "description": "대형 투구"
+        },
+        {
+          "id": "pointed",
+          "description": "뾰족한 투구"
+        },
+        {
+          "id": "bone_helm",
+          "description": "뼈 투구"
+        }
+      ]
+    }
+  ]
+}

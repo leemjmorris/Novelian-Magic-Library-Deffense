@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.UI;
 using TMPro;
 
@@ -29,8 +30,8 @@ public class LevelUpCardUI : MonoBehaviour
     [Header("Timer Text (Optional)")]
     public TextMeshProUGUI timerText; // 20 second timer display (optional)
 
-    [Header("Card Data (Assign 5 cards for each type)")]
-    public List<CharacterData> characterCards; // 5 character cards
+    [Header("사용 가능한 캐릭터 ID")]
+    [SerializeField] private List<int> availableCharacterIds = new List<int> { 1, 2, 3, 4, 5 };
     // TODO: Create CardData ScriptableObject and uncomment below
     // public List<CardData> statCards;          // 5 stat buff cards
     // public List<CardData> buffCards;          // 5 buff cards
@@ -40,23 +41,40 @@ public class LevelUpCardUI : MonoBehaviour
     [Header("Card Selection Manager")]
     public CardSelectionManager cardSelectionManager; // LMJ: Direct reference to CardSelectionManager
 
+    [Header("CharacterPlacementManager")]
+    private CharacterPlacementManager placementManager;
+
     // Card selection timeout (Issue spec: 20 seconds)
     private const float SELECTION_TIME = 20f;
 
     // Card selection complete flag
     private bool isCardSelected = false;
 
-    // Selected card info (for effect application)
+    // Selected card info (CharacterID 기반)
     private CardType selectedCard1Type;
     private CardType selectedCard2Type;
-    private int selectedCard1Index;
-    private int selectedCard2Index;
+    private int selectedCard1Id;
+    private int selectedCard2Id;
+
     // Cancellation token for selection timer
-    private CancellationTokenSource selectionCts = new CancellationTokenSource();  // ← 추가
+    private CancellationTokenSource selectionCts = new CancellationTokenSource();
+
+    // 카드 스프라이트 캐시
+    private Dictionary<int, Sprite> cardSprites = new Dictionary<int, Sprite>();
 
 
-    void Start()
+    async void Start()
     {
+        // CharacterPlacementManager 찾기
+        GameObject managerObj = GameObject.FindGameObjectWithTag("CharacterPlacementManager");
+        if (managerObj != null)
+        {
+            placementManager = managerObj.GetComponent<CharacterPlacementManager>();
+        }
+
+        // 카드 스프라이트 사전 로드
+        await PreloadCardSprites();
+
         // LCB: Initially hide panel using CanvasGroup (keeps GameObject active for FindWithTag)
         if (canvasGroup != null)
         {
@@ -69,6 +87,28 @@ public class LevelUpCardUI : MonoBehaviour
             // LCB: Fallback to SetActive if CanvasGroup not assigned
             cardPanel.SetActive(false);
         }
+    }
+
+    private async UniTask PreloadCardSprites()
+    {
+        Debug.Log("[LevelUpCardUI] Preloading card sprites...");
+
+        foreach (int characterId in availableCharacterIds)
+        {
+            try
+            {
+                string spriteKey = AddressableKey.GetCardSpriteKey(characterId);
+                Sprite sprite = await Addressables.LoadAssetAsync<Sprite>(spriteKey).Task;
+                cardSprites[characterId] = sprite;
+                Debug.Log($"[LevelUpCardUI] Loaded card sprite for ID {characterId}");
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[LevelUpCardUI] Failed to load card sprite for ID {characterId}: {e.Message}");
+            }
+        }
+
+        Debug.Log($"[LevelUpCardUI] Preloaded {cardSprites.Count}/{availableCharacterIds.Count} card sprites");
     }
 
     /// <summary>
@@ -127,60 +167,103 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     void LoadTwoCharacterCards()
     {
-        if (characterCards == null || characterCards.Count < 2)
+        if (availableCharacterIds == null || availableCharacterIds.Count < 2)
         {
-            // Debug.LogError("[LevelUpCardUI] Character data has less than 2 entries!");
+            Debug.LogError("[LevelUpCardUI] 사용 가능한 캐릭터 ID가 2개 미만입니다!");
             return;
         }
 
         // Select random 2 (prevent duplicate)
-        int idx1 = UnityEngine.Random.Range(0, characterCards.Count);
+        int idx1 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
         int idx2 = idx1;
-        while (idx2 == idx1 && characterCards.Count > 1)
+        while (idx2 == idx1 && availableCharacterIds.Count > 1)
         {
-            idx2 = UnityEngine.Random.Range(0, characterCards.Count);
+            idx2 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
         }
 
         // Store selection info
         selectedCard1Type = CardType.Character;
         selectedCard2Type = CardType.Character;
-        selectedCard1Index = idx1;
-        selectedCard2Index = idx2;
+        selectedCard1Id = availableCharacterIds[idx1];
+        selectedCard2Id = availableCharacterIds[idx2];
 
         // Update card 1 UI
-        UpdateCharacterCardUI(card1, characterCards[idx1]);
+        UpdateCharacterCardUI(card1, selectedCard1Id);
 
         // Update card 2 UI
-        UpdateCharacterCardUI(card2, characterCards[idx2]);
+        UpdateCharacterCardUI(card2, selectedCard2Id);
+
+        Debug.Log($"[LevelUpCardUI] 랜덤 캐릭터 선택: ID {selectedCard1Id}, ID {selectedCard2Id}");
     }
 
     /// <summary>
     /// LCB: Regular level up - 2 random cards (from all types)
-    /// TODO: Currently only implements characters, expand to all 5 types later
     /// </summary>
     void LoadTwoRandomCards()
     {
-        // TODO: Temporarily loading only character cards (Issue #139 expansion planned)
-        // Future: Add CardType.Stat, Buff, Debuff, Skill
-        LoadTwoCharacterCards();
+        // 랜덤으로 2개의 카드 타입 선택 (중복 가능)
+        CardType[] allTypes = { CardType.Character, CardType.Stat, CardType.Buff, CardType.Debuff, CardType.Skill };
+
+        // Card 1 랜덤 선택
+        selectedCard1Type = allTypes[UnityEngine.Random.Range(0, allTypes.Length)];
+        if (selectedCard1Type == CardType.Character)
+        {
+            selectedCard1Id = availableCharacterIds[UnityEngine.Random.Range(0, availableCharacterIds.Count)];
+            UpdateCharacterCardUI(card1, selectedCard1Id);
+        }
+
+        // Card 2 랜덤 선택
+        selectedCard2Type = allTypes[UnityEngine.Random.Range(0, allTypes.Length)];
+        if (selectedCard2Type == CardType.Character)
+        {
+            selectedCard2Id = availableCharacterIds[UnityEngine.Random.Range(0, availableCharacterIds.Count)];
+            UpdateCharacterCardUI(card2, selectedCard2Id);
+        }
+
+        Debug.Log($"[LevelUpCardUI] 랜덤 카드 선택: Card1={selectedCard1Type}, Card2={selectedCard2Type}");
     }
 
     /// <summary>
-    /// LCB: Update character card UI
+    /// LCB: Update character card UI (CharacterID 기반)
     /// </summary>
-    void UpdateCharacterCardUI(GameObject cardObj, CharacterData data)
+    void UpdateCharacterCardUI(GameObject cardObj, int characterId)
     {
-        if (cardObj == null || data == null) return;
+        if (cardObj == null) return;
 
         CharacterCard charCard = cardObj.GetComponent<CharacterCard>();
-        if (charCard != null)
+        if (charCard == null) return;
+
+        // 캐릭터 데이터 가져오기 (CardSelectionManager와 동일)
+        string characterName = GetCharacterName(characterId);
+        GenreType genreType = GetCharacterGenre(characterId);
+        Sprite cardSprite = cardSprites.ContainsKey(characterId) ? cardSprites[characterId] : null;
+
+        if (cardSprite == null)
         {
-            charCard.UpdateCharacter(
-                data.characterSprite,
-                data.characterName,
-                data.genreType
-            );
+            Debug.LogWarning($"[LevelUpCardUI] 캐릭터 ID {characterId}의 카드 스프라이트가 로드되지 않았습니다!");
         }
+
+        charCard.UpdateCharacter(cardSprite, characterName, genreType);
+    }
+
+    string GetCharacterName(int characterId)
+    {
+        // 나중에 CSV 연동: return CSVLoader.Get<CharacterTableData>(characterId).CharacterName;
+        switch (characterId)
+        {
+            case 1: return "Horror Warrior";
+            case 2: return "Romance Mage";
+            case 3: return "Adventure Ranger";
+            case 4: return "Comedy Jester";
+            case 5: return "Mystery Detective";
+            default: return "Unknown Character";
+        }
+    }
+
+    GenreType GetCharacterGenre(int characterId)
+    {
+        // 나중에 CSV 연동: return (GenreType)CSVLoader.Get<CharacterTableData>(characterId).GenreType;
+        return (GenreType)characterId;
     }
 
     /// <summary>
@@ -273,10 +356,10 @@ public class LevelUpCardUI : MonoBehaviour
         }
 
 
-        // Debug.Log($"[LevelUpCardUI] Card 1 selected (Type: {selectedCard1Type}, Index: {selectedCard1Index})");
+        // Debug.Log($"[LevelUpCardUI] Card 1 selected (Type: {selectedCard1Type}, ID: {selectedCard1Id})");
 
-        // Apply card effect
-        ApplyCardEffect(selectedCard1Type, selectedCard1Index);
+        // Apply card effect (cardIndex: 0 = card1)
+        ApplyCardEffect(selectedCard1Type, 0);
     }
 
     /// <summary>
@@ -301,10 +384,10 @@ public class LevelUpCardUI : MonoBehaviour
             timerText.text = "0s";
         }
 
-        // Debug.Log($"[LevelUpCardUI] Card 2 selected (Type: {selectedCard2Type}, Index: {selectedCard2Index})");
+        // Debug.Log($"[LevelUpCardUI] Card 2 selected (Type: {selectedCard2Type}, ID: {selectedCard2Id})");
 
-        // Apply card effect
-        ApplyCardEffect(selectedCard2Type, selectedCard2Index);
+        // Apply card effect (cardIndex: 1 = card2)
+        ApplyCardEffect(selectedCard2Type, 1);
     }
 
     /// <summary>
@@ -342,31 +425,36 @@ public class LevelUpCardUI : MonoBehaviour
     }
 
     /// <summary>
-    /// LCB: Apply character card effect (Add character to slot via CardSelectionManager)
+    /// LCB: Apply character card effect (CharacterID 기반)
     /// </summary>
-    void ApplyCharacterCard(int index)
+    void ApplyCharacterCard(int cardIndex)
     {
-        // Debug.Log($"[LevelUpCardUI] ApplyCharacterCard() called with index: {index}");
+        // cardIndex: 0 = card1, 1 = card2
+        int characterId = (cardIndex == 0) ? selectedCard1Id : selectedCard2Id;
 
-        if (index < 0 || index >= characterCards.Count)
+        Debug.Log($"[LevelUpCardUI] ApplyCharacterCard() called with cardIndex: {cardIndex}, CharacterID: {characterId}");
+
+        if (characterId <= 0)
         {
-            Debug.LogError($"[LevelUpCardUI] Invalid character index: {index} (characterCards.Count: {characterCards?.Count ?? 0})");
+            Debug.LogError($"[LevelUpCardUI] 유효하지 않은 캐릭터 ID: {characterId}");
             return;
         }
 
-        CharacterData selectedChar = characterCards[index];
-        // Debug.Log($"[LevelUpCardUI] Character selected: {selectedChar?.characterName ?? "NULL"}");
-
-        // Use direct reference to CardSelectionManager
-        if (cardSelectionManager != null)
+        // CharacterPlacementManager 직접 사용
+        if (placementManager != null)
         {
-            // Debug.Log($"[LevelUpCardUI] Calling CardSelectionManager.AddCharacterToSlot()");
-            cardSelectionManager.AddCharacterToSlot(selectedChar);
-            // Debug.Log($"[LevelUpCardUI] Character added to slot successfully");
+            placementManager.SpawnCharacterById(characterId);
+            Debug.Log($"[LevelUpCardUI] 캐릭터 ID {characterId} 배치 완료");
+        }
+        // Fallback: CardSelectionManager 사용
+        else if (cardSelectionManager != null)
+        {
+            cardSelectionManager.AddCharacterToSlot(characterId);
+            Debug.Log($"[LevelUpCardUI] CardSelectionManager를 통해 캐릭터 ID {characterId} 배치 완료");
         }
         else
         {
-            Debug.LogError("[LevelUpCardUI] CardSelectionManager reference is null! Inspector에서 CardManager GameObject를 할당해주세요.");
+            Debug.LogError("[LevelUpCardUI] PlacementManager와 CardSelectionManager 모두 null입니다!");
         }
     }
 }
