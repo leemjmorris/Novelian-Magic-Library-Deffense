@@ -40,10 +40,6 @@ namespace NovelianMagicLibraryDefense.Managers
         [Header("UI References - Buttons")]
         [SerializeField] private Button speedButton;
         [SerializeField] private Button settingsButton;
-        [SerializeField] private Button skillButton1;
-        [SerializeField] private Button skillButton2;
-        [SerializeField] private Button skillButton3;
-        [SerializeField] private Button skillButton4;
 
         // Preferences panel state
         private bool isPreferencesOpen = false;
@@ -150,17 +146,6 @@ namespace NovelianMagicLibraryDefense.Managers
             if (settingsButton != null)
                 settingsButton.onClick.AddListener(OnSettingsButtonClicked);
 
-            if (skillButton1 != null)
-                skillButton1.onClick.AddListener(() => OnSkillButtonClicked(1));
-
-            if (skillButton2 != null)
-                skillButton2.onClick.AddListener(() => OnSkillButtonClicked(2));
-
-            if (skillButton3 != null)
-                skillButton3.onClick.AddListener(() => OnSkillButtonClicked(3));
-
-            if (skillButton4 != null)
-                skillButton4.onClick.AddListener(() => OnSkillButtonClicked(4));
         }
 
         private void RemoveButtonListeners()
@@ -171,17 +156,6 @@ namespace NovelianMagicLibraryDefense.Managers
             if (settingsButton != null)
                 settingsButton.onClick.RemoveListener(OnSettingsButtonClicked);
 
-            if (skillButton1 != null)
-                skillButton1.onClick.RemoveAllListeners();
-
-            if (skillButton2 != null)
-                skillButton2.onClick.RemoveAllListeners();
-
-            if (skillButton3 != null)
-                skillButton3.onClick.RemoveAllListeners();
-
-            if (skillButton4 != null)
-                skillButton4.onClick.RemoveAllListeners();
         }
 
         #endregion
