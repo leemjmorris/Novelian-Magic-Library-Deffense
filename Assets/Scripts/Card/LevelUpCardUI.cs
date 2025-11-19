@@ -446,15 +446,9 @@ public class LevelUpCardUI : MonoBehaviour
             placementManager.SpawnCharacterById(characterId);
             Debug.Log($"[LevelUpCardUI] 캐릭터 ID {characterId} 배치 완료");
         }
-        // Fallback: CardSelectionManager 사용
-        else if (cardSelectionManager != null)
-        {
-            cardSelectionManager.AddCharacterToSlot(characterId);
-            Debug.Log($"[LevelUpCardUI] CardSelectionManager를 통해 캐릭터 ID {characterId} 배치 완료");
-        }
         else
         {
-            Debug.LogError("[LevelUpCardUI] PlacementManager와 CardSelectionManager 모두 null입니다!");
+            Debug.LogError("[LevelUpCardUI] CharacterPlacementManager를 찾을 수 없습니다!");
         }
     }
 }

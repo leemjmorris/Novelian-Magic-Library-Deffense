@@ -23,9 +23,6 @@ public class CardSelectionManager : MonoBehaviour
     [Header("타이머 텍스트 (선택사항)")]
     public TextMeshProUGUI timerText;
 
-    [Header("슬롯")]
-    public List<PlayerSlot> playerSlots;
-
     [Header("사용 가능한 캐릭터 ID")]
     [SerializeField] private List<int> availableCharacterIds = new List<int> { 1, 2, 3, 4, 5 };
 
@@ -44,7 +41,7 @@ public class CardSelectionManager : MonoBehaviour
     private CancellationTokenSource selectionCts;
 
     // CharacterPlacementManager 캐싱
-    private CharacterPlacementManager placementManager;
+    [SerializeField] private CharacterPlacementManager placementManager;
 
     private void Awake()
     {
@@ -78,7 +75,7 @@ public class CardSelectionManager : MonoBehaviour
                 cardSprites[characterId] = sprite;
                 Debug.Log($"[CardSelectionManager] Loaded card sprite for ID {characterId}");
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 Debug.LogError($"[CardSelectionManager] Failed to load card sprite for ID {characterId}: {e.Message}");
             }
@@ -177,11 +174,11 @@ public class CardSelectionManager : MonoBehaviour
 
         // 랜덤 선택 (중복 방지)
         int idx1 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
-        int idx2 = idx1;
-        while (idx2 == idx1 && availableCharacterIds.Count > 1)
+        int idx2;
+        do
         {
             idx2 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
-        }
+        } while (idx2 == idx1 && availableCharacterIds.Count > 1);
 
         selectedCard1Id = availableCharacterIds[idx1];
         selectedCard2Id = availableCharacterIds[idx2];
@@ -250,9 +247,7 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     void AutoSelectCard()
     {
-        float random = UnityEngine.Random.Range(0f, 1f);
-
-        if (random < 0.5f)
+        if (UnityEngine.Random.value < 0.5f)
         {
             OnCard1Selected();
         }
@@ -311,7 +306,6 @@ public class CardSelectionManager : MonoBehaviour
             return;
         }
 
-        // CharacterPlacementManager를 사용한 월드 좌표 배치
         if (placementManager != null)
         {
             placementManager.SpawnCharacterById(characterId);
@@ -319,61 +313,8 @@ public class CardSelectionManager : MonoBehaviour
         }
         else
         {
-            // 레거시 UI 기반 슬롯 시스템 (다른 씬 호환)
-            PlayerSlot emptySlot = FindNextEmptySlot();
-            if (emptySlot != null)
-            {
-                Sprite cardSprite = cardSprites.ContainsKey(characterId) ? cardSprites[characterId] : null;
-                GenreType genreType = GetCharacterGenre(characterId);
-
-                if (cardSprite != null)
-                {
-                    emptySlot.AssignCharacterSprite(cardSprite, genreType);
-                    Debug.Log($"[CardSelectionManager] UI 슬롯에 배치 완료: ID {characterId}");
-                }
-                else
-                {
-                    Debug.LogError($"[CardSelectionManager] 캐릭터 ID {characterId}의 스프라이트가 없습니다!");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[CardSelectionManager] 빈 슬롯이 없습니다!");
-            }
+            Debug.LogError("[CardSelectionManager] CharacterPlacementManager를 찾을 수 없습니다!");
         }
-    }
-
-    /// <summary>
-    /// 레거시: 1장 카드 시스템 호환용 (LevelUpCardUI에서 호출)
-    /// </summary>
-    public void OnCardSelected()
-    {
-        // 기본적으로 Card 1 선택
-        OnCard1Selected();
-    }
-
-    /// <summary>
-    /// 특정 캐릭터를 슬롯에 추가 (LevelUpCardUI에서 호출)
-    /// </summary>
-    public void AddCharacterToSlot(int characterId)
-    {
-        if (characterId <= 0)
-        {
-            Debug.LogError("[CardSelectionManager] 유효하지 않은 캐릭터 ID입니다!");
-            return;
-        }
-
-        // SelectCard와 동일한 로직 사용
-        SelectCard(characterId);
-    }
-
-    PlayerSlot FindNextEmptySlot()
-    {
-        foreach (PlayerSlot slot in playerSlots)
-        {
-            if (slot.IsEmpty()) return slot;
-        }
-        return null;
     }
 
     public void ShowCardPanel()
@@ -382,14 +323,6 @@ public class CardSelectionManager : MonoBehaviour
         {
             cardPanel.SetActive(true);
             LoadTwoRandomCharacters();
-        }
-    }
-
-    public void ClearAllSlots()
-    {
-        foreach (PlayerSlot slot in playerSlots)
-        {
-            slot.ClearSlot();
         }
     }
 }

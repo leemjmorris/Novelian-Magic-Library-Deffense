@@ -22,7 +22,7 @@ public static class AddressableKey
 
     public static string GetCharacterKey(int characterId)
     {
-        return $"Character_{characterId}";
+        return $"Character_{characterId:D2}";
     }
 
     public static string GetCardSpriteKey(int characterId)

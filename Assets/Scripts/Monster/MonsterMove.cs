@@ -12,13 +12,28 @@ public class MonsterMove : MonoBehaviour
         if (!entity.IsWallHit)
         {
             rb.linearVelocity = Vector3.back * speed;
-            monsterAnimator.SetBool("1_Move", true);
+            if (monsterAnimator != null && HasParameter("1_Move"))
+            {
+                monsterAnimator.SetBool("1_Move", true);
+            }
         }
         else
         {
-            //rb.linearVelocity = Vector3.zero;
-            monsterAnimator.SetBool("1_Move", false);
+            if (monsterAnimator != null && HasParameter("1_Move"))
+            {
+                monsterAnimator.SetBool("1_Move", false);
+            }
         }
+    }
+
+    private bool HasParameter(string paramName)
+    {
+        if (monsterAnimator == null) return false;
+        foreach (var param in monsterAnimator.parameters)
+        {
+            if (param.name == paramName) return true;
+        }
+        return false;
     }
 
     //JML: Future navigation logic placeholder

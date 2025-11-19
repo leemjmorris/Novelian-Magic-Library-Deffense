@@ -84,8 +84,8 @@ public class CharacterCard : MonoBehaviour
         }
         else
         {
-            // Debug.LogWarning($"[CharacterCard] Invalid cardIndex: {cardIndex}. Falling back to OnCardSelected()");
-            manager.OnCardSelected();
+            // Debug.LogWarning($"[CharacterCard] Invalid cardIndex: {cardIndex}. Falling back to OnCard1Selected()");
+            manager.OnCard1Selected();
         }
     }
 }
