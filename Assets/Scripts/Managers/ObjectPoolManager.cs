@@ -39,6 +39,50 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
+        /// JML: Create a new object pool with direct prefab reference (synchronous)
+        /// </summary>
+        public bool CreatePool<T>(GameObject prefab, int defaultCapacity = 10, int maxSize = 1000)
+            where T : Component, IPoolable
+        {
+            Type type = typeof(T);
+
+            if (pools.ContainsKey(type))
+            {
+                Debug.LogWarning($"[ObjectPoolManager] Pool for type '{type.Name}' already exists.");
+                return true;
+            }
+
+            if (prefab == null)
+            {
+                Debug.LogError($"[ObjectPoolManager] Prefab is null for type '{type.Name}'.");
+                return false;
+            }
+
+            if (prefab.GetComponent<T>() == null)
+            {
+                Debug.LogError($"[ObjectPoolManager] Prefab does not have component of type {type.Name}");
+                return false;
+            }
+
+            prefabs[type] = prefab;
+            activeObjects[type] = new HashSet<Component>();
+
+            var pool = new ObjectPool<T>(
+                createFunc: () => CreatePooledObject<T>(),
+                actionOnGet: OnGetFromPool,
+                actionOnRelease: OnReleaseToPool,
+                actionOnDestroy: OnDestroyPoolObject,
+                collectionCheck: true,
+                defaultCapacity: defaultCapacity,
+                maxSize: maxSize
+            );
+
+            pools[type] = pool;
+            // Debug.Log($"[ObjectPoolManager] Pool created for {type.Name} (capacity: {defaultCapacity}, max: {maxSize})");
+            return true;
+        }
+
+        /// <summary>
         /// LMJ: Create a new object pool with Addressables
         /// </summary>
         public async UniTask<bool> CreatePoolAsync<T>(string addressableKey, int defaultCapacity = 10, int maxSize = 1000)

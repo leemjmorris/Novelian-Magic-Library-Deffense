@@ -79,7 +79,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             Debug.Log("[VolumeSettingsController] Loading StageScene...");
-            SceneManager.LoadScene("StageScene");
+            SceneManager.LoadScene("lobbyScene");
         }
 
         /// <summary>

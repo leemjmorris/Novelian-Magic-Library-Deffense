@@ -1,0 +1,44 @@
+Which version to choose?
+
+FOR BUILT-IN RENDER PIPELINE (DEFAULT "3D"):
+
+1) Check your color space settings under Edit -> Project Settings -> Player -> Other Settings.
+We recommend using Linear color space for the new projects.
+
+2) Pick a version that matches your platform and color space.
+
+For example, if you are developing a PC project and your color space is Linear, then
+Multistory Dungeons PC Linear 1.7.unitypackage is for you.
+
+3) Double Click on a pack to import its contents.
+Or go to Assets -> Import Package -> Custom Package and select the one you want to import.
+
+FOR URP/HDRP:
+
+1) These should always be in linear color space (Edit -> Project Settings -> Player -> Other Settings)
+
+2) We recommend starting the project from an SRP template, but if you have started form a blank project,
+or decided to upgrade to SRP, you would need to install High Definition RP or Universal RP from
+package manager (Window -> Package Manager), then create and assign a RenderPipelineAsset to a
+corresponding field under Edit -> Project Settings -> Graphics and Edit -> Project Settings -> Quality.
+
+You can find pre-made RenderPipelineAssets in Multistory Dungeons 2/Settings.
+
+3) Double Click on a pack to import its contents.
+
+You can learn more about SPR here: https://unity.com/srp
+
+===================
+
+Please make sure to backup your project before updating to a new version, otherwise
+you might lose some of your progress!
+
+Note that every new level in mobile-gamma version is going to look a bit dark before the
+lighting is baked because GI is calculated in Linear color space.
+
+The pack is set up to work with lightmap resolution of 8 and above, but it is possible
+to set it to 5 and still get acceptable results especially on mobile platforms.
+
+If you have a question or comment, please email us at manastation3d@gmail.com
+
+Thank you for choosing Multistory Dungeons!
