@@ -76,8 +76,8 @@ public class Character : MonoBehaviour, IPoolable
         if (!characterObj.activeSelf)
             return;
 
-        // JML: Ensure Z position is 0 for 2D
-        Vector3 spawnPosition = new Vector3(transform.position.x, transform.position.y, 0f);
+        // JML: Use character's current position for 3D
+        Vector3 spawnPosition = transform.position;
 
         // JML: Prepare initialization data before spawning
         float speed = skillConfig != null && skillConfig.hasProjectile ?

@@ -11,8 +11,8 @@ public class Monster : BaseEntity, ITargetable, IMovable
     [SerializeField] private Animator monsterAnimator;
     [Header("References")]
     [SerializeField] private MonsterMove monsterMove;
-    [SerializeField] private Rigidbody2D rb;
-    [SerializeField] new Collider2D collider2D;
+    [SerializeField] private Rigidbody rb;
+    [SerializeField] private Collider collider3D;
     private Wall wall;
     
     [Header("Stats")]
@@ -31,11 +31,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     private void OnEnable()
     {
-        collider2D.enabled = true;
+        collider3D.enabled = true;
     }
     private void OnDisable()
     {
-        collider2D.enabled = false;
+        collider3D.enabled = false;
     }
 
     //JML: Physics-based movement in FixedUpdate
@@ -73,7 +73,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         isDead = true;
         monsterAnimator.SetTrigger("4_Death");
-        collider2D.enabled = false;
+        collider3D.enabled = false;
         // Debug.Log($"[Monster] Die() called! Exp={Exp}"); // LCB: Debug monster death
 
         // JML: Unregister BEFORE despawning to prevent accessing destroyed object
@@ -93,7 +93,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
-    private void OnTriggerEnter2D(Collider2D collision)
+    private void OnTriggerEnter(Collider collision)
     {
         if (collision.CompareTag(Tag.Wall))
         {

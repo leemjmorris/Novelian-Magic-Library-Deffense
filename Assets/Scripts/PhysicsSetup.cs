@@ -1,12 +1,12 @@
 using UnityEngine;
 
 /// <summary>
-/// Automatically configure Physics 2D Layer Collision Matrix on game start
+/// Automatically configure Physics 3D Layer Collision Matrix on game start
 /// </summary>
 public class PhysicsSetup
 {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void ConfigurePhysics2DLayers()
+    private static void ConfigurePhysicsLayers()
     {
         // Layer indices
         int wallLayer = LayerMask.NameToLayer("Wall");  // Layer 3
@@ -22,27 +22,27 @@ public class PhysicsSetup
 
         // Configure collision matrix:
         // 1. Projectile should IGNORE Wall (pass through)
-        Physics2D.IgnoreLayerCollision(projectileLayer, wallLayer, true);
+        Physics.IgnoreLayerCollision(projectileLayer, wallLayer, true);
 
         // 2. Projectile should COLLIDE with Monster (hit detection)
-        Physics2D.IgnoreLayerCollision(projectileLayer, monsterLayer, false);
+        Physics.IgnoreLayerCollision(projectileLayer, monsterLayer, false);
 
         // 3. Monster should COLLIDE with Wall (blocked by wall)
-        Physics2D.IgnoreLayerCollision(monsterLayer, wallLayer, false);
+        Physics.IgnoreLayerCollision(monsterLayer, wallLayer, false);
 
         // 4. Projectile should IGNORE UI/Character (pass through friendly units)
         if (uiLayer != -1)
         {
-            Physics2D.IgnoreLayerCollision(projectileLayer, uiLayer, true);
+            Physics.IgnoreLayerCollision(projectileLayer, uiLayer, true);
         }
 
-        Debug.Log("[PhysicsSetup] ✅ Physics 2D layer collision matrix configured!");
-        Debug.Log($"  → Projectile (Layer {projectileLayer}) IGNORES Wall (Layer {wallLayer})");
-        Debug.Log($"  → Projectile (Layer {projectileLayer}) COLLIDES with Monster (Layer {monsterLayer})");
-        Debug.Log($"  → Monster (Layer {monsterLayer}) COLLIDES with Wall (Layer {wallLayer})");
+        Debug.Log("[PhysicsSetup] Physics 3D layer collision matrix configured!");
+        Debug.Log($"  -> Projectile (Layer {projectileLayer}) IGNORES Wall (Layer {wallLayer})");
+        Debug.Log($"  -> Projectile (Layer {projectileLayer}) COLLIDES with Monster (Layer {monsterLayer})");
+        Debug.Log($"  -> Monster (Layer {monsterLayer}) COLLIDES with Wall (Layer {wallLayer})");
         if (uiLayer != -1)
         {
-            Debug.Log($"  → Projectile (Layer {projectileLayer}) IGNORES UI/Character (Layer {uiLayer})");
+            Debug.Log($"  -> Projectile (Layer {projectileLayer}) IGNORES UI/Character (Layer {uiLayer})");
         }
     }
 }

@@ -1,12 +1,12 @@
 using UnityEngine;
 
-//JML: World coordinate-based 2D Sprite grid slot
+//JML: World coordinate-based 3D grid slot
 //     Represents a position where characters can be placed
 public class GridSlot : MonoBehaviour
 {
     [Header("Slot Info")]
     [SerializeField] private int slotIndex;             // Slot number (0-9)
-    [SerializeField] private SpriteRenderer spriteRenderer; // Grid visualization
+    [SerializeField] private MeshRenderer meshRenderer; // Grid visualization (3D)
 
     [Header("Slot State")]
     private GameObject currentCharacter;  // Currently placed character GameObject
@@ -14,10 +14,10 @@ public class GridSlot : MonoBehaviour
 
     private void Awake()
     {
-        // Auto-setup SpriteRenderer
-        if (spriteRenderer == null)
+        // Auto-setup MeshRenderer
+        if (meshRenderer == null)
         {
-            spriteRenderer = GetComponent<SpriteRenderer>();
+            meshRenderer = GetComponent<MeshRenderer>();
         }
     }
 
@@ -31,18 +31,18 @@ public class GridSlot : MonoBehaviour
     //JML: Show grid
     public void ShowGrid()
     {
-        if (spriteRenderer != null)
+        if (meshRenderer != null)
         {
-            spriteRenderer.enabled = true;
+            meshRenderer.enabled = true;
         }
     }
 
     //JML: Hide grid
     public void HideGrid()
     {
-        if (spriteRenderer != null)
+        if (meshRenderer != null)
         {
-            spriteRenderer.enabled = false;
+            meshRenderer.enabled = false;
         }
     }
 

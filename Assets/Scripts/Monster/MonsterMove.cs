@@ -1,9 +1,9 @@
 using UnityEngine;
 
-//JML: Generic movement controller for all movable entities using Rigidbody2D
+//JML: Generic movement controller for all movable entities using Rigidbody
 public class MonsterMove : MonoBehaviour
 {
-    [SerializeField] private Rigidbody2D rb;
+    [SerializeField] private Rigidbody rb;
     [SerializeField] private Animator monsterAnimator;
 
     //JML: Generic movement method using velocity-based physics
@@ -11,12 +11,12 @@ public class MonsterMove : MonoBehaviour
     {
         if (!entity.IsWallHit)
         {
-            rb.linearVelocity = Vector2.down * speed;
+            rb.linearVelocity = Vector3.back * speed;
             monsterAnimator.SetBool("1_Move", true);
         }
         else
         {
-            //rb.linearVelocity = Vector2.zero;
+            //rb.linearVelocity = Vector3.zero;
             monsterAnimator.SetBool("1_Move", false);
         }
     }

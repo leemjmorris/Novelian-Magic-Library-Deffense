@@ -18,8 +18,9 @@ public class CharacterPlacementManager : MonoBehaviour
     [SerializeField] private int gridColumns = 5;        // 5 columns
     [SerializeField] private int gridRows = 2;           // 2 rows
     [SerializeField] private float gridSpacingX = 1.5f;  // X spacing
-    [SerializeField] private float gridSpacingY = 1.5f;  // Y spacing
-    [SerializeField] private Vector3 gridStartPosition = new Vector3(-3f, 0.75f, 0f); // Start position
+    [SerializeField] private float gridSpacingZ = 1.5f;  // Z spacing
+    [SerializeField] private Vector3 gridStartPosition = new Vector3(-3f, 0f, 0.75f); // Start position (XZ plane)
+    [SerializeField] private float gridPlaneY = 0f;      // Y height of the grid plane
 
     // Grid slot list
     private List<GridSlot> gridSlots = new List<GridSlot>();
@@ -108,11 +109,11 @@ public class CharacterPlacementManager : MonoBehaviour
         {
             for (int col = 0; col < gridColumns; col++)
             {
-                // Calculate grid position
+                // Calculate grid position (XZ plane)
                 Vector3 position = gridStartPosition + new Vector3(
                     col * gridSpacingX,
-                    -row * gridSpacingY,
-                    0f
+                    0f,
+                    -row * gridSpacingZ
                 );
 
                 // Create GridSlot
@@ -202,21 +203,14 @@ public class CharacterPlacementManager : MonoBehaviour
     {
         Debug.Log($"[CharacterPlacementManager] HandleLongPressStart called! screenPosition={screenPosition}");
 
-        // Convert screen coordinates to world coordinates
-        // Use absolute distance from camera to character plane
-        float distanceToCharacterPlane = Mathf.Abs(mainCamera.transform.position.z - gridStartPosition.z);
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, distanceToCharacterPlane));
+        // Convert screen coordinates to world coordinates using raycast to grid plane
+        Ray ray = mainCamera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
 
-        Debug.Log($"[CharacterPlacementManager] worldPosition={worldPosition}, camera.z={mainCamera.transform.position.z}, distance={distanceToCharacterPlane}");
-
-        // Detect character with Raycast2D
-        RaycastHit2D hit = Physics2D.Raycast(worldPosition, Vector2.zero);
-        Debug.Log($"[CharacterPlacementManager] Raycast hit={hit.collider?.gameObject.name ?? "null"}");
-
-        if (hit.collider != null)
+        // Raycast to detect character
+        if (Physics.Raycast(ray, out RaycastHit hit))
         {
             GameObject hitObject = hit.collider.gameObject;
-            Debug.Log($"[CharacterPlacementManager] Hit object: {hitObject.name}");
+            Debug.Log($"[CharacterPlacementManager] Raycast hit={hitObject.name}");
 
             // Check if it's a character
             GridSlot ownerSlot = FindSlotByCharacter(hitObject);
@@ -233,6 +227,10 @@ public class CharacterPlacementManager : MonoBehaviour
                 Debug.Log($"[CharacterPlacementManager] Character drag started: slot {ownerSlot.GetSlotIndex()}");
             }
         }
+        else
+        {
+            Debug.Log("[CharacterPlacementManager] Raycast hit nothing");
+        }
     }
 
     //JML: Dragging (position update)
@@ -240,12 +238,17 @@ public class CharacterPlacementManager : MonoBehaviour
     {
         if (draggingCharacter == null) return;
 
-        // Convert screen coordinates to world coordinates
-        float distanceToCharacterPlane = Mathf.Abs(mainCamera.transform.position.z - gridStartPosition.z);
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, distanceToCharacterPlane));
+        // Convert screen coordinates to world position on the grid plane (Y = gridPlaneY)
+        Ray ray = mainCamera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
+        Plane gridPlane = new Plane(Vector3.up, new Vector3(0f, gridPlaneY, 0f));
 
-        // Update character position
-        draggingCharacter.transform.position = worldPosition;
+        if (gridPlane.Raycast(ray, out float distance))
+        {
+            Vector3 worldPosition = ray.GetPoint(distance);
+            // Keep the character at grid height
+            worldPosition.y = gridPlaneY;
+            draggingCharacter.transform.position = worldPosition;
+        }
     }
 
     //JML: Drop (finger/mouse released)
@@ -253,9 +256,15 @@ public class CharacterPlacementManager : MonoBehaviour
     {
         if (draggingCharacter == null) return;
 
-        // Convert screen coordinates to world coordinates
-        float distanceToCharacterPlane = Mathf.Abs(mainCamera.transform.position.z - gridStartPosition.z);
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, distanceToCharacterPlane));
+        // Convert screen coordinates to world position on the grid plane
+        Ray ray = mainCamera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
+        Plane gridPlane = new Plane(Vector3.up, new Vector3(0f, gridPlaneY, 0f));
+        Vector3 worldPosition = Vector3.zero;
+
+        if (gridPlane.Raycast(ray, out float distance))
+        {
+            worldPosition = ray.GetPoint(distance);
+        }
 
         // Check if there's a GridSlot at drop position
         GridSlot targetSlot = FindSlotAtPosition(worldPosition);

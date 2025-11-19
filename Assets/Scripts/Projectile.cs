@@ -1,11 +1,11 @@
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
-//JML: Projectile with Rigidbody2D-based movement and target tracking
+//JML: Projectile with Rigidbody-based movement and target tracking
 public class Projectile : MonoBehaviour, IPoolable
 {
     [Header("Projectile Attributes")]
-    [SerializeField] private Rigidbody2D rb;
+    [SerializeField] private Rigidbody rb;
 
     // JML: Damage is still set via Inspector (not in CSV yet)
     [SerializeField] private float damage = 10f;
@@ -15,7 +15,7 @@ public class Projectile : MonoBehaviour, IPoolable
     private float lifetime = 5f;
     private float spawnTime;
 
-    private Vector2 direction;
+    private Vector3 direction;
     private bool isInitialized = false;  // JML: Flag to prevent FixedUpdate before initialization
 
     //JML: Update for lifetime management only
@@ -32,18 +32,19 @@ public class Projectile : MonoBehaviour, IPoolable
     private void FixedUpdate()
     {
         // JML: Defense code - wait until initialization is complete
-        if (!isInitialized || direction == Vector2.zero)
+        if (!isInitialized || direction == Vector3.zero)
         {
-            rb.linearVelocity = Vector2.zero;
+            rb.linearVelocity = Vector3.zero;
             return;
         }
 
         rb.linearVelocity = direction * speed;
 
         // JML: Rotate projectile to face movement direction
-        // Calculate angle from direction vector (in degrees)
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        if (direction != Vector3.zero)
+        {
+            transform.rotation = Quaternion.LookRotation(direction);
+        }
     }
 
     /// <summary>
@@ -68,28 +69,28 @@ public class Projectile : MonoBehaviour, IPoolable
         // 2. Calculate and set direction immediately
         if (target != null)
         {
-            Vector2 targetPosition = new Vector2(target.position.x, target.position.y);
-            Vector2 projectilePosition = new Vector2(transform.position.x, transform.position.y);
+            Vector3 targetPosition = target.position;
+            Vector3 projectilePosition = transform.position;
 
             // Try to predict target's future position based on velocity
-            Rigidbody2D targetRb = target.GetComponent<Rigidbody2D>();
+            Rigidbody targetRb = target.GetComponent<Rigidbody>();
             if (targetRb != null && targetRb.linearVelocity.sqrMagnitude > 0.01f)
             {
-                Vector2 targetVelocity = targetRb.linearVelocity;
+                Vector3 targetVelocity = targetRb.linearVelocity;
 
                 // Simple prediction: use 50% of estimated time to reduce over-prediction
-                float distance = Vector2.Distance(projectilePosition, targetPosition);
+                float distance = Vector3.Distance(projectilePosition, targetPosition);
                 float timeToReach = (distance / speed) * 0.5f;
 
                 // Predict where target will be after that time
-                Vector2 predictedPosition = targetPosition + (targetVelocity * timeToReach);
+                Vector3 predictedPosition = targetPosition + (targetVelocity * timeToReach);
 
                 // Aim at predicted position for better accuracy
                 direction = (predictedPosition - projectilePosition).normalized;
             }
             else
             {
-                // Fallback: direct aim if target has no Rigidbody2D or is stationary
+                // Fallback: direct aim if target has no Rigidbody or is stationary
                 direction = (targetPosition - projectilePosition).normalized;
             }
         }
@@ -102,23 +103,23 @@ public class Projectile : MonoBehaviour, IPoolable
     {
         if (target != null)
         {
-            Vector2 targetPosition = new Vector2(target.position.x, target.position.y);
-            Vector2 projectilePosition = new Vector2(transform.position.x, transform.position.y);
+            Vector3 targetPosition = target.position;
+            Vector3 projectilePosition = transform.position;
 
             // Debug.Log($"[Projectile] SetTarget - Projectile Pos: {projectilePosition}, Target Pos: {targetPosition}");
 
             // Try to predict target's future position based on velocity
-            Rigidbody2D targetRb = target.GetComponent<Rigidbody2D>();
+            Rigidbody targetRb = target.GetComponent<Rigidbody>();
             if (targetRb != null && targetRb.linearVelocity.sqrMagnitude > 0.01f)
             {
-                Vector2 targetVelocity = targetRb.linearVelocity;
+                Vector3 targetVelocity = targetRb.linearVelocity;
 
                 // Simple prediction: use 50% of estimated time to reduce over-prediction
-                float distance = Vector2.Distance(projectilePosition, targetPosition);
+                float distance = Vector3.Distance(projectilePosition, targetPosition);
                 float timeToReach = (distance / speed) * 0.5f;
 
                 // Predict where target will be after that time
-                Vector2 predictedPosition = targetPosition + (targetVelocity * timeToReach);
+                Vector3 predictedPosition = targetPosition + (targetVelocity * timeToReach);
 
                 // Aim at predicted position for better accuracy
                 direction = (predictedPosition - projectilePosition).normalized;
@@ -127,16 +128,16 @@ public class Projectile : MonoBehaviour, IPoolable
             }
             else
             {
-                // Fallback: direct aim if target has no Rigidbody2D or is stationary
+                // Fallback: direct aim if target has no Rigidbody or is stationary
                 direction = (targetPosition - projectilePosition).normalized;
 
                 // Debug.Log($"[Projectile] Direct aim - Direction: {direction}");
             }
         }
     }
-    
+
     //JML: Handle collision with monsters
-    private void OnTriggerEnter2D(Collider2D collision)
+    private void OnTriggerEnter(Collider collision)
     {
         if (collision.CompareTag(Tag.Monster))
         {
@@ -166,8 +167,8 @@ public class Projectile : MonoBehaviour, IPoolable
     //JML: Reset projectile state on spawn
     public void OnSpawn()
     {
-        direction = Vector2.zero;
-        rb.linearVelocity = Vector2.zero;
+        direction = Vector3.zero;
+        rb.linearVelocity = Vector3.zero;
         spawnTime = 0f;  // Reset spawn time for pool reuse
         isInitialized = false;  // JML: Reset initialization flag
 
@@ -183,8 +184,8 @@ public class Projectile : MonoBehaviour, IPoolable
     //JML: Clean up projectile state on despawn
     public void OnDespawn()
     {
-        direction = Vector2.zero;
-        rb.linearVelocity = Vector2.zero;
+        direction = Vector3.zero;
+        rb.linearVelocity = Vector3.zero;
         spawnTime = 0f;  // Reset spawn time
     }
 }
