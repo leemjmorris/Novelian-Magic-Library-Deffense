@@ -4,17 +4,31 @@ using UnityEngine;
 using UnityEngine.UI;
 public class BookMarkCraft : MonoBehaviour
 {
-    [Header("Craft Button")]
+    [Header("Button")]
     [SerializeField] private Button CraftButton;
     [SerializeField] private Button AddIngredientButton;
+    [SerializeField] private Button GetListButton;  //TODO JML: 테스트용 북마크 리스트 확인 버튼 제가 안지워도 본 사람이 있으면 지워주세요
 
     [Header("Ingredient Text")]
     [SerializeField] private TextMeshProUGUI IngredientText;
-    List<int> resultIds = new List<int>();
+
+    //-----------------------------------
+    //JML: BookMark List
+    private List<BookMark> bookMarks = new List<BookMark>();    //JML: Inventory of bookmarks
+
+    // JML: Result Ids for bookmarks
+    private List<int> resultIds = new List<int>();
+
+    // JML: BookmarkItem Data
+    private BookmarkItemData bookmarkData;
+
     private void Start()
     {
         CraftButton.onClick.AddListener(OnClickCraftButton);
         AddIngredientButton.onClick.AddListener(OnClickAddIngredientButton);
+
+        //TODO JML: 테스트용 북마크 리스트 확인 버튼 제가 안지워도 본 사람이 있다면 지워주세요
+        GetListButton.onClick.AddListener(OnClickGetListButton);
     } 
 
     private void OnClickCraftButton()
@@ -22,12 +36,20 @@ public class BookMarkCraft : MonoBehaviour
         CraftBookMark();
         UpdateUI($"이름: {IngredientManager.Instance.GetIngredientName(102113)} 수량:{IngredientManager.Instance.GetIngredientCount(102113)}\n이름:{IngredientManager.Instance.GetIngredientName(102118)} 수량:{IngredientManager.Instance.GetIngredientCount(102118)}");
     }
+
     private void OnClickAddIngredientButton()
     {
         IngredientManager.Instance.AddIngredient(102113, 10); //JML: 재료1 추가
         IngredientManager.Instance.AddIngredient(102118, 10); //JML: 재료2 추가
         UpdateUI($"이름: {IngredientManager.Instance.GetIngredientName(102113)} 수량:{IngredientManager.Instance.GetIngredientCount(102113)}\n이름:{IngredientManager.Instance.GetIngredientName(102118)} 수량:{IngredientManager.Instance.GetIngredientCount(102118)}");
     }
+
+    //TODO JML: 테스트용 북마크 리스트 확인 버튼 제가 안지워도 본 사람이 있다면 지워주세요
+    private void OnClickGetListButton()
+    {
+        GetListBookMark();
+    }
+
     private void CraftBookMark()
     {
         var BookmarkCraftData = CSVLoader.Instance.GetTable<BookmarkCraftData>().GetId(111);
@@ -68,6 +90,7 @@ public class BookMarkCraft : MonoBehaviour
             }
             IngredientManager.Instance.RemoveIngredient(BookmarkCraftData.Material_1_ID, count1);
             IngredientManager.Instance.RemoveIngredient(BookmarkCraftData.Material_2_ID, count2);
+            AddListBookMark(); //JML: Add a new bookmark to inventory
         }
     }
 
@@ -80,8 +103,22 @@ public class BookMarkCraft : MonoBehaviour
     private void BookmarkStatUpdate(int id)
     {
         Debug.Log($"획득한 북마크 ID: {id}");
-        var bookmarkData = CSVLoader.Instance.GetData<BookmarkItemData>(id);
+        bookmarkData = CSVLoader.Instance.GetData<BookmarkItemData>(id);
         Debug.Log($"북마크 등급: {bookmarkData.Grade}, 옵션 타입: {bookmarkData.Option_Type}, 옵션 값: {bookmarkData.Option_Value}");
+    }
+
+    // TODO JML: 여기에 있어도 괜찮을까 명진이형이랑 상의 필요
+    private void AddListBookMark()
+    {
+        bookMarks.Add(new BookMark("책갈피", (Grade)bookmarkData.Grade, bookmarkData.Option_Type, bookmarkData.Option_Value)); //JML: Add a new bookmark to inventory
+    }
+
+    public void GetListBookMark()
+    {
+        foreach (var bookmark in bookMarks)
+        {
+            Debug.Log(bookmark.ToString());
+        }
     }
 
     private void UpdateUI(string text)

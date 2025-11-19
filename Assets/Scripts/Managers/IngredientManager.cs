@@ -33,10 +33,10 @@ public class IngredientManager : MonoBehaviour
         return data?.Item_Name ?? "Unknown";
     }
 
-    public ItemGrade GetIngredientGrade(int id)
+    public Grade GetIngredientGrade(int id)
     {
         var data = GetIngredientInfo(id);
-        return data?.Item_Grade ?? ItemGrade.Common;
+        return data?.Item_Grade ?? Grade.Common;
     }
 
     public ItemType GetIngredientType(int id)

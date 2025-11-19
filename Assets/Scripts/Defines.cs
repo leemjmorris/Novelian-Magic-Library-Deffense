@@ -19,6 +19,7 @@ public static class AddressableKey
     public static readonly string BookmarkResultTable = "BookmarkResultTable";
     public static readonly string BookmarkOptionTable = "BookmarkOptionTable";
     public static readonly string BookmarkItemTable = "BookmarkItemTable";
+    public static readonly string GradeTable = "GradeTable";
 
     public static string GetCharacterKey(int characterId)
     {
@@ -61,14 +62,13 @@ public enum ItemType
     Special = 3,
 }
 
-public enum ItemGrade
+public enum Grade
 {
     Common = 1,
     Rare = 2,
     Unique = 3,
     Legendary = 4,
     Mythic = 5,
-    Special = 6
 }
 public enum UseType
 {

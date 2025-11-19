@@ -47,15 +47,14 @@ public class CSVLoader : MonoBehaviour
             await UniTask.WhenAll(
                 RegisterTableAsync<TestData>("Test", x => x.ID),
                 RegisterTableAsync<TestData2>("Test2", x => x.ID),
+
+                // JML: Register new CSV tables here
                 RegisterTableAsync<ItemData>(AddressableKey.ItemTable, x => x.Item_ID),
                 RegisterTableAsync<BookmarkCraftData>(AddressableKey.BookmarkCraftTable, x => x.Recipe_ID),
                 RegisterTableAsync<BookmarkResultData>(AddressableKey.BookmarkResultTable, x => x.Result_ID),
                 RegisterTableAsync<BookmarkOptionData>(AddressableKey.BookmarkOptionTable, x => x.Option_ID),
-                RegisterTableAsync<BookmarkItemData>(AddressableKey.BookmarkItemTable, x => x.Bookmark_ID)
-
-                // Add new tables here (just one line per table)
-                // RegisterTableAsync<StageData>("StageData", x => x.ID),
-                // RegisterTableAsync<MonsterData>("MonsterData", x => x.ID)
+                RegisterTableAsync<BookmarkItemData>(AddressableKey.BookmarkItemTable, x => x.Bookmark_ID),
+                RegisterTableAsync<GradeData>(AddressableKey.GradeTable, x => x.Grade_ID)
             );
 
             IsInit = true;
