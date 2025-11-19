@@ -19,22 +19,4 @@ public class SkillData
     public int Order2 { get; set; }
 }
 
-/// <summary>
-/// Skill Type Enum: 1=Attack, 2=Buff, 3=Debuff
-/// </summary>
-public enum SkillType
-{
-    Attack = 1,
-    Buff = 2,
-    Debuff = 3
-}
 
-/// <summary>
-/// Attack Range Enum: 1=Single, 2=Area, 3=Wide
-/// </summary>
-public enum AttackRange
-{
-    Single = 1,
-    Area = 2,
-    Wide = 3
-}
