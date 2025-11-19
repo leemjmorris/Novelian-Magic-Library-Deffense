@@ -20,8 +20,7 @@ public class BookmarkResultData
 {
     public int Result_ID { get; set; }
     public int Grade { get; set; }
-    public int Min_Option_ID { get; set; }
-    public int Max_Option_ID { get; set; }
+    public int Option_ID { get; set; }
 }
 
 [Serializable]
@@ -30,8 +29,8 @@ public class BookmarkOptionData
     public int Option_ID { get; set; }
     public string Option_Name { get; set; }
     public int Grade { get; set; }
-    public string Min_Value { get; set; }
-    public string Max_Value { get; set; }
+    public int Min_Value { get; set; }
+    public int Max_Value { get; set; }
     public int Bookmark_1_ID { get; set; }
     public int Bookmark_2_ID { get; set; }
     public int Bookmark_3_ID { get; set; }
