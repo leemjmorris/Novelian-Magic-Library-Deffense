@@ -30,6 +30,11 @@ public static class AddressableKey
     {
         return $"CardSprite_{characterId}";
     }
+
+    public static string GetItemIconKey(int itemId)
+    {
+        return $"ItemIcon_{itemId}";
+    }
 }
 
 /// <summary>
