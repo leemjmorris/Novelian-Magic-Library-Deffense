@@ -2,12 +2,16 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
+using NovelianMagicLibraryDefense.Core;
+
 public class BookMarkCraft : MonoBehaviour
 {
     [Header("Button")]
     [SerializeField] private Button CraftButton;
     [SerializeField] private Button AddIngredientButton;
     [SerializeField] private Button GetListButton;  //TODO JML: 테스트용 북마크 리스트 확인 버튼 제가 안지워도 본 사람이 있으면 지워주세요
+    [SerializeField] private Button BackToLobbyButton;  // 로비로 돌아가기 버튼
 
     [Header("Ingredient Text")]
     [SerializeField] private TextMeshProUGUI IngredientText;
@@ -29,6 +33,12 @@ public class BookMarkCraft : MonoBehaviour
 
         //TODO JML: 테스트용 북마크 리스트 확인 버튼 제가 안지워도 본 사람이 있다면 지워주세요
         GetListButton.onClick.AddListener(OnClickGetListButton);
+
+        // 로비로 돌아가기 버튼 리스너 설정
+        if (BackToLobbyButton != null)
+        {
+            BackToLobbyButton.onClick.AddListener(OnClickBackToLobbyButton);
+        }
     } 
 
     private void OnClickCraftButton()
@@ -39,8 +49,8 @@ public class BookMarkCraft : MonoBehaviour
 
     private void OnClickAddIngredientButton()
     {
-        IngredientManager.Instance.AddIngredient(102113, 10); //JML: 재료1 추가
-        IngredientManager.Instance.AddIngredient(102118, 10); //JML: 재료2 추가
+        IngredientManager.Instance.AddIngredient(102113, 1000); //JML: 재료1 추가
+        IngredientManager.Instance.AddIngredient(102118, 1000); //JML: 재료2 추가
         UpdateUI($"이름: {IngredientManager.Instance.GetIngredientName(102113)} 수량:{IngredientManager.Instance.GetIngredientCount(102113)}\n이름:{IngredientManager.Instance.GetIngredientName(102118)} 수량:{IngredientManager.Instance.GetIngredientCount(102118)}");
     }
 
@@ -123,5 +133,23 @@ public class BookMarkCraft : MonoBehaviour
     private void UpdateUI(string text)
     {
         IngredientText.text = text;
+    }
+
+    /// <summary>
+    /// 로비로 돌아가기 버튼 클릭 이벤트
+    /// FadeController를 사용하여 페이드 효과와 함께 LobbyScene으로 이동
+    /// </summary>
+    private void OnClickBackToLobbyButton()
+    {
+        Debug.Log("[BookMarkCraft] 로비로 돌아가기 - LobbyScene으로 이동");
+        LoadLobbySceneAsync().Forget();
+    }
+
+    /// <summary>
+    /// LobbyScene 비동기 로드 (페이드 효과 포함)
+    /// </summary>
+    private async UniTaskVoid LoadLobbySceneAsync()
+    {
+        await FadeController.Instance.LoadSceneWithFade("LobbyScene");
     }
 }
