@@ -16,15 +16,17 @@ public class BookMarkCraftSys : MonoBehaviour
     [SerializeField] private GameObject bookMarkCraftUI;
     [SerializeField] private GameObject bookMarkRecipeUI;
     [SerializeField] private GameObject bookMarkResultUI;
+    [SerializeField] private GameObject craftFailUI;
     
     [Header("Close Button")]
-    [SerializeField] private Button closeButton;
+    [SerializeField] private Button recipeCloseButton;
+    [SerializeField] private Button craftCloseButton;
     
     [Header("Buttons")]
     [SerializeField] private Button confirmYesButton;
     [SerializeField] private Button confirmNoButton;
     [SerializeField] private Button craftingButton;
-
+   
     [Header("Craft Text Fields")]
     [SerializeField] private TextMeshProUGUI meaterial1NameText;
     [SerializeField] private TextMeshProUGUI material2NameText;
@@ -66,11 +68,12 @@ public class BookMarkCraftSys : MonoBehaviour
             int index = i; // Capture the current index
             recipeButtons[i].onClick.AddListener(() => OnClickRecipeButton(index));
         }
-        closeButton.onClick.AddListener(() => OnclickCloseButton().Forget());
+        recipeCloseButton.onClick.AddListener(() => OnclickCloseButton().Forget());
+        craftCloseButton.onClick.AddListener(OnclickCraftCloseButton);
 
         confirmYesButton.onClick.AddListener(OnClickConfirmYesButton);
         confirmNoButton.onClick.AddListener(OnClickConfirmNoButton);
-        craftingButton.onClick.AddListener(OnClickCraftingButton);
+        craftingButton.onClick.AddListener(() => OnClickCraftingButton().Forget());
 
         AddIngredientButton.onClick.AddListener(OnClickAddIngredientButton); // JML: Test function for adding ingredients
 
@@ -92,6 +95,12 @@ public class BookMarkCraftSys : MonoBehaviour
         await SceneManager.LoadSceneAsync("LobbyScene");
     }
 
+    private void OnclickCraftCloseButton()
+    {
+        bookMarkCraftUI.SetActive(false);
+        bookMarkRecipeUI.SetActive(true);
+    }
+
     private void OnClickRecipeButton(int index)
     {
         if (index != 0) return; //JML: Test only first recipe
@@ -109,15 +118,20 @@ public class BookMarkCraftSys : MonoBehaviour
         Debug.Log("제작 버튼이 클릭되었습니다.");
     }
 
-    private void OnClickCraftingButton()
+    private async UniTaskVoid OnClickCraftingButton()
     {
         if(CraftBookMark())
         {
             UpdateResultUI().Forget();
             bookMarkResultUI.SetActive(true);
             bookMarkCraftUI.SetActive(false);
-        } 
-        //TODO JML: 제작 실패시 처리 필요
+        }
+        else
+        {
+            craftFailUI.SetActive(true);
+            await Task.Delay(2000); //JML: Wait for 2 seconds
+            craftFailUI.SetActive(false);
+        }
     }
 
     private void OnClickConfirmNoButton()
