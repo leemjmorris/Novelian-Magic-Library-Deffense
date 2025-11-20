@@ -9,6 +9,7 @@ public class BookmarkCraftData
     public int Material_1_Count { get; set; }
     public int Material_2_ID { get; set; }
     public int Material_2_Count { get; set; }
+    public int Gold { get; set; }
     public float Success_Rate { get; set; }
     public float Great_Success_Rate { get; set; }
     public int Result_Grade { get; set; }

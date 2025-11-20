@@ -107,7 +107,6 @@ public class BookMarkCraft : MonoBehaviour
         Debug.Log($"북마크 등급: {bookmarkData.Grade}, 옵션 타입: {bookmarkData.Option_Type}, 옵션 값: {bookmarkData.Option_Value}");
     }
 
-    // TODO JML: 여기에 있어도 괜찮을까 명진이형이랑 상의 필요
     private void AddListBookMark()
     {
         bookMarks.Add(new BookMark("책갈피", (Grade)bookmarkData.Grade, bookmarkData.Option_Type, bookmarkData.Option_Value)); //JML: Add a new bookmark to inventory
