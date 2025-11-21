@@ -187,6 +187,7 @@ public class BookMarkCraftSys : MonoBehaviour
             }
             IngredientManager.Instance.RemoveIngredient(BookmarkCraftData.Material_1_ID, count1);
             IngredientManager.Instance.RemoveIngredient(BookmarkCraftData.Material_2_ID, count2);
+            CurrencyManager.Instance.SpendGold(BookmarkCraftData.Gold);
             AddListBookMark(); //JML: Add a new bookmark to inventory
             return true;
         }
@@ -208,7 +209,19 @@ public class BookMarkCraftSys : MonoBehaviour
 
     private void AddListBookMark()
     {
-        bookMarks.Add(new BookMark("책갈피", (Grade)bookmarkData.Grade, bookmarkData.Option_Type, bookmarkData.Option_Value)); //JML: Add a new bookmark to inventory
+        var newBookmark = new BookMark("책갈피", (Grade)bookmarkData.Grade, bookmarkData.Option_Type, bookmarkData.Option_Value);
+        bookMarks.Add(newBookmark); //JML: Add a new bookmark to inventory
+
+        //TODO JML: 2차 빌드 후 삭제 예정 - TempBookMarkManager에 책갈피 저장
+        if (TempBookMarkManager.Instance != null)
+        {
+            TempBookMarkManager.Instance.AddBookmark(newBookmark);
+            Debug.Log("[BookMarkCraftSys] 책갈피가 TempBookMarkManager에 추가되었습니다.");
+        }
+        else
+        {
+            Debug.LogWarning("[BookMarkCraftSys] TempBookMarkManager 인스턴스가 없습니다. Hierarchy에 생성해주세요.");
+        }
     }
 
     public void GetListBookMark()
@@ -267,6 +280,7 @@ public class BookMarkCraftSys : MonoBehaviour
         resultOptionText.text = $"노말 책갈피\n옵션 등급: {bookmarkData.Grade}\n공격력: {bookmarkData.Option_Value}";
         
         await Task.Delay(3000); //JML: Wait a frame for UI update
+        bookMarkResultUI.SetActive(false);
         bookMarkCraftUI.SetActive(true);
         isGreatSuccess = false; //JML: Reset great success flag
     }
