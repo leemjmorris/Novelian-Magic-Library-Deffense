@@ -18,6 +18,11 @@ public class Projectile : MonoBehaviour, IPoolable
     private Vector3 direction;
     private bool isInitialized = false;  // JML: Flag to prevent FixedUpdate before initialization
 
+    // Homing projectile support
+    private Transform homingTarget;
+    private bool isHoming = false;
+    [SerializeField] private float homingStrength = 5f; // How aggressively it tracks target
+
     //JML: Update for lifetime management only
     private void Update()
     {
@@ -36,6 +41,13 @@ public class Projectile : MonoBehaviour, IPoolable
         {
             rb.linearVelocity = Vector3.zero;
             return;
+        }
+
+        // Homing behavior: Update direction towards target
+        if (isHoming && homingTarget != null)
+        {
+            Vector3 targetDirection = (homingTarget.position - transform.position).normalized;
+            direction = Vector3.Lerp(direction, targetDirection, homingStrength * Time.fixedDeltaTime).normalized;
         }
 
         rb.linearVelocity = direction * speed;
@@ -60,42 +72,29 @@ public class Projectile : MonoBehaviour, IPoolable
     /// JML: Initialize and set target atomically (before first FixedUpdate)
     /// This prevents the race condition where FixedUpdate runs before SetTarget
     /// </summary>
-    public void InitializeAndSetTarget(float projectileSpeed, float projectileLifetime, Transform target)
+    public void InitializeAndSetTarget(float projectileSpeed, float projectileLifetime, Transform target, bool enableHoming = true)
     {
         // 1. Set speed and lifetime
         speed = projectileSpeed;
         lifetime = projectileLifetime;
 
-        // 2. Calculate and set direction immediately
+        // 2. Set homing target
+        homingTarget = target;
+        isHoming = enableHoming;
+
+        // 3. Calculate initial direction: Simply aim at target (LookAt behavior)
         if (target != null)
         {
             Vector3 targetPosition = target.position;
             Vector3 projectilePosition = transform.position;
 
-            // Try to predict target's future position based on velocity
-            Rigidbody targetRb = target.GetComponent<Rigidbody>();
-            if (targetRb != null && targetRb.linearVelocity.sqrMagnitude > 0.01f)
-            {
-                Vector3 targetVelocity = targetRb.linearVelocity;
+            // Simple direct aim at target's current position
+            direction = (targetPosition - projectilePosition).normalized;
 
-                // Simple prediction: use 50% of estimated time to reduce over-prediction
-                float distance = Vector3.Distance(projectilePosition, targetPosition);
-                float timeToReach = (distance / speed) * 0.5f;
-
-                // Predict where target will be after that time
-                Vector3 predictedPosition = targetPosition + (targetVelocity * timeToReach);
-
-                // Aim at predicted position for better accuracy
-                direction = (predictedPosition - projectilePosition).normalized;
-            }
-            else
-            {
-                // Fallback: direct aim if target has no Rigidbody or is stationary
-                direction = (targetPosition - projectilePosition).normalized;
-            }
+            Debug.Log($"[Projectile] Aiming at target: {targetPosition}, from: {projectilePosition}, homing: {isHoming}");
         }
 
-        // 3. Mark as initialized (enables FixedUpdate movement)
+        // 4. Mark as initialized (enables FixedUpdate movement)
         isInitialized = true;
     }
 
@@ -106,33 +105,8 @@ public class Projectile : MonoBehaviour, IPoolable
             Vector3 targetPosition = target.position;
             Vector3 projectilePosition = transform.position;
 
-            // Debug.Log($"[Projectile] SetTarget - Projectile Pos: {projectilePosition}, Target Pos: {targetPosition}");
-
-            // Try to predict target's future position based on velocity
-            Rigidbody targetRb = target.GetComponent<Rigidbody>();
-            if (targetRb != null && targetRb.linearVelocity.sqrMagnitude > 0.01f)
-            {
-                Vector3 targetVelocity = targetRb.linearVelocity;
-
-                // Simple prediction: use 50% of estimated time to reduce over-prediction
-                float distance = Vector3.Distance(projectilePosition, targetPosition);
-                float timeToReach = (distance / speed) * 0.5f;
-
-                // Predict where target will be after that time
-                Vector3 predictedPosition = targetPosition + (targetVelocity * timeToReach);
-
-                // Aim at predicted position for better accuracy
-                direction = (predictedPosition - projectilePosition).normalized;
-
-                // Debug.Log($"[Projectile] Prediction - Velocity: {targetVelocity}, Time: {timeToReach:F2}s, Predicted: {predictedPosition}, Direction: {direction}");
-            }
-            else
-            {
-                // Fallback: direct aim if target has no Rigidbody or is stationary
-                direction = (targetPosition - projectilePosition).normalized;
-
-                // Debug.Log($"[Projectile] Direct aim - Direction: {direction}");
-            }
+            // Simple direct aim at target's current position
+            direction = (targetPosition - projectilePosition).normalized;
         }
     }
 
@@ -172,6 +146,10 @@ public class Projectile : MonoBehaviour, IPoolable
         spawnTime = 0f;  // Reset spawn time for pool reuse
         isInitialized = false;  // JML: Reset initialization flag
 
+        // Reset homing
+        homingTarget = null;
+        isHoming = false;
+
         // JML: Ensure all particle systems follow the projectile
         ParticleSystem[] particleSystems = GetComponentsInChildren<ParticleSystem>();
         foreach (var ps in particleSystems)
@@ -187,5 +165,9 @@ public class Projectile : MonoBehaviour, IPoolable
         direction = Vector3.zero;
         rb.linearVelocity = Vector3.zero;
         spawnTime = 0f;  // Reset spawn time
+
+        // Reset homing
+        homingTarget = null;
+        isHoming = false;
     }
 }

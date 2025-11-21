@@ -1,395 +1,128 @@
 using NovelianMagicLibraryDefense.Core;
-using NovelianMagicLibraryDefense.Events;
+using NovelianMagicLibraryDefense.UI;
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 
 namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
-    /// LCB/LMJ: Central UI manager that handles all UI elements and button interactions
-    /// Converted to MonoBehaviour for Inspector integration and event system compatibility
-    /// Manages monster count, wave timer, barrier HP, and button interactions
+    /// LMJ: Lightweight UI coordinator that connects UI components
+    /// Delegates to specialized UI components for actual functionality
+    /// Single responsibility: Coordinate UI components and provide unified interface
     /// </summary>
     public class UIManager : BaseManager
     {
-        [Header("Event Channels")]
-        [SerializeField] private WallEvents wallEvents;
+        [Header("Essential UI - Build Ready")]
+        [SerializeField] private GameHUD gameHUD;
+        [SerializeField] private CardSelectPanel cardSelectPanel;
 
-        [Header("UI References - Monster Display")]
-        [SerializeField] private TextMeshProUGUI monsterCountText;
-
-        [Header("UI References - Timer Display")]
-        [SerializeField] private TextMeshProUGUI waveTimerText;
-
-        [Header("UI References - Barrier HP")]
-        [SerializeField] private Slider barrierHPSlider;
-        [SerializeField] private TextMeshProUGUI barrierHPText;
-
-        [Header("UI References - Exp Slider")]
-        [SerializeField] private Slider expSlider;
-
-        [Header("UI References - Panels")]
-        [SerializeField] private GameObject cardPanel;
-        [SerializeField] private GameObject preferencesPanel;
-        [SerializeField] private string preferencesPanelName = "Preferences"; // Fallback if not assigned
-
-        [Header("UI References - SpeedButtonText")]
-        [SerializeField] private TextMeshProUGUI speedButtonText;
-
-        [Header("UI References - Buttons")]
-        [SerializeField] private Button speedButton;
-        [SerializeField] private Button settingsButton;
-
-        // Preferences panel state
-        private bool isPreferencesOpen = false;
-        private float previousTimeScale = 1f;
-
-        /// <summary>
-        /// LMJ: Initialize UI elements and setup button listeners
-        /// </summary>
         protected override void OnInitialize()
         {
-            if (expSlider != null)
-                expSlider.value = 0f;
-            if (barrierHPSlider != null)
-            {
-                barrierHPSlider.value = 1f;
-                Debug.Log($"[UIManager] OnInitialize - barrierHPSlider assigned: {barrierHPSlider != null}");
-            }
-            else
-            {
-                Debug.LogError("[UIManager] OnInitialize - barrierHPSlider is null! Inspector 할당 확인 필요!");
-            }
-
-            if (speedButton != null)
-            {
-                Debug.Log($"[UIManager] OnInitialize - speedButton assigned: {speedButton != null}");
-            }
-            else
-            {
-                Debug.LogError("[UIManager] OnInitialize - speedButton is null! Inspector 할당 확인 필요!");
-            }
-
-            if (speedButtonText != null)
-                speedButtonText.text = "X1";
-
-            // Find and initialize preferences panel
-            FindPreferencesPanel();
-            if (preferencesPanel != null)
-            {
-                preferencesPanel.SetActive(false);
-                isPreferencesOpen = false;
-                Debug.Log("[UIManager] Preferences panel found and initialized as closed");
-            }
-            else
-            {
-                Debug.LogWarning("[UIManager] Preferences panel not found! Inspector 할당 또는 GameObject 이름 확인 필요");
-            }
-
-            // Setup button listeners
-            SetupButtonListeners();
-
-            // LMJ: Subscribe to Wall HP changes via EventChannel
-            if (wallEvents != null)
-            {
-                wallEvents.AddHealthChangedListener(UpdateBarrierHP);
-                Debug.Log("[UIManager] WallEvents listener 등록 완료");
-            }
-            else
-            {
-                Debug.LogError("[UIManager] wallEvents is null! Inspector에서 할당해주세요.");
-            }
+            // UI components initialize themselves
+            // UIManager just validates references
+            ValidateReferences();
         }
 
-        /// <summary>
-        /// LMJ: Reset UI to initial state
-        /// </summary>
         protected override void OnReset()
         {
-            UpdateMonsterCount(0);
-            UpdateWaveTimer(0f);
-            if (expSlider != null)
-                expSlider.value = 0f;
-            if (barrierHPSlider != null)
-                barrierHPSlider.value = 1f;
-            if (speedButtonText != null)
-                speedButtonText.text = "X1";
+            // Reset essential UI components
+            if (gameHUD != null)
+            {
+                gameHUD.ResetUI();
+            }
+
+            // Close card panel if open
+            if (cardSelectPanel != null && cardSelectPanel.IsOpen)
+            {
+                cardSelectPanel.Close();
+            }
         }
 
         protected override void OnDispose()
         {
-            // LMJ: Unsubscribe from EventChannel
-            if (wallEvents != null)
-            {
-                wallEvents.RemoveHealthChangedListener(UpdateBarrierHP);
-            }
-
-            // Remove button listeners
-            RemoveButtonListeners();
-        }
-
-        #region Button Setup
-
-        private void SetupButtonListeners()
-        {
-            if (speedButton != null)
-            {
-                speedButton.onClick.AddListener(OnSpeedButtonClicked);
-                Debug.Log("[UIManager] Speed button listener 등록 완료");
-            }
-            else
-            {
-                Debug.LogError("[UIManager] speedButton is null! Inspector에서 할당해주세요.");
-            }
-
-            if (settingsButton != null)
-                settingsButton.onClick.AddListener(OnSettingsButtonClicked);
-
-        }
-
-        private void RemoveButtonListeners()
-        {
-            if (speedButton != null)
-                speedButton.onClick.RemoveListener(OnSpeedButtonClicked);
-
-            if (settingsButton != null)
-                settingsButton.onClick.RemoveListener(OnSettingsButtonClicked);
-
-        }
-
-        #endregion
-
-        #region Preferences Panel Management
-
-        /// <summary>
-        /// Find preferences panel if not assigned in Inspector
-        /// Searches in scene root to find the panel
-        /// </summary>
-        private void FindPreferencesPanel()
-        {
-            if (preferencesPanel == null && !string.IsNullOrEmpty(preferencesPanelName))
-            {
-                // Search from scene root (handles any hierarchy structure)
-                GameObject[] rootObjects = gameObject.scene.GetRootGameObjects();
-                foreach (GameObject root in rootObjects)
-                {
-                    Transform found = FindChildRecursive(root.transform, preferencesPanelName);
-                    if (found != null)
-                    {
-                        preferencesPanel = found.gameObject;
-                        Debug.Log($"[UIManager] Found preferences panel: {preferencesPanelName} at path: {GetTransformPath(found)}");
-                        return;
-                    }
-                }
-
-                Debug.LogWarning($"[UIManager] Could not find preferences panel named '{preferencesPanelName}'");
-            }
+            // UI components clean up themselves
         }
 
         /// <summary>
-        /// Get full path of transform for debugging
+        /// Validate that all UI components are assigned
         /// </summary>
-        private string GetTransformPath(Transform t)
+        private void ValidateReferences()
         {
-            string path = t.name;
-            while (t.parent != null)
-            {
-                t = t.parent;
-                path = t.name + "/" + path;
-            }
-            return path;
+            // All UI components are optional - UIManager will handle null references gracefully
+            // No errors or warnings logged for missing references
         }
 
-        /// <summary>
-        /// Recursively search for child transform by name
-        /// </summary>
-        private Transform FindChildRecursive(Transform parent, string childName)
-        {
-            foreach (Transform child in parent)
-            {
-                if (child.name == childName)
-                {
-                    return child;
-                }
+        #region Public API - Essential UI Only
 
-                Transform found = FindChildRecursive(child, childName);
-                if (found != null)
-                {
-                    return found;
-                }
-            }
-            return null;
-        }
-
-        #endregion
-
-        #region Button Callbacks
-
-        private void OnSpeedButtonClicked()
-        {
-            Debug.Log($"[UIManager] Speed button clicked! Current Time.timeScale: {Time.timeScale}");
-
-            switch (Time.timeScale)
-            {
-                case 1f:
-                    Time.timeScale = 1.5f;
-                    if (speedButtonText != null) speedButtonText.text = "X1.5";
-                    Debug.Log("[UIManager] Speed changed to X1.5");
-                    break;
-                case 1.5f:
-                    Time.timeScale = 2f;
-                    if (speedButtonText != null) speedButtonText.text = "X2";
-                    Debug.Log("[UIManager] Speed changed to X2");
-                    break;
-                case 2f:
-                    Time.timeScale = 1f;
-                    if (speedButtonText != null) speedButtonText.text = "X1";
-                    Debug.Log("[UIManager] Speed changed to X1");
-                    break;
-                default:
-                    Time.timeScale = 1f;
-                    if (speedButtonText != null) speedButtonText.text = "X1";
-                    Debug.Log($"[UIManager] Unexpected timeScale {Time.timeScale}, reset to X1");
-                    break;
-            }
-        }
-
-        private void OnSettingsButtonClicked()
-        {
-            // Try to find panel again if it's null
-            if (preferencesPanel == null)
-            {
-                FindPreferencesPanel();
-            }
-
-            if (preferencesPanel == null)
-            {
-                Debug.LogError("[UIManager] preferencesPanel을 찾을 수 없습니다! Hierarchy에서 'Preferences' 이름의 GameObject가 있는지 확인해주세요.");
-                return;
-            }
-
-            if (isPreferencesOpen)
-            {
-                ClosePreferencesPanel();
-            }
-            else
-            {
-                OpenPreferencesPanel();
-            }
-        }
-
-        /// <summary>
-        /// Open preferences panel and pause the game
-        /// </summary>
-        public void OpenPreferencesPanel()
-        {
-            if (preferencesPanel == null) return;
-
-            // Save current time scale and pause the game
-            previousTimeScale = Time.timeScale;
-            Time.timeScale = 0f;
-
-            // Show preferences panel
-            preferencesPanel.SetActive(true);
-            isPreferencesOpen = true;
-
-            Debug.Log($"[UIManager] 환경설정 열림 - 게임 일시정지 (이전 timeScale: {previousTimeScale})");
-        }
-
-        /// <summary>
-        /// Close preferences panel and resume the game
-        /// </summary>
-        public void ClosePreferencesPanel()
-        {
-            if (preferencesPanel == null) return;
-
-            // Hide preferences panel
-            preferencesPanel.SetActive(false);
-            isPreferencesOpen = false;
-
-            // Resume the game with previous time scale
-            Time.timeScale = previousTimeScale;
-
-            Debug.Log($"[UIManager] 환경설정 닫힘 - 게임 재개 (timeScale: {Time.timeScale})");
-        }
-
-        private void OnSkillButtonClicked(int skillIndex)
-        {
-            // TODO: Implement skill logic
-        }
-
-        #endregion
-
-        #region Monster Count Display
-
-        /// <summary>
-        /// LMJ: Update monster count display - called by WaveManager
-        /// </summary>
+        // ===== GameHUD =====
         public void UpdateMonsterCount(int count)
         {
-            if (monsterCountText != null)
+            if (gameHUD != null)
             {
-                monsterCountText.text = $"남은 몬스터: {count}";
+                gameHUD.UpdateMonsterCount(count);
             }
         }
 
-        #endregion
-
-        #region Wave Timer Display
-
-        /// <summary>
-        /// LMJ: Update wave timer display with remaining time in seconds
-        /// Called by StageManager
-        /// </summary>
         public void UpdateWaveTimer(float timeInSeconds)
         {
-            if (waveTimerText != null)
+            if (gameHUD != null)
             {
-                int minutes = Mathf.FloorToInt(timeInSeconds / 60f);
-                int seconds = Mathf.FloorToInt(timeInSeconds % 60f);
-                waveTimerText.text = $"웨이브 시간: {minutes:00}:{seconds:00}";
+                gameHUD.UpdateWaveTimer(timeInSeconds);
             }
         }
-
-        #endregion
-
-        #region Barrier HP Display
-
-        /// <summary>
-        /// LMJ: Update barrier HP slider and text - event-driven from Wall
-        /// </summary>
-        private void UpdateBarrierHP(float currentHP, float maxHP)
-        {
-            float sliderValue = currentHP / maxHP;
-            Debug.Log($"[UIManager] UpdateBarrierHP 호출! currentHP={currentHP}, maxHP={maxHP}, sliderValue={sliderValue}, barrierHPSlider null? {barrierHPSlider == null}");
-
-            if (barrierHPSlider != null)
-            {
-                barrierHPSlider.value = sliderValue;
-                Debug.Log($"[UIManager] Slider value 설정 완료: {barrierHPSlider.value}");
-            }
-            else
-            {
-                Debug.LogError("[UIManager] barrierHPSlider is null! Inspector에서 할당해주세요.");
-            }
-
-            if (barrierHPText != null)
-            {
-                barrierHPText.text = $"결계 HP: {currentHP:F0}/{maxHP:F0}";
-            }
-        }
-
-        #endregion
-
-        #region Experience Display
 
         public void UpdateExperience(float currentExp, float maxExp)
         {
-            if (expSlider != null)
+            if (gameHUD != null)
             {
-                expSlider.value = currentExp / maxExp;
+                gameHUD.UpdateExperience(currentExp, maxExp);
             }
+        }
+
+        // ===== CardSelectPanel =====
+        /// <summary>
+        /// Open card selection for game start (2 character cards only)
+        /// </summary>
+        public void OpenCardSelectForGameStart()
+        {
+            if (cardSelectPanel != null)
+            {
+                cardSelectPanel.OpenForGameStart();
+            }
+        }
+
+        /// <summary>
+        /// Open card selection for level up (2 random cards: character + ability mix)
+        /// </summary>
+        public void OpenCardSelectForLevelUp()
+        {
+            if (cardSelectPanel != null)
+            {
+                cardSelectPanel.OpenForLevelUp();
+            }
+        }
+
+        /// <summary>
+        /// Open card selection with specific cards
+        /// </summary>
+        public void OpenCardSelectWithCards(CardSelectPanel.CardData[] cards, bool pauseGame = false)
+        {
+            if (cardSelectPanel != null)
+            {
+                cardSelectPanel.OpenWithCards(cards, pauseGame);
+            }
+        }
+
+        public void CloseCardSelect()
+        {
+            if (cardSelectPanel != null)
+            {
+                cardSelectPanel.Close();
+            }
+        }
+
+        public bool IsCardSelectOpen()
+        {
+            return cardSelectPanel != null && cardSelectPanel.IsOpen;
         }
 
         #endregion

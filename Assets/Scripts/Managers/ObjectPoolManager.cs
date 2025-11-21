@@ -151,15 +151,14 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void OnGetFromPool<T>(T component) where T : Component, IPoolable
         {
-            component.gameObject.SetActive(true);
+            // 활성화하지 않음 - Spawn()에서 위치 설정 후 활성화
+            // (OnGetFromPool은 pool.Get() 시점에 호출되므로, 여기서 활성화하면 잘못된 위치에서 보임)
 
             Type type = typeof(T);
             if (activeObjects.ContainsKey(type))
             {
                 activeObjects[type].Add(component);
             }
-
-            component.OnSpawn();
         }
 
         private void OnReleaseToPool<T>(T component) where T : Component, IPoolable
@@ -204,8 +203,17 @@ namespace NovelianMagicLibraryDefense.Managers
 
             ObjectPool<T> pool = pools[type] as ObjectPool<T>;
             T component = pool.Get();
+
+            // 1. 위치 설정 (활성화 전에 먼저!)
             component.transform.position = position;
             component.transform.rotation = rotation;
+
+            // 2. 활성화 (올바른 위치에서 나타남)
+            component.gameObject.SetActive(true);
+
+            // 3. OnSpawn() 호출 (목적지 계산에 현재 위치가 필요함)
+            component.OnSpawn();
+
             return component;
         }
 
@@ -289,6 +297,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         /// <summary>
         /// LMJ: Pre-instantiate objects to avoid runtime spikes
+        /// WarmUp은 객체를 생성만 하고, 화면에 보이지 않게 즉시 반환
         /// </summary>
         public void WarmUp<T>(int count) where T : Component, IPoolable
         {
@@ -305,7 +314,10 @@ namespace NovelianMagicLibraryDefense.Managers
 
             for (int i = 0; i < count; i++)
             {
-                temp.Add(pool.Get());
+                T obj = pool.Get();
+                // WarmUp 시에는 비활성화 (OnGetFromPool에서 위치가 Vector3.zero로 초기화됨)
+                obj.gameObject.SetActive(false);
+                temp.Add(obj);
             }
 
             foreach (var obj in temp)

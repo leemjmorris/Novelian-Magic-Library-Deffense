@@ -27,23 +27,25 @@ public class CharacterPlacementManager : MonoBehaviour
 
     // Loaded character prefabs cache
     private Dictionary<string, GameObject> loadedCharacterPrefabs = new Dictionary<string, GameObject>();
+    private bool isPreloadComplete = false;
 
     // Drag state management
     private GameObject draggingCharacter;
     private GridSlot originalSlot;
     private Camera mainCamera;
 
-    private void Awake()
+    private async void Awake()
     {
         mainCamera = Camera.main;
-    }
+        if (mainCamera == null)
+        {
+            Debug.LogError("[CharacterPlacementManager] Main camera not found!");
+        }
 
-    private async void Start()
-    {
         // Create grid
         CreateGrid();
 
-        // Preload all character prefabs
+        // Preload all character prefabs IMMEDIATELY in Awake
         await PreloadCharacterPrefabs();
     }
 
@@ -72,6 +74,13 @@ public class CharacterPlacementManager : MonoBehaviour
         }
 
         Debug.Log($"[CharacterPlacementManager] Preloaded {loadedCharacterPrefabs.Count}/{characterIds.Length} character prefabs");
+        isPreloadComplete = true;
+    }
+
+    //JML: Check if character prefabs are preloaded
+    public bool IsPreloadComplete()
+    {
+        return isPreloadComplete;
     }
 
     private void OnEnable()
@@ -116,8 +125,8 @@ public class CharacterPlacementManager : MonoBehaviour
                     -row * gridSpacingZ
                 );
 
-                // Create GridSlot
-                GameObject slotObj = Instantiate(gridSlotPrefab, position, Quaternion.identity, gridParent);
+                // Create GridSlot - preserve prefab's rotation (X=90 for ground-aligned quad)
+                GameObject slotObj = Instantiate(gridSlotPrefab, position, gridSlotPrefab.transform.rotation, gridParent);
                 slotObj.name = $"GridSlot_{slotIndex}";
 
                 GridSlot gridSlot = slotObj.GetComponent<GridSlot>();
@@ -140,7 +149,8 @@ public class CharacterPlacementManager : MonoBehaviour
     }
 
     //JML: Place character in random empty slot by CharacterID (called from CardSelectionManager)
-    public void SpawnCharacterById(int characterId)
+    //     Returns true if spawn successful, false if no empty slots
+    public bool SpawnCharacterById(int characterId)
     {
         string characterKey = AddressableKey.GetCharacterKey(characterId);
 
@@ -148,7 +158,7 @@ public class CharacterPlacementManager : MonoBehaviour
         if (!loadedCharacterPrefabs.ContainsKey(characterKey))
         {
             Debug.LogError($"[CharacterPlacementManager] Character prefab '{characterKey}' (ID: {characterId}) is not loaded!");
-            return;
+            return false;
         }
 
         // Find empty slot
@@ -156,7 +166,7 @@ public class CharacterPlacementManager : MonoBehaviour
         if (targetSlot == null)
         {
             Debug.LogWarning("[CharacterPlacementManager] No empty slots available!");
-            return;
+            return false;
         }
 
         // Instantiate character prefab
@@ -172,6 +182,20 @@ public class CharacterPlacementManager : MonoBehaviour
         targetSlot.PlaceCharacter(characterObj);
 
         Debug.Log($"[CharacterPlacementManager] Character ID {characterId} spawned at slot {targetSlot.GetSlotIndex()}");
+        return true;
+    }
+
+    //JML: Check if there are any empty slots available
+    public bool HasEmptySlot()
+    {
+        foreach (GridSlot slot in gridSlots)
+        {
+            if (slot.IsEmpty())
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     //JML: Get random empty slot
@@ -269,17 +293,35 @@ public class CharacterPlacementManager : MonoBehaviour
         // Check if there's a GridSlot at drop position
         GridSlot targetSlot = FindSlotAtPosition(worldPosition);
 
-        if (targetSlot != null && targetSlot.IsEmpty())
+        if (targetSlot != null && targetSlot != originalSlot)
         {
-            // Drop on empty slot: move character
-            originalSlot.RemoveCharacter();
-            targetSlot.PlaceCharacter(draggingCharacter);
+            if (targetSlot.IsEmpty())
+            {
+                // Drop on empty slot: move character
+                originalSlot.RemoveCharacter();
+                targetSlot.PlaceCharacter(draggingCharacter);
 
-            Debug.Log($"[CharacterPlacementManager] Character moved: slot {originalSlot.GetSlotIndex()} → {targetSlot.GetSlotIndex()}");
+                Debug.Log($"[CharacterPlacementManager] Character moved: slot {originalSlot.GetSlotIndex()} → {targetSlot.GetSlotIndex()}");
+            }
+            else
+            {
+                // Drop on occupied slot: swap characters
+                GameObject targetCharacter = targetSlot.GetCurrentCharacter();
+
+                // Remove both characters from slots
+                originalSlot.RemoveCharacter();
+                targetSlot.RemoveCharacter();
+
+                // Swap positions
+                targetSlot.PlaceCharacter(draggingCharacter);
+                originalSlot.PlaceCharacter(targetCharacter);
+
+                Debug.Log($"[CharacterPlacementManager] Characters swapped: slot {originalSlot.GetSlotIndex()} ↔ {targetSlot.GetSlotIndex()}");
+            }
         }
         else
         {
-            // Not an empty slot: return to original position
+            // Not a valid slot or same slot: return to original position
             draggingCharacter.transform.position = originalSlot.GetWorldPosition();
             Debug.Log($"[CharacterPlacementManager] Character returned to original position: slot {originalSlot.GetSlotIndex()}");
         }
@@ -352,5 +394,70 @@ public class CharacterPlacementManager : MonoBehaviour
         }
 
         Debug.Log("[CharacterPlacementManager] All slots cleared (characters destroyed)");
+    }
+
+    //JML: Draw grid in SceneView using Gizmos
+    private void OnDrawGizmos()
+    {
+        // Draw grid even when not playing (for visualization during setup)
+        Color emptyColor = new Color(0f, 1f, 0f, 0.3f);  // Green for empty slots
+        Color occupiedColor = new Color(1f, 0f, 0f, 0.5f); // Red for occupied slots
+        Color wireColor = new Color(1f, 1f, 0f, 0.8f);   // Yellow wireframe
+
+        // Draw each grid slot
+        for (int row = 0; row < gridRows; row++)
+        {
+            for (int col = 0; col < gridColumns; col++)
+            {
+                // Calculate grid position (same as CreateGrid)
+                Vector3 position = gridStartPosition + new Vector3(
+                    col * gridSpacingX,
+                    gridPlaneY,
+                    -row * gridSpacingZ
+                );
+
+                // Check if slot is occupied (only in play mode)
+                bool isOccupied = false;
+                if (Application.isPlaying && gridSlots.Count > 0)
+                {
+                    int slotIndex = row * gridColumns + col;
+                    if (slotIndex < gridSlots.Count)
+                    {
+                        isOccupied = !gridSlots[slotIndex].IsEmpty();
+                    }
+                }
+
+                // Set color based on occupancy
+                Gizmos.color = isOccupied ? occupiedColor : emptyColor;
+
+                // Draw cube for slot
+                Vector3 cubeSize = new Vector3(gridSpacingX * 0.8f, 0.1f, gridSpacingZ * 0.8f);
+                Gizmos.DrawCube(position, cubeSize);
+
+                // Draw wireframe
+                Gizmos.color = wireColor;
+                Gizmos.DrawWireCube(position, cubeSize);
+
+                // Draw slot index label in scene view
+                #if UNITY_EDITOR
+                int index = row * gridColumns + col;
+                UnityEditor.Handles.Label(position + Vector3.up * 0.2f, $"Slot {index}");
+                #endif
+            }
+        }
+
+        // Draw grid boundary
+        Gizmos.color = Color.cyan;
+        Vector3 gridCenter = gridStartPosition + new Vector3(
+            (gridColumns - 1) * gridSpacingX * 0.5f,
+            gridPlaneY,
+            -(gridRows - 1) * gridSpacingZ * 0.5f
+        );
+        Vector3 gridBoundarySize = new Vector3(
+            gridColumns * gridSpacingX,
+            0.05f,
+            gridRows * gridSpacingZ
+        );
+        Gizmos.DrawWireCube(gridCenter, gridBoundarySize);
     }
 }

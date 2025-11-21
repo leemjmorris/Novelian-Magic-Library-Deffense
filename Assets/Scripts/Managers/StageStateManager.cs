@@ -22,7 +22,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [Header("Dependencies")]
         [SerializeField] private WaveManager waveManager;
         [SerializeField] private StageManager stageManager;
-        [SerializeField] private WinLosePanel winLosePanel;
+        [SerializeField] private GameResultPanel gameResultPanel;
         [SerializeField] private Wall wall;
         [SerializeField] private StageEvents stageEvents;
         [SerializeField] private WallEvents wallEvents;
@@ -128,30 +128,26 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (newState == StageState.Cleared)
             {
-                // Debug.Log("[StageStateManager] Stage Cleared!");
-                //JML: ShowVictoryPanel
-                //TODO JML: Rank calculation logic to be implemented
-                if (winLosePanel != null)
+                Debug.Log("[StageStateManager] Stage Cleared!");
+                if (gameResultPanel != null)
                 {
-                    winLosePanel.ShowVictoryPanel("S",stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetKillCount(), stageManager.GetReward());
+                    gameResultPanel.ShowVictoryPanel("S", stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetKillCount(), stageManager.GetReward());
                 }
                 else
                 {
-                    Debug.LogError("[StageStateManager] WinLosePanel is null! Inspector에서 할당해주세요.");
+                    Debug.LogError("[StageStateManager] GameResultPanel is null! Inspector에서 할당해주세요.");
                 }
             }
             else if (newState == StageState.Failed)
             {
-                // Debug.Log("[StageStateManager] Stage Failed!");
-                //JML: ShowDefeatPanel
-                //TODO JML: Rank calculation logic to be implemented
-                if (winLosePanel != null)
+                Debug.Log("[StageStateManager] Stage Failed!");
+                if (gameResultPanel != null)
                 {
-                    winLosePanel.ShowDefeatPanel("F", stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetRemainderCount());
+                    gameResultPanel.ShowDefeatPanel("F", stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetRemainderCount());
                 }
                 else
                 {
-                    Debug.LogError("[StageStateManager] WinLosePanel is null! Inspector에서 할당해주세요.");
+                    Debug.LogError("[StageStateManager] GameResultPanel is null! Inspector에서 할당해주세요.");
                 }
             }
         }

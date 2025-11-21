@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
-using NovelianMagicLibraryDefense.Settings;
+using NovelianMagicLibraryDefense.Spawners;
 using TMPro;
 using UnityEngine;
 
@@ -20,22 +20,20 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private MonsterEvents monsterEvents;
         [SerializeField] private StageEvents stageEvents;
 
+        [Header("Spawners")]
+        [SerializeField] private MonsterSpawner monsterSpawner;
+        [SerializeField] private MonsterSpawner bossSpawner;
+        [SerializeField] private DestinationArea destinationArea;
+
         [Header("Settings")]
-        [SerializeField] private WaveSettings waveSettings;
+        [SerializeField] private float spawnInterval = 2f;
 
         private bool isPoolReady = false;
 
         #region WaveData
-        // private int waveId;  // LMJ: Reserved for future use
         private int enemyCount;
         private int initialEnemyCount;
         private int bossCount;
-
-        // LMJ: RushSpawn feature disabled
-        // private float rushSpawnInterval = 0.5f;
-        // private float rushDuration = 30f;
-        // private float rushInterval = 0.25f;
-        // private List<float> rushProgressPoints = new List<float>();
         #endregion
 
         protected override void OnInitialize()
@@ -100,27 +98,12 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             enemyCount = totalEnemies;
             initialEnemyCount = totalEnemies;
-            // rushInterval = rushIntervalPercent;  // LMJ: RushSpawn disabled
             this.bossCount = bossCount;
-
-            // LMJ: RushSpawn feature disabled
-            /*
-            rushProgressPoints.Clear();
-
-            float currentProgress = rushInterval;
-            while (currentProgress < 1f)
-            {
-                rushProgressPoints.Add(currentProgress);
-                currentProgress += rushInterval;
-            }
-            */
 
             if (uiManager != null)
             {
                 uiManager.UpdateMonsterCount(enemyCount);
             }
-
-            // Debug.Log($"[WaveManager] Wave initialized - Enemies: {totalEnemies}, Bosses: {bossCount}");
         }
 
         /// <summary>
@@ -185,25 +168,17 @@ namespace NovelianMagicLibraryDefense.Managers
             // LCB: Check isPoolReady in loop to stop spawning when reset
             while (spawnedCount < totalMonsters && isPoolReady)
             {
-                // LMJ: RushSpawn feature disabled
-                /*
-                float progress = (float)spawnedCount / totalMonsters;
+                Vector3 spawnPos = monsterSpawner.GetRandomSpawnPosition();
+                var monster = poolManager.Spawn<Monster>(spawnPos);
 
-                if (rushIndex < rushProgressPoints.Count &&
-                    progress >= rushProgressPoints[rushIndex])
+                // 목적지 설정
+                if (monster != null && destinationArea != null)
                 {
-                    await RushSpawn();
-                    rushIndex++;
-                    continue;
+                    monster.SetDestination(destinationArea.GetRandomDestinationPosition());
                 }
-                */
-
-                // LMJ: Normal spawn
-                Vector3 spawnPos = waveSettings.GetRandomSpawnPosition();
-                poolManager.Spawn<Monster>(spawnPos);
 
                 spawnedCount++;
-                await UniTask.Delay((int)(waveSettings.spawnInterval * 1000));
+                await UniTask.Delay((int)(spawnInterval * 1000));
             }
 
             // LMJ: Spawn boss after all normal enemies
@@ -216,41 +191,19 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void SpawnBoss()
         {
-            Vector3 bossSpawnPos = waveSettings.GetBossSpawnPosition();
-            poolManager.Spawn<BossMonster>(bossSpawnPos);
+            Vector3 bossSpawnPos = bossSpawner != null
+                ? bossSpawner.GetRandomSpawnPosition()
+                : monsterSpawner.GetRandomSpawnPosition();
+            var boss = poolManager.Spawn<BossMonster>(bossSpawnPos);
 
-            // Debug.Log("[WaveManager] Boss spawned");
-        }
-
-        // LMJ: RushSpawn feature disabled - kept as reference
-        /*
-        private async UniTask RushSpawn()
-        {
-            float elapsed = 0f;
-
-            if (monsterCountText != null)
+            // 목적지 설정
+            if (boss != null && destinationArea != null)
             {
-                monsterCountText.text = $"Rush Spawn!";
+                boss.SetDestination(destinationArea.GetRandomDestinationPosition());
             }
 
-            while (elapsed < rushDuration)
-            {
-                float randomX = Random.Range(-0.4f, 0.4f);
-                Vector3 spawnPos = new Vector3(randomX, 3f, -7.5f);
-                poolManager.Spawn<Monster>(spawnPos);
-
-                await UniTask.Delay((int)(rushSpawnInterval * 1000));
-                elapsed += rushSpawnInterval;
-            }
-
-            ClearAllMonsters();
         }
 
-        private void ClearAllMonsters()
-        {
-            poolManager.DespawnAll<Monster>();
-        }
-        */
         public void WaveClear()
         {
             poolManager.ClearAll();

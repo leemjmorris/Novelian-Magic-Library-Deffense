@@ -53,7 +53,7 @@ namespace NovelianMagicLibraryDefense.Managers
                     // 3순위: Tag 없으면 이름으로 찾기
                     if (instance == null)
                     {
-                        GameObject managerObj = GameObject.Find("InputManger"); // 씬에 있는 오브젝트 이름
+                        GameObject managerObj = GameObject.Find("InputManager"); // 씬에 있는 오브젝트 이름
                         if (managerObj != null)
                         {
                             instance = managerObj.GetComponent<InputManager>();
@@ -377,7 +377,16 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnDispose()
         {
-            Debug.Log("[InputManager] Disposing Input System");
+            CleanupInputActions();
+        }
+
+        /// <summary>
+        /// Clean up InputActions to prevent memory leaks
+        /// Called from OnDispose (which is called by BaseManager.OnDestroy)
+        /// </summary>
+        private void CleanupInputActions()
+        {
+            Debug.Log("[InputManager] Cleaning up Input System");
 
             // Singleton 정리
             if (instance == this)
@@ -401,7 +410,10 @@ namespace NovelianMagicLibraryDefense.Managers
                     inputActions.Touch.TouchPress.canceled -= OnPointerUp;
                     inputActions.Touch.Disable();
                     // Disable EnhancedTouch
-                    UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
+                    if (UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.enabled)
+                    {
+                        UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
+                    }
                 }
                 else
                 {
@@ -416,15 +428,18 @@ namespace NovelianMagicLibraryDefense.Managers
                 inputActions.Touch.TouchPress.canceled -= OnPointerUp;
                 inputActions.Touch.Disable();
                 // Disable EnhancedTouch
-                UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
+                if (UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.enabled)
+                {
+                    UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Disable();
+                }
 #endif
+
+                // Input Actions 정리
+                inputActions.Dispose();
+                inputActions = null;
             }
 
-            // Input Actions 정리
-            inputActions?.Dispose();
-            inputActions = null;
-
-            Debug.Log("[InputManager] Disposed successfully");
+            Debug.Log("[InputManager] Cleanup completed successfully");
         }
     }
 }

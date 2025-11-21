@@ -6,12 +6,16 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     [Header("Event Channels")]
     [SerializeField] private MonsterEvents monsterEvents;
 
+    [Header("References")]
     [SerializeField] private Collider collider3D;
     [SerializeField] private Rigidbody rb;
+    [SerializeField] private MonsterMove monsterMove;
+
+    [Header("Stats")]
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackInterval = 0.7f;
-    [SerializeField] private MonsterMove monsterMove;
+    [SerializeField] private float fallOffThreshold = -10f;
 
     private float attackTimer = 0f;
     private Wall wall;
@@ -41,7 +45,15 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     //JML: Game logic in Update
     private void Update()
     {
-        if (isWallHit)
+        // 맵 밖으로 떨어진 경우 despawn
+        if (transform.position.y < fallOffThreshold)
+        {
+            Debug.LogWarning($"[BossMonster] Fell off map at {transform.position}, despawning");
+            Die();
+            return;
+        }
+
+        if (isWallHit && wall != null)
         {
             attackTimer += Time.deltaTime;
             if (attackInterval <= attackTimer)
@@ -50,7 +62,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
                 attackTimer = 0f;
             }
         }
-        Weight += 1f;
+        // Weight는 고정값 사용 (매 프레임 증가 제거)
     }
 
     public override void TakeDamage(float damage)
@@ -73,15 +85,34 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
         NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
-    
-    private void OnTriggerEnter(Collider collision)
-    {
-        if (collision.CompareTag(Tag.Wall))
-        {
-            Debug.Log("Monster hit the wall.");
-            wall = collision.GetComponent<Wall>();
 
+    /// <summary>
+    /// 외부에서 목적지 설정
+    /// </summary>
+    public void SetDestination(Vector3 destination)
+    {
+        if (monsterMove != null)
+        {
+            monsterMove.SetDestination(destination);
+        }
+    }
+    
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag(Tag.Wall))
+        {
+            Debug.Log("BossMonster hit the wall.");
+            wall = collision.gameObject.GetComponent<Wall>();
             isWallHit = true;
+        }
+    }
+
+    private void OnCollisionExit(Collision collision)
+    {
+        if (collision.gameObject.CompareTag(Tag.Wall))
+        {
+            isWallHit = false;
+            wall = null;
         }
     }
 
@@ -94,8 +125,9 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         attackTimer = 0f;
         Weight = 5f;
 
-        TargetRegistry.Instance.RegisterTarget(this);
+        // 목적지는 WaveManager에서 SetDestination()으로 설정됨
 
+        TargetRegistry.Instance.RegisterTarget(this);
     }
 
     public override void OnDespawn()
@@ -104,6 +136,12 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         wall = null;
         attackTimer = 0f;
         Weight = 5f;
+
+        // MonsterMove 상태 초기화
+        if (monsterMove != null)
+        {
+            monsterMove.ResetState();
+        }
 
         // JML: Redundant safety check - should already be unregistered in Die()
         // But kept as failsafe for edge cases

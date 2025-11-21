@@ -139,6 +139,18 @@ public class InventoryController : MonoBehaviour
             }
         }
 
+        //TODO JML: 2차 빌드 후 삭제 예정 - 임시 책갈피 추가
+        if (TempBookMarkManager.Instance != null)
+        {
+            var bookmarks = TempBookMarkManager.Instance.GetAllBookmarks();
+            foreach (var bookmark in bookmarks)
+            {
+                int instanceId = TempBookMarkManager.Instance.GetNextInstanceId();
+                var bookmarkInfo = new InventoryItemInfo(bookmark, instanceId);
+                displayedItems.Add(bookmarkInfo);
+            }
+        }
+
         // 아이템 정렬: 현재 정렬 방식에 따라
         ApplySorting();
 

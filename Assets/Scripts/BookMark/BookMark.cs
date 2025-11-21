@@ -31,4 +31,10 @@ public class BookMark
     {
         return $"현재 책갈피 : 이름: {name}, 등급: {grade}, 타입: {type}, 옵션 값: {optionValue}";
     }
+
+    //TODO JML: 2차 주간빌드 하고삭제 예정 - 인벤토리 표시용 Getter
+    public string GetName() => name;
+    public Grade GetGrade() => grade;
+    public int GetOptionType() => type;
+    public float GetOptionValue() => optionValue;
 }

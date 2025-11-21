@@ -111,6 +111,7 @@ GameObject:
   - component: {fileID: 2555002555427334004}
   - component: {fileID: 7349392714644605555}
   - component: {fileID: 4416283717621848062}
+  - component: {fileID: 6648061920493256930}
   m_Layer: 7
   m_Name: Monster_01
   m_TagString: Monster
@@ -128,8 +129,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0, y: 0, z: 15.4}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 1475935930752712199}
   - {fileID: 8141917697380878369}
@@ -180,10 +181,10 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
+  m_IsKinematic: 1
+  m_Interpolate: 1
+  m_Constraints: 16
+  m_CollisionDetection: 1
 --- !u!65 &2555002555427334004
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -199,7 +200,7 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -223,9 +224,10 @@ MonoBehaviour:
   monsterMove: {fileID: 4416283717621848062}
   rb: {fileID: 9048751247325128687}
   collider3D: {fileID: 2555002555427334004}
-  moveSpeed: 2
+  moveSpeed: 10
   damage: 10
   attackInterval: 0.7
+  fallOffThreshold: -10
 --- !u!114 &4416283717621848062
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -238,8 +240,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 068ef2c38d6093243aa0dd5c99c86450, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rb: {fileID: 9048751247325128687}
+  navAgent: {fileID: 6648061920493256930}
   monsterAnimator: {fileID: 2142173203755059167}
+--- !u!195 &6648061920493256930
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 967941316364084182}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 10
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0.5
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!1 &1091345320812839880
 GameObject:
   m_ObjectHideFlags: 0

@@ -21,8 +21,11 @@ namespace NovelianMagicLibraryDefense.Settings
         [Tooltip("스폰 영역 최대 Y 좌표")]
         public float maxY = 4f;
 
-        [Tooltip("고정된 Z 좌표")]
-        public float fixedZ = -7.5f;
+        [Tooltip("스폰 영역 최소 Z 좌표")]
+        public float minZ = -7.5f;
+
+        [Tooltip("스폰 영역 최대 Z 좌표")]
+        public float maxZ = -7.5f;
 
         /// <summary>
         /// 영역 내 랜덤 위치 반환
@@ -31,7 +34,8 @@ namespace NovelianMagicLibraryDefense.Settings
         {
             float randomX = UnityEngine.Random.Range(minX, maxX);
             float randomY = UnityEngine.Random.Range(minY, maxY);
-            return new Vector3(randomX, randomY, fixedZ);
+            float randomZ = UnityEngine.Random.Range(minZ, maxZ);
+            return new Vector3(randomX, randomY, randomZ);
         }
 
         /// <summary>
@@ -39,7 +43,7 @@ namespace NovelianMagicLibraryDefense.Settings
         /// </summary>
         public Vector3 GetCenter()
         {
-            return new Vector3((minX + maxX) / 2f, (minY + maxY) / 2f, fixedZ);
+            return new Vector3((minX + maxX) / 2f, (minY + maxY) / 2f, (minZ + maxZ) / 2f);
         }
 
         /// <summary>
@@ -47,7 +51,23 @@ namespace NovelianMagicLibraryDefense.Settings
         /// </summary>
         public Vector3 GetSize()
         {
-            return new Vector3(maxX - minX, maxY - minY, 0.1f);
+            return new Vector3(maxX - minX, maxY - minY, maxZ - minZ);
+        }
+
+        /// <summary>
+        /// 최소 코너 위치 반환
+        /// </summary>
+        public Vector3 GetMinCorner()
+        {
+            return new Vector3(minX, minY, minZ);
+        }
+
+        /// <summary>
+        /// 최대 코너 위치 반환
+        /// </summary>
+        public Vector3 GetMaxCorner()
+        {
+            return new Vector3(maxX, maxY, maxZ);
         }
     }
 
@@ -69,6 +89,18 @@ namespace NovelianMagicLibraryDefense.Settings
         [Tooltip("보스 몬스터 스폰 영역")]
         public SpawnAreaData bossSpawnArea = new();
 
+        [Header("Destination Area")]
+        [Tooltip("몬스터 목적지 영역")]
+        public SpawnAreaData destinationArea = new()
+        {
+            minX = -2f,
+            maxX = 2f,
+            minY = 0f,
+            maxY = 2f,
+            minZ = 5f,
+            maxZ = 5f
+        };
+
         /// <summary>
         /// 랜덤 스폰 위치 가져오기
         /// </summary>
@@ -83,6 +115,14 @@ namespace NovelianMagicLibraryDefense.Settings
         public Vector3 GetBossSpawnPosition()
         {
             return bossSpawnArea.GetRandomPosition();
+        }
+
+        /// <summary>
+        /// 랜덤 목적지 위치 가져오기
+        /// </summary>
+        public Vector3 GetRandomDestinationPosition()
+        {
+            return destinationArea.GetRandomPosition();
         }
     }
 }

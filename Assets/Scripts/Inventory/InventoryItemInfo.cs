@@ -46,6 +46,46 @@ public class InventoryItemInfo
         CurrentCount = currentCount;
     }
 
+    // TODO JML: 2차 빌드 후 삭제 예정 - BookMark 전용 생성자
+    /// <summary>
+    /// BookMark 객체로부터 인벤토리 아이템 정보 생성 (임시)
+    /// </summary>
+    /// <param name="bookmark">제작된 책갈피 객체</param>
+    /// <param name="instanceId">고유 인스턴스 ID</param>
+    public InventoryItemInfo(BookMark bookmark, int instanceId)
+    {
+        ItemID = 900000 + instanceId; // 임시 고유 ID (900001, 900002, ...)
+        ItemName = $"{bookmark.GetName()} #{instanceId}";
+        ItemType = ItemType.Special; // Special 타입으로 구분
+        ItemGrade = bookmark.GetGrade();
+        MaxStackCount = 1; // 책갈피는 1개씩만
+        MaxTotalCount = 1;
+        IconPath = "";
+        Description = GetBookmarkDescription(bookmark);
+        CurrentCount = 1;
+    }
+
+    //TODO JML: 2차 빌드 후 삭제 예정 - BookMark 설명 생성
+    /// <summary>
+    /// BookMark의 정보를 설명 문자열로 변환
+    /// </summary>
+    private string GetBookmarkDescription(BookMark bookmark)
+    {
+        string gradeText = bookmark.GetGrade() switch
+        {
+            Grade.Common => "커먼",
+            Grade.Rare => "레어",
+            Grade.Unique => "유니크",
+            Grade.Legendary => "레전더리",
+            Grade.Mythic => "신화",
+            _ => "알 수 없음"
+        };
+
+        return $"등급: {gradeText}\n" +
+               $"옵션 타입: {bookmark.GetOptionType()}\n" +
+               $"옵션 값: {bookmark.GetOptionValue()}";
+    }
+
     /// <summary>
     /// 아이템 수량 업데이트
     /// </summary>

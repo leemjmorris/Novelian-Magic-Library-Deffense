@@ -20,8 +20,6 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private UIManager uiManager;
         [SerializeField] private MonsterEvents monsterEvents;
         [SerializeField] private StageEvents stageEvents;
-        [SerializeField] private CardSelectionManager cardSelectionManager; // LMJ: Direct reference to CardSelectionManager
-        [SerializeField] private LevelUpCardUI levelUpCardUI; // LCB: Direct reference to LevelUpCardUI
 
         [Header("Settings")]
         [SerializeField] private StageSettings stageSettings;
@@ -66,12 +64,6 @@ namespace NovelianMagicLibraryDefense.Managers
                 monsterEvents.AddMonsterDiedListener(AddExp);
             }
 
-            // LCB: Validate LevelUpCardUI reference
-            if (levelUpCardUI == null)
-            {
-                Debug.LogError("[StageManager] LevelUpCardUI가 할당되지 않았습니다! Inspector에서 할당해주세요.");
-            }
-
             // LMJ: Initialize wave manager with hardcoded values (can be loaded from CSV later)
             waveManager.Initialize(totalEnemies: 20, bossCount: 0);
             waveManager.WaveLoop().Forget();
@@ -87,28 +79,29 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// LCB: Show start card selection and pause the game
+        /// LMJ: Show start card selection (2 character cards only)
+        /// Game does NOT pause for start selection
         /// </summary>
         private async UniTaskVoid ShowStartCardSelection()
         {
-            // 1. Pause the game
-            Time.timeScale = 0f;//LCB: pause
-            // Debug.Log("[StageManager] Game paused for start card selection");
+            Debug.Log("[StageManager] Opening start card selection (2 character cards)");
 
-            // 2. Show start card selection UI using direct reference
-            if (cardSelectionManager != null)
+            if (uiManager != null)
             {
-                await cardSelectionManager.ShowStartCards();
-                // Debug.Log("[StageManager] Start card selection completed");
+                uiManager.OpenCardSelectForGameStart(); // Opens 2 character cards, no pause
+
+                // Wait until card panel is closed
+                while (uiManager != null && uiManager.IsCardSelectOpen())
+                {
+                    await UniTask.Yield();
+                }
+
+                Debug.Log("[StageManager] Start card selection completed");
             }
             else
             {
-                Debug.LogWarning("[StageManager] CardSelectionManager not found! Skipping start card selection.");
+                Debug.LogError("[StageManager] UIManager is null! Cannot show start card selection.");
             }
-
-            // 3. Resume the game
-            Time.timeScale = 1f;
-            // Debug.Log("[StageManager] Game resumed after start card selection");
         }
 
         protected override void OnReset()
@@ -237,20 +230,22 @@ namespace NovelianMagicLibraryDefense.Managers
                 level++;
                 uiManager.UpdateExperience(currentExp, maxExp);
 
-                // LCB: Call level-up card system
+                // LMJ: Open card selection for level up
+                Debug.Log($"[StageManager] Level up to {level}!");
 
-                Time.timeScale = 0f; // Pause the game for level up
-
-                // LCB: Display card selection UI using cached reference (works even if object is inactive)
-                // Debug.Log($"[StageManager] Level up to {level}, using cached LevelUpCardUI...");
-                if (levelUpCardUI != null)
+                if (uiManager != null)
                 {
-                    // Debug.Log($"[StageManager] Calling ShowCards(level={level})");
-                    await levelUpCardUI.ShowCards(level); // level 1 means first level-up
+                    uiManager.OpenCardSelectForLevelUp(); // Opens with 2 random cards (character + ability mix)
+
+                    // Wait until card panel is closed
+                    while (uiManager != null && GameManager.Instance?.UI?.IsCardSelectOpen() == true)
+                    {
+                        await UniTask.Yield();
+                    }
                 }
                 else
                 {
-                    Debug.LogError("[StageManager] LevelUpCardUI is null! Was it destroyed or not found on Initialize?");
+                    Debug.LogError("[StageManager] UIManager is null!");
                 }
             }
             Time.timeScale = previousTimeScale; // Resume game
