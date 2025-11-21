@@ -3,52 +3,46 @@ using UnityEngine;
 
 public class CSVTestObj : MonoBehaviour
 {
-    TestData data;
-    TestData2 data2;
-
-
-
     private async UniTaskVoid Start()
     {
         // Wait until CSVLoader completes LoadAll
         await UniTask.WaitUntil(() => CSVLoader.Instance != null && CSVLoader.Instance.IsInit);
 
         // Method 1: Use GetTable
-        data = CSVLoader.Instance.GetTable<TestData>().GetId(1);
-        data2 = CSVLoader.Instance.GetTable<TestData2>().GetId(1);
-        var itemData = CSVLoader.Instance.GetTable<ItemData>().GetId(101611);
+        var bookmarkTable = CSVLoader.Instance.GetTable<BookmarkData>();
+        var bookmarkCraftTable = CSVLoader.Instance.GetTable<BookmarkCraftData>();
+        var bookmarkOptionTable = CSVLoader.Instance.GetTable<BookmarkOptionData>();
+        var bookmarkListTable = CSVLoader.Instance.GetTable<BookmarkListData>();
+        var bookmarkSkillTable = CSVLoader.Instance.GetTable<BookmarkSkillData>();
 
-        var BookmarkCraftData = CSVLoader.Instance.GetTable<BookmarkCraftData>().GetId(1001);
-        var BookmarkResultData = CSVLoader.Instance.GetTable<BookmarkResultData>().GetId(1211);
-        var BookmarkOptionData = CSVLoader.Instance.GetTable<BookmarkOptionData>().GetId(1311);
-        var BookmarkItemData = CSVLoader.Instance.GetTable<BookmarkItemData>().GetId(1411);
+        var currencyTable = CSVLoader.Instance.GetTable<CurrencyData>();
+        var ingredientTable = CSVLoader.Instance.GetTable<IngredientData>();
+        var gradeTable = CSVLoader.Instance.GetTable<GradeData>();
 
-        // Method 2: Use GetData helper method (shorter)
-        // data = CSVLoader.Instance.GetData<TestData>(1);
-        // data2 = CSVLoader.Instance.GetData<TestData2>(1);
+    
+        Debug.Log("=== CSV Load Test ===");
 
-        if (data != null && data2 != null)
-        {
-            Debug.Log($"Name: {data.NAME}");
-            Debug.Log($"Name2: {data2.NAME}");
-            Debug.Log($"Item Name: {itemData.Item_Name}");
-            Debug.Log("===============================");
-            Debug.Log($"Bookmark Craft Success Rate: {BookmarkCraftData.Success_Rate}");
-            Debug.Log($"Bookmark Result Grade: {BookmarkResultData.Grade}");
-            Debug.Log($"Bookmark Option Name: {BookmarkOptionData.Option_Name}");
-            Debug.Log($"Bookmark Item Option Value: {BookmarkItemData.Option_Value}");
-        }
-        else
-        {
-            Debug.LogError("Data not found!");
-        }
+        Debug.Log("=== BookMark Table===");
+        Debug.Log($"Bookmark Name: {bookmarkTable.GetId(111).Bookmark_Name}");
+        Debug.Log($"Bookmark Craft Bookmark_Name: {bookmarkCraftTable.GetId(121).Recipe_Name}");
+        Debug.Log($"Bookmark Option Name: {bookmarkOptionTable.GetId(1311).Option_Name}");
+        Debug.Log($"Bookmark List Name: {bookmarkListTable.GetId(141).List_Name}");
+        Debug.Log($"Bookmark Skill Name: {bookmarkSkillTable.GetId(1711).Bookmark_Skill_Name}");
+
+        Debug.Log("=== Currency & Ingredient Table ===");
+        Debug.Log($"Ingredient Name: {ingredientTable.GetId(1011).Ingredient_Name}");
+        Debug.Log($"Currency Name: {currencyTable.GetId(161).Currency_Name}");
+        Debug.Log($"Grde Name: {gradeTable.GetId(151).Grade_Name}");
+
+        Debug.Log("===============");
+
 
         // Additional usage examples
-        var allData = CSVLoader.Instance.GetTable<TestData>().GetAll();
+        var allData = CSVLoader.Instance.GetTable<BookmarkCraftData>().GetAll();
         Debug.Log($"Total rows in TestTable: {allData.Count}");
 
         // Conditional search
-        var filtered = CSVLoader.Instance.GetTable<TestData>().FindAll(x => x.ID > 5);
+        var filtered = CSVLoader.Instance.GetTable<BookmarkCraftData>().FindAll(x => x.Recipe_ID > 5);
         Debug.Log($"Filtered count: {filtered.Count}");
     }
 }

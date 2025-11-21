@@ -14,12 +14,14 @@ public static class AddressableKey
     public static readonly string Skill = "Skill";
 
     //JML: CSV Addressable Keys
-    public static readonly string ItemTable = "ItemTable";
+    public static readonly string BookmarkTable = "BookmarkTable";
     public static readonly string BookmarkCraftTable = "BookMarkCraftTable";
-    public static readonly string BookmarkResultTable = "BookmarkResultTable";
     public static readonly string BookmarkOptionTable = "BookmarkOptionTable";
-    public static readonly string BookmarkItemTable = "BookmarkItemTable";
+    public static readonly string BookmarkListTable = "BookmarkListTable";
+    public static readonly string BookmarkSkillTable = "BookmarkSkillTable";
+    public static readonly string CurrencyTable = "CurrencyTable";
     public static readonly string GradeTable = "GradeTable";
+    public static readonly string IngredientTable = "IngredientTable";
 
     public static string GetCharacterKey(int characterId)
     {
@@ -75,9 +77,21 @@ public enum Grade
     Legendary = 4,
     Mythic = 5,
 }
+
+public enum OptionType
+{
+    AttackPower = 1,
+}
 public enum UseType
 {
     BookmarkCraft = 1,
     UserLevelUp = 2,
     ProductPurchase = 3
+}
+
+public enum CurrencyType
+{
+    FreeCurrency = 1,
+    PaidCurrency = 2,
+    SpecialCurrency = 3
 }

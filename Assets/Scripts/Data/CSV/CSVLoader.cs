@@ -45,16 +45,15 @@ public class CSVLoader : MonoBehaviour
         {
             // Load all tables in parallel
             await UniTask.WhenAll(
-                RegisterTableAsync<TestData>("Test", x => x.ID),
-                RegisterTableAsync<TestData2>("Test2", x => x.ID),
-
                 // JML: Register new CSV tables here
-                RegisterTableAsync<ItemData>(AddressableKey.ItemTable, x => x.Item_ID),
+                RegisterTableAsync<BookmarkData>(AddressableKey.BookmarkTable, x => x.Bookmark_ID),
                 RegisterTableAsync<BookmarkCraftData>(AddressableKey.BookmarkCraftTable, x => x.Recipe_ID),
-                RegisterTableAsync<BookmarkResultData>(AddressableKey.BookmarkResultTable, x => x.Result_ID),
                 RegisterTableAsync<BookmarkOptionData>(AddressableKey.BookmarkOptionTable, x => x.Option_ID),
-                RegisterTableAsync<BookmarkItemData>(AddressableKey.BookmarkItemTable, x => x.Bookmark_ID),
-                RegisterTableAsync<GradeData>(AddressableKey.GradeTable, x => x.Grade_ID)
+                RegisterTableAsync<BookmarkListData>(AddressableKey.BookmarkListTable, x => x.List_ID),
+                RegisterTableAsync<BookmarkSkillData>(AddressableKey.BookmarkSkillTable, x => x.Bookmark_Skill_ID),
+                RegisterTableAsync<GradeData>(AddressableKey.GradeTable, x => x.Grade_ID),
+                RegisterTableAsync<CurrencyData>(AddressableKey.CurrencyTable, x => x.Currency_ID),
+                RegisterTableAsync<IngredientData>(AddressableKey.IngredientTable, x => x.Ingredient_ID)
             );
 
             IsInit = true;
@@ -99,7 +98,8 @@ public class CSVLoader : MonoBehaviour
 
             // Create and load CsvTable
             var table = new CsvTable<T>(idSelector);
-            table.LoadFromText(asset.text);
+            string csvText = asset.text.Replace(",N/A,", ",0,").Replace(",N/A\n", ",0\n").Replace(",N/A\r", ",0\r").Replace(",N/A,", ",0,"); ;
+            table.LoadFromText(csvText);
 
             Debug.Log($"[CSVLoader] Table loaded: {addressableKey} ({table.Count} rows)");
             return table;
