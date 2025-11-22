@@ -34,8 +34,8 @@ public class CardSelectionManager : MonoBehaviour
     private int selectedCard2Id;
     private bool isCardSelected = false;
 
-    // 카드 스프라이트 캐시 (Addressable로 로드)
-    private Dictionary<int, Sprite> cardSprites = new Dictionary<int, Sprite>();
+    // 카드 스프라이트 캐시 (임시: 사용 안 함)
+    // private Dictionary<int, Sprite> cardSprites = new Dictionary<int, Sprite>();
 
     // 타이머 취소 토큰
     private CancellationTokenSource selectionCts;
@@ -53,36 +53,11 @@ public class CardSelectionManager : MonoBehaviour
         }
     }
 
-    private async void Start()
-    {
-        // 카드 스프라이트 사전 로드
-        await PreloadCardSprites();
-    }
-
-    /// <summary>
-    /// 카드 스프라이트 사전 로드 (Addressable)
-    /// </summary>
-    private async UniTask PreloadCardSprites()
-    {
-        Debug.Log("[CardSelectionManager] Preloading card sprites...");
-
-        foreach (int characterId in availableCharacterIds)
-        {
-            try
-            {
-                string spriteKey = AddressableKey.GetCardSpriteKey(characterId);
-                Sprite sprite = await Addressables.LoadAssetAsync<Sprite>(spriteKey).Task;
-                cardSprites[characterId] = sprite;
-                Debug.Log($"[CardSelectionManager] Loaded card sprite for ID {characterId}");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[CardSelectionManager] Failed to load card sprite for ID {characterId}: {e.Message}");
-            }
-        }
-
-        Debug.Log($"[CardSelectionManager] Preloaded {cardSprites.Count}/{availableCharacterIds.Count} card sprites");
-    }
+    // 임시: 카드 스프라이트 로드 비활성화 (CharacterCard 프리팹만 사용)
+    // private async void Start()
+    // {
+    //     await PreloadCardSprites();
+    // }
 
     /// <summary>
     /// 게임 시작 시 카드 선택 (StageManager에서 호출)
@@ -90,12 +65,6 @@ public class CardSelectionManager : MonoBehaviour
     public async UniTask ShowStartCards()
     {
         isCardSelected = false;
-
-        // 0. 스프라이트 로드 대기 (Start()에서 로드 중일 수 있음)
-        while (cardSprites.Count < availableCharacterIds.Count)
-        {
-            await UniTask.Yield();
-        }
 
         // 1. 카드 패널 활성화
         if (cardPanel != null)
@@ -205,14 +174,9 @@ public class CardSelectionManager : MonoBehaviour
         // 캐릭터 데이터 가져오기 (임시: 하드코딩, 나중에 CSV로 대체)
         string characterName = GetCharacterName(characterId);
         GenreType genreType = GetCharacterGenre(characterId);
-        Sprite cardSprite = cardSprites.ContainsKey(characterId) ? cardSprites[characterId] : null;
 
-        if (cardSprite == null)
-        {
-            Debug.LogWarning($"[CardSelectionManager] 캐릭터 ID {characterId}의 카드 스프라이트가 로드되지 않았습니다!");
-        }
-
-        charCard.UpdateCharacter(cardSprite, characterName, genreType);
+        // 임시: 스프라이트 없이 업데이트 (CharacterCard 프리팹의 기본 스프라이트 사용)
+        charCard.UpdateCharacter(null, characterName, genreType);
     }
 
     /// <summary>
