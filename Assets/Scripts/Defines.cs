@@ -89,6 +89,12 @@ public enum UseType
     ProductPurchase = 3
 }
 
+public enum BookmarkType
+{
+    Stat = 1,
+    Skill = 2
+}
+
 public enum CurrencyType
 {
     FreeCurrency = 1,

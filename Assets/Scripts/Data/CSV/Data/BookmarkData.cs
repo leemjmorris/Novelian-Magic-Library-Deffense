@@ -37,14 +37,6 @@ public class BookmarkCraftData
 }
 
 [Serializable]
-public class BookmarkResultData
-{
-    public int Result_ID { get; set; }
-    public int Grade { get; set; }
-    public int Option_ID { get; set; }
-}
-
-[Serializable]
 public class BookmarkOptionData
 {
     public int Option_ID { get; set; }
