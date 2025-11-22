@@ -1,4 +1,3 @@
-using NovelianMagicLibraryDefense.Managers;
 using NovelianMagicLibraryDefense.Skills;
 using UnityEngine;
 

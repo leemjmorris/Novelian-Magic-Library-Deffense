@@ -2,7 +2,10 @@ using UnityEngine;
 
 public class BookMark
 {
-    private string name; // JML: Example default name in Korean
+    public int UniqueID { get; private set; }
+
+    public int BookmarkDataID { get; private set; }
+    public string Name { get; private set; }
     private Grade grade;
     private int type;
     private float optionValue;
@@ -16,7 +19,7 @@ public class BookMark
     /// <param name="optionValue">Item Value</param>
     public BookMark(string name = "책갈피", Grade grade = Grade.Common, int type = 0, float optionValue = 0)
     {
-        this.name = name;
+        //this.name = name;
         this.grade = grade;
         this.type = type;
         this.optionValue = optionValue;
@@ -29,12 +32,6 @@ public class BookMark
 
     public override string ToString()
     {
-        return $"현재 책갈피 : 이름: {name}, 등급: {grade}, 타입: {type}, 옵션 값: {optionValue}";
+        return $"현재 책갈피 : 이름: {Name}, 등급: {grade}, 타입: {type}, 옵션 값: {optionValue}";
     }
-
-    //TODO JML: 2차 주간빌드 하고삭제 예정 - 인벤토리 표시용 Getter
-    public string GetName() => name;
-    public Grade GetGrade() => grade;
-    public int GetOptionType() => type;
-    public float GetOptionValue() => optionValue;
 }
