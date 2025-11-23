@@ -103,16 +103,46 @@ public class BookMark
 
     public override string ToString()
     {
-        string typeStr = Type == BookmarkType.Stat ? "스탯" : "스킬";
+        string typeStr = Type == BookmarkType.Stat ? "스탯 책갈피" : "스킬 책갈피";
         string equipStatus = IsEquipped ? $"[장착됨 - 사서{EquippedLibrarianID}]" : "[미장착]";
-        
+
+        // JML: Get Grade Name from CSV
+        string gradeName = GetGradeName(Grade);
+
         if (Type == BookmarkType.Stat)
         {
-            return $"[{UniqueID}] {Name} ({typeStr}, 등급: {Grade}, 옵션: {OptionValue}) {equipStatus}";
+            // JML: Get Option Type Name
+            string optionTypeName = GetOptionTypeName(OptionType);
+            return $"[고유번호: {UniqueID}] {Name} ({typeStr}, 등급: {gradeName}, 옵션: {optionTypeName} +{OptionValue}) {equipStatus}";
         }
         else
         {
-            return $"[{UniqueID}] {Name} ({typeStr}, 등급: {Grade}, 이펙트ID: {EffectID}) {equipStatus}";
+            return $"[고유번호: {UniqueID}] {Name} ({typeStr}, 등급: {gradeName}, 이펙트ID: {EffectID}) {equipStatus}";
+        }
+    }
+
+    /// <summary>
+    /// JML: Get Grade Name from Grade Enum
+    /// </summary>
+    private string GetGradeName(Grade grade)
+    {
+        // JML: Grade enum value is already Grade_ID (151~155), use it directly
+        int gradeID = (int)grade;
+        var gradeData = CSVLoader.Instance.GetData<GradeData>(gradeID);
+        return gradeData != null ? gradeData.Grade_Name : grade.ToString();
+    }
+
+    /// <summary>
+    /// JML: Get Option Type Name
+    /// </summary>
+    private string GetOptionTypeName(int optionType)
+    {
+        switch (optionType)
+        {
+            case 1: // OptionType.AttackPower
+                return "공격력";
+            default:
+                return ((OptionType)optionType).ToString();
         }
     }
 }

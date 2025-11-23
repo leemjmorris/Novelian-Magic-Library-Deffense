@@ -1,29 +1,22 @@
 using UnityEngine;
 
-public class BookMarkCraft : MonoBehaviour
+/// <summary>
+/// JML: Bookmark Crafting Utility Class (static)
+/// 책갈피 제작 유틸리티 클래스 (static)
+/// MonoBehaviour 상속 없이 순수 제작 로직만 제공
+/// </summary>
+public static class BookMarkCraft
 {
-    private static BookMarkCraft instance;
-    public static BookMarkCraft Instance => instance;
-
-    private void Awake()
-    {
-        if (instance != null && instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-        instance = this;
-        DontDestroyOnLoad(gameObject);
-    }
-
     /// <summary>
+    /// JML: Craft Bookmark
     /// 책갈피 제작
     /// </summary>
     /// <param name="recipeID">BookmarkCraftData의 Recipe_ID</param>
     /// <returns>제작 결과</returns>
-    public BookMarkCraftResult CraftBookmark(int recipeID)
+    public static BookMarkCraftResult CraftBookmark(int recipeID)
     {
         // JML: Recipe Data Load
+        // 레시피 데이터 로드
         var recipeData = CSVLoader.Instance.GetData<BookmarkCraftData>(recipeID);
         if (recipeData == null)
         {
@@ -31,7 +24,8 @@ public class BookMarkCraft : MonoBehaviour
             return new BookMarkCraftResult(false, null, "레시피를 찾을 수 없습니다.");
         }
 
-        // JML: Material Count Check
+        // JML: Material Check
+        // 재료 확인
         if (!CheckMaterials(recipeData))
         {
             Debug.LogWarning($"[BookMarkCraft] 재료 부족: {recipeData.Recipe_Name}");
@@ -39,6 +33,7 @@ public class BookMarkCraft : MonoBehaviour
         }
 
         // JML: Currency Check
+        // 골드 확인
         if (!CheckCurrency(recipeData))
         {
             Debug.LogWarning($"[BookMarkCraft] 골드 부족: {recipeData.Recipe_Name}");
@@ -46,6 +41,7 @@ public class BookMarkCraft : MonoBehaviour
         }
 
         // JML: Material Consumption
+        // 재료 소모
         if (!ConsumeMaterials(recipeData))
         {
             Debug.LogError($"[BookMarkCraft] 재료 소모 실패: {recipeData.Recipe_Name}");
@@ -53,6 +49,7 @@ public class BookMarkCraft : MonoBehaviour
         }
 
         // JML: Currency Consumption
+        // 골드 소모
         if (!ConsumeCurrency(recipeData))
         {
             Debug.LogError($"[BookMarkCraft] 골드 소모 실패: {recipeData.Recipe_Name}");
@@ -60,9 +57,11 @@ public class BookMarkCraft : MonoBehaviour
         }
 
         // JML: Success Determination
-        CraftSuccessType successType = RollCraftSuccess(recipeData.Success_Rate, recipeData.Great_Success_Rate);
+        // 성공 판정
+        CraftSuccessType successType = RollCraftSuccess(recipeData.Great_Success_Rate);
 
         // JML: Result Bookmark Creation
+        // 결과 책갈피 생성
         int resultID = successType == CraftSuccessType.GreatSuccess ? recipeData.Great_Result_ID : recipeData.Result_ID;
         BookMark craftedBookmark = CreateBookmarkFromResult(resultID);
 
@@ -73,6 +72,7 @@ public class BookMarkCraft : MonoBehaviour
         }
 
         // JML: Add to BookMarkManager
+        // BookMarkManager에 추가
         BookMarkManager.Instance.AddBookmark(craftedBookmark);
 
         string message = successType == CraftSuccessType.GreatSuccess ? "대성공!" : "성공!";
@@ -81,54 +81,53 @@ public class BookMarkCraft : MonoBehaviour
         return new BookMarkCraftResult(true, craftedBookmark, message, successType);
     }
 
+    #region Material & Currency Check
+
     /// <summary>
-    /// JML: Material Count Check
+    /// JML: Check if materials are sufficient
+    /// 재료가 충분한지 확인
     /// </summary>
-    private bool CheckMaterials(BookmarkCraftData recipeData)
+    private static bool CheckMaterials(BookmarkCraftData recipeData)
     {
         var ingredientMgr = IngredientManager.Instance;
         if (ingredientMgr == null)
         {
             Debug.LogError("[BookMarkCraft] IngredientManager가 없습니다!");
-            {
-                return false;
-            }
+            return false;
         }
 
-        // Material_1
+        // JML: Material_1 Check
+        // 재료 1 확인
         if (recipeData.Material_1_ID > 0 && recipeData.Material_1_Count > 0)
         {
             if (!ingredientMgr.HasIngredient(recipeData.Material_1_ID, recipeData.Material_1_Count))
-            {
                 return false;
-            }
         }
 
-        // Material_2
+        // JML: Material_2 Check
+        // 재료 2 확인
         if (recipeData.Material_2_ID > 0 && recipeData.Material_2_Count > 0)
         {
             if (!ingredientMgr.HasIngredient(recipeData.Material_2_ID, recipeData.Material_2_Count))
-            {
                 return false;
-            }
         }
 
-        // Material_3
+        // JML: Material_3 Check
+        // 재료 3 확인
         if (recipeData.Material_3_ID > 0 && recipeData.Material_3_Count > 0)
         {
             if (!ingredientMgr.HasIngredient(recipeData.Material_3_ID, recipeData.Material_3_Count))
-            {
                 return false;
-            }
         }
 
         return true;
     }
 
     /// <summary>
+    /// JML: Check if currency is sufficient
     /// 골드가 충분한지 확인
     /// </summary>
-    private bool CheckCurrency(BookmarkCraftData recipeData)
+    private static bool CheckCurrency(BookmarkCraftData recipeData)
     {
         var currencyMgr = CurrencyManager.Instance;
         if (currencyMgr == null)
@@ -145,28 +144,36 @@ public class BookMarkCraft : MonoBehaviour
         return true;
     }
 
+    #endregion
+
+    #region Material & Currency Consumption
+
     /// <summary>
+    /// JML: Consume materials
     /// 재료 소모
     /// </summary>
-    private bool ConsumeMaterials(BookmarkCraftData recipeData)
+    private static bool ConsumeMaterials(BookmarkCraftData recipeData)
     {
         var ingredientMgr = IngredientManager.Instance;
 
-        // Material_1
+        // JML: Consume Material_1
+        // 재료 1 소모
         if (recipeData.Material_1_ID > 0 && recipeData.Material_1_Count > 0)
         {
             if (!ingredientMgr.RemoveIngredient(recipeData.Material_1_ID, recipeData.Material_1_Count))
                 return false;
         }
 
-        // Material_2
+        // JML: Consume Material_2
+        // 재료 2 소모
         if (recipeData.Material_2_ID > 0 && recipeData.Material_2_Count > 0)
         {
             if (!ingredientMgr.RemoveIngredient(recipeData.Material_2_ID, recipeData.Material_2_Count))
                 return false;
         }
 
-        // Material_3
+        // JML: Consume Material_3
+        // 재료 3 소모
         if (recipeData.Material_3_ID > 0 && recipeData.Material_3_Count > 0)
         {
             if (!ingredientMgr.RemoveIngredient(recipeData.Material_3_ID, recipeData.Material_3_Count))
@@ -177,9 +184,10 @@ public class BookMarkCraft : MonoBehaviour
     }
 
     /// <summary>
+    /// JML: Consume currency
     /// 골드 소모
     /// </summary>
-    private bool ConsumeCurrency(BookmarkCraftData recipeData)
+    private static bool ConsumeCurrency(BookmarkCraftData recipeData)
     {
         var currencyMgr = CurrencyManager.Instance;
 
@@ -191,33 +199,88 @@ public class BookMarkCraft : MonoBehaviour
         return true;
     }
 
+    #endregion
+
+    #region Success Roll & Bookmark Creation
+
     /// <summary>
-    /// JML: Crafting Success Roll
+    /// JML: Roll crafting success
+    /// 제작 성공 판정
     /// </summary>
-    private CraftSuccessType RollCraftSuccess(float successRate, float greatSuccessRate)
+    private static CraftSuccessType RollCraftSuccess(float greatSuccessRate)
     {
         float roll = Random.Range(0f, 1f);
 
-        // JML: Great Success
-        if (roll < greatSuccessRate)    // 0.05
+        // JML: Great Success Check (great success rate is the probability of great success)
+        // 대성공 확률 체크 (greatSuccessRate는 대성공 확률)
+        if (roll < greatSuccessRate)
         {
             return CraftSuccessType.GreatSuccess;
         }
-        //JML: Normal Success
+
+        // JML: Normal Success (always success if not great success)
+        // 일반 성공 (대성공이 아니면 무조건 일반 성공)
         return CraftSuccessType.Success;
     }
 
-    /// <summary>   
+    /// <summary>
     /// JML: Create Bookmark from Result_ID
+    /// Result_ID로부터 BookMark 생성
     /// </summary>
-    private BookMark CreateBookmarkFromResult(int resultID)
+    private static BookMark CreateBookmarkFromResult(int resultID)
     {
-        // BookMarkSkillData Check
-        var skillData = CSVLoader.Instance.GetData<BookmarkSkillData>(resultID);
+        // JML: Load BookmarkListData
+        // BookmarkListData 로드
+        var listData = CSVLoader.Instance.GetData<BookmarkListData>(resultID);
+        if (listData == null)
+        {
+            Debug.LogError($"[BookMarkCraft] BookmarkListData를 찾을 수 없음: {resultID}");
+            return null;
+        }
+
+        // JML: Collect Option_1~4 (without LINQ)
+        // Option_1~4 수집 (LINQ 없이)
+        int[] optionIDs = new int[]
+        {
+            listData.Option_1_ID,
+            listData.Option_2_ID,
+            listData.Option_3_ID,
+            listData.Option_4_ID
+        };
+
+        // JML: Filter valid options (exclude 0)
+        // 유효한 옵션만 필터링 (0 제외)
+        int[] validOptions = new int[4];
+        int validCount = 0;
+
+        for (int i = 0; i < optionIDs.Length; i++)
+        {
+            if (optionIDs[i] > 0)
+            {
+                validOptions[validCount] = optionIDs[i];
+                validCount++;
+            }
+        }
+
+        if (validCount == 0)
+        {
+            Debug.LogError($"[BookMarkCraft] BookmarkListData {resultID}에 유효한 옵션이 없습니다!");
+            return null;
+        }
+
+        // JML: Random selection
+        // 랜덤으로 하나 선택
+        int selectedOptionID = validOptions[Random.Range(0, validCount)];
+        Debug.Log($"[BookMarkCraft] 랜덤 옵션 선택: {selectedOptionID} (총 {validCount}개 중)");
+
+        // JML: Check BookmarkSkillData first (Skill Bookmark)
+        // BookmarkSkillData 먼저 확인 (스킬 북마크)
+        var skillData = CSVLoader.Instance.GetData<BookmarkSkillData>(selectedOptionID);
 
         if (skillData != null)
         {
             // JML: Create Skill Bookmark
+            // 스킬 북마크 생성
             Debug.Log($"[BookMarkCraft] 스킬 북마크 생성: {skillData.Bookmark_Skill_Name}");
             var skillBookmark = new BookMark(
                 bookmarkDataID: resultID,
@@ -230,11 +293,13 @@ public class BookMarkCraft : MonoBehaviour
             return skillBookmark;
         }
 
-        // BookMarkOptionData Check
-        var optionData = CSVLoader.Instance.GetData<BookmarkOptionData>(resultID);
+        // JML: Check BookmarkOptionData (Stat Bookmark)
+        // BookmarkOptionData 확인 (스탯 북마크)
+        var optionData = CSVLoader.Instance.GetData<BookmarkOptionData>(selectedOptionID);
         if (optionData != null)
         {
             // JML: Create Stat Bookmark
+            // 스탯 북마크 생성
             Debug.Log($"[BookMarkCraft] 스탯 북마크 생성: {optionData.Option_Name}");
             var statBookmark = new BookMark(
                 bookmarkDataID: resultID,
@@ -246,18 +311,11 @@ public class BookMarkCraft : MonoBehaviour
             return statBookmark;
         }
 
-        // JML: Neither Data Found
-        Debug.LogError($"[BookMarkCraft] Result_ID {resultID}에 해당하는 BookmarkSkillData 또는 BookmarkOptionData를 찾을 수 없습니다!");
+        // JML: Error if neither found
+        // 둘 다 없으면 에러
+        Debug.LogError($"[BookMarkCraft] Option_ID {selectedOptionID}에 해당하는 BookmarkSkillData 또는 BookmarkOptionData를 찾을 수 없습니다!");
         return null;
     }
-}
 
-/// <summary>
-/// 제작 성공 타입
-/// </summary>
-public enum CraftSuccessType
-{
-    Success,        // 일반 성공
-    GreatSuccess,   // 대성공
+    #endregion
 }
-

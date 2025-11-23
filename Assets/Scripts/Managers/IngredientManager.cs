@@ -21,28 +21,28 @@ public class IngredientManager : MonoBehaviour
 
         Ingredients = new Dictionary<int, int>();
     }
-    //JML: ItemTable
-    public ItemData GetIngredientInfo(int id)
+    //JML: IngredientDataTable
+    public IngredientData GetIngredientInfo(int id)
     {
-        return CSVLoader.Instance.GetData<ItemData>(id);
+        return CSVLoader.Instance.GetData<IngredientData>(id);
     }
 
     public string GetIngredientName(int id)
     {
         var data = GetIngredientInfo(id);
-        return data?.Item_Name ?? "Unknown";
+        return data?.Ingredient_Name ?? "Unknown";
     }
 
-    public Grade GetIngredientGrade(int id)
+    public int GetIngredientGradeID(int id)
     {
         var data = GetIngredientInfo(id);
-        return data?.Item_Grade ?? Grade.Common;
+        return data?.Grade_ID ?? 151;
     }
 
-    public ItemType GetIngredientType(int id)
+    public UseType GetIngredientUseType(int id)
     {
         var data = GetIngredientInfo(id);
-        return data?.Item_Type ?? ItemType.Material;
+        return data?.Use_Type ?? UseType.BookmarkCraft;
     }
 
     public int GetMaxCount(int id)
@@ -59,26 +59,19 @@ public class IngredientManager : MonoBehaviour
     public void AddIngredient(int id, int count)
     {
 
-        var itemData = CSVLoader.Instance.GetData<ItemData>(id);
-        if (itemData == null)
+        var ingredientData = CSVLoader.Instance.GetData<IngredientData>(id);
+        if (ingredientData == null)
         {
-            Debug.LogError($"존재하지 않는 아이템 ID: {id}");
+            Debug.LogError($"존재하지 않는 재료 ID: {id}");
             return;
         }
 
-        if (itemData.Item_Type != ItemType.Material)
-        {
-            Debug.LogError($"재료 아이템이 아닙니다: {id} (Type: {itemData.Item_Type})");
-            return;
-        }
-
-  
         int currentCount = GetIngredientCount(id);
-        int maxCount = itemData.Max_Count;
-        
+        int maxCount = ingredientData.Max_Count;
+
         if (currentCount + count > maxCount)
         {
-            Debug.LogWarning($"{itemData.Item_Name} 최대 수량 초과! (최대: {maxCount})");
+            Debug.LogWarning($"{ingredientData.Ingredient_Name} 최대 수량 초과! (최대: {maxCount})");
             count = maxCount - currentCount;
         }
 
@@ -87,7 +80,7 @@ public class IngredientManager : MonoBehaviour
         else
             Ingredients[id] = count;
 
-        Debug.Log($"{itemData.Item_Name} {count}개 획득! (보유: {Ingredients[id]}/{maxCount})");
+        Debug.Log($"{ingredientData.Ingredient_Name} {count}개 획득! (보유: {Ingredients[id]}/{maxCount})");
     }
 
     public bool RemoveIngredient(int id, int count)

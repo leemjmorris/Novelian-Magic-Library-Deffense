@@ -112,28 +112,27 @@ public class InventoryController : MonoBehaviour
 
         // IngredientManager에서 모든 재료 정보 가져오기
         // (IngredientManager는 Dictionary<int, int>로 관리하므로 모든 ID를 순회해야 함)
-        // 실제 구현에서는 IngredientManager에 GetAllIngredients() 같은 메서드가 필요할 수 있음
-        // 여기서는 ItemTable의 모든 Material 타입 아이템을 체크하는 방식 사용
+        // IngredientTable의 모든 재료를 체크하는 방식 사용
 
-        var allItemData = CSVLoader.Instance.GetTable<ItemData>();
-        if (allItemData == null)
+        var allIngredientData = CSVLoader.Instance.GetTable<IngredientData>();
+        if (allIngredientData == null)
         {
-            Debug.LogError("[InventoryController] ItemData 테이블을 불러올 수 없습니다!");
+            Debug.LogError("[InventoryController] IngredientData 테이블을 불러올 수 없습니다!");
             return;
         }
 
-        // ItemTable에서 Material 타입 아이템들을 가져와서 보유 수량 확인
-        foreach (var itemData in allItemData.GetAll())
+        // IngredientTable에서 재료들을 가져와서 보유 수량 확인
+        foreach (var ingredientData in allIngredientData.GetAll())
         {
-            // Material 타입만 인벤토리에 표시 (또는 Inventory 플래그가 true인 아이템)
-            if (itemData.Item_Type == ItemType.Material && itemData.Inventory)
+            // Inventory 플래그가 true인 재료만 인벤토리에 표시
+            if (ingredientData.Inventory)
             {
-                int currentCount = IngredientManager.Instance.GetIngredientCount(itemData.Item_ID);
+                int currentCount = IngredientManager.Instance.GetIngredientCount(ingredientData.Ingredient_ID);
 
                 // 보유 수량이 1개 이상인 아이템만 표시
                 if (currentCount > 0)
                 {
-                    var itemInfo = new InventoryItemInfo(itemData.Item_ID, currentCount);
+                    var itemInfo = new InventoryItemInfo(ingredientData.Ingredient_ID, currentCount);
                     displayedItems.Add(itemInfo);
                 }
             }

@@ -6,10 +6,10 @@ using UnityEngine;
 /// </summary>
 public class InventoryItemInfo
 {
-    // ItemTable에서 가져온 기본 정보
+    // IngredientTable에서 가져온 기본 정보
     public int ItemID { get; private set; }
     public string ItemName { get; private set; }
-    public ItemType ItemType { get; private set; }
+    public UseType ItemType { get; private set; }
     public Grade ItemGrade { get; private set; }
     public int MaxStackCount { get; private set; }
     public int MaxTotalCount { get; private set; }
@@ -20,29 +20,33 @@ public class InventoryItemInfo
     public int CurrentCount { get; private set; }
 
     /// <summary>
-    /// ItemTable 데이터를 기반으로 인벤토리 아이템 정보 생성
+    /// IngredientTable 데이터를 기반으로 인벤토리 아이템 정보 생성
     /// </summary>
     /// <param name="itemId">아이템 ID</param>
     /// <param name="currentCount">현재 보유 수량</param>
     public InventoryItemInfo(int itemId, int currentCount)
     {
-        // ItemTable에서 데이터 로드
-        var itemData = CSVLoader.Instance.GetData<ItemData>(itemId);
+        // IngredientTable에서 데이터 로드
+        var ingredientData = CSVLoader.Instance.GetData<IngredientData>(itemId);
 
-        if (itemData == null)
+        if (ingredientData == null)
         {
-            Debug.LogError($"[InventoryItemInfo] 존재하지 않는 아이템 ID: {itemId}");
+            Debug.LogError($"[InventoryItemInfo] 존재하지 않는 재료 ID: {itemId}");
             return;
         }
 
-        ItemID = itemData.Item_ID;
-        ItemName = itemData.Item_Name;
-        ItemType = itemData.Item_Type;
-        ItemGrade = itemData.Item_Grade;
-        MaxStackCount =Mathf.Max(1, itemData.Max_Stack); // 한 슬롯당 최대 스택 개수
-        MaxTotalCount = Mathf.Max(MaxStackCount, itemData.Max_Count); // 전체 최대 보유 가능 개수
-        IconPath = GetIconPath(itemData.Item_ID);           // 아이템 ID 기반 아이콘 경로
-        Description = GetDescription(itemData.Item_ID);     // 아이템 ID 기반 설명
+        ItemID = ingredientData.Ingredient_ID;
+        ItemName = ingredientData.Ingredient_Name;
+        ItemType = ingredientData.Use_Type;
+
+        // GradeTable에서 등급 정보 가져오기
+        var gradeData = CSVLoader.Instance.GetData<GradeData>(ingredientData.Grade_ID);
+        ItemGrade = gradeData?.Grade_Type ?? Grade.Common;
+
+        MaxStackCount = Mathf.Max(1, ingredientData.Max_Stack); // 한 슬롯당 최대 스택 개수
+        MaxTotalCount = Mathf.Max(MaxStackCount, ingredientData.Max_Count); // 전체 최대 보유 가능 개수
+        IconPath = GetIconPath(ingredientData.Ingredient_ID);           // 아이템 ID 기반 아이콘 경로
+        Description = GetDescription(ingredientData.Ingredient_ID);     // 아이템 ID 기반 설명
         CurrentCount = currentCount;
     }
 
