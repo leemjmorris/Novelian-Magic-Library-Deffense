@@ -1,173 +1,173 @@
+#if false
+// LMJ: Old Projectile disabled for combat system refactor (Issue #265)
+// Will be replaced with straight-line projectile
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
 //JML: Projectile with Rigidbody-based movement and target tracking
-public class Projectile : MonoBehaviour, IPoolable
+public class Projectile_OLD : MonoBehaviour, IPoolable
 {
-    [Header("Projectile Attributes")]
-    [SerializeField] private Rigidbody rb;
+    // Old code preserved for reference
+}
+#endif
 
-    // JML: Damage is still set via Inspector (not in CSV yet)
-    [SerializeField] private float damage = 10f;
+//LMJ : Straight-line projectile with fixed direction (Issue #265)
+namespace Novelian.Combat
+{
+    using NovelianMagicLibraryDefense.Managers;
+    using UnityEngine;
+    using Cysharp.Threading.Tasks;
+    using System.Threading;
 
-    // JML: Speed and lifetime are now set dynamically from SkillConfig
-    private float speed = 10f;
-    private float lifetime = 5f;
-    private float spawnTime;
-
-    private Vector3 direction;
-    private bool isInitialized = false;  // JML: Flag to prevent FixedUpdate before initialization
-
-    // Homing projectile support
-    private Transform homingTarget;
-    private bool isHoming = false;
-    [SerializeField] private float homingStrength = 5f; // How aggressively it tracks target
-
-    //JML: Update for lifetime management only
-    private void Update()
+    public class Projectile : MonoBehaviour, IPoolable
     {
-        spawnTime += Time.deltaTime;
-        if (spawnTime >= lifetime)
+        private const float OUT_OF_BOUNDS_DISTANCE = 100f;
+
+        [Header("Components")]
+        [SerializeField, Tooltip("Rigidbody for physics movement")]
+        private Rigidbody rb;
+
+        [Header("Damage")]
+        [SerializeField, Tooltip("Projectile damage")]
+        private float damage = 10f;
+
+        // Movement state
+        private Vector3 fixedDirection;
+        private float speed;
+        private float lifetime;
+        private Vector3 startPosition;
+        private bool isInitialized = false;
+
+        // Lifetime tracking
+        private CancellationTokenSource lifetimeCts;
+
+        //LMJ : Initialize and launch projectile in fixed direction
+        public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime)
         {
+            transform.position = spawnPos;
+            startPosition = spawnPos;
+
+            // Calculate fixed direction (NO HOMING)
+            fixedDirection = (targetPos - spawnPos).normalized;
+            speed = projectileSpeed;
+            lifetime = projectileLifetime;
+            isInitialized = true;
+
+            // Cancel previous lifetime token
+            lifetimeCts?.Cancel();
+            lifetimeCts = new CancellationTokenSource();
+
+            // Start lifetime countdown
+            TrackLifetimeAsync(lifetimeCts.Token).Forget();
+
+            Debug.Log($"[Projectile] Launched from {spawnPos} to {targetPos}, direction: {fixedDirection}");
+        }
+
+        //LMJ : Physics-based movement in fixed direction
+        private void FixedUpdate()
+        {
+            // Wait until initialized
+            if (!isInitialized) return;
+
+            // Pause support (respect Time.timeScale for card selection UI)
+            if (Time.timeScale == 0f)
+            {
+                rb.linearVelocity = Vector3.zero;
+                return;
+            }
+
+            // Move in fixed direction
+            rb.linearVelocity = fixedDirection * speed;
+
+            // Rotate to face movement direction
+            if (fixedDirection != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(fixedDirection);
+            }
+
+            // Out of bounds check
+            if (Vector3.Distance(startPosition, transform.position) > OUT_OF_BOUNDS_DISTANCE)
+            {
+                ReturnToPool();
+            }
+        }
+
+        //LMJ : Track lifetime and auto-despawn
+        private async UniTaskVoid TrackLifetimeAsync(CancellationToken ct)
+        {
+            try
+            {
+                await UniTask.Delay((int)(lifetime * 1000), cancellationToken: ct);
+
+                if (!ct.IsCancellationRequested)
+                {
+                    ReturnToPool();
+                }
+            }
+            catch (System.OperationCanceledException)
+            {
+                // Expected when projectile hits target before lifetime ends
+            }
+        }
+
+        //LMJ : Handle collision with monsters
+        private void OnTriggerEnter(Collider other)
+        {
+            if (other.CompareTag(Tag.Monster))
+            {
+                Monster monster = other.GetComponent<Monster>();
+                if (monster != null)
+                {
+                    monster.TakeDamage(damage);
+                }
+                ReturnToPool();
+            }
+            else if (other.CompareTag(Tag.BossMonster))
+            {
+                BossMonster boss = other.GetComponent<BossMonster>();
+                if (boss != null)
+                {
+                    boss.TakeDamage(damage);
+                }
+                ReturnToPool();
+            }
+        }
+
+        //LMJ : Return projectile to pool
+        private void ReturnToPool()
+        {
+            lifetimeCts?.Cancel();
             GameManager.Instance.Pool.Despawn(this);
         }
-    }
 
-    //JML: Physics-based movement in FixedUpdate
-    private void FixedUpdate()
-    {
-        // JML: Defense code - wait until initialization is complete
-        if (!isInitialized || direction == Vector3.zero)
+        // IPoolable implementation
+        public void OnSpawn()
         {
+            isInitialized = false;
+            fixedDirection = Vector3.zero;
             rb.linearVelocity = Vector3.zero;
-            return;
-        }
 
-        // Homing behavior: Update direction towards target
-        if (isHoming && homingTarget != null)
-        {
-            Vector3 targetDirection = (homingTarget.position - transform.position).normalized;
-            direction = Vector3.Lerp(direction, targetDirection, homingStrength * Time.fixedDeltaTime).normalized;
-        }
-
-        rb.linearVelocity = direction * speed;
-
-        // JML: Rotate projectile to face movement direction
-        if (direction != Vector3.zero)
-        {
-            transform.rotation = Quaternion.LookRotation(direction);
-        }
-    }
-
-    /// <summary>
-    /// JML: Initialize projectile with speed and lifetime from SkillConfig
-    /// </summary>
-    public void Initialize(float projectileSpeed, float projectileLifetime)
-    {
-        speed = projectileSpeed;
-        lifetime = projectileLifetime;
-    }
-
-    /// <summary>
-    /// JML: Initialize and set target atomically (before first FixedUpdate)
-    /// This prevents the race condition where FixedUpdate runs before SetTarget
-    /// </summary>
-    public void InitializeAndSetTarget(float projectileSpeed, float projectileLifetime, Transform target, bool enableHoming = true)
-    {
-        // 1. Set speed and lifetime
-        speed = projectileSpeed;
-        lifetime = projectileLifetime;
-
-        // 2. Set homing target
-        homingTarget = target;
-        isHoming = enableHoming;
-
-        // 3. Calculate initial direction: Simply aim at target (LookAt behavior)
-        if (target != null)
-        {
-            Vector3 targetPosition = target.position;
-            Vector3 projectilePosition = transform.position;
-
-            // Simple direct aim at target's current position
-            direction = (targetPosition - projectilePosition).normalized;
-
-            Debug.Log($"[Projectile] Aiming at target: {targetPosition}, from: {projectilePosition}, homing: {isHoming}");
-        }
-
-        // 4. Mark as initialized (enables FixedUpdate movement)
-        isInitialized = true;
-    }
-
-    public void SetTarget(Transform target)
-    {
-        if (target != null)
-        {
-            Vector3 targetPosition = target.position;
-            Vector3 projectilePosition = transform.position;
-
-            // Simple direct aim at target's current position
-            direction = (targetPosition - projectilePosition).normalized;
-        }
-    }
-
-    //JML: Handle collision with monsters
-    private void OnTriggerEnter(Collider collision)
-    {
-        if (collision.CompareTag(Tag.Monster))
-        {
-            var monster = collision.GetComponent<Monster>();
-            if (monster != null)
+            // Ensure particle systems follow projectile
+            ParticleSystem[] particleSystems = GetComponentsInChildren<ParticleSystem>();
+            foreach (var ps in particleSystems)
             {
-                monster.TakeDamage(damage);
+                var main = ps.main;
+                main.simulationSpace = ParticleSystemSimulationSpace.Local;
             }
-            else
-            {
-                // Debug.LogWarning("[Projectile] Monster component not found!"); // LCB: Debug warning
-            }
-            // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-            GameManager.Instance.Pool.Despawn(this);
         }
-        if (collision.CompareTag(Tag.BossMonster))
+
+        public void OnDespawn()
         {
-            var bossMonster = collision.GetComponent<BossMonster>();
-            if (bossMonster != null)
-            {
-                bossMonster.TakeDamage(damage);
-            }
-            GameManager.Instance.Pool.Despawn(this);
+            isInitialized = false;
+            fixedDirection = Vector3.zero;
+            rb.linearVelocity = Vector3.zero;
+            lifetimeCts?.Cancel();
         }
-    }
 
-    //JML: Reset projectile state on spawn
-    public void OnSpawn()
-    {
-        direction = Vector3.zero;
-        rb.linearVelocity = Vector3.zero;
-        spawnTime = 0f;  // Reset spawn time for pool reuse
-        isInitialized = false;  // JML: Reset initialization flag
-
-        // Reset homing
-        homingTarget = null;
-        isHoming = false;
-
-        // JML: Ensure all particle systems follow the projectile
-        ParticleSystem[] particleSystems = GetComponentsInChildren<ParticleSystem>();
-        foreach (var ps in particleSystems)
+        private void OnDestroy()
         {
-            var main = ps.main;
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            lifetimeCts?.Cancel();
+            lifetimeCts?.Dispose();
         }
-    }
-
-    //JML: Clean up projectile state on despawn
-    public void OnDespawn()
-    {
-        direction = Vector3.zero;
-        rb.linearVelocity = Vector3.zero;
-        spawnTime = 0f;  // Reset spawn time
-
-        // Reset homing
-        homingTarget = null;
-        isHoming = false;
     }
 }
