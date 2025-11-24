@@ -4,6 +4,7 @@ public static class Tag
     public static readonly string Monster = "Monster";
     public static readonly string Wall = "Wall";
     public static readonly string BossMonster = "BossMonster";
+    public static readonly string CharacterInfoPanel = "CharacterInfoPanel";
 }
 
 public static class sceneName
@@ -82,7 +83,14 @@ public enum Grade
     Legendary = 4,
     Mythic = 5,
 }
-
+public enum Genre
+{
+    Horror = 1,
+    Romance = 2,
+    Adventure = 3,
+    Comedy = 4,
+    Mystery = 5
+}
 public enum OptionType
 {
     AttackPower = 1,
