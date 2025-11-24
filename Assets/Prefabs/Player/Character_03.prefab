@@ -1644,7 +1644,6 @@ GameObject:
   - component: {fileID: 7730501246628072596}
   - component: {fileID: -5003336236946313295}
   - component: {fileID: 2283981678323184754}
-  - component: {fileID: -5085719275853127168}
   - component: {fileID: -5237000719285273456}
   m_Layer: 0
   m_Name: Character_03
@@ -1764,24 +1763,6 @@ CapsuleCollider:
   m_Height: 1.8
   m_Direction: 1
   m_Center: {x: 0, y: 0.9, z: 0}
---- !u!114 &-5085719275853127168
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3382100200812772492}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8866aa7e288c8fd4fba5d55a22d83317, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  skillConfig: {fileID: 11400000, guid: 7a8c87e2b4cbdc6479c9fde180a71039, type: 2}
-  attackRange: 1000
-  characterAnimator: {fileID: 7730501246628072596}
-  attackAnimationTrigger: 2_Attack
-  projectileSpawnPoint: {fileID: 1772730194552269525}
-  spawnOffset: {x: 0, y: 5, z: 0}
 --- !u!114 &-5237000719285273456
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1795,6 +1776,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   characterObj: {fileID: 3382100200812772492}
+  attackSpeed: 1
+  projectileSpeed: 50
+  projectileLifetime: 5
+  attackRange: 1000
+  spawnOffset: {x: 0, y: 0, z: 0}
+  useWeightTargeting: 1
+  projectilePrefab: {fileID: 6672619125338747142, guid: e4e516f5ef650764d8c8fc256f49adfc, type: 3}
 --- !u!1 &3467037918758978342
 GameObject:
   m_ObjectHideFlags: 0

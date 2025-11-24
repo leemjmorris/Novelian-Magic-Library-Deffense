@@ -1,6 +1,3 @@
-#if false
-// LMJ: SkillExecutor disabled for combat system refactor (Issue #265)
-// This will be used later for complex skill system
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
@@ -431,4 +428,3 @@ namespace NovelianMagicLibraryDefense.Skills
         }
     }
 }
-#endif

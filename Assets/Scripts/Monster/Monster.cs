@@ -29,7 +29,17 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private bool isDead = false;
     private bool isDizzy = false;
     private float dizzyTimer = 0f;
-    public float Weight { get; private set; } = 1f; // Example weight value
+    public float Weight { get; private set; } = 1f;
+
+    [Header("Weight System")]
+    [SerializeField, Tooltip("Distance thresholds for weight calculation (closer to wall = higher weight)")]
+    private float[] weightThresholds = { 10f, 5f, 3f, 1f };
+
+    private const float WEIGHT_UPDATE_INTERVAL = 0.5f;
+    private const string WALL_TAG = "Wall";
+
+    private Transform wallTransform;
+    private System.Threading.CancellationTokenSource weightUpdateCts;
 
     // 애니메이터 파라미터 해시 (성능 최적화)
     private static readonly int ANIM_IS_MOVING = Animator.StringToHash("IsMoving");
@@ -158,6 +168,59 @@ public class Monster : BaseEntity, ITargetable, IMovable
         }
     }
 
+    //LMJ : Override to return collider center instead of transform position
+    public new Vector3 GetPosition()
+    {
+        return collider3D != null ? collider3D.bounds.center : transform.position;
+    }
+
+    //LMJ : Start weight update loop
+    private void StartWeightUpdate()
+    {
+        // Find wall if not assigned
+        if (wallTransform == null)
+        {
+            GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
+            if (wallObj != null)
+            {
+                wallTransform = wallObj.transform;
+            }
+        }
+
+        weightUpdateCts = new System.Threading.CancellationTokenSource();
+        UpdateWeightLoopAsync(weightUpdateCts.Token).Forget();
+    }
+
+    //LMJ : Update weight based on distance to wall
+    private async Cysharp.Threading.Tasks.UniTaskVoid UpdateWeightLoopAsync(System.Threading.CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            UpdateWeight();
+            await Cysharp.Threading.Tasks.UniTask.Delay((int)(WEIGHT_UPDATE_INTERVAL * 1000), cancellationToken: ct);
+        }
+    }
+
+    //LMJ : Calculate weight based on wall distance
+    private void UpdateWeight()
+    {
+        if (wallTransform == null || isDead) return;
+
+        float distanceToWall = Vector3.Distance(transform.position, wallTransform.position);
+
+        // Calculate weight: 벽에 가까울수록 가중치 증가
+        float newWeight = 1f;
+        foreach (float threshold in weightThresholds)
+        {
+            if (distanceToWall < threshold)
+            {
+                newWeight += 1f;
+            }
+        }
+
+        Weight = newWeight;
+    }
+
     public override void Die()
     {
         isDead = true;
@@ -220,6 +283,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         // 목적지는 WaveManager에서 SetDestination()으로 설정됨
 
+        //LMJ : Start weight update system
+        StartWeightUpdate();
+
         TargetRegistry.Instance.RegisterTarget(this);
     }
 
@@ -231,6 +297,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
         Weight = 1f;
         CancelInvoke(nameof(DespawnMonster));
 
+        //LMJ : Stop weight update system
+        weightUpdateCts?.Cancel();
+
         // MonsterMove 상태 초기화
         if (monsterMove != null)
         {
@@ -240,5 +309,12 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // JML: Redundant safety check - should already be unregistered in Die()
         // But kept as failsafe for edge cases
         TargetRegistry.Instance.UnregisterTarget(this);
+    }
+
+    //LMJ : Cleanup cancellation token on destroy
+    private void OnDestroy()
+    {
+        weightUpdateCts?.Cancel();
+        weightUpdateCts?.Dispose();
     }
 }
