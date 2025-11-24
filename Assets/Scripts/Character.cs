@@ -97,9 +97,16 @@ namespace Novelian.Combat
         //LMJ : Initialize projectile pool (from basic attack skill)
         private void InitializeProjectilePool()
         {
-            if (basicAttackSkill == null || basicAttackSkill.projectilePrefab == null)
+            if (basicAttackSkill == null)
             {
-                Debug.LogError("[Character] basicAttackSkill or projectilePrefab is null!");
+                Debug.LogError("[Character] basicAttackSkill is null!");
+                return;
+            }
+
+            // projectilePrefab이 없으면 이펙트 전용 스킬이므로 풀 생성 스킵
+            if (basicAttackSkill.projectilePrefab == null)
+            {
+                Debug.LogWarning($"[Character] {basicAttackSkill.skillName} has no projectile prefab (effect-only skill). Skipping pool creation.");
                 return;
             }
 
@@ -116,9 +123,16 @@ namespace Novelian.Combat
         //LMJ : Initialize active skill projectile pool
         private void InitializeActiveSkillPool()
         {
-            if (activeSkill == null || activeSkill.projectilePrefab == null)
+            if (activeSkill == null)
             {
-                Debug.LogWarning("[Character] activeSkill or projectilePrefab is null. Skipping active skill initialization.");
+                Debug.LogWarning("[Character] activeSkill is null. Skipping active skill initialization.");
+                return;
+            }
+
+            // projectilePrefab이 없으면 이펙트 전용 스킬이므로 풀 생성 스킵
+            if (activeSkill.projectilePrefab == null)
+            {
+                Debug.LogWarning($"[Character] {activeSkill.skillName} has no projectile prefab (effect-only skill). Skipping pool creation.");
                 return;
             }
 
@@ -203,14 +217,84 @@ namespace Novelian.Combat
             Vector3 spawnPos = transform.position + spawnOffset;
             Vector3 targetPos = target.GetPosition();
 
-            // Spawn projectile from pool (using skill's projectile prefab)
-            var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
-            Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+            // 투사체 프리팹이 있는 경우: 투사체 발사
+            if (basicAttackSkill.projectilePrefab != null)
+            {
+                var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
+                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime);
 
-            // Launch projectile in straight line (using final projectile speed from skill + character modifier)
-            projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime);
+                Debug.Log($"[Character] Fired projectile {basicAttackSkill.skillName} at {target.GetTransform().name} (Damage: {FinalDamage:F1})");
+            }
+            // 투사체 프리팹이 없는 경우: 이펙트 전용 투사체 (물리 없이 비주얼만 날아감)
+            else
+            {
+                // 시전 이펙트 생성 (발사 위치)
+                if (basicAttackSkill.castEffectPrefab != null)
+                {
+                    GameObject castEffect = Object.Instantiate(basicAttackSkill.castEffectPrefab, spawnPos, Quaternion.identity);
+                    Object.Destroy(castEffect, 2f);
+                }
 
-            Debug.Log($"[Character] Fired {basicAttackSkill.skillName} at {target.GetTransform().name} (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1})");
+                // 투사체 비주얼 이펙트를 날림 (projectileEffectPrefab이 날아가는 투사체처럼 동작)
+                if (basicAttackSkill.projectileEffectPrefab != null)
+                {
+                    GameObject projEffectObj = Object.Instantiate(basicAttackSkill.projectileEffectPrefab, spawnPos, Quaternion.LookRotation(targetPos - spawnPos));
+
+                    // Projectile 컴포넌트 추가해서 Effect 모드로 날림
+                    Projectile effectProj = projEffectObj.AddComponent<Projectile>();
+                    effectProj.LaunchEffect(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, (hitPos) =>
+                    {
+                        // 도착 시 피격 이펙트 생성
+                        if (basicAttackSkill.hitEffectPrefab != null)
+                        {
+                            GameObject hitEffect = Object.Instantiate(basicAttackSkill.hitEffectPrefab, hitPos, Quaternion.identity);
+                            Object.Destroy(hitEffect, 2f);
+                        }
+
+                        // 타겟에게 데미지 적용
+                        if (target != null && target.IsAlive())
+                        {
+                            if (target.GetTransform().CompareTag(Tag.Monster))
+                            {
+                                Monster monster = target.GetTransform().GetComponent<Monster>();
+                                if (monster != null) monster.TakeDamage(FinalDamage);
+                            }
+                            else if (target.GetTransform().CompareTag(Tag.BossMonster))
+                            {
+                                BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
+                                if (boss != null) boss.TakeDamage(FinalDamage);
+                            }
+                        }
+                    });
+
+                    Debug.Log($"[Character] Effect projectile {basicAttackSkill.skillName} launched at {target.GetTransform().name} (Damage: {FinalDamage:F1})");
+                }
+                // projectileEffectPrefab도 없으면 즉발 공격
+                else
+                {
+                    // 피격 이펙트만 표시
+                    if (basicAttackSkill.hitEffectPrefab != null)
+                    {
+                        GameObject hitEffect = Object.Instantiate(basicAttackSkill.hitEffectPrefab, targetPos, Quaternion.identity);
+                        Object.Destroy(hitEffect, 2f);
+                    }
+
+                    // 즉시 데미지 적용
+                    if (target.GetTransform().CompareTag(Tag.Monster))
+                    {
+                        Monster monster = target.GetTransform().GetComponent<Monster>();
+                        if (monster != null) monster.TakeDamage(FinalDamage);
+                    }
+                    else if (target.GetTransform().CompareTag(Tag.BossMonster))
+                    {
+                        BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
+                        if (boss != null) boss.TakeDamage(FinalDamage);
+                    }
+
+                    Debug.Log($"[Character] Instant attack {basicAttackSkill.skillName} at {target.GetTransform().name} (Instant Damage: {FinalDamage:F1})");
+                }
+            }
         }
 
         //LMJ : Attempt to use active skill on target
@@ -229,14 +313,84 @@ namespace Novelian.Combat
             Vector3 spawnPos = transform.position + spawnOffset;
             Vector3 targetPos = target.GetPosition();
 
-            // Spawn projectile from pool (using active skill's projectile prefab)
-            var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
-            Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+            // 투사체 프리팹이 있는 경우: 투사체 발사
+            if (activeSkill.projectilePrefab != null)
+            {
+                var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
+                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                projectile.Launch(spawnPos, targetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime);
 
-            // Launch projectile in straight line (using final projectile speed from active skill + character modifier)
-            projectile.Launch(spawnPos, targetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime);
+                Debug.Log($"[Character] Used Active Skill (projectile): {activeSkill.skillName} at {target.GetTransform().name} (Damage: {FinalActiveDamage:F1})");
+            }
+            // 투사체 프리팹이 없는 경우: 이펙트 전용 투사체 (물리 없이 비주얼만 날아감)
+            else
+            {
+                // 시전 이펙트 생성 (발사 위치)
+                if (activeSkill.castEffectPrefab != null)
+                {
+                    GameObject castEffect = Object.Instantiate(activeSkill.castEffectPrefab, spawnPos, Quaternion.identity);
+                    Object.Destroy(castEffect, 2f);
+                }
 
-            Debug.Log($"[Character] Used Active Skill: {activeSkill.skillName} at {target.GetTransform().name} (Damage: {FinalActiveDamage:F1}, Speed: {FinalActiveProjectileSpeed:F1})");
+                // 투사체 비주얼 이펙트를 날림 (projectileEffectPrefab이 날아가는 투사체처럼 동작)
+                if (activeSkill.projectileEffectPrefab != null)
+                {
+                    GameObject projEffectObj = Object.Instantiate(activeSkill.projectileEffectPrefab, spawnPos, Quaternion.LookRotation(targetPos - spawnPos));
+
+                    // Projectile 컴포넌트 추가해서 Effect 모드로 날림
+                    Projectile effectProj = projEffectObj.AddComponent<Projectile>();
+                    effectProj.LaunchEffect(spawnPos, targetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, FinalActiveDamage, (hitPos) =>
+                    {
+                        // 도착 시 피격 이펙트 생성
+                        if (activeSkill.hitEffectPrefab != null)
+                        {
+                            GameObject hitEffect = Object.Instantiate(activeSkill.hitEffectPrefab, hitPos, Quaternion.identity);
+                            Object.Destroy(hitEffect, 2f);
+                        }
+
+                        // 타겟에게 데미지 적용
+                        if (target != null && target.IsAlive())
+                        {
+                            if (target.GetTransform().CompareTag(Tag.Monster))
+                            {
+                                Monster monster = target.GetTransform().GetComponent<Monster>();
+                                if (monster != null) monster.TakeDamage(FinalActiveDamage);
+                            }
+                            else if (target.GetTransform().CompareTag(Tag.BossMonster))
+                            {
+                                BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
+                                if (boss != null) boss.TakeDamage(FinalActiveDamage);
+                            }
+                        }
+                    });
+
+                    Debug.Log($"[Character] Active effect projectile {activeSkill.skillName} launched at {target.GetTransform().name} (Damage: {FinalActiveDamage:F1})");
+                }
+                // projectileEffectPrefab도 없으면 즉발 공격
+                else
+                {
+                    // 피격 이펙트만 표시
+                    if (activeSkill.hitEffectPrefab != null)
+                    {
+                        GameObject hitEffect = Object.Instantiate(activeSkill.hitEffectPrefab, targetPos, Quaternion.identity);
+                        Object.Destroy(hitEffect, 2f);
+                    }
+
+                    // 즉시 데미지 적용
+                    if (target.GetTransform().CompareTag(Tag.Monster))
+                    {
+                        Monster monster = target.GetTransform().GetComponent<Monster>();
+                        if (monster != null) monster.TakeDamage(FinalActiveDamage);
+                    }
+                    else if (target.GetTransform().CompareTag(Tag.BossMonster))
+                    {
+                        BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
+                        if (boss != null) boss.TakeDamage(FinalActiveDamage);
+                    }
+
+                    Debug.Log($"[Character] Active instant attack {activeSkill.skillName} at {target.GetTransform().name} (Instant Damage: {FinalActiveDamage:F1})");
+                }
+            }
         }
 
         // IPoolable implementation

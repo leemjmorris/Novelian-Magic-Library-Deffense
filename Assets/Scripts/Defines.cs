@@ -5,6 +5,7 @@ public static class Tag
     public static readonly string Wall = "Wall";
     public static readonly string BossMonster = "BossMonster";
     public static readonly string CharacterInfoPanel = "CharacterInfoPanel";
+    public static readonly string Obstacle = "Obstacle";
 }
 
 public static class sceneName

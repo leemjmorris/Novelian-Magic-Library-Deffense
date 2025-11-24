@@ -1776,13 +1776,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   characterObj: {fileID: 3382100200812772492}
-  attackSpeed: 1
-  projectileSpeed: 50
-  projectileLifetime: 5
-  attackRange: 1000
+  basicAttackSkill: {fileID: 11400000, guid: 3ecfc6148496b844fabeb8878ad9ded6, type: 2}
+  activeSkill: {fileID: 11400000, guid: 8169482c2fec8e046bf12064012ef8eb, type: 2}
+  damageModifier: 0
+  attackSpeedModifier: 0
+  projectileSpeedModifier: 0
+  rangeModifier: 0
   spawnOffset: {x: 0, y: 0, z: 0}
   useWeightTargeting: 1
-  projectilePrefab: {fileID: 6672619125338747142, guid: e4e516f5ef650764d8c8fc256f49adfc, type: 3}
 --- !u!1 &3467037918758978342
 GameObject:
   m_ObjectHideFlags: 0

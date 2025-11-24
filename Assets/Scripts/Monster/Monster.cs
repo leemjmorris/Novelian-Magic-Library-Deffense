@@ -225,7 +225,8 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         isDead = true;
         monsterAnimator.SetTrigger(ANIM_DIE);
-        collider3D.enabled = false;
+        // LMJ: Don't disable collider immediately - let projectiles still hit during death animation
+        // collider3D.enabled = false; // Moved to DespawnMonster()
 
         // JML: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);
@@ -239,6 +240,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
     private void DespawnMonster()
     {
+        // LMJ: Disable collider before despawning
+        if (collider3D != null)
+        {
+            collider3D.enabled = false;
+        }
         NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
     private void OnCollisionEnter(Collision collision)

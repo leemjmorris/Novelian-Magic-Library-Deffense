@@ -117,9 +117,11 @@ public class SkillAssetData : ScriptableObject
         switch (skillType)
         {
             case SkillAssetType.Projectile:
-                if (projectilePrefab == null)
+                // Projectile 타입도 투사체 프리팹이 선택사항
+                // 이펙트만으로 구성 가능 (예: 레이저 빔, 즉발 마법)
+                if (projectilePrefab == null && projectileEffectPrefab == null && hitEffectPrefab == null)
                 {
-                    errorMessage = "Projectile 프리팹 누락";
+                    errorMessage = "Projectile 타입은 투사체 프리팹 또는 이펙트 중 하나 이상 필요";
                     return false;
                 }
                 break;
@@ -137,6 +139,24 @@ public class SkillAssetData : ScriptableObject
                 if (trapPrefab == null)
                 {
                     errorMessage = "Trap/Mine 프리팹 누락";
+                    return false;
+                }
+                break;
+
+            case SkillAssetType.AOE:
+                // AOE는 범위 이펙트만 있으면 됨
+                if (areaEffectPrefab == null && hitEffectPrefab == null)
+                {
+                    errorMessage = "AOE 타입은 범위 이펙트 또는 피격 이펙트 중 하나 이상 필요";
+                    return false;
+                }
+                break;
+
+            case SkillAssetType.Channeling:
+                // 채널링은 이펙트만 있으면 됨
+                if (projectileEffectPrefab == null && castEffectPrefab == null)
+                {
+                    errorMessage = "Channeling 타입은 시전 이펙트 또는 투사체 이펙트 중 하나 이상 필요";
                     return false;
                 }
                 break;

@@ -13,6 +13,9 @@ public abstract class BaseEntity : MonoBehaviour, IEntity, IPoolable
     // IEntity Implementation
     public virtual void TakeDamage(float damage)
     {
+        // Prevent damage to dead entities (also checks if already despawned)
+        if (!IsAlive()) return;
+
         currentHealth -= damage;
         if (currentHealth <= 0)
         {

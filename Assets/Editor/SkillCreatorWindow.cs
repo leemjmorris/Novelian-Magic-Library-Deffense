@@ -161,20 +161,37 @@ public class SkillCreatorWindow : EditorWindow
 
     private void DrawEffectsSection()
     {
-        EditorGUILayout.LabelField("🎯 투사체 프리팹", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("🎯 투사체 프리팹 (선택사항)", EditorStyles.boldLabel);
         EditorGUILayout.BeginVertical("box");
         currentSkill.projectilePrefab = (GameObject)EditorGUILayout.ObjectField("투사체 프리팹", currentSkill.projectilePrefab, typeof(GameObject), false);
-        EditorGUILayout.HelpBox("실제 투사체 게임오브젝트 (Projectile.cs 컴포넌트 필수)", MessageType.Info);
+        EditorGUILayout.HelpBox("• 실제 투사체 게임오브젝트 (Projectile.cs 컴포넌트 필요)\n• 물리 기반 이동, 충돌 감지, 데미지 처리\n• 선택사항: 이펙트만으로도 스킬 구성 가능 (예: 레이저 빔, 즉발 마법)", MessageType.Info);
         EditorGUILayout.EndVertical();
 
         EditorGUILayout.Space(10);
 
-        EditorGUILayout.LabelField("✨ 이펙트 프리팹", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("✨ 이펙트 프리팹 (비주얼 전용)", EditorStyles.boldLabel);
         EditorGUILayout.BeginVertical("box");
-        currentSkill.castEffectPrefab = (GameObject)EditorGUILayout.ObjectField("시전 이펙트", currentSkill.castEffectPrefab, typeof(GameObject), false);
-        currentSkill.projectileEffectPrefab = (GameObject)EditorGUILayout.ObjectField("투사체 이펙트", currentSkill.projectileEffectPrefab, typeof(GameObject), false);
-        currentSkill.hitEffectPrefab = (GameObject)EditorGUILayout.ObjectField("피격 이펙트", currentSkill.hitEffectPrefab, typeof(GameObject), false);
-        currentSkill.areaEffectPrefab = (GameObject)EditorGUILayout.ObjectField("범위 이펙트", currentSkill.areaEffectPrefab, typeof(GameObject), false);
+
+        currentSkill.castEffectPrefab = (GameObject)EditorGUILayout.ObjectField("시전 이펙트 (Muzzleflash)", currentSkill.castEffectPrefab, typeof(GameObject), false);
+        EditorGUILayout.LabelField("  └ 스킬 발동 순간, 캐스터 위치에서 재생", EditorStyles.miniLabel);
+
+        EditorGUILayout.Space(3);
+
+        currentSkill.projectileEffectPrefab = (GameObject)EditorGUILayout.ObjectField("투사체 비주얼", currentSkill.projectileEffectPrefab, typeof(GameObject), false);
+        EditorGUILayout.LabelField("  └ 투사체를 따라다니는 파티클 (Retro Arsenal 프리팹)", EditorStyles.miniLabel);
+
+        EditorGUILayout.Space(3);
+
+        currentSkill.hitEffectPrefab = (GameObject)EditorGUILayout.ObjectField("피격 이펙트 (Impact)", currentSkill.hitEffectPrefab, typeof(GameObject), false);
+        EditorGUILayout.LabelField("  └ 타겟 충돌 시 폭발/충격 효과", EditorStyles.miniLabel);
+
+        EditorGUILayout.Space(3);
+
+        currentSkill.areaEffectPrefab = (GameObject)EditorGUILayout.ObjectField("범위 이펙트 (AOE)", currentSkill.areaEffectPrefab, typeof(GameObject), false);
+        EditorGUILayout.LabelField("  └ AOE 스킬의 지속 범위 표시", EditorStyles.miniLabel);
+
+        EditorGUILayout.Space(5);
+        EditorGUILayout.HelpBox("💡 Tip: Retro Arsenal 사용 시\n• Combat/Missiles → 투사체 비주얼\n• Combat/Explosions → 피격 이펙트\n• Combat/Muzzleflash → 시전 이펙트", MessageType.None);
         EditorGUILayout.EndVertical();
     }
 
