@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Core;
 using Cysharp.Threading.Tasks;
 
@@ -12,53 +11,31 @@ namespace NovelianMagicLibraryDefense.Managers
     /// </summary>
     public class StageSceneManager : MonoBehaviour
     {
-        [Header("Button References")]
-        [SerializeField] private Button homeButton;
-        [SerializeField] private Button stageStartButton;
+        [Header("UI References")]
+        [SerializeField] private GameObject panel3;
 
         private void Awake()
         {
-            SetupButtonListeners();
-        }
-
-        private void OnDestroy()
-        {
-            RemoveButtonListeners();
-        }
-
-        private void SetupButtonListeners()
-        {
-            if (homeButton != null)
+            // Panel3 초기 비활성화
+            if (panel3 != null)
             {
-                homeButton.onClick.AddListener(OnHomeButtonClicked);
-                Debug.Log("[StageSceneManager] Home button listener setup complete");
-            }
-            else
-            {
-                Debug.LogWarning("[StageSceneManager] Home button reference is null!");
-            }
-
-            if (stageStartButton != null)
-            {
-                stageStartButton.onClick.AddListener(OnStageStartButtonClicked);
-                Debug.Log("[StageSceneManager] StageStart button listener setup complete");
-            }
-            else
-            {
-                Debug.LogWarning("[StageSceneManager] StageStart button reference is null!");
+                panel3.SetActive(false);
             }
         }
 
-        private void RemoveButtonListeners()
+        public void ShowPanel3()
         {
-            if (homeButton != null)
+            if (panel3 != null)
             {
-                homeButton.onClick.RemoveListener(OnHomeButtonClicked);
+                panel3.SetActive(true);
             }
+        }
 
-            if (stageStartButton != null)
+        public void HidePanel3()
+        {
+            if (panel3 != null)
             {
-                stageStartButton.onClick.RemoveListener(OnStageStartButtonClicked);
+                panel3.SetActive(false);
             }
         }
 
@@ -74,6 +51,15 @@ namespace NovelianMagicLibraryDefense.Managers
             LoadGameSceneAsync().Forget();
         }
 
+        public void OnLoadLobbyScene()
+        {
+            LoadLobbySceneAsync().Forget();
+        }
+        public void OnLoadGameScene()
+        {
+            LoadGameSceneAsync().Forget();
+        }
+
         private async UniTaskVoid LoadLobbySceneAsync()
         {
             await FadeController.Instance.LoadSceneWithFade("LobbyScene");
@@ -81,7 +67,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private async UniTaskVoid LoadGameSceneAsync()
         {
-            await FadeController.Instance.LoadSceneWithFade("GameScene3D");
+            await FadeController.Instance.LoadSceneWithFade("GameScene");
         }
     }
 }
