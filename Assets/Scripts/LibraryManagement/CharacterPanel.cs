@@ -8,6 +8,7 @@ public class CharacterPanel : MonoBehaviour
     [SerializeField] private GameObject characterSlotPrefab;
     [SerializeField] private GameObject characterInfoPanel;
     [SerializeField] private CharacterInfoPanel infoPanel;
+
     
     private List<LibraryCharacterSlot> characterSlots = new List<LibraryCharacterSlot>();
 
