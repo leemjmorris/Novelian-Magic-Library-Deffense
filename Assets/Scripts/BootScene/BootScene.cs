@@ -20,6 +20,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private IngredientManager ingredientManager;
     [SerializeField] private AudioManager audioManager;
     [SerializeField] private BookMarkManager bookMarkManager;
+    [SerializeField] private DeckManager deckManager;
 
     [Header("Loading Progress")]
     [SerializeField] private float minimumLoadTime = 1.0f; // JML: Minimum time to show loading screen
@@ -64,7 +65,8 @@ public class BootScene : MonoBehaviour
             InitializeCurrencyManager(),
             InitializeIngredientManager(),
             InitializeAudioManager(),
-            InitializeBookMarkManager()
+            InitializeBookMarkManager(),
+            InitializeDeckManager()
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -90,6 +92,30 @@ public class BootScene : MonoBehaviour
         else
         {
             Debug.LogError("✗ FadeController failed to initialize!");
+        }
+    }
+
+    private async UniTask InitializeDeckManager()
+    {
+        Log("Initializing DeckManager...");
+
+        if (deckManager == null)
+        {
+            Debug.LogError("✗ DeckManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+
+        // JML: Wait for Awake to complete
+        await UniTask.WaitUntil(() => DeckManager.Instance != null);
+        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start()
+
+        if (DeckManager.Instance != null)
+        {
+            Log("✓ DeckManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ DeckManager failed to initialize!");
         }
     }
 

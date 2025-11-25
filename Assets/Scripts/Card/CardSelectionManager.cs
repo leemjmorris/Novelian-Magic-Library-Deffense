@@ -24,7 +24,7 @@ public class CardSelectionManager : MonoBehaviour
     public TextMeshProUGUI timerText;
 
     [Header("사용 가능한 캐릭터 ID")]
-    [SerializeField] private List<int> availableCharacterIds = new List<int> { 1, 2, 3, 4, 5 };
+    //[SerializeField] private List<int> availableCharacterIds = new List<int> { 1, 2, 3, 4, 5 };
 
     // 카드 선택 타임아웃 (20초)
     private const float SELECTION_TIME = 20f;
@@ -135,30 +135,28 @@ public class CardSelectionManager : MonoBehaviour
     /// </summary>
     void LoadTwoRandomCharacters()
     {
-        if (availableCharacterIds == null || availableCharacterIds.Count < 2)
+        // DeckManager에서 덱 가져오기
+        List<int> availableCharacterIds = DeckManager.Instance != null
+            ? DeckManager.Instance.GetDeck()
+            : new List<int> { 1, 2, 3, 4, 5 }; // Fallback (DeckManager 없을 때만)
+
+        if (availableCharacterIds == null || availableCharacterIds.Count == 0)
         {
-            Debug.LogError("[CardSelectionManager] 사용 가능한 캐릭터 ID가 2개 미만입니다!");
+            Debug.LogError("[CardSelectionManager] 덱이 비어있습니다!");
             return;
         }
 
-        // 랜덤 선택 (중복 방지)
+        // 랜덤 선택 (중복 허용)
         int idx1 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
-        int idx2;
-        do
-        {
-            idx2 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
-        } while (idx2 == idx1 && availableCharacterIds.Count > 1);
+        int idx2 = UnityEngine.Random.Range(0, availableCharacterIds.Count);
 
         selectedCard1Id = availableCharacterIds[idx1];
         selectedCard2Id = availableCharacterIds[idx2];
 
-        // Card 1 업데이트
         UpdateCardUI(card1, selectedCard1Id);
-
-        // Card 2 업데이트
         UpdateCardUI(card2, selectedCard2Id);
 
-        Debug.Log($"[CardSelectionManager] 랜덤 캐릭터 선택: ID {selectedCard1Id}, ID {selectedCard2Id}");
+        Debug.Log($"[CardSelectionManager] 덱에서 랜덤 캐릭터 선택: ID {selectedCard1Id}, ID {selectedCard2Id}");
     }
 
     /// <summary>
