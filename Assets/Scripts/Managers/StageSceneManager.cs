@@ -7,7 +7,7 @@ namespace NovelianMagicLibraryDefense.Managers
     /// <summary>
     /// StageScene manager for handling scene transitions
     /// Home button -> LobbyScene
-    /// Stage button -> GameScene3D
+    /// Stage button -> GameScene
     /// </summary>
     public class StageSceneManager : MonoBehaviour
     {
@@ -47,7 +47,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void OnStageStartButtonClicked()
         {
-            Debug.Log("[StageSceneManager] Stage button clicked - Loading GameScene3D");
+            Debug.Log("[StageSceneManager] Stage button clicked - Loading GameScene");
             LoadGameSceneAsync().Forget();
         }
 
