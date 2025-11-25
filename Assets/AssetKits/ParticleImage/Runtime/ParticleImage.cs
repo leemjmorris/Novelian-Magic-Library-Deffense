@@ -1836,7 +1836,7 @@ namespace AssetKits.ParticleImage
                     
                     _particleJob = new ParticleJob()
                     {
-                        particles = JobParticles,
+                        particles = JobParticles.AsArray(),
                         space = space,
                         meshData = _meshData,
                         deltaTime = deltaTime,
@@ -1889,7 +1889,7 @@ namespace AssetKits.ParticleImage
                         
                         trailsEnabled = trailsEnabled,
                         trailVertexDistance = _minimumVertexDistance,
-                        trailPoints = TrailData
+                        trailPoints = TrailData.AsArray()
                     };
                     _particleJobHandle = _particleJob.Schedule(JobParticles.Length, 16);
                     
@@ -1928,9 +1928,9 @@ namespace AssetKits.ParticleImage
                         
                         _trailJob = new TrailJob()
                         {
-                            particles = JobParticles,
+                            particles = JobParticles.AsArray(),
                             trailMeshData = _trailMeshData,
-                            trailPoints = TrailData,
+                            trailPoints = TrailData.AsArray(),
                             trailsEnabled = trailsEnabled,
                             trailLifetime = _trailLifetime,
                             trailWidth = JobUtils.ConvertMinMaxCurveToJobs(_trailWidth),
@@ -2685,8 +2685,10 @@ namespace AssetKits.ParticleImage
             {
                 if(sprite != null)
                     return sprite.texture;
-                
+
+#pragma warning disable CS0618
                 return m_Texture == null ? s_WhiteTexture : m_Texture;
+#pragma warning restore CS0618
             }
         }
 

@@ -97,7 +97,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
             return;
         }
 
-        // 벽 공격 처리
+        // 벽 공격 처리 (Dizzy 상태가 아닐 때만)
         if (isWallHit && wall != null)
         {
             monsterAnimator.SetBool(ANIM_IS_MOVING, false);
@@ -110,9 +110,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 attackTimer = 0f;
             }
         }
-        else
+        else if (!isDizzy)
         {
-            // 벽에서 떨어지면 다시 이동 상태로
+            // 벽에서 떨어지면 다시 이동 상태로 (Dizzy 상태가 아닐 때만)
             monsterAnimator.SetBool(ANIM_IS_MOVING, true);
         }
     }
@@ -122,7 +122,12 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (isDead) return;
 
         base.TakeDamage(damage);
-        monsterAnimator.SetTrigger(ANIM_GET_HIT);
+
+        // Dizzy 상태에서는 피격 애니메이션 재생하지 않음
+        if (!isDizzy)
+        {
+            monsterAnimator.SetTrigger(ANIM_GET_HIT);
+        }
     }
 
     /// <summary>
@@ -146,6 +151,119 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (rb != null)
         {
             rb.linearVelocity = Vector3.zero;
+        }
+    }
+
+    /// <summary>
+    /// CC 효과 적용 (Support 스킬용)
+    /// </summary>
+    public void ApplyCC(CCType ccType, float duration, float slowAmount, GameObject ccEffectPrefab = null)
+    {
+        if (isDead)
+        {
+            Debug.Log("[Monster] ApplyCC called but monster is dead");
+            return;
+        }
+
+        Debug.Log($"[Monster] ApplyCC called: Type={ccType}, Duration={duration}s");
+
+        // CC 이펙트 생성 (몬스터를 따라다니면서 재생)
+        if (ccEffectPrefab != null)
+        {
+            GameObject ccEffect = Instantiate(ccEffectPrefab, transform.position, Quaternion.identity, transform);
+            Destroy(ccEffect, duration);
+            Debug.Log($"[Monster] CC effect spawned: {ccEffectPrefab.name}");
+        }
+
+        switch (ccType)
+        {
+            case CCType.Stun:
+            case CCType.Freeze:
+                Debug.Log($"[Monster] Applying {ccType} → ApplyDizzy({duration})");
+                ApplyDizzy(duration);
+                break;
+
+            case CCType.Slow:
+                // TODO: Slow 효과 구현 (moveSpeed 감소)
+                Debug.Log($"[Monster] Slow applied: {slowAmount}% for {duration}s");
+                break;
+
+            case CCType.Root:
+                // TODO: Root 효과 구현 (이동 불가, 공격 가능)
+                Debug.Log($"[Monster] Root applied for {duration}s");
+                break;
+
+            case CCType.Knockback:
+                // TODO: Knockback 효과 구현
+                Debug.Log($"[Monster] Knockback applied");
+                break;
+
+            case CCType.Silence:
+                // TODO: Silence 효과 구현 (스킬 사용 불가)
+                Debug.Log($"[Monster] Silence applied for {duration}s");
+                break;
+
+            case CCType.None:
+                Debug.Log("[Monster] CCType is None");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// DOT 효과 적용 (Support 스킬용)
+    /// </summary>
+    public void ApplyDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration, GameObject dotEffectPrefab = null)
+    {
+        if (isDead) return;
+
+        // DOT 이펙트 생성 (몬스터를 따라다니면서 재생)
+        if (dotEffectPrefab != null)
+        {
+            GameObject dotEffect = Instantiate(dotEffectPrefab, transform.position, Quaternion.identity, transform);
+            Destroy(dotEffect, duration);
+            Debug.Log($"[Monster] DOT effect spawned: {dotEffectPrefab.name}");
+        }
+
+        // Start DOT coroutine
+        StartDOT(dotType, damagePerTick, tickInterval, duration).Forget();
+    }
+
+    private async Cysharp.Threading.Tasks.UniTaskVoid StartDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration)
+    {
+        float elapsed = 0f;
+        Debug.Log($"[Monster] {dotType} DOT started: {damagePerTick} dmg every {tickInterval}s for {duration}s");
+
+        while (elapsed < duration && !isDead)
+        {
+            await Cysharp.Threading.Tasks.UniTask.Delay((int)(tickInterval * 1000));
+            if (isDead) break;
+
+            elapsed += tickInterval;
+            TakeDamage(damagePerTick);
+            Debug.Log($"[Monster] {dotType} tick: {damagePerTick} damage");
+        }
+
+        Debug.Log($"[Monster] {dotType} DOT ended");
+    }
+
+    /// <summary>
+    /// Mark 효과 적용 (Support 스킬용)
+    /// </summary>
+    public void ApplyMark(MarkType markType, float duration, float damageMultiplier, GameObject markEffectPrefab)
+    {
+        if (isDead) return;
+
+        Debug.Log($"[Monster] {markType} Mark applied: +{damageMultiplier}% damage for {duration}s");
+
+        // TODO: Mark 효과 구현
+        // 1. Mark 비주얼 이펙트 생성 (markEffectPrefab)
+        // 2. Mark가 있는 동안 받는 데미지 증가
+        // 3. duration 후 Mark 제거
+
+        if (markEffectPrefab != null)
+        {
+            GameObject markEffect = Instantiate(markEffectPrefab, transform.position, Quaternion.identity, transform);
+            Destroy(markEffect, duration);
         }
     }
 
@@ -225,7 +343,8 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         isDead = true;
         monsterAnimator.SetTrigger(ANIM_DIE);
-        collider3D.enabled = false;
+        // LMJ: Don't disable collider immediately - let projectiles still hit during death animation
+        // collider3D.enabled = false; // Moved to DespawnMonster()
 
         // JML: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);
@@ -239,6 +358,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
     private void DespawnMonster()
     {
+        // LMJ: Disable collider before despawning
+        if (collider3D != null)
+        {
+            collider3D.enabled = false;
+        }
         NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
     }
     private void OnCollisionEnter(Collision collision)

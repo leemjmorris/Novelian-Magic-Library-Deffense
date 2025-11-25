@@ -16,14 +16,16 @@ namespace AssetKits.ParticleImage.Editor
             [MenuItem("GameObject/UI/Particle Image", priority = MenuPriority)]
             private static void CreateButton(MenuCommand menuCommand)
             {
-                var canvas = Object.FindObjectsOfType(typeof(Canvas)).Cast<Canvas>().FirstOrDefault();
+                var canvas = Object.FindObjectsByType(typeof(Canvas), FindObjectsSortMode.None).Cast<Canvas>().FirstOrDefault();
 
                 if (canvas)
                 {
                     // Create a custom game object
                     GameObject go = new GameObject("Particle Image");
                     ParticleImage pi = go.AddComponent<ParticleImage>();
+#pragma warning disable CS0618
                     pi.texture = AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd");
+#pragma warning restore CS0618
                     pi.canvasRect = canvas.GetComponent<RectTransform>();
                     if (menuCommand.context)
                     {
@@ -48,7 +50,9 @@ namespace AssetKits.ParticleImage.Editor
                     // Create a custom game object
                     GameObject go = new GameObject("Particle Image");
                     ParticleImage pi = go.AddComponent<ParticleImage>();
+#pragma warning disable CS0618
                     pi.texture = AssetDatabase.GetBuiltinExtraResource<Texture2D>("Default-Particle.psd");
+#pragma warning restore CS0618
                     pi.canvasRect = newCanvas.GetComponent<RectTransform>();
                     GameObjectUtility.SetParentAndAlign(go, newCanvas);
                     
@@ -56,7 +60,7 @@ namespace AssetKits.ParticleImage.Editor
                     Selection.activeObject = go;
                 }
                 
-                var eventSystem = Object.FindObjectsOfType(typeof(EventSystem)).Cast<EventSystem>().FirstOrDefault();
+                var eventSystem = Object.FindObjectsByType(typeof(EventSystem), FindObjectsSortMode.None).Cast<EventSystem>().FirstOrDefault();
 
                 if (eventSystem == null)
                 {
