@@ -20,6 +20,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private IngredientManager ingredientManager;
     [SerializeField] private AudioManager audioManager;
     [SerializeField] private BookMarkManager bookMarkManager;
+   
 
     [Header("Loading Progress")]
     [SerializeField] private float minimumLoadTime = 1.0f; // JML: Minimum time to show loading screen
@@ -64,7 +65,8 @@ public class BootScene : MonoBehaviour
             InitializeCurrencyManager(),
             InitializeIngredientManager(),
             InitializeAudioManager(),
-            InitializeBookMarkManager()
+            InitializeBookMarkManager(),
+            InitializeLoadingUIManager() // LCB: 로딩 UI 매니저 초기화 (병렬 처리)
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -181,6 +183,30 @@ public class BootScene : MonoBehaviour
     }
 
     /// <summary>
+    /// LCB: LoadingUIManager 초기화 (다른 매니저들과 병렬로 실행)
+    /// LCB: 싱글톤으로 자동 생성되므로 Instance 접근만으로 초기화 트리거
+    /// </summary>
+    private async UniTask InitializeLoadingUIManager()
+    {
+        Log("Initializing LoadingUIManager...");
+
+        // LCB: Instance 접근으로 자동 생성 트리거
+        var instance = LoadingUIManager.Instance;
+
+        // LCB: Awake 완료 대기
+        await UniTask.DelayFrame(1);
+
+        if (instance != null)
+        {
+            Log("✓ LoadingUIManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ LoadingUIManager failed to initialize!");
+        }
+    }
+
+    /// <summary>
     /// JML: Initialize IngredientManager (runs in parallel with other managers)
     /// JML: Depends on CSVLoader being ready
     /// </summary>
@@ -237,19 +263,28 @@ public class BootScene : MonoBehaviour
 
     /// <summary>
     /// JML: Transition to the next scene with fade effect
+    /// LCB: 수정 - LoadingUI 진행률 표시 후 FadeController로 씬 전환
     /// </summary>
     private async UniTask TransitionToNextScene()
     {
         Log($"=== Transitioning to {nextSceneName} ===");
 
-        if (FadeController.Instance != null)
+        // LCB: LoadingUIManager의 새로운 메서드 사용
+        // LCB: 실행 순서: LoadingUI 표시 → 진행률 0-100% → FadeController 씬 전환
+        if (LoadingUIManager.Instance != null)
         {
+            await LoadingUIManager.Instance.LoadSceneWithProgress(nextSceneName);
+        }
+        else if (FadeController.Instance != null)
+        {
+            // LCB: Fallback 1: LoadingUI 없으면 기존 FadeController만 사용
+            Debug.LogWarning("LoadingUIManager not available, using FadeController only");
             await FadeController.Instance.LoadSceneWithFade(nextSceneName);
         }
         else
         {
-            // JML: Fallback: Direct scene load without fade
-            Debug.LogWarning("FadeController not available, loading scene directly");
+            // LCB: Fallback 2: 둘 다 없으면 직접 씬 로드
+            Debug.LogWarning("No transition managers available, loading scene directly");
             await SceneManager.LoadSceneAsync(nextSceneName);
         }
     }

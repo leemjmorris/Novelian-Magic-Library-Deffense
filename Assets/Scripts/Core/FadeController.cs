@@ -34,8 +34,6 @@ namespace NovelianMagicLibraryDefense.Core
         private GameObject fadePanel;
         private Canvas fadeCanvas;
 
-        private const float DEFAULT_FADE_DURATION = 0.5f;
-
         private void Awake()
         {
             if (instance != null && instance != this)
@@ -92,28 +90,24 @@ namespace NovelianMagicLibraryDefense.Core
         }
 
         /// <summary>
-        /// Performs full fade out/in cycle with scene load
+        /// LCB: 페이드 아웃/인 효과와 함께 씬 로딩 수행 (간소화 버전)
         /// </summary>
         public async UniTask LoadSceneWithFade(string sceneName)
         {
-            Debug.Log($"[FadeController] Loading scene: {sceneName}");
-
             // Activate fade panel
             fadePanel.SetActive(true);
 
-            // Fade out
-            await FadeOut(DEFAULT_FADE_DURATION);
+            // Fade out (빠르게)
+            await FadeOut(0.3f);
 
-            // Load scene
+            // 씬 로드
             await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
 
-            // Fade in
-            await FadeIn(DEFAULT_FADE_DURATION);
+            // Fade in (빠르게)
+            await FadeIn(0.3f);
 
             // Deactivate fade panel
             fadePanel.SetActive(false);
-
-            Debug.Log($"[FadeController] Scene loaded: {sceneName}");
         }
 
         /// <summary>
