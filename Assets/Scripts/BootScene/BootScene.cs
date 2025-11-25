@@ -1,3 +1,4 @@
+using System;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
@@ -21,6 +22,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private AudioManager audioManager;
     [SerializeField] private BookMarkManager bookMarkManager;
     [SerializeField] private DeckManager deckManager;
+    [SerializeField] private CharacterEnhancementManager characterEnhancementManager;
 
     [Header("Loading Progress")]
     [SerializeField] private float minimumLoadTime = 1.0f; // JML: Minimum time to show loading screen
@@ -66,7 +68,8 @@ public class BootScene : MonoBehaviour
             InitializeIngredientManager(),
             InitializeAudioManager(),
             InitializeBookMarkManager(),
-            InitializeDeckManager()
+            InitializeDeckManager(),
+            InitializeCharacterEnhancementManager()
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -92,6 +95,30 @@ public class BootScene : MonoBehaviour
         else
         {
             Debug.LogError("✗ FadeController failed to initialize!");
+        }
+    }
+
+    private async UniTask InitializeCharacterEnhancementManager()
+    {
+        Log("Initializing CharacterEnhancementManager...");
+
+        if (characterEnhancementManager == null)
+        {
+            Debug.LogError("✗ CharacterEnhancementManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+
+        // JML: Wait for Awake to complete
+        await UniTask.WaitUntil(() => CharacterEnhancementManager.Instance != null);
+        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start()
+
+        if (CharacterEnhancementManager.Instance != null)
+        {
+            Log("✓ CharacterEnhancementManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ CharacterEnhancementManager failed to initialize!");
         }
     }
 

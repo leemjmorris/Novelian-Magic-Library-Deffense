@@ -55,8 +55,9 @@ public class CSVLoader : MonoBehaviour
                 RegisterTableAsync<IngredientData>(AddressableKey.IngredientTable, x => x.Ingredient_ID),
                 RegisterTableAsync<CharacterData>(AddressableKey.CharacterTable, x => x.Character_ID),
                 RegisterTableAsync<LevelData>(AddressableKey.LevelTable, x => x.Cha_Level_ID),
-                RegisterTableAsync<SkillData>(AddressableKey.SkillTable, x => x.Skill_ID)
-
+                RegisterTableAsync<SkillData>(AddressableKey.SkillTable, x => x.Skill_ID),
+                RegisterTableAsync<EnhancementLevelData>(AddressableKey.EnhancementLevelTable, x => x.Pw_Level),
+                RegisterTableAsync<CharacterEnhancementData>(AddressableKey.CharacterEnhancementTable, x => x.Character_PwUp_ID)
             );
 
             IsInit = true;

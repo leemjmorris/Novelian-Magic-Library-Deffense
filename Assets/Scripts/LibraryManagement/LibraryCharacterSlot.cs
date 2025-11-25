@@ -50,8 +50,12 @@ public class LibraryCharacterSlot : MonoBehaviour
         // 2. 캐릭터 이름 표시
         characterName.text = data.Character_Name;
 
-        // 3. 현재 강화 레벨 (지금은 1로 고정, 나중에 저장 데이터에서 가져올 값)
+        // 3. 현재 강화 레벨 (CharacterEnhancementManager에서 가져오기)
         int currentEnhanceLevel = 1;
+        if (CharacterEnhancementManager.Instance != null)
+        {
+            currentEnhanceLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterID);
+        }
 
         // 4. 해당 강화 레벨의 LevelData ID 가져오기
         int levelDataID = GetLevelDataID(data, currentEnhanceLevel);
@@ -114,5 +118,41 @@ public class LibraryCharacterSlot : MonoBehaviour
         characterExp.text = $"{exp} / {maxExp}";
         characterExpBar.maxValue = maxExp;
         characterExpBar.value = exp;
+    }
+
+    /// <summary>
+    /// 강화 후 캐릭터 레벨 갱신
+    /// </summary>
+    public void RefreshCharacterLevel()
+    {
+        // Manager에서 최신 강화 레벨 가져오기
+        int currentEnhanceLevel = 1;
+        if (CharacterEnhancementManager.Instance != null)
+        {
+            currentEnhanceLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterID);
+        }
+
+        // LevelData 갱신
+        CharacterData data = CSVLoader.Instance.GetData<CharacterData>(characterID);
+        if (data == null)
+        {
+            Debug.LogError($"CharacterData not found for ID: {characterID}");
+            return;
+        }
+
+        int levelDataID = GetLevelDataID(data, currentEnhanceLevel);
+        LevelData levelData = CSVLoader.Instance.GetData<LevelData>(levelDataID);
+
+        if (levelData != null)
+        {
+            currentLevel = levelData.Level;
+            characterLevel.text = $"Lv.{currentLevel}";
+
+            // InfoPanel이 열려있다면 갱신
+            if (infoPanel != null)
+            {
+                infoPanel.InitInfo(characterID, currentLevel);
+            }
+        }
     }
 }

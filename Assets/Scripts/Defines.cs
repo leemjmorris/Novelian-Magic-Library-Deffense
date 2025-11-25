@@ -32,6 +32,8 @@ public static class AddressableKey
     public static readonly string CharacterTable = "CharacterTable";
     public static readonly string LevelTable = "LevelTable";
     public static readonly string SkillTable = "SkillTable";
+    public static readonly string EnhancementLevelTable = "EnhancementLevelTable";
+    public static readonly string CharacterEnhancementTable = "CharacterEnhancementTable";
 
     public static string GetCharacterKey(int characterId)
     {
