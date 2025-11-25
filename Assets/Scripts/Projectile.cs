@@ -41,6 +41,18 @@ namespace Novelian.Combat
         private ProjectileMode mode = ProjectileMode.Physics;
         private System.Action<Vector3> onHitCallback;
 
+        // Skill data (for effect prefab)
+        private SkillAssetData skillData;
+
+        // Support skill data for status effects
+        private SkillAssetData supportSkill;
+
+        // Chain state tracking
+        private int currentChainCount = 0;
+        private int maxChainCount = 0;
+        private System.Collections.Generic.HashSet<ITargetable> chainHitTargets;
+        private float currentChainDamage = 0f;
+
         // Movement state
         private Vector3 fixedDirection;
         private float speed;
@@ -53,8 +65,26 @@ namespace Novelian.Combat
         // Lifetime tracking
         private CancellationTokenSource lifetimeCts;
 
-        //LMJ : Launch projectile in Physics mode (for pooled projectiles with Rigidbody)
+        //LMJ : Launch projectile in Physics mode - basic version (for backward compatibility)
         public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime)
+        {
+            Launch(spawnPos, targetPos, projectileSpeed, projectileLifetime, this.damage, null);
+        }
+
+        //LMJ : Launch projectile in Physics mode - with support skill (for backward compatibility)
+        public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, SkillAssetData supportSkillData)
+        {
+            Launch(spawnPos, targetPos, projectileSpeed, projectileLifetime, this.damage, supportSkillData);
+        }
+
+        //LMJ : Launch projectile in Physics mode - full version with damage and support skill
+        public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, float damageAmount, SkillAssetData supportSkillData)
+        {
+            Launch(spawnPos, targetPos, projectileSpeed, projectileLifetime, damageAmount, null, supportSkillData);
+        }
+
+        //LMJ : Launch projectile in Physics mode - with skill data for effect prefab
+        public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, float damageAmount, SkillAssetData skillDataParam, SkillAssetData supportSkillData)
         {
             mode = ProjectileMode.Physics;
             transform.position = spawnPos;
@@ -65,8 +95,44 @@ namespace Novelian.Combat
             fixedDirection = (targetPos - spawnPos).normalized;
             speed = projectileSpeed;
             lifetime = projectileLifetime;
+            damage = damageAmount; // Set damage from parameter
             elapsedTime = 0f;
             isInitialized = true;
+
+            // Store skill data and support skill data
+            if (skillDataParam != null)
+            {
+                skillData = skillDataParam;
+            }
+            supportSkill = supportSkillData;
+
+            // Spawn effect prefab as child if skillData is provided
+            if (skillData != null && skillData.projectileEffectPrefab != null)
+            {
+                // Clear any existing child effects
+                foreach (Transform child in transform)
+                {
+                    if (child.gameObject != null)
+                    {
+                        Object.Destroy(child.gameObject);
+                    }
+                }
+
+                // Spawn new effect as child
+                GameObject effectInstance = Object.Instantiate(skillData.projectileEffectPrefab, transform);
+                effectInstance.transform.localPosition = Vector3.zero;
+                effectInstance.transform.localRotation = Quaternion.LookRotation(fixedDirection);
+                Debug.Log($"[Projectile] Effect prefab spawned as child: {skillData.projectileEffectPrefab.name}");
+            }
+
+            // Initialize Chain state (only on first launch, not re-launch)
+            if (currentChainCount == 0 && supportSkill != null && supportSkill.statusEffectType == StatusEffectType.Chain)
+            {
+                maxChainCount = supportSkill.chainCount;
+                chainHitTargets = new System.Collections.Generic.HashSet<ITargetable>();
+                currentChainDamage = damageAmount; // Use parameter damage, not field default
+                Debug.Log($"[Projectile] Chain initialized: maxChainCount={maxChainCount}, initialDamage={currentChainDamage:F1}");
+            }
 
             // Cancel previous lifetime token
             lifetimeCts?.Cancel();
@@ -75,11 +141,11 @@ namespace Novelian.Combat
             // Start lifetime countdown
             TrackLifetimeAsync(lifetimeCts.Token).Forget();
 
-            Debug.Log($"[Projectile] Physics mode launched from {spawnPos} to {targetPos}");
+            Debug.Log($"[Projectile] Physics mode launched from {spawnPos} to {targetPos}, damage={damage:F1}, chainCount={currentChainCount}/{maxChainCount}");
         }
 
         //LMJ : Launch projectile in Effect mode (for visual-only projectiles without physics)
-        public void LaunchEffect(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, float damageAmount, System.Action<Vector3> onHit = null)
+        public void LaunchEffect(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, float damageAmount, System.Action<Vector3> onHit = null, SkillAssetData supportSkillData = null)
         {
             mode = ProjectileMode.Effect;
             transform.position = spawnPos;
@@ -93,6 +159,9 @@ namespace Novelian.Combat
             onHitCallback = onHit;
             elapsedTime = 0f;
             isInitialized = true;
+
+            // Store support skill data for status effects
+            supportSkill = supportSkillData;
 
             transform.rotation = Quaternion.LookRotation(fixedDirection);
 
@@ -252,10 +321,61 @@ namespace Novelian.Combat
                 Monster monster = other.GetComponent<Monster>();
                 if (monster != null)
                 {
-                    monster.TakeDamage(damage);
+                    // Apply status effects BEFORE damage (so monster is still alive)
+                    if (supportSkill != null && supportSkill.statusEffectType != StatusEffectType.Chain)
+                    {
+                        ApplyStatusEffect(monster);
+                    }
+
+                    // Apply damage (use chain damage if chaining)
+                    float damageToApply = (maxChainCount > 0) ? currentChainDamage : damage;
+                    monster.TakeDamage(damageToApply);
+
+                    // Spawn hit effect
+                    if (skillData != null && skillData.hitEffectPrefab != null)
+                    {
+                        GameObject hitEffect = Object.Instantiate(skillData.hitEffectPrefab, other.transform.position, Quaternion.identity);
+                        Object.Destroy(hitEffect, 2f);
+                    }
+
+                    // Add to hit targets for chain tracking
+                    if (maxChainCount > 0)
+                    {
+                        chainHitTargets.Add(monster);
+                    }
+
+                    // Process Chain: find next target and re-launch projectile
+                    if (supportSkill != null && supportSkill.statusEffectType == StatusEffectType.Chain && currentChainCount < maxChainCount)
+                    {
+                        // Spawn chain effect from previous position to current
+                        if (supportSkill.chainEffectPrefab != null && currentChainCount > 0)
+                        {
+                            SpawnChainEffect(startPosition, other.transform.position);
+                        }
+
+                        // Find next target
+                        ITargetable nextTarget = FindNextChainTarget(other.transform.position, chainHitTargets);
+
+                        if (nextTarget != null)
+                        {
+                            // Calculate reduced damage for next chain
+                            currentChainDamage *= (1f - supportSkill.chainDamageReduction / 100f);
+                            currentChainCount++;
+
+                            Debug.Log($"[Projectile] Chain {currentChainCount}/{maxChainCount}: Bouncing to {nextTarget.GetTransform().name}, damage={currentChainDamage:F1}");
+
+                            // Re-launch projectile to next target (bounce like billiard ball!)
+                            Launch(other.transform.position, nextTarget.GetPosition(), speed, lifetime, currentChainDamage, skillData, supportSkill);
+                            return; // Don't despawn - projectile continues!
+                        }
+                        else
+                        {
+                            Debug.Log($"[Projectile] Chain ended: No more targets found");
+                        }
+                    }
                 }
 
-                // Mode-specific cleanup
+                // Mode-specific cleanup (only if not chaining to next target)
                 if (mode == ProjectileMode.Physics)
                 {
                     ReturnToPool();
@@ -277,10 +397,61 @@ namespace Novelian.Combat
                 BossMonster boss = other.GetComponent<BossMonster>();
                 if (boss != null)
                 {
-                    boss.TakeDamage(damage);
+                    // Apply status effects BEFORE damage (so boss is still alive)
+                    if (supportSkill != null && supportSkill.statusEffectType != StatusEffectType.Chain)
+                    {
+                        ApplyStatusEffectToBoss(boss);
+                    }
+
+                    // Apply damage (use chain damage if chaining)
+                    float damageToApply = (maxChainCount > 0) ? currentChainDamage : damage;
+                    boss.TakeDamage(damageToApply);
+
+                    // Spawn hit effect
+                    if (skillData != null && skillData.hitEffectPrefab != null)
+                    {
+                        GameObject hitEffect = Object.Instantiate(skillData.hitEffectPrefab, other.transform.position, Quaternion.identity);
+                        Object.Destroy(hitEffect, 2f);
+                    }
+
+                    // Add to hit targets for chain tracking
+                    if (maxChainCount > 0)
+                    {
+                        chainHitTargets.Add(boss);
+                    }
+
+                    // Process Chain: find next target and re-launch projectile
+                    if (supportSkill != null && supportSkill.statusEffectType == StatusEffectType.Chain && currentChainCount < maxChainCount)
+                    {
+                        // Spawn chain effect from previous position to current
+                        if (supportSkill.chainEffectPrefab != null && currentChainCount > 0)
+                        {
+                            SpawnChainEffect(startPosition, other.transform.position);
+                        }
+
+                        // Find next target
+                        ITargetable nextTarget = FindNextChainTarget(other.transform.position, chainHitTargets);
+
+                        if (nextTarget != null)
+                        {
+                            // Calculate reduced damage for next chain
+                            currentChainDamage *= (1f - supportSkill.chainDamageReduction / 100f);
+                            currentChainCount++;
+
+                            Debug.Log($"[Projectile] Chain {currentChainCount}/{maxChainCount}: Bouncing to {nextTarget.GetTransform().name}, damage={currentChainDamage:F1}");
+
+                            // Re-launch projectile to next target (bounce like billiard ball!)
+                            Launch(other.transform.position, nextTarget.GetPosition(), speed, lifetime, currentChainDamage, skillData, supportSkill);
+                            return; // Don't despawn - projectile continues!
+                        }
+                        else
+                        {
+                            Debug.Log($"[Projectile] Chain ended: No more targets found");
+                        }
+                    }
                 }
 
-                // Mode-specific cleanup
+                // Mode-specific cleanup (only if not chaining to next target)
                 if (mode == ProjectileMode.Physics)
                 {
                     ReturnToPool();
@@ -297,6 +468,164 @@ namespace Novelian.Combat
                     Destroy(gameObject);
                 }
             }
+        }
+
+        //LMJ : Apply status effect to monster
+        private void ApplyStatusEffect(Monster monster)
+        {
+            if (supportSkill == null)
+            {
+                Debug.Log("[Projectile] ApplyStatusEffect called but supportSkill is null");
+                return;
+            }
+
+            if (monster == null)
+            {
+                Debug.Log("[Projectile] ApplyStatusEffect called but monster is null");
+                return;
+            }
+
+            Debug.Log($"[Projectile] Applying status effect: {supportSkill.statusEffectType}");
+
+            switch (supportSkill.statusEffectType)
+            {
+                case StatusEffectType.CC:
+                    Debug.Log($"[Projectile] Applying CC: {supportSkill.ccType}, Duration: {supportSkill.ccDuration}");
+                    monster.ApplyCC(supportSkill.ccType, supportSkill.ccDuration, supportSkill.ccSlowAmount, supportSkill.ccEffectPrefab);
+                    break;
+
+                case StatusEffectType.DOT:
+                    Debug.Log($"[Projectile] Applying DOT: {supportSkill.dotType}");
+                    monster.ApplyDOT(supportSkill.dotType, supportSkill.dotDamagePerTick, supportSkill.dotTickInterval, supportSkill.dotDuration, supportSkill.dotEffectPrefab);
+                    break;
+
+                case StatusEffectType.Mark:
+                    Debug.Log($"[Projectile] Applying Mark: {supportSkill.markType}");
+                    monster.ApplyMark(supportSkill.markType, supportSkill.markDuration, supportSkill.markDamageMultiplier, supportSkill.markEffectPrefab);
+                    break;
+
+                case StatusEffectType.Chain:
+                    // Chain은 첫 타격 후 처리되므로 여기서는 로그만
+                    Debug.Log("[Projectile] Chain effect will be processed after hit");
+                    break;
+
+                case StatusEffectType.None:
+                    Debug.Log("[Projectile] StatusEffectType is None");
+                    break;
+            }
+        }
+
+        //LMJ : Apply status effect to boss monster
+        private void ApplyStatusEffectToBoss(BossMonster boss)
+        {
+            if (supportSkill == null || boss == null) return;
+
+            switch (supportSkill.statusEffectType)
+            {
+                case StatusEffectType.CC:
+                    boss.ApplyCC(supportSkill.ccType, supportSkill.ccDuration, supportSkill.ccSlowAmount, supportSkill.ccEffectPrefab);
+                    break;
+
+                case StatusEffectType.DOT:
+                    boss.ApplyDOT(supportSkill.dotType, supportSkill.dotDamagePerTick, supportSkill.dotTickInterval, supportSkill.dotDuration, supportSkill.dotEffectPrefab);
+                    break;
+
+                case StatusEffectType.Mark:
+                    boss.ApplyMark(supportSkill.markType, supportSkill.markDuration, supportSkill.markDamageMultiplier, supportSkill.markEffectPrefab);
+                    break;
+
+                case StatusEffectType.Chain:
+                    // Chain은 첫 타격 후 처리되므로 여기서는 로그만
+                    break;
+            }
+        }
+
+        //LMJ : Spawn chain effect visual between two positions
+        private void SpawnChainEffect(Vector3 startPos, Vector3 endPos)
+        {
+            if (supportSkill == null || supportSkill.chainEffectPrefab == null) return;
+
+            Vector3 midPos = (startPos + endPos) / 2f;
+            GameObject chainEffect = Instantiate(supportSkill.chainEffectPrefab, midPos, Quaternion.identity);
+
+            // Orient the effect to point from start to end
+            Vector3 direction = (endPos - startPos).normalized;
+            if (direction != Vector3.zero)
+            {
+                chainEffect.transform.rotation = Quaternion.LookRotation(direction);
+            }
+
+            // Scale the effect based on distance (optional)
+            float distance = Vector3.Distance(startPos, endPos);
+            chainEffect.transform.localScale = new Vector3(1f, 1f, distance);
+
+            // Auto-destroy after short duration
+            Destroy(chainEffect, 1f);
+
+            Debug.Log($"[Projectile] Chain effect spawned from {startPos} to {endPos}");
+        }
+
+        //LMJ : Find next target for chain effect with priority system
+        private ITargetable FindNextChainTarget(Vector3 currentPosition, System.Collections.Generic.HashSet<ITargetable> hitTargets)
+        {
+            if (supportSkill == null) return null;
+
+            // Get all targets within chain range
+            Collider[] hits = Physics.OverlapSphere(currentPosition, supportSkill.chainRange);
+
+            // Separate unhit and hit targets
+            ITargetable closestUnhitTarget = null;
+            float closestUnhitDistance = float.MaxValue;
+
+            ITargetable closestHitTarget = null;
+            float closestHitDistance = float.MaxValue;
+
+            foreach (var hit in hits)
+            {
+                // Check if it's a valid target (Monster or BossMonster)
+                if (!hit.CompareTag(Tag.Monster) && !hit.CompareTag(Tag.BossMonster))
+                    continue;
+
+                ITargetable target = hit.GetComponent<ITargetable>();
+                if (target == null || !target.IsAlive())
+                    continue;
+
+                float distance = Vector3.Distance(currentPosition, target.GetPosition());
+
+                // Categorize by hit status
+                if (!hitTargets.Contains(target))
+                {
+                    // Unhit target - highest priority
+                    if (distance < closestUnhitDistance)
+                    {
+                        closestUnhitDistance = distance;
+                        closestUnhitTarget = target;
+                    }
+                }
+                else
+                {
+                    // Already hit target - lower priority
+                    if (distance < closestHitDistance)
+                    {
+                        closestHitDistance = distance;
+                        closestHitTarget = target;
+                    }
+                }
+            }
+
+            // Priority: unhit targets first, then hit targets (re-hit allowed)
+            if (closestUnhitTarget != null)
+            {
+                Debug.Log($"[Projectile] Chain: Found unhit target at {closestUnhitDistance:F1}m");
+                return closestUnhitTarget;
+            }
+            else if (closestHitTarget != null)
+            {
+                Debug.Log($"[Projectile] Chain: No unhit targets, re-hitting target at {closestHitDistance:F1}m");
+                return closestHitTarget;
+            }
+
+            return null;
         }
 
         //LMJ : Return projectile to pool
@@ -332,6 +661,13 @@ namespace Novelian.Combat
             fixedDirection = Vector3.zero;
             elapsedTime = 0f;
             onHitCallback = null;
+            supportSkill = null; // Clear support skill reference
+
+            // Reset chain state
+            currentChainCount = 0;
+            maxChainCount = 0;
+            chainHitTargets = null;
+            currentChainDamage = 0f;
 
             if (rb != null) rb.linearVelocity = Vector3.zero;
             lifetimeCts?.Cancel();

@@ -71,6 +71,95 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         base.TakeDamage(damage);
     }
 
+    /// <summary>
+    /// CC 효과 적용 (Support 스킬용)
+    /// </summary>
+    public void ApplyCC(CCType ccType, float duration, float slowAmount, GameObject ccEffectPrefab = null)
+    {
+        // CC 이펙트 생성 (몬스터를 따라다니면서 재생)
+        if (ccEffectPrefab != null)
+        {
+            GameObject ccEffect = Instantiate(ccEffectPrefab, transform.position, Quaternion.identity, transform);
+            Destroy(ccEffect, duration);
+            Debug.Log($"[BossMonster] CC effect spawned: {ccEffectPrefab.name}");
+        }
+
+        switch (ccType)
+        {
+            case CCType.Stun:
+            case CCType.Freeze:
+                Debug.Log($"[BossMonster] {ccType} applied for {duration}s");
+                // TODO: Boss CC 효과 구현
+                break;
+
+            case CCType.Slow:
+                Debug.Log($"[BossMonster] Slow applied: {slowAmount}% for {duration}s");
+                break;
+
+            case CCType.Root:
+                Debug.Log($"[BossMonster] Root applied for {duration}s");
+                break;
+
+            case CCType.Knockback:
+                Debug.Log($"[BossMonster] Knockback applied");
+                break;
+
+            case CCType.Silence:
+                Debug.Log($"[BossMonster] Silence applied for {duration}s");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// DOT 효과 적용 (Support 스킬용)
+    /// </summary>
+    public void ApplyDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration, GameObject dotEffectPrefab = null)
+    {
+        // DOT 이펙트 생성 (몬스터를 따라다니면서 재생)
+        if (dotEffectPrefab != null)
+        {
+            GameObject dotEffect = Instantiate(dotEffectPrefab, transform.position, Quaternion.identity, transform);
+            Destroy(dotEffect, duration);
+            Debug.Log($"[BossMonster] DOT effect spawned: {dotEffectPrefab.name}");
+        }
+
+        // Start DOT coroutine
+        StartDOT(dotType, damagePerTick, tickInterval, duration).Forget();
+    }
+
+    private async Cysharp.Threading.Tasks.UniTaskVoid StartDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration)
+    {
+        float elapsed = 0f;
+        Debug.Log($"[BossMonster] {dotType} DOT started: {damagePerTick} dmg every {tickInterval}s for {duration}s");
+
+        while (elapsed < duration && IsAlive())
+        {
+            await Cysharp.Threading.Tasks.UniTask.Delay((int)(tickInterval * 1000));
+            if (!IsAlive()) break;
+
+            elapsed += tickInterval;
+            TakeDamage(damagePerTick);
+            Debug.Log($"[BossMonster] {dotType} tick: {damagePerTick} damage");
+        }
+
+        Debug.Log($"[BossMonster] {dotType} DOT ended");
+    }
+
+    /// <summary>
+    /// Mark 효과 적용 (Support 스킬용)
+    /// </summary>
+    public void ApplyMark(MarkType markType, float duration, float damageMultiplier, GameObject markEffectPrefab)
+    {
+        Debug.Log($"[BossMonster] {markType} Mark applied: +{damageMultiplier}% damage for {duration}s");
+
+        // TODO: Mark 효과 구현
+        if (markEffectPrefab != null)
+        {
+            GameObject markEffect = Instantiate(markEffectPrefab, transform.position, Quaternion.identity, transform);
+            Destroy(markEffect, duration);
+        }
+    }
+
     public override void Die()
     {
         // LMJ: Unregister BEFORE despawning to prevent accessing destroyed object
