@@ -9,5 +9,7 @@ public class EnhancementLevelData
     public int Material_2_Count { get; set; }
     public int Material_3_ID { get; set; }
     public int Material_3_Count { get; set; }
+    public int Material_4_ID { get; set; }
+    public int Material_4_Count { get; set; }
     public int Bookmark_Slots { get; set; }
 }

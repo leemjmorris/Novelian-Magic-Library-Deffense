@@ -159,11 +159,12 @@ public class CharacterEnhancementManager : MonoBehaviour
             return false;
         }
 
-        // 골드 체크 (재화 ID 171)
-        // EnhancementLevelTable의 Material_3_ID 컬럼이 실제로는 골드를 의미
-        // CSV 구조상 Material_3_ID가 171 (골드)
-        // 이미 위에서 체크했으므로 생략 가능하지만, 명시적으로 골드만 다시 체크
-        // 실제로는 CSV에서 Material_3_ID에 골드(171)가 들어가 있음
+        // 골드 체크 (CurrencyManager 사용)
+        if (CurrencyManager.Instance.Gold < nextInfo.Material_4_Count)
+        {
+            failReason = $"골드가 부족합니다. ({CurrencyManager.Instance.Gold}/{nextInfo.Material_4_Count})";
+            return false;
+        }
 
         return true;
     }
@@ -200,9 +201,11 @@ public class CharacterEnhancementManager : MonoBehaviour
         }
 
         // 골드 소모 (CurrencyManager 사용)
-        // CSV 확인 결과: Material_3_ID 두 번 사용됨 (버그), 하지만 마지막 Material_3_ID가 실제 골드
-        // 골드는 CSV에서 별도로 처리 필요 (현재 구조상 문제가 있음)
-        // 임시로 재료 3개만 소모 처리
+        if (!CurrencyManager.Instance.SpendGold(nextInfo.Material_4_Count))
+        {
+            Debug.LogError("Failed to spend gold");
+            return false;
+        }
 
         // 강화 레벨 증가
         int currentLevel = GetEnhancementLevel(characterId);

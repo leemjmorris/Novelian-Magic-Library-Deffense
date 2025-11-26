@@ -10,9 +10,9 @@ public class LibraryCharacterSlot : MonoBehaviour
     private int characterID;
     public int CharacterID => characterID;
     [SerializeField] private TextMeshProUGUI characterName;
-    [SerializeField] private TextMeshProUGUI characterExp;
+    [SerializeField] private TextMeshProUGUI characterSliderLevelText;
     [SerializeField] private TextMeshProUGUI characterLevel;
-    [SerializeField] private Slider characterExpBar;
+    [SerializeField] private Slider characterLevelBar;
     [SerializeField] private Image characterSprite;
     [SerializeField] private Button characterInfoButton;
     private int currentLevel;
@@ -33,7 +33,7 @@ public class LibraryCharacterSlot : MonoBehaviour
     private void OnClickCharacterInfo()
     {
         Debug.Log($"Character Info Clicked for ID: {characterID}");
-        infoPanel.InitInfo(characterID, currentLevel);
+        infoPanel.InitInfo(characterID, currentLevel, this);
         infoPanel.ShowPanel();
     }
 
@@ -67,11 +67,11 @@ public class LibraryCharacterSlot : MonoBehaviour
         {
             currentLevel = levelData.Level;
             // 6. 레벨 표시
-            characterLevel.text = $"Lv.{currentLevel}";
+            characterLevel.text = $"Lv {currentEnhanceLevel}";
+            characterSliderLevelText.text = $"{currentEnhanceLevel}/10";
 
-            // 7. 경험치 바 초기화 (현재는 0/100으로 임시 설정)
-            // 나중에 저장 데이터에서 현재 경험치와 최대 경험치 가져올 것
-            UpdateUI(currentLevel, 10);
+            // 7. 레벨 슬라이더 설정 (강화 레벨 기준)
+            characterLevelBar.value = currentEnhanceLevel / 10f;
         }
 
         // 8. 캐릭터 스프라이트 로드 (Addressables 사용)
@@ -113,13 +113,6 @@ public class LibraryCharacterSlot : MonoBehaviour
             }
         };
     }
-    public void UpdateUI(int exp, int maxExp)
-    {
-        characterExp.text = $"{exp} / {maxExp}";
-        characterExpBar.maxValue = maxExp;
-        characterExpBar.value = exp;
-    }
-
     /// <summary>
     /// 강화 후 캐릭터 레벨 갱신
     /// </summary>
@@ -146,7 +139,9 @@ public class LibraryCharacterSlot : MonoBehaviour
         if (levelData != null)
         {
             currentLevel = levelData.Level;
-            characterLevel.text = $"Lv.{currentLevel}";
+            characterSliderLevelText.text = $"{currentEnhanceLevel}/10";
+            characterLevel.text = $"Lv {currentEnhanceLevel}";
+            characterLevelBar.value = currentEnhanceLevel / 10f;
 
             // InfoPanel이 열려있다면 갱신
             if (infoPanel != null)

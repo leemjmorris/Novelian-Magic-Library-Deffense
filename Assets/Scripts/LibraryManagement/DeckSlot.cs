@@ -64,10 +64,13 @@ public class DeckSlot : MonoBehaviour
             characterNameText.enabled = true;
         }
 
-        // 레벨 표시
+        // 강화 레벨 가져오기
+        int enhancementLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterData.Character_ID);
+
+        // 레벨 텍스트 표시
         if (levelText != null)
         {
-            levelText.text = "Lv.1";
+            levelText.text = $"Lv.{enhancementLevel}";
             levelText.enabled = true;
         }
     }
