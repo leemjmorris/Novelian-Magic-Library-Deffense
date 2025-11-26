@@ -39,7 +39,7 @@ namespace NovelianMagicLibraryDefense.UI
 
         public void OnLibraryManagementButton()
         {
-            LoadSceneWithLoadingUI("LibraryManagementScene").Forget();
+            LoadSceneWithLoadingUI("LibraryManagementScene(LCB)").Forget();
         }
 
         /// <summary>
