@@ -24,7 +24,7 @@ jobs:
         env:
           NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
           NOTION_REPORT_PAGE_ID: ${{ secrets.NOTION_REPORT_PAGE_ID }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           script: |
@@ -258,8 +258,8 @@ jobs:
               return blocks;
             }
             
-            async function generateClaudeSummary(issues, prs, isMonday) {
-              const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+            async function generateGeminiSummary(issues, prs, isMonday) {
+              const geminiApiKey = process.env.GEMINI_API_KEY;
 
               const periodInfo = isMonday ? '금요일부터 월요일까지 (주말 포함 3일간)' : '전일';
 
@@ -339,25 +339,21 @@ jobs:
 
               return new Promise((resolve, reject) => {
                 const postData = JSON.stringify({
-                  model: 'claude-3-haiku-20240307',
-                  max_tokens: 4096,
-                  messages: [{
-                    role: 'user',
-                    content: prompt
+                  contents: [{
+                    parts: [{ text: prompt }]
                   }]
                 });
 
                 const req = https.request({
-                  hostname: 'api.anthropic.com',
-                  path: '/v1/messages',
+                  hostname: 'generativelanguage.googleapis.com',
+                  path: '/v1beta/models/gemini-2.0-flash:generateContent?key=' + geminiApiKey,
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': anthropicApiKey,
-                    'anthropic-version': '2023-06-01'
+                    'Content-Length': Buffer.byteLength(postData)
                   }
                 }, (res) => {
-                  console.log('🔍 Claude API Status:', res.statusCode);
+                  console.log('🔍 Gemini API Status:', res.statusCode);
 
                   let body = '';
                   res.on('data', d => body += d);
@@ -365,25 +361,25 @@ jobs:
                     try {
                       const result = JSON.parse(body);
 
-                      if (result.content && result.content[0] && result.content[0].text) {
+                      if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0] && result.candidates[0].content.parts[0].text) {
                         console.log('✅ AI summary generated successfully');
-                        resolve(result.content[0].text);
+                        resolve(result.candidates[0].content.parts[0].text);
                       } else if (result.error) {
-                        console.error('❌ Claude API Error:', result.error);
-                        reject(new Error('Claude API error: ' + result.error.message));
+                        console.error('❌ Gemini API Error:', result.error);
+                        reject(new Error('Gemini API error: ' + result.error.message));
                       } else {
                         console.error('❌ Unexpected response structure:', JSON.stringify(result));
-                        reject(new Error('Invalid Claude API response structure'));
+                        reject(new Error('Invalid Gemini API response structure'));
                       }
                     } catch (e) {
-                      console.error('❌ Failed to parse Claude response:', body);
+                      console.error('❌ Failed to parse Gemini response:', body);
                       reject(e);
                     }
                   });
                 });
 
                 req.on('error', (e) => {
-                  console.error('❌ Claude request error:', e);
+                  console.error('❌ Gemini request error:', e);
                   reject(e);
                 });
 
@@ -555,8 +551,8 @@ jobs:
               // Filter only developers for AI summary
               const developers = ['leemjmorris', 'jaemoon23', 'LeeChaeBin002'];
 
-              console.log('🤖 Generating AI summary with Claude...');
-              const aiSummary = await generateClaudeSummary(allRecentIssues, allPRsResponse.data, dayOfWeek === 1);
+              console.log('🤖 Generating AI summary with Gemini...');
+              const aiSummary = await generateGeminiSummary(allRecentIssues, allPRsResponse.data, dayOfWeek === 1);
               console.log('✅ AI summary generated');
 
               const userStats = {};
