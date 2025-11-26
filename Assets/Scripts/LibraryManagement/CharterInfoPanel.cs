@@ -58,7 +58,7 @@ public class CharacterInfoPanel : MonoBehaviour
         CharacterID = characterID;
         currentSlot = slot;
         var characterData = CSVLoader.Instance.GetData<CharacterData>(CharacterID);
-        characterNameText.text = $"{characterData.Character_Name}";
+        characterNameText.text = $"{CSVLoader.Instance.GetData<StringTable>(characterData.Character_Name_ID)?.Text ?? "Unknown"}";
 
         RefreshLevelUI();
         RefreshBookmarkUI();

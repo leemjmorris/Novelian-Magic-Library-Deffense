@@ -34,6 +34,7 @@ public static class AddressableKey
     public static readonly string SkillTable = "SkillTable";
     public static readonly string EnhancementLevelTable = "EnhancementLevelTable";
     public static readonly string CharacterEnhancementTable = "CharacterEnhancementTable";
+    public static readonly string StringTable = "StringTable";
 
     public static string GetCharacterKey(int characterId)
     {
@@ -100,6 +101,7 @@ public enum Genre
 public enum OptionType
 {
     AttackPower = 1,
+    AttackSkill = 2,
 }
 public enum UseType
 {

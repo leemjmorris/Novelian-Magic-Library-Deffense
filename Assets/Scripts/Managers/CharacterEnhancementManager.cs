@@ -62,7 +62,8 @@ public class CharacterEnhancementManager : MonoBehaviour
         IngredientManager.Instance.AddIngredient(enhancementData.Material_3_ID, enhancementData.Material_3_Count);
 
         CharacterData charData = CSVLoader.Instance.GetData<CharacterData>(characterId);
-        Debug.Log($"[Test] {charData.Character_Name} Lv.{targetLevel} 강화에 필요한 재료 지급 완료!");
+        string charName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";
+        Debug.Log($"[Test] {charName} Lv.{targetLevel} 강화에 필요한 재료 지급 완료!");
     }
 
     /// <summary>
@@ -212,7 +213,8 @@ public class CharacterEnhancementManager : MonoBehaviour
         characterEnhancementLevels[characterId] = currentLevel + 1;
 
         CharacterData charData = CSVLoader.Instance.GetData<CharacterData>(characterId);
-        Debug.Log($"[Enhancement Success] {charData.Character_Name} Lv.{currentLevel} → Lv.{currentLevel + 1}");
+        string enhancedCharName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";
+        Debug.Log($"[Enhancement Success] {enhancedCharName} Lv.{currentLevel} → Lv.{currentLevel + 1}");
 
         return true;
     }

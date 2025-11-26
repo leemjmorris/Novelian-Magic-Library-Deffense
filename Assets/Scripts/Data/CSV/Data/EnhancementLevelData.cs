@@ -1,7 +1,6 @@
 public class EnhancementLevelData
 {
     public int Pw_Level { get; set; }
-    public string Character_Name { get; set; }
     public int Req_Level { get; set; }
     public int Material_1_ID { get; set; }
     public int Material_1_Count { get; set; }

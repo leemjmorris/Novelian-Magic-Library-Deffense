@@ -36,7 +36,7 @@ public class InventoryItemInfo
         }
 
         ItemID = ingredientData.Ingredient_ID;
-        ItemName = ingredientData.Ingredient_Name;
+        ItemName = CSVLoader.Instance.GetData<StringTable>(ingredientData.Ingredient_Name_ID)?.Text ?? "Unknown";
         ItemType = ingredientData.Use_Type;
 
         // GradeTable에서 등급 정보 가져오기

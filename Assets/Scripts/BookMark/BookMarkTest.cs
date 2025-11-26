@@ -8,18 +8,17 @@ public class BookMarkTest : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        test.onClick.AddListener(OnClick);
         add.onClick.AddListener(OnAddClick);
     }
 
     private void OnAddClick()
     {
-        // 강화 시스템 재료 추가 (장르별 정수)
-        IngredientManager.Instance.AddIngredient(10210, 1000); // 공포의 정수
-        IngredientManager.Instance.AddIngredient(10211, 1000); // 추리의 정수
-        IngredientManager.Instance.AddIngredient(1027, 1000);  // 로맨스의 정수
-        IngredientManager.Instance.AddIngredient(1028, 1000);  // 코미디의 정수
-        IngredientManager.Instance.AddIngredient(1029, 1000);  // 모험의 정수
+        // 강화 시스템 재료 추가 (장르별 정수) - 새로운 ID
+        IngredientManager.Instance.AddIngredient(10207, 1000); // 장르 정수 1
+        IngredientManager.Instance.AddIngredient(10208, 1000); // 장르 정수 2
+        IngredientManager.Instance.AddIngredient(10209, 1000); // 장르 정수 3
+        IngredientManager.Instance.AddIngredient(10210, 1000); // 장르 정수 4
+        IngredientManager.Instance.AddIngredient(10211, 1000); // 장르 정수 5
         IngredientManager.Instance.AddIngredient(10212, 100);  // 승진의 인장
 
         // 캐릭터별 정수 (20명)
@@ -44,32 +43,16 @@ public class BookMarkTest : MonoBehaviour
         IngredientManager.Instance.AddIngredient(10233, 500); // 키의 정수
         IngredientManager.Instance.AddIngredient(10234, 500); // 베리타의 정수
 
-        // 북마크 제작 재료 (기존)
-        IngredientManager.Instance.AddIngredient(1011, 100); // 희미한 마력의 종이
-        IngredientManager.Instance.AddIngredient(1012, 100); // 응축된 마력의 종이
-        IngredientManager.Instance.AddIngredient(1013, 100); // 비범한 마력의 종이
-        IngredientManager.Instance.AddIngredient(1014, 100); // 신성한 마력의 종이
-        IngredientManager.Instance.AddIngredient(1015, 100); // 고대 마력의 종이
-        IngredientManager.Instance.AddIngredient(1016, 100); // 잉크
+        // 북마크 제작 재료 - 새로운 ID (마력의 종이)
+        IngredientManager.Instance.AddIngredient(10101, 100); // 희미한 마력의 종이
+        IngredientManager.Instance.AddIngredient(10102, 100); // 응축된 마력의 종이
+        IngredientManager.Instance.AddIngredient(10103, 100); // 비범한 마력의 종이
+        IngredientManager.Instance.AddIngredient(10104, 100); // 고대 마력의 종이
+        IngredientManager.Instance.AddIngredient(10105, 100); // 신성한 마력의 종이
+        IngredientManager.Instance.AddIngredient(10106, 100); // 잉크
         IngredientManager.Instance.AddIngredient(10114, 100); // 룬석
 
         CurrencyManager.Instance.AddGold(10000000); // 1000만 골드
         Debug.Log("모든 강화 재료 지급 완료! 보유 골드: " + CurrencyManager.Instance.Gold);
-    }
-    private void OnClick()
-    {
-        Debug.Log("BookMarkTest Clicked");
-
-        BookMarkCraftResult result = BookMarkCraft.CraftBookmark(121);
-        
-        if (result.IsSuccess)
-        {
-            Debug.Log($"제작 성공! {result.Message}");
-            Debug.Log($"북마크: {result.CraftedBookmark.Name}");
-        }
-        else
-        {
-            Debug.LogError($"제작 실패! {result.Message}");
-        }
     }
 }

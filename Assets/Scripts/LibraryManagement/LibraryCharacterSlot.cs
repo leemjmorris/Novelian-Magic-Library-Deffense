@@ -48,7 +48,7 @@ public class LibraryCharacterSlot : MonoBehaviour
         characterID = data.Character_ID;
 
         // 2. 캐릭터 이름 표시
-        characterName.text = data.Character_Name;
+        characterName.text = CSVLoader.Instance.GetData<StringTable>(data.Character_Name_ID)?.Text ?? "Unknown";
 
         // 3. 현재 강화 레벨 (CharacterEnhancementManager에서 가져오기)
         int currentEnhanceLevel = 1;

@@ -30,7 +30,8 @@ public class IngredientManager : MonoBehaviour
     public string GetIngredientName(int id)
     {
         var data = GetIngredientInfo(id);
-        return data?.Ingredient_Name ?? "Unknown";
+        if (data == null) return "Unknown";
+        return CSVLoader.Instance.GetData<StringTable>(data.Ingredient_Name_ID)?.Text ?? "Unknown";
     }
 
     public int GetIngredientGradeID(int id)
@@ -71,7 +72,8 @@ public class IngredientManager : MonoBehaviour
 
         if (currentCount + count > maxCount)
         {
-            Debug.LogWarning($"{ingredientData.Ingredient_Name} 최대 수량 초과! (최대: {maxCount})");
+            string ingredientName = CSVLoader.Instance.GetData<StringTable>(ingredientData.Ingredient_Name_ID)?.Text ?? "Unknown";
+            Debug.LogWarning($"{ingredientName} 최대 수량 초과! (최대: {maxCount})");
             count = maxCount - currentCount;
         }
 
@@ -80,7 +82,8 @@ public class IngredientManager : MonoBehaviour
         else
             Ingredients[id] = count;
 
-        Debug.Log($"{ingredientData.Ingredient_Name} {count}개 획득! (보유: {Ingredients[id]}/{maxCount})");
+        string addedIngredientName = CSVLoader.Instance.GetData<StringTable>(ingredientData.Ingredient_Name_ID)?.Text ?? "Unknown";
+        Debug.Log($"{addedIngredientName} {count}개 획득! (보유: {Ingredients[id]}/{maxCount})");
     }
 
     public bool RemoveIngredient(int id, int count)

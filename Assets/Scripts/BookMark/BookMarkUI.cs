@@ -188,7 +188,7 @@ public class BookMarkUI : MonoBehaviour
         // JML: Update UI
         UpdateStatCraftPanelUI(recipe);
 
-        Debug.Log($"[BookMarkUI] 레시피 선택됨: {recipe.Recipe_Name}");
+        Debug.Log($"[BookMarkUI] 레시피 선택됨: {CSVLoader.Instance.GetData<StringTable>(recipe.Recipe_Name_ID)?.Text ?? "Unknown"}");
     }
 
 
@@ -208,7 +208,7 @@ public class BookMarkUI : MonoBehaviour
         if (recipe.Material_1_ID > 0)
         {
             var material1Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_1_ID);
-            statMetrial1NameText.text = material1Data != null ? material1Data.Ingredient_Name : "알 수 없음";
+            statMetrial1NameText.text = material1Data != null ? CSVLoader.Instance.GetData<StringTable>(material1Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
 
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_1_ID);
             int requiredCount = recipe.Material_1_Count;
@@ -230,7 +230,7 @@ public class BookMarkUI : MonoBehaviour
         if (recipe.Material_2_ID > 0)
         {
             var material2Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_2_ID);
-            statMetrial2NameText.text = material2Data != null ? material2Data.Ingredient_Name : "알 수 없음";
+            statMetrial2NameText.text = material2Data != null ? CSVLoader.Instance.GetData<StringTable>(material2Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
 
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_2_ID);
             int requiredCount = recipe.Material_2_Count;
@@ -264,7 +264,7 @@ public class BookMarkUI : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[BookMarkUI] 제작 시도: {selectedRecipe.Recipe_Name}");
+        Debug.Log($"[BookMarkUI] 제작 시도: {CSVLoader.Instance.GetData<StringTable>(selectedRecipe.Recipe_Name_ID)?.Text ?? "Unknown"}");
 
         // JML: Call BookMarkCraft
         BookMarkCraftResult result = BookMarkCraft.CraftBookmark(selectedRecipe.Recipe_ID);
@@ -287,7 +287,7 @@ public class BookMarkUI : MonoBehaviour
         if (recipe.Material_1_ID > 0)
         {
             var material1Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_1_ID);
-            skillMetrial1NameText.text = material1Data != null ? material1Data.Ingredient_Name : "알 수 없음";
+            skillMetrial1NameText.text = material1Data != null ? CSVLoader.Instance.GetData<StringTable>(material1Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
 
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_1_ID);
             int requiredCount = recipe.Material_1_Count;
@@ -309,7 +309,7 @@ public class BookMarkUI : MonoBehaviour
         if (recipe.Material_2_ID > 0)
         {
             var material2Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_2_ID);
-            skillMetrial2NameText.text = material2Data != null ? material2Data.Ingredient_Name : "알 수 없음";
+            skillMetrial2NameText.text = material2Data != null ? CSVLoader.Instance.GetData<StringTable>(material2Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
 
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_2_ID);
             int requiredCount = recipe.Material_2_Count;
@@ -330,7 +330,7 @@ public class BookMarkUI : MonoBehaviour
         if (recipe.Material_3_ID > 0)
         {
             var material3Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_3_ID);
-            skillMetrial3NameText.text = material3Data != null ? material3Data.Ingredient_Name : "알 수 없음";
+            skillMetrial3NameText.text = material3Data != null ? CSVLoader.Instance.GetData<StringTable>(material3Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
 
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_3_ID);
             int requiredCount = recipe.Material_3_Count;

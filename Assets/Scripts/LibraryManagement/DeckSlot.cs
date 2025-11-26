@@ -60,7 +60,7 @@ public class DeckSlot : MonoBehaviour
         // 캐릭터 이름 표시
         if (characterNameText != null)
         {
-            characterNameText.text = characterData.Character_Name;
+            characterNameText.text = CSVLoader.Instance.GetData<StringTable>(characterData.Character_Name_ID)?.Text ?? "Unknown";
             characterNameText.enabled = true;
         }
 
