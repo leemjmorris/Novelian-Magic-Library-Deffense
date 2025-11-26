@@ -1,17 +1,16 @@
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace NovelianMagicLibraryDefense.UI
 {
     /// <summary>
     /// LMJ: Controls game speed (time scale)
     /// Single responsibility: Manage game speed settings
+    /// OnClick은 Inspector에서 직접 할당
     /// </summary>
     public class GameSpeedController : MonoBehaviour
     {
         [Header("UI References")]
-        [SerializeField] private Button speedButton;
         [SerializeField] private TextMeshProUGUI speedText;
 
         [Header("Speed Settings")]
@@ -21,30 +20,18 @@ namespace NovelianMagicLibraryDefense.UI
 
         private void Awake()
         {
-            SetupButton();
+            AutoFindReferences();
             UpdateSpeedDisplay();
         }
 
-        private void OnDestroy()
-        {
-            if (speedButton != null)
-            {
-                speedButton.onClick.RemoveListener(CycleSpeed);
-            }
-        }
-
         /// <summary>
-        /// Setup button listener
+        /// Auto-find references if not assigned in Inspector
         /// </summary>
-        private void SetupButton()
+        private void AutoFindReferences()
         {
-            if (speedButton != null)
+            if (speedText == null)
             {
-                speedButton.onClick.AddListener(CycleSpeed);
-            }
-            else
-            {
-                Debug.LogError("[GameSpeedController] Speed button not assigned!");
+                speedText = GetComponentInChildren<TextMeshProUGUI>();
             }
         }
 

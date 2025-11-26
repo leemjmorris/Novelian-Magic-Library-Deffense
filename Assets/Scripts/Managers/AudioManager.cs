@@ -58,6 +58,9 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             instance = this;
+
+            // Move to root before DontDestroyOnLoad (required for DontDestroyOnLoad to work)
+            transform.SetParent(null);
             DontDestroyOnLoad(gameObject);
 
             InitializeAudio();

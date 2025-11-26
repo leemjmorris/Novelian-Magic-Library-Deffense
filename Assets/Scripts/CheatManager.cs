@@ -2,6 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Cheat manager for debugging and testing
+/// OnClick은 Inspector에서 직접 할당
 /// </summary>
 public class CheatManager : MonoBehaviour
 {
@@ -15,7 +16,7 @@ public class CheatManager : MonoBehaviour
 
     /// <summary>
     /// Spawn next character in sequence (01 → 02 → 03 → 04 → 05 → 01...)
-    /// This method is called by CheatBtn's OnClick event
+    /// This method is called by CheatBtn's OnClick event in Inspector
     /// </summary>
     public void SpawnNextCharacter()
     {

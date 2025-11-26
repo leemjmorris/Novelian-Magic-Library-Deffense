@@ -19,13 +19,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackInterval = 0.7f;
+    [SerializeField] private float attackRange = 2f; // 공격 범위 (Wall과의 거리)
     [SerializeField] private float fallOffThreshold = -10f;
 
     public int Exp { get; private set; } = 11; // JML: Example exp amount
 
     private float attackTimer = 0f;
-    private bool isWallHit = false;
-    public bool IsWallHit => isWallHit;
+    private bool isWallHit = false; // 물리 충돌 백업용
+    private bool isInAttackRange = false; // 공격 범위 내 진입 여부
+    public bool IsWallHit => isInAttackRange || isWallHit; // 둘 중 하나라도 true면 정지
     private bool isDead = false;
     private bool isDizzy = false;
     private float dizzyTimer = 0f;
@@ -39,6 +41,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private const string WALL_TAG = "Wall";
 
     private Transform wallTransform;
+    private Collider wallCollider; // Wall Collider 참조 (ClosestPoint 계산용)
     private System.Threading.CancellationTokenSource weightUpdateCts;
 
     // Mark state tracking
@@ -103,8 +106,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
             return;
         }
 
-        // 벽 공격 처리 (Dizzy 상태가 아닐 때만)
-        if (isWallHit && wall != null)
+        // 공격 범위 체크 (거리 기반)
+        CheckAttackRange();
+
+        // 벽 공격 처리 (공격 범위 내이거나 물리 충돌 시)
+        if ((isInAttackRange || isWallHit) && wall != null)
         {
             monsterAnimator.SetBool(ANIM_IS_MOVING, false);
 
@@ -114,11 +120,12 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 wall.TakeDamage(damage);
                 monsterAnimator.SetTrigger(ANIM_ATTACK);
                 attackTimer = 0f;
+                Debug.Log($"[Monster] Attacked Wall! Damage: {damage}");
             }
         }
         else if (!isDizzy)
         {
-            // 벽에서 떨어지면 다시 이동 상태로 (Dizzy 상태가 아닐 때만)
+            // 공격 범위 밖이면 이동 상태
             monsterAnimator.SetBool(ANIM_IS_MOVING, true);
         }
     }
@@ -343,11 +350,34 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     /// <summary>
     /// 외부에서 목적지 설정
+    /// Wall Collider의 가장 가까운 지점을 자동 계산하여 자연스럽게 분산
     /// </summary>
     public void SetDestination(Vector3 destination)
     {
-        if (monsterMove != null)
+        if (monsterMove == null) return;
+
+        // Wall Collider 찾기 (아직 없으면)
+        if (wallCollider == null)
         {
+            GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
+            if (wallObj != null)
+            {
+                wallCollider = wallObj.GetComponent<Collider>();
+                wallTransform = wallObj.transform;
+                wall = wallObj.GetComponent<Wall>();
+            }
+        }
+
+        // Wall Collider가 있으면 가장 가까운 지점 계산
+        if (wallCollider != null)
+        {
+            // 몬스터의 현재 위치에서 Wall Collider의 가장 가까운 지점 계산
+            Vector3 closestPoint = wallCollider.ClosestPoint(transform.position);
+            monsterMove.SetDestination(closestPoint);
+        }
+        else
+        {
+            // Fallback: Wall Collider가 없으면 전달받은 위치 사용
             monsterMove.SetDestination(destination);
         }
     }
@@ -356,6 +386,52 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public new Vector3 GetPosition()
     {
         return collider3D != null ? collider3D.bounds.center : transform.position;
+    }
+
+    /// <summary>
+    /// 공격 범위 체크 (Wall Collider의 가장 가까운 지점까지의 거리 기반)
+    /// </summary>
+    private void CheckAttackRange()
+    {
+        // Wall Collider 찾기 (아직 없으면)
+        if (wallCollider == null)
+        {
+            GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
+            if (wallObj != null)
+            {
+                wallCollider = wallObj.GetComponent<Collider>();
+                wallTransform = wallObj.transform;
+                wall = wallObj.GetComponent<Wall>();
+            }
+        }
+
+        if (wallCollider == null) return;
+
+        // Wall Collider의 가장 가까운 지점까지의 거리 계산
+        Vector3 closestPoint = wallCollider.ClosestPoint(transform.position);
+        float distanceToWall = Vector3.Distance(transform.position, closestPoint);
+
+        // 공격 범위 내 진입 체크
+        bool wasInRange = isInAttackRange;
+        isInAttackRange = distanceToWall <= attackRange;
+
+        // 공격 범위 진입 시 NavMeshAgent 정지
+        if (isInAttackRange && !wasInRange)
+        {
+            if (monsterMove != null)
+            {
+                monsterMove.SetEnabled(false);
+            }
+            Debug.Log($"[Monster] Entered attack range! Distance: {distanceToWall:F2}");
+        }
+        // 공격 범위 이탈 시 NavMeshAgent 재활성화 (Dizzy나 Dead가 아닐 때)
+        else if (!isInAttackRange && wasInRange && !isDizzy && !isDead)
+        {
+            if (monsterMove != null)
+            {
+                monsterMove.SetEnabled(true);
+            }
+        }
     }
 
     //LMJ : Start weight update loop
@@ -437,6 +513,31 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             wall = collision.gameObject.GetComponent<Wall>();
             isWallHit = true;
+
+            // Wall에 닿으면 NavMeshAgent 비활성화하여 밀림 방지
+            if (monsterMove != null)
+            {
+                monsterMove.SetEnabled(false);
+            }
+
+            // Rigidbody velocity 초기화
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.linearVelocity = Vector3.zero;
+            }
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        // Wall과 충돌 중일 때 뒤로 밀리지 않도록 처리
+        if (collision.gameObject.CompareTag(Tag.Wall) && isWallHit)
+        {
+            // Rigidbody velocity를 0으로 설정하여 밀림 방지
+            if (rb != null && !rb.isKinematic)
+            {
+                rb.linearVelocity = Vector3.zero;
+            }
         }
     }
 
@@ -446,6 +547,12 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             isWallHit = false;
             wall = null;
+
+            // Wall에서 떨어지면 NavMeshAgent 다시 활성화 (Dizzy 상태가 아닐 때만)
+            if (monsterMove != null && !isDizzy && !isDead)
+            {
+                monsterMove.SetEnabled(true);
+            }
         }
     }
 
@@ -454,9 +561,12 @@ public class Monster : BaseEntity, ITargetable, IMovable
         base.OnSpawn(); // Initialize health
         isDead = false;
         isWallHit = false;
+        isInAttackRange = false;
         isDizzy = false;
         dizzyTimer = 0f;
         wall = null;
+        wallTransform = null;
+        wallCollider = null; // Wall 참조 초기화
         attackTimer = 0f;
         Weight = 1f;
 
@@ -482,7 +592,10 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public override void OnDespawn()
     {
         isWallHit = false;
+        isInAttackRange = false;
         wall = null;
+        wallTransform = null;
+        wallCollider = null;
         attackTimer = 0f;
         Weight = 1f;
         CancelInvoke(nameof(DespawnMonster));

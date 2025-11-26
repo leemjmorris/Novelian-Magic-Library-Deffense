@@ -1,21 +1,16 @@
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.UI
 {
     /// <summary>
     /// LMJ: Manages settings panel (pause menu)
     /// Single responsibility: Control settings panel visibility and pause state
+    /// 버튼 OnClick은 Inspector에서 직접 할당
     /// </summary>
     public class SettingsPanel : MonoBehaviour
     {
-        [Header("Panel References")]
-        [SerializeField] private GameObject panel;
-
-        [Header("Button References")]
-        [SerializeField] private Button openButton;
-        [SerializeField] private Button closeButton;
-
         [Header("Settings")]
         [SerializeField] private bool pauseOnOpen = true;
 
@@ -24,44 +19,42 @@ namespace NovelianMagicLibraryDefense.UI
 
         private void Awake()
         {
-            SetupButtons();
             InitializePanel();
         }
 
-        private void OnDestroy()
-        {
-            RemoveButtonListeners();
-        }
-
         /// <summary>
-        /// Setup button listeners
+        /// Called when master volume slider value changes
+        /// Inspector에서 Slider의 OnValueChanged에 할당
         /// </summary>
-        private void SetupButtons()
+        public void OnMasterVolumeChanged(float value)
         {
-            if (openButton != null)
+            if (AudioManager.Instance != null)
             {
-                openButton.onClick.AddListener(Toggle);
-            }
-
-            if (closeButton != null)
-            {
-                closeButton.onClick.AddListener(Close);
+                AudioManager.Instance.SetMasterVolume(value);
             }
         }
 
         /// <summary>
-        /// Remove button listeners
+        /// Called when BGM volume slider value changes
+        /// Inspector에서 Slider의 OnValueChanged에 할당
         /// </summary>
-        private void RemoveButtonListeners()
+        public void OnBGMVolumeChanged(float value)
         {
-            if (openButton != null)
+            if (AudioManager.Instance != null)
             {
-                openButton.onClick.RemoveListener(Toggle);
+                AudioManager.Instance.SetBGMVolume(value);
             }
+        }
 
-            if (closeButton != null)
+        /// <summary>
+        /// Called when SFX volume slider value changes
+        /// Inspector에서 Slider의 OnValueChanged에 할당
+        /// </summary>
+        public void OnSFXVolumeChanged(float value)
+        {
+            if (AudioManager.Instance != null)
             {
-                closeButton.onClick.RemoveListener(Close);
+                AudioManager.Instance.SetSFXVolume(value);
             }
         }
 
@@ -70,15 +63,8 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void InitializePanel()
         {
-            if (panel != null)
-            {
-                panel.SetActive(false);
-                isOpen = false;
-            }
-            else
-            {
-                Debug.LogError("[SettingsPanel] Panel GameObject not assigned!");
-            }
+            gameObject.SetActive(false);
+            isOpen = false;
         }
 
         /// <summary>
@@ -101,8 +87,6 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void Open()
         {
-            if (panel == null) return;
-
             // Save current time scale and pause if needed
             if (pauseOnOpen)
             {
@@ -110,7 +94,7 @@ namespace NovelianMagicLibraryDefense.UI
                 Time.timeScale = 0f;
             }
 
-            panel.SetActive(true);
+            gameObject.SetActive(true);
             isOpen = true;
         }
 
@@ -119,16 +103,30 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void Close()
         {
-            if (panel == null) return;
-
-            panel.SetActive(false);
-            isOpen = false;
+            // Save audio settings when closing
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SaveAudioSettings();
+            }
 
             // Restore previous time scale
             if (pauseOnOpen)
             {
                 Time.timeScale = previousTimeScale;
             }
+
+            isOpen = false;
+            gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Go to lobby scene
+        /// </summary>
+        public void GoToLobby()
+        {
+            // Restore time scale before scene change
+            Time.timeScale = 1f;
+            SceneManager.LoadScene("LobbyScene");
         }
 
         /// <summary>

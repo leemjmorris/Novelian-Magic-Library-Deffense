@@ -23,10 +23,16 @@ namespace NovelianMagicLibraryDefense.Managers
         [Header("Spawners")]
         [SerializeField] private MonsterSpawner monsterSpawner;
         [SerializeField] private MonsterSpawner bossSpawner;
-        [SerializeField] private DestinationArea destinationArea;
+
+        [Header("Target")]
+        [SerializeField] private Transform wallTarget;
 
         [Header("Settings")]
         [SerializeField] private float spawnInterval = 2f;
+
+        [Header("Wave Settings")]
+        [SerializeField] private int defaultEnemyCount = 10;
+        [SerializeField] private int defaultBossCount = 0;
 
         private bool isPoolReady = false;
         private System.Threading.CancellationTokenSource spawnCts;
@@ -93,7 +99,16 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// LMJ: Initialize wave parameters
+        /// LMJ: Initialize wave parameters with Inspector default values
+        /// </summary>
+        public new void Initialize()
+        {
+            base.Initialize(); // OnInitialize() 호출하여 풀 초기화
+            Initialize(defaultEnemyCount, defaultBossCount);
+        }
+
+        /// <summary>
+        /// LMJ: Initialize wave parameters with custom values
         /// </summary>
         public void Initialize(int totalEnemies, int bossCount = 0)
         {
@@ -181,10 +196,10 @@ namespace NovelianMagicLibraryDefense.Managers
                 Vector3 spawnPos = monsterSpawner.GetRandomSpawnPosition();
                 var monster = poolManager.Spawn<Monster>(spawnPos);
 
-                // 목적지 설정
-                if (monster != null && destinationArea != null)
+                // 목적지 설정 (Wall 위치로)
+                if (monster != null && wallTarget != null)
                 {
-                    monster.SetDestination(destinationArea.GetRandomDestinationPosition());
+                    monster.SetDestination(wallTarget.position);
                 }
 
                 spawnedCount++;
@@ -206,10 +221,10 @@ namespace NovelianMagicLibraryDefense.Managers
                 : monsterSpawner.GetRandomSpawnPosition();
             var boss = poolManager.Spawn<BossMonster>(bossSpawnPos);
 
-            // 목적지 설정
-            if (boss != null && destinationArea != null)
+            // 목적지 설정 (Wall 위치로)
+            if (boss != null && wallTarget != null)
             {
-                boss.SetDestination(destinationArea.GetRandomDestinationPosition());
+                boss.SetDestination(wallTarget.position);
             }
 
         }

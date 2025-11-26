@@ -2,8 +2,6 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Events;
-using UnityEditor.SearchService;
-using UnityEngine.SceneManagement;
 
 namespace NovelianMagicLibraryDefense.UI
 {
@@ -29,23 +27,11 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Experience")]
         [SerializeField] private Slider experienceSlider;
 
-        [SerializeField] private Button lobbyButton;
-
-        private void OnClickLobbyButton()
-        {
-            SceneManager.LoadScene("LobbyScene");
-        }
         private void Awake()
         {
             InitializeUI();
         }
-        private void Start()
-        {
-            if (lobbyButton != null)
-            {
-                lobbyButton.onClick.AddListener(OnClickLobbyButton);
-            }
-        }
+
         private void OnEnable()
         {
             // Subscribe to wall health changes
