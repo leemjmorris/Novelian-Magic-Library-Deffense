@@ -68,7 +68,7 @@ public class BootScene : MonoBehaviour
             InitializeIngredientManager(),
             InitializeAudioManager(),
             InitializeBookMarkManager(),
-            InitializeLoadingUIManager() // LCB: 로딩 UI 매니저 초기화 (병렬 처리)
+            InitializeLoadingUIManager(), // LCB: 로딩 UI 매니저 초기화 (병렬 처리)
             InitializeDeckManager(),
             InitializeCharacterEnhancementManager()
         );
