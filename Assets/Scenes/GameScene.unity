@@ -1376,53 +1376,6 @@ MonoBehaviour:
   applyBottom: 0
   applyLeft: 1
   applyRight: 1
---- !u!1 &473772402
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 473772404}
-  - component: {fileID: 473772403}
-  m_Layer: 0
-  m_Name: DestinationArea
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &473772403
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 473772402}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3a5be0c9c78affb45aa0c57b27ee2552, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  areaSize: {x: 8.5, y: 2, z: 0.5}
-  gizmoColor: {r: 0, g: 1, b: 0, a: 0.3}
-  wireColor: {r: 0, g: 1, b: 0, a: 1}
---- !u!4 &473772404
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 473772402}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 27.2}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &474770863
 GameObject:
   m_ObjectHideFlags: 0
@@ -1999,6 +1952,11 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 1
+--- !u!4 &771525958 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8525663306814178914, guid: 359e2c47140c3714eb5e1277f3c4ca0a, type: 3}
+  m_PrefabInstance: {fileID: 760839227830381201}
+  m_PrefabAsset: {fileID: 0}
 --- !u!224 &807096649 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5989948656166511201, guid: 6d337f27293321243b71275168181e81, type: 3}
@@ -3239,8 +3197,10 @@ MonoBehaviour:
   stageEvents: {fileID: 11400000, guid: a6107e8f17d03324eb9952b4cb8d5d67, type: 2}
   monsterSpawner: {fileID: 220364304}
   bossSpawner: {fileID: 0}
-  wallTarget: {fileID: 0}
-  spawnInterval: 2
+  wallTarget: {fileID: 771525958}
+  spawnInterval: 1
+  defaultEnemyCount: 100
+  defaultBossCount: 0
 --- !u!4 &1645457265
 Transform:
   m_ObjectHideFlags: 0
@@ -5214,15 +5174,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1349090608359486497, guid: 359e2c47140c3714eb5e1277f3c4ca0a, type: 3}
       propertyPath: m_Size.x
-      value: 108.05
+      value: 2.8
       objectReference: {fileID: 0}
     - target: {fileID: 1349090608359486497, guid: 359e2c47140c3714eb5e1277f3c4ca0a, type: 3}
       propertyPath: m_Size.y
-      value: 25
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1349090608359486497, guid: 359e2c47140c3714eb5e1277f3c4ca0a, type: 3}
       propertyPath: m_Size.z
-      value: 3
+      value: 0.27
       objectReference: {fileID: 0}
     - target: {fileID: 1349090608359486497, guid: 359e2c47140c3714eb5e1277f3c4ca0a, type: 3}
       propertyPath: m_Enabled
@@ -5230,7 +5190,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1349090608359486497, guid: 359e2c47140c3714eb5e1277f3c4ca0a, type: 3}
       propertyPath: m_Center.y
-      value: 10
+      value: 0.05
+      objectReference: {fileID: 0}
+    - target: {fileID: 1349090608359486497, guid: 359e2c47140c3714eb5e1277f3c4ca0a, type: 3}
+      propertyPath: m_Center.z
+      value: -0.15
       objectReference: {fileID: 0}
     - target: {fileID: 1349090608359486497, guid: 359e2c47140c3714eb5e1277f3c4ca0a, type: 3}
       propertyPath: m_Material
@@ -8095,7 +8059,6 @@ SceneRoots:
   - {fileID: 1581007722}
   - {fileID: 1794729396}
   - {fileID: 220364305}
-  - {fileID: 473772404}
   - {fileID: 674472987}
   - {fileID: 473596601}
   - {fileID: 737278825}
