@@ -24,7 +24,7 @@ jobs:
         env:
           NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
           NOTION_REPORT_PAGE_ID: ${{ secrets.NOTION_REPORT_PAGE_ID }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
           script: |
@@ -258,25 +258,13 @@ jobs:
               return blocks;
             }
             
-            async function generateGeminiSummary(issues, prs, isMonday) {
-              const geminiApiKey = process.env.GEMINI_API_KEY;
-              
-              const issuesList = issues.map(issue => {
-                const assignees = issue.assignees.map(a => userNames[a.login] || a.login).join(', ') || '미배정';
-                const labels = issue.labels.map(l => l.name).join(', ');
-                return '- #' + issue.number + ' ' + issue.title + ' (담당: ' + assignees + ') [' + labels + '] - ' + issue.state;
-              }).join('\n');
-              
-              const prsList = prs.map(pr => {
-                const author = userNames[pr.user.login] || pr.user.login;
-                return '- #' + pr.number + ' ' + pr.title + ' (작성: ' + author + ') - ' + (pr.merged_at ? '머지됨' : pr.state);
-              }).join('\n');
-              
+            async function generateClaudeSummary(issues, prs, isMonday) {
+              const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+
               const periodInfo = isMonday ? '금요일부터 월요일까지 (주말 포함 3일간)' : '전일';
 
               // Filter only developers (exclude planners)
               const developers = ['leemjmorris', 'jaemoon23', 'LeeChaeBin002'];
-              const developerNames = ['이명진', '이재문', '이채빈'];
 
               const filteredIssues = issues.filter(issue =>
                 issue.assignees.some(assignee => developers.includes(assignee.login))
@@ -301,104 +289,104 @@ jobs:
               }).join('\n');
 
               const prompt = '당신은 Unity 게임 개발 팀의 일일 보고서를 작성하는 AI입니다.\n' +
-                '아래의 GitHub Issues와 Pull Requests를 분석하여, 노션 양식에 맞게 보고서를 작성해주세요.\n\n' +
-                '**기간: ' + periodInfo + '**\n\n' +
-                '**개발 팀원 목록 (보고 대상):**\n' +
+                '아래의 GitHub Issues와 Pull Requests 데이터를 분석하여, 정확히 지정된 양식으로 보고서를 작성해주세요.\n\n' +
+                '## 입력 데이터\n\n' +
+                '**기간:** ' + periodInfo + '\n\n' +
+                '**개발 팀원:**\n' +
                 '- 이명진 (팀장, 프로그래머)\n' +
                 '- 이재문 (프로그래머)\n' +
                 '- 이채빈 (프로그래머/디자이너)\n\n' +
-                '**중요: 위 3명의 개발자 작업만 보고서에 포함해주세요.**\n\n' +
                 '**GitHub Issues:**\n' +
                 (filteredIssuesList || '없음') + '\n\n' +
                 '**Pull Requests:**\n' +
                 (filteredPRsList || '없음') + '\n\n' +
-                '=== 노션 양식 (반드시 이 형식을 따라주세요) ===\n\n' +
+                '## 출력 양식 (반드시 이 형식 그대로 출력하세요)\n\n' +
                 '# 이슈\n' +
-                '- 해결해야 할 이슈나 문제점 (없으면 "없음")\n\n' +
+                '- 없음\n\n' +
                 '---\n\n' +
                 '# 전일 보고\n' +
                 '## 완료\n' +
-                '- 이명진 - 작업 제목\n' +
-                'ㄴ 세부 작업 내용 1\n' +
-                'ㄴ 세부 작업 내용 2\n' +
-                '- 이재문 - 작업 제목\n' +
-                'ㄴ 세부 작업 내용\n\n' +
+                '- 이명진 - 스킬 시스템 구현\n' +
+                'ㄴ 파이어볼 스킬 다중 투사체 기능 추가\n' +
+                'ㄴ 스턴 효과 구현 완료\n' +
+                '- 이재문 - 사서 관리 시스템 제작\n' +
+                'ㄴ 책갈피 인벤토리 연동 완료\n' +
+                'ㄴ 캐릭터 도감 기능 구현\n\n' +
                 '## 미완료 (사유, 처리)\n' +
-                '- 이명진 - 미완료 작업. 사유 설명.\n' +
-                '- 이재문 - 미완료 작업. 사유 설명.\n\n' +
+                '- 이명진 - 스킬 25개 구현 미완료. 시간 부족으로 10개만 완성.\n\n' +
                 '---\n\n' +
                 '# 금일 보고\n' +
                 '## 오전\n' +
-                '- 이명진 - 오전 작업 계획\n' +
-                'ㄴ 세부 계획 1\n' +
-                'ㄴ 세부 계획 2\n' +
-                '- 이재문 - 오전 작업 계획\n\n' +
+                '- 이명진 - 스킬 추가 구현\n' +
+                'ㄴ 남은 15개 스킬 제작 예정\n' +
+                '- 이재문 - 덱 설정 시스템 구현\n\n' +
                 '## 오후\n' +
-                '- 이명진 - 오후 작업 계획\n' +
-                '- 이재문 - 오후 작업 계획\n' +
-                '- 이채빈 - 오후 작업 계획\n' +
-                'ㄴ 세부 계획\n\n' +
+                '- 이채빈 - UI 작업 진행\n' +
+                'ㄴ 스테이지 선택 팝업 완성 예정\n\n' +
                 '## (야근)\n' +
-                '- 이명진 - 야근 작업 계획 (야근이 예상되는 경우만)\n\n' +
-                '=== 작성 규칙 ===\n' +
-                '1. **작업자별 그룹화**: 같은 작업자의 작업은 한 번만 이름을 쓰고, 세부 내용은 "ㄴ"로 들여쓰기\n' +
-                '2. **형식**: "- 작업자 - 작업 제목" 다음 줄에 "ㄴ 세부 내용"\n' +
-                '3. **이슈 번호**: 관련 Issue가 있으면 "Issue #번호" 형식으로 포함\n' +
-                '4. Issue의 label(bug, feature 등)과 상태(open/closed)를 참고하여 완료 여부 판단\n' +
-                '5. PR의 merge 여부를 참고하여 작업 완료 판단\n' +
-                '6. 작업 내용이 없는 팀원은 해당 섹션에서 생략\n' +
-                '7. 전체 섹션에 작업이 없으면 "- 없음" 표시\n' +
-                '8. 제목은 반드시 # 또는 ##로 시작\n' +
-                '9. 구분선은 반드시 --- 사용\n' +
-                (isMonday ? '10. 주말(금~일) 작업 내용을 모두 반영\n' : '') +
-                '\n보고서를 작성해주세요:';
+                '- 없음\n\n' +
+                '---\n\n' +
+                '## 핵심 규칙 (절대 위반 금지)\n\n' +
+                '1. **작업자별 그룹화**: 같은 작업자는 한 번만 이름을 쓰고, 세부 내용은 반드시 "ㄴ"로 시작\n' +
+                '2. **들여쓰기 문자**: 하위 항목은 반드시 "ㄴ" 문자 사용 (- 사용 금지!)\n' +
+                '3. **이슈 섹션**: "# 이슈"는 해결해야 할 버그나 문제점만 기재. 진행 중인 Feature는 기재하지 않음\n' +
+                '4. **제목 레벨**: # (heading 1), ## (heading 2) 정확히 사용\n' +
+                '5. **구분선**: --- 사용\n' +
+                '6. **내용 요약**: Issue 제목을 그대로 복사하지 말고, 실제 작업 내용을 자연스럽게 요약\n' +
+                '7. **없는 항목**: 해당 섹션에 내용이 없으면 "- 없음" 표시\n' +
+                (isMonday ? '8. 주말(금~일) 작업 내용을 모두 반영하세요.\n' : '') +
+                '\n위 양식과 규칙을 정확히 따라 보고서를 작성하세요. 양식 외의 추가 설명이나 주석은 넣지 마세요.';
 
               return new Promise((resolve, reject) => {
                 const postData = JSON.stringify({
-                  contents: [{
-                    parts: [{ text: prompt }]
+                  model: 'claude-3-haiku-20240307',
+                  max_tokens: 4096,
+                  messages: [{
+                    role: 'user',
+                    content: prompt
                   }]
                 });
-                
+
                 const req = https.request({
-                  hostname: 'generativelanguage.googleapis.com',
-                  path: '/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiApiKey,
+                  hostname: 'api.anthropic.com',
+                  path: '/v1/messages',
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
-                    'Content-Length': Buffer.byteLength(postData)
+                    'x-api-key': anthropicApiKey,
+                    'anthropic-version': '2023-06-01'
                   }
                 }, (res) => {
-                  console.log('🔍 Gemini API Status:', res.statusCode);
-                  
+                  console.log('🔍 Claude API Status:', res.statusCode);
+
                   let body = '';
                   res.on('data', d => body += d);
                   res.on('end', () => {
                     try {
                       const result = JSON.parse(body);
-                      
-                      if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0] && result.candidates[0].content.parts[0].text) {
+
+                      if (result.content && result.content[0] && result.content[0].text) {
                         console.log('✅ AI summary generated successfully');
-                        resolve(result.candidates[0].content.parts[0].text);
+                        resolve(result.content[0].text);
                       } else if (result.error) {
-                        console.error('❌ Gemini API Error:', result.error);
-                        reject(new Error('Gemini API error: ' + result.error.message));
+                        console.error('❌ Claude API Error:', result.error);
+                        reject(new Error('Claude API error: ' + result.error.message));
                       } else {
                         console.error('❌ Unexpected response structure:', JSON.stringify(result));
-                        reject(new Error('Invalid Gemini API response structure'));
+                        reject(new Error('Invalid Claude API response structure'));
                       }
                     } catch (e) {
-                      console.error('❌ Failed to parse Gemini response:', body);
+                      console.error('❌ Failed to parse Claude response:', body);
                       reject(e);
                     }
                   });
                 });
-                
+
                 req.on('error', (e) => {
-                  console.error('❌ Gemini request error:', e);
+                  console.error('❌ Claude request error:', e);
                   reject(e);
                 });
-                
+
                 req.write(postData);
                 req.end();
               });
@@ -567,8 +555,8 @@ jobs:
               // Filter only developers for AI summary
               const developers = ['leemjmorris', 'jaemoon23', 'LeeChaeBin002'];
 
-              console.log('🤖 Generating AI summary with Gemini...');
-              const aiSummary = await generateGeminiSummary(allRecentIssues, allPRsResponse.data, dayOfWeek === 1);
+              console.log('🤖 Generating AI summary with Claude...');
+              const aiSummary = await generateClaudeSummary(allRecentIssues, allPRsResponse.data, dayOfWeek === 1);
               console.log('✅ AI summary generated');
 
               const userStats = {};
