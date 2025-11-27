@@ -75,7 +75,7 @@ public class CharacterPrefabSetup : Editor
                 capsuleCollider.center = new Vector3(0f, 0.9f, 0f);
                 capsuleCollider.direction = 1; // Y-Axis
 
-                Debug.Log($"[CharacterPrefabSetup] ✅ CapsuleCollider configured: {prefab.name}");
+                Debug.Log($"[CharacterPrefabSetup] CapsuleCollider configured: {prefab.name}");
 
                 // Setup Rigidbody
                 Rigidbody rb = prefabInstance.GetComponent<Rigidbody>();
@@ -100,13 +100,13 @@ public class CharacterPrefabSetup : Editor
                                 RigidbodyConstraints.FreezeRotationY |
                                 RigidbodyConstraints.FreezeRotationZ;
 
-                Debug.Log($"[CharacterPrefabSetup] ✅ Rigidbody configured: {prefab.name}");
+                Debug.Log($"[CharacterPrefabSetup] Rigidbody configured: {prefab.name}");
 
                 // Save the prefab
                 PrefabUtility.SaveAsPrefabAsset(prefabInstance, prefabPath);
                 successCount++;
 
-                Debug.Log($"[CharacterPrefabSetup] ✅ Prefab saved successfully: {prefab.name}");
+                Debug.Log($"[CharacterPrefabSetup] Prefab saved successfully: {prefab.name}");
             }
             catch (System.Exception e)
             {
@@ -122,8 +122,8 @@ public class CharacterPrefabSetup : Editor
 
         // Summary
         Debug.Log($"[CharacterPrefabSetup] ==================== SUMMARY ====================");
-        Debug.Log($"[CharacterPrefabSetup] ✅ Success: {successCount} prefabs");
-        Debug.Log($"[CharacterPrefabSetup] ❌ Failed: {failCount} prefabs");
+        Debug.Log($"[CharacterPrefabSetup] Success: {successCount} prefabs");
+        Debug.Log($"[CharacterPrefabSetup] Failed: {failCount} prefabs");
         Debug.Log($"[CharacterPrefabSetup] ================================================");
 
         if (successCount > 0)

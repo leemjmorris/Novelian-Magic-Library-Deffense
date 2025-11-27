@@ -1,13 +1,13 @@
 # 인벤토리 시스템 사용 가이드
 
-## 📋 개요
+## 개요
 
 이 인벤토리 시스템은 **ItemTable**(CSV)의 데이터를 기반으로 재료 아이템을 UI에 표시합니다.
 **BookMarkCraft**에서 재료를 추가하면 **IngredientManager**를 통해 자동으로 인벤토리에 반영됩니다.
 
 ---
 
-## 🗂️ 파일 구조
+## 파일 구조
 
 ### 1. **InventoryItemInfo.cs**
 - **역할**: 인벤토리에 표시될 아이템의 데이터를 담는 클래스
@@ -34,7 +34,7 @@
 
 ---
 
-## 🔗 연동 구조
+## 연동 구조
 
 ```
 BookMarkCraft (재료 추가/사용)
@@ -57,7 +57,7 @@ InventoryItemSlot (개별 슬롯 UI)
 
 ---
 
-## 🛠️ Unity 에디터 설정
+## Unity 에디터 설정
 
 ### InventoryController 설정
 
@@ -104,7 +104,7 @@ ItemSlot (Prefab)
 
 ---
 
-## 📝 사용 예시
+## 사용 예시
 
 ### 1. BookMarkCraft에서 재료 추가 시
 
@@ -133,22 +133,22 @@ if (inventoryController != null)
 
 ---
 
-## 🎨 와이어프레임 요구사항 구현
+## 와이어프레임 요구사항 구현
 
-### ✅ 1. 메인 로비 → 인벤토리 진입
+### 1. 메인 로비 -> 인벤토리 진입
 - 로비 씬의 "인벤토리" 버튼 클릭
 - Scene 전환 시 로딩 화면 표시 (TODO: 추가 구현 필요)
 - 인벤토리 씬 로드
 
-### ✅ 2. 인벤토리 기본 구성
+### 2. 인벤토리 기본 구성
 - ScrollRect를 이용한 상하 스와이프
 - 뒤로가기 버튼 클릭 → 로비 씬 이동 (TODO: 씬 전환 코드 활성화)
 
-### ✅ 3. 아이템 정보 확인
+### 3. 아이템 정보 확인
 - 슬롯을 **길게 누르면** 아이템 정보 팝업 표시
 - 팝업 외부 영역 터치 시 닫힘
 
-### ✅ 4. 아이템 스택 및 정렬
+### 4. 아이템 스택 및 정렬
 - **최대 스택 수량**: ItemTable의 `Max_Count` 값 사용
 - **정렬 순서**: 이름 순 (가나다 순)
 - **여러 슬롯 사용**: 보유 수량이 최대 스택을 초과하면 다음 슬롯에 표시
@@ -156,7 +156,7 @@ if (inventoryController != null)
 
 ---
 
-## 🔧 확장 및 커스터마이징
+## 확장 및 커스터마이징
 
 ### 아이템 아이콘 및 정보 로드
 
@@ -187,7 +187,7 @@ if (icon != null && itemIconImage != null)
 
 ---
 
-## 📌 주의사항
+## 주의사항
 
 1. **IngredientManager가 DontDestroyOnLoad 상태**이므로 씬 전환 시에도 데이터 유지
 2. **ItemTable의 `Inventory` 필드가 `true`**인 아이템만 인벤토리에 표시
@@ -213,7 +213,7 @@ Item_ID,Item_Name,Item_Type,Item_Grade,Use_Type,Inventory,Max_Count,Icon_Path,De
 
 ---
 
-## 🚀 다음 단계
+## 다음 단계
 
 - [ ] **ItemTable.csv에 Icon_Path와 Description 필드 추가**
 - [ ] **아이템 아이콘 스프라이트를 Addressables에 등록**
@@ -226,7 +226,7 @@ Item_ID,Item_Name,Item_Type,Item_Grade,Use_Type,Inventory,Max_Count,Icon_Path,De
 
 ---
 
-## 💬 문의 및 수정
+## 문의 및 수정
 
 코드 수정이 필요하거나 기능 추가가 필요한 경우 해당 파일을 직접 수정하시면 됩니다.
 각 클래스는 독립적으로 동작하도록 설계되어 유지보수가 쉽습니다.

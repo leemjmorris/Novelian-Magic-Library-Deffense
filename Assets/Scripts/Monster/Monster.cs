@@ -40,6 +40,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private const float WEIGHT_UPDATE_INTERVAL = 0.5f;
     private const string WALL_TAG = "Wall";
 
+    // Static cache for Wall reference (shared across all Monster instances)
+    private static Transform cachedWallTransform;
+    private static Collider cachedWallCollider;
+    private static Wall cachedWall;
+
     private Transform wallTransform;
     private Collider wallCollider; // Wall Collider 참조 (ClosestPoint 계산용)
     private System.Threading.CancellationTokenSource weightUpdateCts;
@@ -49,6 +54,14 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private float markDamageMultiplier = 0f;
     private float markEndTime = 0f; // Time.time when mark expires
     private System.Threading.CancellationTokenSource markCts;
+
+    // CC state tracking
+    private bool isSlowed = false;
+    private float slowMultiplier = 1f; // 1.0 = normal speed, 0.5 = 50% speed
+    private System.Threading.CancellationTokenSource slowCts;
+
+    private bool isRooted = false;
+    private System.Threading.CancellationTokenSource rootCts;
 
     // 애니메이터 파라미터 해시 (성능 최적화)
     private static readonly int ANIM_IS_MOVING = Animator.StringToHash("IsMoving");
@@ -71,8 +84,12 @@ public class Monster : BaseEntity, ITargetable, IMovable
     //JML: Physics-based movement in FixedUpdate
     private void FixedUpdate()
     {
-        if (isDead || isDizzy) return;
-        monsterMove.Move(this, moveSpeed);
+        // Don't move if dead, dizzy, or rooted
+        if (isDead || isDizzy || isRooted) return;
+
+        // Apply slow multiplier to movement speed
+        float effectiveSpeed = isSlowed ? moveSpeed * slowMultiplier : moveSpeed;
+        monsterMove.Move(this, effectiveSpeed);
     }
 
     //JML: Game logic in Update
@@ -134,7 +151,24 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         if (isDead) return;
 
-        base.TakeDamage(damage);
+        // Apply Mark damage multiplier if active
+        float finalDamage = damage;
+        bool isCritical = false;
+        if (currentMarkType != MarkType.None && Time.time < markEndTime)
+        {
+            finalDamage = damage * (1f + markDamageMultiplier / 100f);
+            isCritical = true; // Mark amplified damage shows as critical
+            Debug.Log($"[Monster] Mark amplified damage: {damage:F1} -> {finalDamage:F1} (+{markDamageMultiplier}%)");
+        }
+
+        // LMJ: Show floating damage text
+        if (NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance != null)
+        {
+            Vector3 textPosition = collider3D != null ? collider3D.bounds.center : transform.position;
+            NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance.ShowDamage(textPosition, finalDamage, isCritical);
+        }
+
+        base.TakeDamage(finalDamage);
 
         // Dizzy 상태에서는 피격 애니메이션 재생하지 않음
         if (!isDizzy)
@@ -168,6 +202,149 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
 
     /// <summary>
+    /// Slow 효과 적용 - 이동 속도 감소
+    /// </summary>
+    public void ApplySlow(float slowPercent, float duration)
+    {
+        if (isDead) return;
+
+        // Cancel previous slow if exists
+        slowCts?.Cancel();
+        slowCts?.Dispose();
+        slowCts = new System.Threading.CancellationTokenSource();
+
+        isSlowed = true;
+        slowMultiplier = 1f - (slowPercent / 100f); // 50% slow = 0.5 multiplier
+        Debug.Log($"[Monster] Slow applied: {slowPercent}% for {duration}s (speed multiplier: {slowMultiplier})");
+
+        // Start slow duration
+        SlowDurationAsync(duration, slowCts.Token).Forget();
+    }
+
+    private async Cysharp.Threading.Tasks.UniTaskVoid SlowDurationAsync(float duration, System.Threading.CancellationToken ct)
+    {
+        try
+        {
+            await Cysharp.Threading.Tasks.UniTask.Delay((int)(duration * 1000), cancellationToken: ct);
+
+            if (!ct.IsCancellationRequested)
+            {
+                isSlowed = false;
+                slowMultiplier = 1f;
+                Debug.Log("[Monster] Slow ended");
+            }
+        }
+        catch (System.OperationCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
+    /// <summary>
+    /// Root 효과 적용 - 이동 불가 (공격은 가능)
+    /// </summary>
+    public void ApplyRoot(float duration)
+    {
+        if (isDead) return;
+
+        // Cancel previous root if exists
+        rootCts?.Cancel();
+        rootCts?.Dispose();
+        rootCts = new System.Threading.CancellationTokenSource();
+
+        isRooted = true;
+
+        // Stop NavMeshAgent but don't disable it completely
+        if (monsterMove != null)
+        {
+            monsterMove.SetEnabled(false);
+        }
+
+        Debug.Log($"[Monster] Root applied for {duration}s");
+
+        // Start root duration
+        RootDurationAsync(duration, rootCts.Token).Forget();
+    }
+
+    private async Cysharp.Threading.Tasks.UniTaskVoid RootDurationAsync(float duration, System.Threading.CancellationToken ct)
+    {
+        try
+        {
+            await Cysharp.Threading.Tasks.UniTask.Delay((int)(duration * 1000), cancellationToken: ct);
+
+            if (!ct.IsCancellationRequested)
+            {
+                isRooted = false;
+
+                // Re-enable NavMeshAgent if not dead or dizzy
+                if (!isDead && !isDizzy && monsterMove != null)
+                {
+                    monsterMove.SetEnabled(true);
+                }
+
+                Debug.Log("[Monster] Root ended");
+            }
+        }
+        catch (System.OperationCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
+    /// <summary>
+    /// Knockback 효과 적용 - 공격자 반대 방향으로 밀려남
+    /// </summary>
+    public void ApplyKnockback(Vector3 sourcePosition, float force)
+    {
+        if (isDead) return;
+
+        // Calculate knockback direction (away from source)
+        Vector3 knockbackDirection = (transform.position - sourcePosition).normalized;
+        knockbackDirection.y = 0f; // Keep on same Y level
+
+        // Temporarily disable NavMeshAgent for knockback
+        if (monsterMove != null)
+        {
+            monsterMove.SetEnabled(false);
+        }
+
+        // Apply knockback force using Rigidbody
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.AddForce(knockbackDirection * force, ForceMode.Impulse);
+            Debug.Log($"[Monster] Knockback applied: direction={knockbackDirection}, force={force}");
+        }
+
+        // Re-enable NavMeshAgent after short delay
+        KnockbackRecoveryAsync().Forget();
+    }
+
+    private async Cysharp.Threading.Tasks.UniTaskVoid KnockbackRecoveryAsync()
+    {
+        // Wait for knockback physics to settle
+        await Cysharp.Threading.Tasks.UniTask.Delay(500); // 0.5 second recovery
+
+        if (!isDead && !isDizzy && !isRooted)
+        {
+            // Reset Rigidbody
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.isKinematic = true;
+            }
+
+            // Re-enable NavMeshAgent
+            if (monsterMove != null)
+            {
+                monsterMove.SetEnabled(true);
+            }
+
+            Debug.Log("[Monster] Knockback recovery complete");
+        }
+    }
+
+    /// <summary>
     /// CC 효과 적용 (Support 스킬용)
     /// </summary>
     public void ApplyCC(CCType ccType, float duration, float slowAmount, GameObject ccEffectPrefab = null)
@@ -197,18 +374,16 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 break;
 
             case CCType.Slow:
-                // TODO: Slow 효과 구현 (moveSpeed 감소)
-                Debug.Log($"[Monster] Slow applied: {slowAmount}% for {duration}s");
+                ApplySlow(slowAmount, duration);
                 break;
 
             case CCType.Root:
-                // TODO: Root 효과 구현 (이동 불가, 공격 가능)
-                Debug.Log($"[Monster] Root applied for {duration}s");
+                ApplyRoot(duration);
                 break;
 
             case CCType.Knockback:
-                // TODO: Knockback 효과 구현
-                Debug.Log($"[Monster] Knockback applied");
+                // Knockback needs attacker position - use default backward direction
+                ApplyKnockback(transform.position + transform.forward, 5f);
                 break;
 
             case CCType.Silence:
@@ -349,6 +524,58 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
 
     /// <summary>
+    /// Face toward Wall on spawn (instant rotation)
+    /// </summary>
+    private void FaceTowardWall()
+    {
+        // Use cached Wall reference
+        Transform targetWall = cachedWallTransform;
+
+        if (targetWall == null)
+        {
+            // Fallback: try to find Wall
+            GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
+            if (wallObj != null)
+            {
+                targetWall = wallObj.transform;
+            }
+        }
+
+        if (targetWall != null)
+        {
+            // Calculate direction to Wall (horizontal only)
+            Vector3 directionToWall = (targetWall.position - transform.position);
+            directionToWall.y = 0f; // Keep rotation horizontal
+
+            if (directionToWall.sqrMagnitude > 0.001f)
+            {
+                transform.rotation = Quaternion.LookRotation(directionToWall.normalized);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Initialize static Wall cache (called once by WaveManager at game start)
+    /// </summary>
+    public static void InitializeWallCache(Transform wallTransform, Collider wallCollider, Wall wall)
+    {
+        cachedWallTransform = wallTransform;
+        cachedWallCollider = wallCollider;
+        cachedWall = wall;
+        Debug.Log("[Monster] Wall cache initialized via WaveManager");
+    }
+
+    /// <summary>
+    /// Clear static Wall cache (called when scene changes)
+    /// </summary>
+    public static void ClearWallCache()
+    {
+        cachedWallTransform = null;
+        cachedWallCollider = null;
+        cachedWall = null;
+    }
+
+    /// <summary>
     /// 외부에서 목적지 설정
     /// Wall Collider의 가장 가까운 지점을 자동 계산하여 자연스럽게 분산
     /// </summary>
@@ -356,15 +583,31 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         if (monsterMove == null) return;
 
-        // Wall Collider 찾기 (아직 없으면)
+        // Use cached Wall reference (fallback to FindWithTag only if cache is empty)
         if (wallCollider == null)
         {
-            GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
-            if (wallObj != null)
+            if (cachedWallCollider != null)
             {
-                wallCollider = wallObj.GetComponent<Collider>();
-                wallTransform = wallObj.transform;
-                wall = wallObj.GetComponent<Wall>();
+                wallCollider = cachedWallCollider;
+                wallTransform = cachedWallTransform;
+                wall = cachedWall;
+            }
+            else
+            {
+                // Fallback: FindWithTag only once per scene if cache not initialized
+                GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
+                if (wallObj != null)
+                {
+                    wallCollider = wallObj.GetComponent<Collider>();
+                    wallTransform = wallObj.transform;
+                    wall = wallObj.GetComponent<Wall>();
+
+                    // Update static cache for other monsters
+                    cachedWallCollider = wallCollider;
+                    cachedWallTransform = wallTransform;
+                    cachedWall = wall;
+                    Debug.Log("[Monster] Wall cache initialized via FindWithTag fallback");
+                }
             }
         }
 
@@ -393,15 +636,30 @@ public class Monster : BaseEntity, ITargetable, IMovable
     /// </summary>
     private void CheckAttackRange()
     {
-        // Wall Collider 찾기 (아직 없으면)
+        // Use cached Wall reference
         if (wallCollider == null)
         {
-            GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
-            if (wallObj != null)
+            if (cachedWallCollider != null)
             {
-                wallCollider = wallObj.GetComponent<Collider>();
-                wallTransform = wallObj.transform;
-                wall = wallObj.GetComponent<Wall>();
+                wallCollider = cachedWallCollider;
+                wallTransform = cachedWallTransform;
+                wall = cachedWall;
+            }
+            else
+            {
+                // Fallback: FindWithTag only if cache not initialized
+                GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
+                if (wallObj != null)
+                {
+                    wallCollider = wallObj.GetComponent<Collider>();
+                    wallTransform = wallObj.transform;
+                    wall = wallObj.GetComponent<Wall>();
+
+                    // Update static cache
+                    cachedWallCollider = wallCollider;
+                    cachedWallTransform = wallTransform;
+                    cachedWall = wall;
+                }
             }
         }
 
@@ -437,16 +695,28 @@ public class Monster : BaseEntity, ITargetable, IMovable
     //LMJ : Start weight update loop
     private void StartWeightUpdate()
     {
-        // Find wall if not assigned
+        // Use cached Wall reference
         if (wallTransform == null)
         {
-            GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
-            if (wallObj != null)
+            if (cachedWallTransform != null)
             {
-                wallTransform = wallObj.transform;
+                wallTransform = cachedWallTransform;
+            }
+            else
+            {
+                // Fallback: FindWithTag only if cache not initialized
+                GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
+                if (wallObj != null)
+                {
+                    wallTransform = wallObj.transform;
+                    cachedWallTransform = wallTransform;
+                }
             }
         }
 
+        // Cancel previous CTS before creating new one
+        weightUpdateCts?.Cancel();
+        weightUpdateCts?.Dispose();
         weightUpdateCts = new System.Threading.CancellationTokenSource();
         UpdateWeightLoopAsync(weightUpdateCts.Token).Forget();
     }
@@ -483,7 +753,10 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     public override void Die()
     {
+        // Prevent double Die() calls
+        if (isDead) return;
         isDead = true;
+
         monsterAnimator.SetTrigger(ANIM_DIE);
         // LMJ: Don't disable collider immediately - let projectiles still hit during death animation
         // collider3D.enabled = false; // Moved to DespawnMonster()
@@ -498,8 +771,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
         }
         Invoke(nameof(DespawnMonster), 1.5f); // Die 애니메이션이 끝날 때까지 대기
     }
+
+    private bool isDespawning = false;
+
     private void DespawnMonster()
     {
+        // Prevent double Despawn calls
+        if (isDespawning) return;
+        isDespawning = true;
+
         // LMJ: Disable collider before despawning
         if (collider3D != null)
         {
@@ -560,6 +840,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         base.OnSpawn(); // Initialize health
         isDead = false;
+        isDespawning = false;
         isWallHit = false;
         isInAttackRange = false;
         isDizzy = false;
@@ -569,6 +850,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
         wallCollider = null; // Wall 참조 초기화
         attackTimer = 0f;
         Weight = 1f;
+
+        // Reset CC states
+        isSlowed = false;
+        slowMultiplier = 1f;
+        isRooted = false;
+
+        // Reset Mark state
+        currentMarkType = MarkType.None;
+        markDamageMultiplier = 0f;
 
         // 애니메이션 상태 초기화
         if (monsterAnimator != null)
@@ -582,6 +872,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
         }
 
         // 목적지는 WaveManager에서 SetDestination()으로 설정됨
+
+        // Face toward Wall on spawn
+        FaceTowardWall();
 
         //LMJ : Start weight update system
         StartWeightUpdate();
@@ -622,5 +915,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         markCts?.Cancel();
         markCts?.Dispose();
+
+        slowCts?.Cancel();
+        slowCts?.Dispose();
+
+        rootCts?.Cancel();
+        rootCts?.Dispose();
     }
 }

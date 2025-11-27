@@ -20,6 +20,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     private float attackTimer = 0f;
     private Wall wall;
     private bool isWallHit = false;
+    private bool isDead = false;
     public bool IsWallHit => isWallHit;
 
     // Mark state tracking
@@ -73,47 +74,55 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
 
     public override void TakeDamage(float damage)
     {
-        Debug.Log($"BossMonster took {damage} damage. current Health: {currentHealth - damage}");
-        base.TakeDamage(damage);
+        if (isDead) return;
+
+        // Apply Mark damage multiplier if active
+        float finalDamage = damage;
+        bool isCritical = false;
+        if (currentMarkType != MarkType.None && Time.time < markEndTime)
+        {
+            finalDamage = damage * (1f + markDamageMultiplier / 100f);
+            isCritical = true; // Mark amplified damage shows as critical
+            Debug.Log($"[BossMonster] Mark amplified damage: {damage:F1} -> {finalDamage:F1} (+{markDamageMultiplier}%)");
+        }
+
+        // LMJ: Show floating damage text
+        if (NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance != null)
+        {
+            Vector3 textPosition = collider3D != null ? collider3D.bounds.center : transform.position;
+            NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance.ShowDamage(textPosition, finalDamage, isCritical);
+        }
+
+        Debug.Log($"BossMonster took {finalDamage} damage. current Health: {currentHealth - finalDamage}");
+        base.TakeDamage(finalDamage);
     }
 
     /// <summary>
     /// CC 효과 적용 (Support 스킬용)
+    /// Boss는 CC에 면역 - 이펙트만 표시하고 실제 효과는 적용하지 않음
     /// </summary>
     public void ApplyCC(CCType ccType, float duration, float slowAmount, GameObject ccEffectPrefab = null)
     {
-        // CC 이펙트 생성 (몬스터를 따라다니면서 재생)
+        // Boss is immune to CC - show effect but don't apply actual CC
+        Debug.Log($"[BossMonster] CC IMMUNE: {ccType} blocked (Boss cannot be crowd controlled)");
+
+        // LMJ: Show "IMMUNE" floating text
+        if (NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance != null)
+        {
+            Vector3 textPosition = collider3D != null ? collider3D.bounds.center : transform.position;
+            NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance.ShowStatus(textPosition, "IMMUNE", Color.gray);
+        }
+
+        // Show CC effect briefly to indicate hit (optional visual feedback)
         if (ccEffectPrefab != null)
         {
             GameObject ccEffect = Instantiate(ccEffectPrefab, transform.position, Quaternion.identity, transform);
-            Destroy(ccEffect, duration);
-            Debug.Log($"[BossMonster] CC effect spawned: {ccEffectPrefab.name}");
+            // Destroy effect quickly since CC doesn't apply
+            Destroy(ccEffect, 0.5f);
+            Debug.Log($"[BossMonster] CC effect shown briefly (immune): {ccEffectPrefab.name}");
         }
 
-        switch (ccType)
-        {
-            case CCType.Stun:
-            case CCType.Freeze:
-                Debug.Log($"[BossMonster] {ccType} applied for {duration}s");
-                // TODO: Boss CC 효과 구현
-                break;
-
-            case CCType.Slow:
-                Debug.Log($"[BossMonster] Slow applied: {slowAmount}% for {duration}s");
-                break;
-
-            case CCType.Root:
-                Debug.Log($"[BossMonster] Root applied for {duration}s");
-                break;
-
-            case CCType.Knockback:
-                Debug.Log($"[BossMonster] Knockback applied");
-                break;
-
-            case CCType.Silence:
-                Debug.Log($"[BossMonster] Silence applied for {duration}s");
-                break;
-        }
+        // No actual CC effect is applied to Boss
     }
 
     /// <summary>
@@ -232,6 +241,10 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
 
     public override void Die()
     {
+        // Prevent double Die() calls
+        if (isDead) return;
+        isDead = true;
+
         // LMJ: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);
 
@@ -278,11 +291,16 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     public override void OnSpawn()
     {
         base.OnSpawn(); // Initialize health
+        isDead = false;
 
         isWallHit = false;
         wall = null;
         attackTimer = 0f;
         Weight = 5f;
+
+        // Reset Mark state
+        currentMarkType = MarkType.None;
+        markDamageMultiplier = 0f;
 
         // 목적지는 WaveManager에서 SetDestination()으로 설정됨
 

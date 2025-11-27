@@ -20,7 +20,8 @@ public class CharacterPlacementManager : MonoBehaviour
     [SerializeField] private float gridSpacingX = 1.5f;  // X spacing
     [SerializeField] private float gridSpacingZ = 1.5f;  // Z spacing
     [SerializeField] private Vector3 gridStartPosition = new Vector3(-3f, 0f, 0.75f); // Start position (XZ plane)
-    [SerializeField] private float gridPlaneY = 0f;      // Y height of the grid plane
+    [SerializeField, Tooltip("그리드 높이 오프셋 (지형이 평평하지 않을 때 위로 올리기)")]
+    private float gridPlaneY = 0f;
 
     // Grid slot list
     private List<GridSlot> gridSlots = new List<GridSlot>();
@@ -118,10 +119,10 @@ public class CharacterPlacementManager : MonoBehaviour
         {
             for (int col = 0; col < gridColumns; col++)
             {
-                // Calculate grid position (XZ plane)
+                // Calculate grid position (XZ plane with Y height offset)
                 Vector3 position = gridStartPosition + new Vector3(
                     col * gridSpacingX,
-                    0f,
+                    gridPlaneY,
                     -row * gridSpacingZ
                 );
 

@@ -26,6 +26,8 @@ namespace NovelianMagicLibraryDefense.Managers
 
         [Header("Target")]
         [SerializeField] private Transform wallTarget;
+        [SerializeField] private Wall wallComponent;
+        [SerializeField] private Collider wallCollider;
 
         [Header("Settings")]
         [SerializeField] private float spawnInterval = 2f;
@@ -54,8 +56,56 @@ namespace NovelianMagicLibraryDefense.Managers
                 monsterEvents.AddBossDiedListener(HandleBossDied);
             }
 
+            // Initialize Monster's static Wall cache (Inspector references preferred)
+            InitializeWallCache();
+
             // LMJ: Initialize pools asynchronously
             InitializePoolsAsync().Forget();
+        }
+
+        /// <summary>
+        /// Initialize Monster's static Wall cache using Inspector references
+        /// Falls back to FindWithTag if Inspector references are not set
+        /// </summary>
+        private void InitializeWallCache()
+        {
+            // Use Inspector references if available
+            if (wallTarget != null && wallCollider != null && wallComponent != null)
+            {
+                Monster.InitializeWallCache(wallTarget, wallCollider, wallComponent);
+                return;
+            }
+
+            // Fallback: Try to find Wall by tag
+            if (wallTarget != null)
+            {
+                // Get missing components from wallTarget
+                if (wallCollider == null)
+                    wallCollider = wallTarget.GetComponent<Collider>();
+                if (wallComponent == null)
+                    wallComponent = wallTarget.GetComponent<Wall>();
+
+                if (wallCollider != null && wallComponent != null)
+                {
+                    Monster.InitializeWallCache(wallTarget, wallCollider, wallComponent);
+                    return;
+                }
+            }
+
+            // Last resort: FindWithTag
+            GameObject wallObj = GameObject.FindWithTag("Wall");
+            if (wallObj != null)
+            {
+                wallTarget = wallObj.transform;
+                wallCollider = wallObj.GetComponent<Collider>();
+                wallComponent = wallObj.GetComponent<Wall>();
+                Monster.InitializeWallCache(wallTarget, wallCollider, wallComponent);
+                Debug.LogWarning("[WaveManager] Wall references not set in Inspector, using FindWithTag fallback");
+            }
+            else
+            {
+                Debug.LogError("[WaveManager] Wall not found! Please assign Wall references in Inspector.");
+            }
         }
 
         /// <summary>
@@ -96,6 +146,9 @@ namespace NovelianMagicLibraryDefense.Managers
                 monsterEvents.RemoveMonsterDiedListener(HandleMonsterDied);
                 monsterEvents.RemoveBossDiedListener(HandleBossDied);
             }
+
+            // Clear Monster's static Wall cache when scene unloads
+            Monster.ClearWallCache();
         }
 
         /// <summary>

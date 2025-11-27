@@ -34,8 +34,8 @@ namespace Novelian.Combat
         private float rangeModifier = 0f;
 
         [Header("Spawn Position")]
-        [SerializeField, Tooltip("Projectile spawn offset")]
-        private Vector3 spawnOffset = Vector3.zero;
+        [SerializeField, Tooltip("Projectile spawn offset (Y=1.5 for chest height)")]
+        private Vector3 spawnOffset = new Vector3(0f, 1.5f, 0f);
 
         [Header("Projectile Template")]
         [SerializeField, Tooltip("Generic projectile template (used when skill has no projectile prefab)")]
@@ -218,6 +218,7 @@ namespace Novelian.Combat
         private void StartAttackLoop()
         {
             attackCts?.Cancel();
+            attackCts?.Dispose();
             attackCts = new CancellationTokenSource();
             AttackLoopAsync(attackCts.Token).Forget();
         }
@@ -248,6 +249,7 @@ namespace Novelian.Combat
             }
 
             activeSkillCts?.Cancel();
+            activeSkillCts?.Dispose();
             activeSkillCts = new CancellationTokenSource();
             ActiveSkillLoopAsync(activeSkillCts.Token).Forget();
         }
@@ -418,6 +420,7 @@ namespace Novelian.Combat
 
             isChanneling = true;
             channelingCts?.Cancel();
+            channelingCts?.Dispose();
             channelingCts = new CancellationTokenSource();
             var ct = channelingCts.Token;
 
@@ -630,19 +633,78 @@ namespace Novelian.Combat
                     }
                 }
 
-                // 3. 착탄 위치는 타겟 Y 위치 그대로 사용 (지면 Raycast 대신)
+                // 3. 착탄 위치는 지면 좌표로 변환 (Meteor-style)
                 Vector3 impactPos = targetPos;
-                Debug.Log($"[Character] AOE impact position: {impactPos}");
 
-                // 4. Meteor Effect (착탄 위치에 스폰 - 파티클이 자체 낙하 연출)
+                // Raycast로 지면 위치 찾기
+                Ray groundRay = new Ray(targetPos + Vector3.up * 10f, Vector3.down);
+                if (Physics.Raycast(groundRay, out RaycastHit groundHit, 20f, LayerMask.GetMask("Ground")))
+                {
+                    impactPos = groundHit.point;
+                    Debug.Log($"[Character] AOE ground impact: {impactPos} (raycast hit)");
+                }
+                else
+                {
+                    // Ground 레이어 못 찾으면 Y=0으로 설정
+                    impactPos = new Vector3(targetPos.x, 0f, targetPos.z);
+                    Debug.Log($"[Character] AOE ground impact: {impactPos} (fallback Y=0)");
+                }
+
+                // 4. Meteor Effect (몬스터 스폰 위치에서 출발 → 착탄 지점으로 이동)
                 if (activeSkill.projectileEffectPrefab != null)
                 {
-                    meteorEffect = Object.Instantiate(activeSkill.projectileEffectPrefab, impactPos, Quaternion.identity);
-                    Debug.Log($"[Character] Meteor spawned at {impactPos}");
+                    // 몬스터 스폰 위치 가져오기 (WaveManager에서)
+                    Vector3 meteorStartPos = impactPos + Vector3.up * 20f; // 기본값: 착탄점 위 20m
+                    if (NovelianMagicLibraryDefense.Managers.GameManager.Instance?.Wave != null)
+                    {
+                        // WaveManager의 monsterSpawner 위치 사용
+                        var waveManager = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Wave;
+                        var spawnerField = waveManager.GetType().GetField("monsterSpawner",
+                            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                        if (spawnerField != null)
+                        {
+                            var spawner = spawnerField.GetValue(waveManager) as NovelianMagicLibraryDefense.Spawners.MonsterSpawner;
+                            if (spawner != null)
+                            {
+                                meteorStartPos = spawner.transform.position + Vector3.up * 10f; // 스폰 위치 + 높이
+                                Debug.Log($"[Character] Meteor start from MonsterSpawner: {meteorStartPos}");
+                            }
+                        }
+                    }
 
-                    // 파티클 낙하 시간 대기 (projectileLifetime 사용, 기본값 1.5초)
-                    float fallDuration = activeSkill.projectileLifetime > 0 ? activeSkill.projectileLifetime : 1.5f;
-                    await UniTask.Delay((int)(fallDuration * 1000));
+                    meteorEffect = Object.Instantiate(activeSkill.projectileEffectPrefab, meteorStartPos, Quaternion.identity);
+                    Debug.Log($"[Character] Meteor spawned at {meteorStartPos}, moving to {impactPos}");
+
+                    // Meteor 이동 애니메이션 (projectileSpeed 사용)
+                    float meteorSpeed = FinalActiveProjectileSpeed > 0 ? FinalActiveProjectileSpeed : 10f;
+                    float distance = Vector3.Distance(meteorStartPos, impactPos);
+                    float travelTime = distance / meteorSpeed;
+
+                    Debug.Log($"[Character] Meteor travel: distance={distance:F1}m, speed={meteorSpeed:F1}, time={travelTime:F2}s");
+
+                    // Lerp로 이동 애니메이션
+                    float elapsed = 0f;
+                    while (elapsed < travelTime && meteorEffect != null)
+                    {
+                        elapsed += Time.deltaTime;
+                        float t = Mathf.Clamp01(elapsed / travelTime);
+                        meteorEffect.transform.position = Vector3.Lerp(meteorStartPos, impactPos, t);
+
+                        // Meteor가 착탄 지점을 바라보도록 회전
+                        Vector3 direction = (impactPos - meteorStartPos).normalized;
+                        if (direction != Vector3.zero)
+                        {
+                            meteorEffect.transform.rotation = Quaternion.LookRotation(direction);
+                        }
+
+                        await UniTask.Yield(PlayerLoopTiming.Update);
+                    }
+
+                    // 최종 위치 보정
+                    if (meteorEffect != null)
+                    {
+                        meteorEffect.transform.position = impactPos;
+                    }
                 }
 
                 // 5. Hit Effect (착탄 폭발) - 착탄 위치에서 재생
@@ -902,8 +964,14 @@ namespace Novelian.Combat
         {
             characterObj.SetActive(false);
             attackCts?.Cancel();
+            attackCts?.Dispose();
+            attackCts = null;
             activeSkillCts?.Cancel();
+            activeSkillCts?.Dispose();
+            activeSkillCts = null;
             channelingCts?.Cancel();
+            channelingCts?.Dispose();
+            channelingCts = null;
             Debug.Log("[Character] Character despawned");
         }
 

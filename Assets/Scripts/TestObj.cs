@@ -41,22 +41,22 @@ public class TestObj : MonoBehaviour
     // 테스트용 이벤트 핸들러
     private void OnShortPressTest(Vector2 position)
     {
-        Debug.Log($"<color=green>[TEST] ✅ Short Press 감지! 위치: {position}</color>");
+        Debug.Log($"<color=green>[TEST] Short Press 감지! 위치: {position}</color>");
     }
 
     private void OnLongPressTest(Vector2 position)
     {
-        Debug.Log($"<color=yellow>[TEST] ⏱️ Long Press 시작! 위치: {position} (2초 유지 완료)</color>");
+        Debug.Log($"<color=yellow>[TEST] Long Press 시작! 위치: {position} (2초 유지 완료)</color>");
     }
 
     private void OnDragUpdateTest(Vector2 position)
     {
-        Debug.Log($"<color=cyan>[TEST] 🖱️ Drag 중... 위치: {position}</color>");
+        Debug.Log($"<color=cyan>[TEST] Drag 중... 위치: {position}</color>");
     }
 
     private void OnDropTest(Vector2 position)
     {
-        Debug.Log($"<color=magenta>[TEST] 📍 Drop 완료! 위치: {position}</color>");
+        Debug.Log($"<color=magenta>[TEST] Drop 완료! 위치: {position}</color>");
     }
 
     private void Update()

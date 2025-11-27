@@ -9,7 +9,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "New Skill Config", menuName = "Skills/Skill Config", order = 1)]
 public class SkillConfig : ScriptableObject
 {
-    [Header("📋 Basic Info")]
+    [Header("Basic Info")]
     [Tooltip("스킬을 드롭다운에서 선택하세요 (자동으로 모든 정보 로드)")]
     [HideInInspector] public int skillID;
 
@@ -21,11 +21,11 @@ public class SkillConfig : ScriptableObject
     [ReadOnly] public float castTime;
     [ReadOnly] public int effectID;
 
-    [Header("🎭 Casting Mode")]
+    [Header("Casting Mode")]
     [Tooltip("스킬 발동 방식 선택")]
     public CastMode castMode = CastMode.Instant;
 
-    [Header("🎯 Projectile Settings")]
+    [Header("Projectile Settings")]
     [Tooltip("투사체 사용 여부")]
     public bool hasProjectile;
 
@@ -54,7 +54,7 @@ public class SkillConfig : ScriptableObject
     [Range(0, 20)]
     public int maxPierceCount = 0;
 
-    [Header("💥 AOE Settings")]
+    [Header("AOE Settings")]
     [Tooltip("범위 효과 타입")]
     public AreaOfEffectType aoeType = AreaOfEffectType.None;
 
@@ -66,7 +66,7 @@ public class SkillConfig : ScriptableObject
     [Range(15f, 180f)]
     public float aoeAngle = 90f;
 
-    [Header("⚡ Dash Settings")]
+    [Header("Dash Settings")]
     [Tooltip("돌진형 스킬 (Flicker Strike)")]
     public bool isDashSkill;
 
@@ -91,7 +91,7 @@ public class SkillConfig : ScriptableObject
     [ShowIf("isDashSkill")]
     public GameObject slashEffect;
 
-    [Header("🌪️ Moving AOE Settings")]
+    [Header("Moving AOE Settings")]
     [Tooltip("이동형 장판 (먹구름처럼 천천히 이동)")]
     public bool isMovingAOE;
 
@@ -113,7 +113,7 @@ public class SkillConfig : ScriptableObject
     [ShowIf("isMovingAOE")]
     public GameObject aoeEffectPrefab;
 
-    [Header("✨ Visual Effects")]
+    [Header("Visual Effects")]
     [Tooltip("발사 시 이펙트 (총구 섬광, 발사 위치에 남음)")]
     public GameObject muzzleFlashEffectPrefab;
 
@@ -132,7 +132,7 @@ public class SkillConfig : ScriptableObject
     [Tooltip("스킬 착탄/폭발 이펙트 (Deprecated - use onHitEffectPrefab)")]
     public GameObject impactEffectPrefab;
 
-    [Header("👥 Character Assignment")]
+    [Header("Character Assignment")]
     [Tooltip("이 스킬을 사용할 캐릭터들 (드래그 & 드롭)")]
     public List<GameObject> assignedCharacters = new List<GameObject>();
 

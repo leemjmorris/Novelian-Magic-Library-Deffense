@@ -28,6 +28,7 @@ namespace Novelian.Combat
     public class Projectile : MonoBehaviour, IPoolable
     {
         private const float OUT_OF_BOUNDS_DISTANCE = 100f;
+        private const float SPAWN_GRACE_PERIOD = 0.1f; // Ignore ground collision for first 0.1s
 
         [Header("Components")]
         [SerializeField, Tooltip("Rigidbody for physics movement (Physics mode only)")]
@@ -60,6 +61,7 @@ namespace Novelian.Combat
         private Vector3 startPosition;
         private Vector3 targetPosition;
         private float elapsedTime;
+        private float spawnTime; // Time.time when spawned (for grace period)
         private bool isInitialized = false;
 
         // Lifetime tracking
@@ -97,6 +99,7 @@ namespace Novelian.Combat
             lifetime = projectileLifetime;
             damage = damageAmount; // Set damage from parameter
             elapsedTime = 0f;
+            spawnTime = Time.time; // Record spawn time for grace period
             isInitialized = true;
 
             // Store skill data and support skill data
@@ -158,6 +161,7 @@ namespace Novelian.Combat
             damage = damageAmount;
             onHitCallback = onHit;
             elapsedTime = 0f;
+            spawnTime = Time.time; // Record spawn time for grace period
             isInitialized = true;
 
             // Store support skill data for status effects
@@ -304,6 +308,28 @@ namespace Novelian.Combat
             // LMJ: Obstacle collision (rocks, trees, terrain objects) - destroy projectile without damage
             if (other.CompareTag(Tag.Obstacle))
             {
+                if (mode == ProjectileMode.Physics)
+                {
+                    ReturnToPool();
+                }
+                else if (mode == ProjectileMode.Effect)
+                {
+                    lifetimeCts?.Cancel();
+                    Destroy(gameObject);
+                }
+                return;
+            }
+
+            // LMJ: Ground/Terrain collision - destroy projectile (layer-based check)
+            // Skip during spawn grace period to prevent immediate destruction
+            if (other.gameObject.layer == LayerMask.NameToLayer("Ground"))
+            {
+                if (Time.time - spawnTime < SPAWN_GRACE_PERIOD)
+                {
+                    return; // Ignore ground collision during grace period
+                }
+
+                Debug.Log("[Projectile] Hit ground, destroying");
                 if (mode == ProjectileMode.Physics)
                 {
                     ReturnToPool();
@@ -575,7 +601,7 @@ namespace Novelian.Combat
             Debug.Log($"[Projectile] Chain effect spawned from {startPos} to {endPos}");
         }
 
-        //LMJ : Find next target for chain effect with priority system
+        //LMJ : Find next target for chain effect (no re-hit allowed)
         private ITargetable FindNextChainTarget(Vector3 currentPosition, System.Collections.Generic.HashSet<ITargetable> hitTargets, ITargetable excludeTarget = null)
         {
             if (supportSkill == null) return null;
@@ -583,12 +609,8 @@ namespace Novelian.Combat
             // Get all targets within chain range
             Collider[] hits = Physics.OverlapSphere(currentPosition, supportSkill.chainRange);
 
-            // Separate unhit and hit targets
-            ITargetable closestUnhitTarget = null;
-            float closestUnhitDistance = float.MaxValue;
-
-            ITargetable closestHitTarget = null;
-            float closestHitDistance = float.MaxValue;
+            ITargetable closestTarget = null;
+            float closestDistance = float.MaxValue;
 
             const float MIN_CHAIN_DISTANCE = 0.5f; // Minimum distance to prevent immediate re-hit
 
@@ -606,46 +628,34 @@ namespace Novelian.Combat
                 if (excludeTarget != null && target == excludeTarget)
                     continue;
 
+                // Skip already hit targets (no re-hit allowed)
+                if (hitTargets.Contains(target))
+                    continue;
+
                 float distance = Vector3.Distance(currentPosition, target.GetPosition());
 
                 // Skip targets that are too close (prevent re-collision with overlapping colliders)
                 if (distance < MIN_CHAIN_DISTANCE)
                     continue;
 
-                // Categorize by hit status
-                if (!hitTargets.Contains(target))
+                // Find closest unhit target
+                if (distance < closestDistance)
                 {
-                    // Unhit target - highest priority
-                    if (distance < closestUnhitDistance)
-                    {
-                        closestUnhitDistance = distance;
-                        closestUnhitTarget = target;
-                    }
-                }
-                else
-                {
-                    // Already hit target - lower priority
-                    if (distance < closestHitDistance)
-                    {
-                        closestHitDistance = distance;
-                        closestHitTarget = target;
-                    }
+                    closestDistance = distance;
+                    closestTarget = target;
                 }
             }
 
-            // Priority: unhit targets first, then hit targets (re-hit allowed)
-            if (closestUnhitTarget != null)
+            if (closestTarget != null)
             {
-                Debug.Log($"[Projectile] Chain: Found unhit target at {closestUnhitDistance:F1}m");
-                return closestUnhitTarget;
+                Debug.Log($"[Projectile] Chain: Found target at {closestDistance:F1}m");
             }
-            else if (closestHitTarget != null)
+            else
             {
-                Debug.Log($"[Projectile] Chain: No unhit targets, re-hitting target at {closestHitDistance:F1}m");
-                return closestHitTarget;
+                Debug.Log("[Projectile] Chain: No valid targets found (all targets already hit or out of range)");
             }
 
-            return null;
+            return closestTarget;
         }
 
         //LMJ : Return projectile to pool

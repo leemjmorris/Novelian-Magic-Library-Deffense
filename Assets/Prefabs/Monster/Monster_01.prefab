@@ -127,7 +127,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 967941316364084182}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 15.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
@@ -135,7 +135,7 @@ Transform:
   - {fileID: 1475935930752712199}
   - {fileID: 8141917697380878369}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &2142173203755059167
 Animator:
   serializedVersion: 7
@@ -227,6 +227,7 @@ MonoBehaviour:
   moveSpeed: 10
   damage: 10
   attackInterval: 0.7
+  attackRange: 2
   fallOffThreshold: -10
   weightThresholds:
   - 10

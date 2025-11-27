@@ -46,13 +46,15 @@ public class TargetRegistry
 
     /// <summary>
     /// JML: Get all registered targetable entities.
+    /// Returns a copy of the list to prevent concurrent modification issues.
     /// </summary>
     public List<ITargetable> GetAllTargets()
     {
         // Clean up null or dead targets
         targets.RemoveAll(t => t == null || !t.IsAlive());
 
-        return targets;
+        // Return copy to prevent concurrent modification
+        return new List<ITargetable>(targets);
     }
 
     /// <summary>
@@ -72,7 +74,9 @@ public class TargetRegistry
         float closestFocusRemainingTime = float.MaxValue;
         float closestFocusDistance = float.MaxValue;
 
-        foreach (var target in targets)
+        // Create snapshot to prevent concurrent modification during iteration
+        var snapshot = new List<ITargetable>(targets);
+        foreach (var target in snapshot)
         {
             // JML: Check for null or destroyed objects before calling methods
             if (target == null || !target.IsAlive()) continue;
