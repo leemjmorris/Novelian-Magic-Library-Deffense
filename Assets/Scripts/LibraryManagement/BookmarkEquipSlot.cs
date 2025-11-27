@@ -5,16 +5,29 @@ using UnityEngine.UI;
 
 public class BookmarkEquipSlot : MonoBehaviour
 {
+    [Header("UI References")]
     [SerializeField] private TextMeshProUGUI gradeText;
     [SerializeField] private TextMeshProUGUI optionText;
+    [SerializeField] private Image selectionBorder; // LCB: Selection border image (선택 테두리 이미지)
+    [SerializeField] private Button slotButton; // LCB: Slot click button (슬롯 클릭 버튼)
+
     private BookMark bookmark;
     private CharacterInfoPanel characterInfoPanel;
+    private BookmarkEquipPanel equipPanel; // LCB: Reference to BookmarkEquipPanel (패널 참조)
+    private bool isSelected = false; // LCB: Selection state (선택 상태)
+
     public int CharacterID { get; private set; }
+    public BookMark Bookmark => bookmark; // LCB: Expose bookmark data (책갈피 데이터 노출)
     
-    public void Init(BookMark bookmark, CharacterInfoPanel panel)
+    /// <summary>
+    /// LCB: Initialize bookmark slot with data and references
+    /// 책갈피 슬롯 초기화 (데이터 및 참조 설정)
+    /// </summary>
+    public void Init(BookMark bookmark, CharacterInfoPanel panel, BookmarkEquipPanel equipPanel)
     {
         this.bookmark = bookmark;
         characterInfoPanel = panel;
+        this.equipPanel = equipPanel;
         var bookmarkData = CSVLoader.Instance.GetData<BookmarkData>(bookmark.BookmarkDataID);
 
         gradeText.text = $"{bookmark.GetGradeName(bookmark.Grade)}";
@@ -59,6 +72,41 @@ public class BookmarkEquipSlot : MonoBehaviour
         }
 
         CharacterID = panel.CharacterID;
+
+        // LCB: Setup slot button click listener (슬롯 버튼 클릭 리스너 설정)
+        if (slotButton != null)
+        {
+            slotButton.onClick.RemoveAllListeners();
+            slotButton.onClick.AddListener(OnSlotClicked);
+        }
+
+        // LCB: Initialize selection border as deselected (선택 테두리 초기화 - 비선택 상태)
+        SetSelected(false);
+    }
+
+    /// <summary>
+    /// LCB: Called when slot is clicked
+    /// 슬롯 클릭 시 호출
+    /// </summary>
+    private void OnSlotClicked()
+    {
+        if (equipPanel != null)
+        {
+            equipPanel.OnSlotClicked(this);
+        }
+    }
+
+    /// <summary>
+    /// LCB: Set selection state and update border visibility
+    /// 선택 상태 설정 및 테두리 표시 업데이트
+    /// </summary>
+    public void SetSelected(bool selected)
+    {
+        isSelected = selected;
+        if (selectionBorder != null)
+        {
+            selectionBorder.gameObject.SetActive(selected);
+        }
     }
 
     public void OnClickEquipButton()

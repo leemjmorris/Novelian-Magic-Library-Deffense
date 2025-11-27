@@ -272,6 +272,37 @@ public class BookMarkManager : MonoBehaviour
     }
 
     /// <summary>
+    /// LCB: Unequip bookmark from character slot
+    /// 캐릭터 슬롯에서 책갈피 해제
+    /// </summary>
+    public bool UnequipBookmarkFromCharacter(int characterID, int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= 5)
+        {
+            Debug.LogError($"[BookMarkManager] 잘못된 슬롯 인덱스: {slotIndex}");
+            return false;
+        }
+
+        BookMark[] bookmarks = GetOrCreateBookmarkArray(characterID);
+
+        // LCB: Check if there's a bookmark in the slot (슬롯에 책갈피가 있는지 확인)
+        if (bookmarks[slotIndex] == null)
+        {
+            Debug.LogWarning($"[BookMarkManager] 슬롯 {slotIndex}에 장착된 책갈피가 없습니다.");
+            return false;
+        }
+
+        BookMark bookmarkToUnequip = bookmarks[slotIndex];
+
+        // LCB: Unequip the bookmark (책갈피 해제)
+        bookmarkToUnequip.Unequip();
+        bookmarks[slotIndex] = null;
+
+        Debug.Log($"[BookMarkManager] 책갈피 해제: {bookmarkToUnequip.Name} (슬롯 {slotIndex})");
+        return true;
+    }
+
+    /// <summary>
     /// 캐릭터에게 실제로 장착된 책갈피만 가져오기 (null 제외)
     /// 스탯/스킬 적용 시 사용
     /// </summary>

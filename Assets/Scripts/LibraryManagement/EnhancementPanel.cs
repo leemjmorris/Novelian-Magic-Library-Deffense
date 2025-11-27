@@ -23,7 +23,8 @@ public class EnhancementPanel : MonoBehaviour
     [Header("Reference")]
     [SerializeField] private CharacterInfoPanel characterInfoPanel;
     [SerializeField] private GameObject characterInfoPanelObject;
-
+    
+    
     private int characterID;
 
     /// <summary>
