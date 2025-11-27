@@ -152,7 +152,8 @@ public class EnhancementPanel : MonoBehaviour
         if (CharacterEnhancementManager.Instance.TryEnhance(characterID))
         {
             CharacterData charData = CSVLoader.Instance.GetData<CharacterData>(characterID);
-            Debug.Log($"[Enhancement Success] {charData.Character_Name} 강화 완료!");
+            string charName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";
+            Debug.Log($"[Enhancement Success] {charName} 강화 완료!");
 
             // UI 갱신
             RefreshEnhancementUI();

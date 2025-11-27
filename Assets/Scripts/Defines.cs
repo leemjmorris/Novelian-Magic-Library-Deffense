@@ -34,6 +34,7 @@ public static class AddressableKey
     public static readonly string SkillTable = "SkillTable";
     public static readonly string EnhancementLevelTable = "EnhancementLevelTable";
     public static readonly string CharacterEnhancementTable = "CharacterEnhancementTable";
+    public static readonly string StringTable = "StringTable";
 
     public static string GetCharacterKey(int characterId)
     {
@@ -100,6 +101,7 @@ public enum Genre
 public enum OptionType
 {
     AttackPower = 1,
+    AttackSkill = 2,
 }
 public enum UseType
 {
@@ -112,7 +114,9 @@ public enum BookmarkType
 {
     None = 0,
     Stat = 1,
-    Skill = 2
+    Skill = 2,
+    SubSkill = 3,   // JML: 보조스킬 (추후 구현)
+    All = 99        // JML: 전체 필터용
 }
 
 public enum CurrencyType

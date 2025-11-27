@@ -16,6 +16,7 @@ public class TeamSetupPanel : MonoBehaviour
     [Header("Party Synergy")]
     [SerializeField] private TextMeshProUGUI partyNameText;
     [SerializeField] private TextMeshProUGUI synergyDescText;
+    [SerializeField] private GameObject deckPanel;
 
     private List<DeckCharacterSlot> characterSlots = new List<DeckCharacterSlot>();
     private int selectedDeckSlotIndex = -1;
@@ -58,6 +59,7 @@ public class TeamSetupPanel : MonoBehaviour
             tempDeck.Clear();
             Debug.Log("[TeamSetupPanel] 저장하지 않고 패널 닫힘 - 임시 덱 초기화");
         }
+        deckPanel.SetActive(false);
     }
 
     /// <summary>

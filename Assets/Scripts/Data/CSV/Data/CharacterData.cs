@@ -3,7 +3,7 @@ using UnityEngine;
 public class CharacterData
 {
     public int Character_ID { get; set; }
-    public string Character_Name { get; set; }
+    public int Character_Name_ID { get; set; }
     public Genre Genre { get; set; }
     public int Cha_Level_1_ID { get; set; }
     public int Cha_Level_2_ID { get; set; }
@@ -16,4 +16,5 @@ public class CharacterData
     public int Cha_Level_9_ID { get; set; }
     public int Cha_Level_10_ID { get; set; }
     public int Base_Skill_ID { get; set; }
+    public int Description_ID { get; set; }
 }

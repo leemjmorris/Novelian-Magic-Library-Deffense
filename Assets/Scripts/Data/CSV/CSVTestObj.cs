@@ -23,15 +23,15 @@ public class CSVTestObj : MonoBehaviour
         Debug.Log("=== CSV Load Test ===");
 
         Debug.Log("=== BookMark Table===");
-        Debug.Log($"Bookmark Name: {bookmarkTable.GetId(111).Bookmark_Name}");
-        Debug.Log($"Bookmark Craft Bookmark_Name: {bookmarkCraftTable.GetId(121).Recipe_Name}");
-        Debug.Log($"Bookmark Option Name: {bookmarkOptionTable.GetId(1311).Option_Name}");
-        Debug.Log($"Bookmark List Name: {bookmarkListTable.GetId(141).List_Name}");
+        Debug.Log($"Bookmark Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkTable.GetId(111).Bookmark_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Bookmark Craft Bookmark_Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkCraftTable.GetId(121).Recipe_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Bookmark Option Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkOptionTable.GetId(1311).Option_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Bookmark List Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkListTable.GetId(141).List_Name_ID)?.Text ?? "Unknown"}");
 
         Debug.Log("=== Currency & Ingredient Table ===");
-        Debug.Log($"Ingredient Name: {ingredientTable.GetId(1011).Ingredient_Name}");
-        Debug.Log($"Currency Name: {currencyTable.GetId(161).Currency_Name}");
-        Debug.Log($"Grde Name: {gradeTable.GetId(151).Grade_Name}");
+        Debug.Log($"Ingredient Name: {CSVLoader.Instance.GetData<StringTable>(ingredientTable.GetId(1011).Ingredient_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Currency Name: {CSVLoader.Instance.GetData<StringTable>(currencyTable.GetId(161).Currency_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Grde Name: {CSVLoader.Instance.GetData<StringTable>(gradeTable.GetId(151).Grade_Name_ID)?.Text ?? "Unknown"}");
 
         Debug.Log("===============");
 

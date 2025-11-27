@@ -45,7 +45,7 @@ public class BookmarkEquipSlot : MonoBehaviour
                 var optionData = CSVLoader.Instance.GetData<BookmarkOptionData>(bookmarkData.Option_ID);
                 if (optionData != null)
                 {
-                    optionText.text = $"{optionData.Option_Name}\n{bookmark.OptionValue}%";
+                    optionText.text = $"{CSVLoader.Instance.GetData<StringTable>(optionData.Option_Name_ID)?.Text ?? "Unknown"}\n{bookmark.OptionValue}%";
                 }
                 else
                 {

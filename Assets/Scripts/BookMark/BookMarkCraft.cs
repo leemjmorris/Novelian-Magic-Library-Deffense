@@ -28,7 +28,7 @@ public static class BookMarkCraft
         // 재료 확인
         if (!CheckMaterials(recipeData))
         {
-            Debug.LogWarning($"[BookMarkCraft] 재료 부족: {recipeData.Recipe_Name}");
+            Debug.LogWarning($"[BookMarkCraft] 재료 부족: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
             return new BookMarkCraftResult(false, null, "재료가 부족합니다.");
         }
 
@@ -36,7 +36,7 @@ public static class BookMarkCraft
         // 골드 확인
         if (!CheckCurrency(recipeData))
         {
-            Debug.LogWarning($"[BookMarkCraft] 골드 부족: {recipeData.Recipe_Name}");
+            Debug.LogWarning($"[BookMarkCraft] 골드 부족: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
             return new BookMarkCraftResult(false, null, "골드가 부족합니다.");
         }
 
@@ -44,7 +44,7 @@ public static class BookMarkCraft
         // 재료 소모
         if (!ConsumeMaterials(recipeData))
         {
-            Debug.LogError($"[BookMarkCraft] 재료 소모 실패: {recipeData.Recipe_Name}");
+            Debug.LogError($"[BookMarkCraft] 재료 소모 실패: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
             return new BookMarkCraftResult(false, null, "재료 소모 중 오류가 발생했습니다.");
         }
 
@@ -52,7 +52,7 @@ public static class BookMarkCraft
         // 골드 소모
         if (!ConsumeCurrency(recipeData))
         {
-            Debug.LogError($"[BookMarkCraft] 골드 소모 실패: {recipeData.Recipe_Name}");
+            Debug.LogError($"[BookMarkCraft] 골드 소모 실패: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
             return new BookMarkCraftResult(false, null, "골드 소모 중 오류가 발생했습니다.");
         }
 
@@ -319,10 +319,11 @@ public static class BookMarkCraft
                 return null;
             }
 
-            Debug.Log($"[BookMarkCraft] 스킬 북마크 생성: {bookmarkData.Bookmark_Name}, Skill_ID: {bookmarkData.Skill_ID}");
+            string bookmarkName = CSVLoader.Instance.GetData<StringTable>(bookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
+            Debug.Log($"[BookMarkCraft] 스킬 북마크 생성: {bookmarkName}, Skill_ID: {bookmarkData.Skill_ID}");
             var skillBookmark = new BookMark(
                 bookmarkDataID: bookmarkData.Bookmark_ID,
-                name: bookmarkData.Bookmark_Name,
+                name: bookmarkName,
                 grade: (Grade)bookmarkData.Grade_ID,
                 optionType: 0,
                 optionValue: 0,
@@ -352,12 +353,13 @@ public static class BookMarkCraft
 
             // JML: Create Stat Bookmark
             // 스탯 북마크 생성
-            Debug.Log($"[BookMarkCraft] 스탯 북마크 생성: {bookmarkData.Bookmark_Name}");
+            string statBookmarkName = CSVLoader.Instance.GetData<StringTable>(bookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
+            Debug.Log($"[BookMarkCraft] 스탯 북마크 생성: {statBookmarkName}");
             var statBookmark = new BookMark(
                 bookmarkDataID: bookmarkData.Bookmark_ID,
-                name: bookmarkData.Bookmark_Name,
+                name: statBookmarkName,
                 grade: (Grade)bookmarkData.Grade_ID,
-                optionType: optionData.Option_Type,
+                optionType: (int)optionData.Option_Type,
                 optionValue: optionData.Option_Value
             );
             return statBookmark;

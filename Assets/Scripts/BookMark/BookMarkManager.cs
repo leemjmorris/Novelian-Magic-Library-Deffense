@@ -14,6 +14,9 @@ public class BookMarkManager : MonoBehaviour
     // 보유한 모든 책갈피
     private List<BookMark> ownedBookmarks = new List<BookMark>();
 
+    // JML: 책갈피 추가 이벤트 (UI 갱신용)
+    public event System.Action<BookMark> OnBookmarkAdded;
+
     private void Awake()
     {
         if (instance != null && instance != this)
@@ -39,6 +42,9 @@ public class BookMarkManager : MonoBehaviour
 
         ownedBookmarks.Add(bookmark);
         Debug.Log($"[BookMarkManager] 책갈피 추가: {bookmark}");
+
+        // JML: 이벤트 발생 (UI 갱신용)
+        OnBookmarkAdded?.Invoke(bookmark);
     }
 
     /// <summary>
