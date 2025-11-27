@@ -13,6 +13,8 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
 
     // JML: 실제 책갈피 데이터
     private BookMark bookMarkData;
+    public BookMark BookMarkData => bookMarkData;  // 외부에서 접근용
+
     private BookMarkInfo bookMarkInfo;
     private LibraryBookMarkInfoPanel libraryBookMarkInfoPanel;
 

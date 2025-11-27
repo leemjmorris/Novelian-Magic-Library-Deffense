@@ -132,6 +132,23 @@ public class BookmarkEquipPanel : MonoBehaviour
     }
 
     /// <summary>
+    /// 특정 책갈피에 해당하는 슬롯 찾기
+    /// </summary>
+    public CraftSceneBookMarkSlot FindSlotByBookmark(BookMark bookmark)
+    {
+        if (bookmark == null) return null;
+
+        foreach (var slot in slotList)
+        {
+            if (slot != null && slot.BookMarkData == bookmark)
+            {
+                return slot;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
     /// 패널 닫기
     /// </summary>
     public void ClosePanel()
