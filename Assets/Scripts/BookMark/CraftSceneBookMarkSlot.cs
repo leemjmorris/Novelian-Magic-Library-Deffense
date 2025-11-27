@@ -14,6 +14,7 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
     // JML: 실제 책갈피 데이터
     private BookMark bookMarkData;
     private BookMarkInfo bookMarkInfo;
+    private LibraryBookMarkInfoPanel libraryBookMarkInfoPanel;
 
     // JML: 로드된 스프라이트 캐싱 (Info 패널에 전달용)
     private Sprite loadedBookmarkSprite;
@@ -36,11 +37,25 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
         GameObject choicePanel,
         GameObject bookMarkInfoPanel)
     {
+        // JML: 장착 아이콘 즉시 설정 (await 전에 먼저 설정하여 깜빡임 방지)
+        if (equipIcon != null)
+        {
+            bool isEquipped = bookMark != null && bookMark.IsEquipped;
+            equipIcon.SetActive(isEquipped);
+            Debug.Log($"[CraftSceneBookMarkSlot] Init - 책갈피: {bookMark?.Name}, IsEquipped: {bookMark?.IsEquipped}, equipIcon 활성화: {isEquipped}");
+        }
+
         // JML: 데이터 저장
         this.bookMarkData = bookMark;
         this.choicePanel = choicePanel;
         this.bookMarkInfoPanel = bookMarkInfoPanel;
-        this.bookMarkInfo = bookMarkInfoPanel.GetComponent<BookMarkInfo>();
+
+        // JML: 패널 타입에 따라 컴포넌트 가져오기
+        if (bookMarkInfoPanel != null)
+        {
+            this.bookMarkInfo = bookMarkInfoPanel.GetComponent<BookMarkInfo>();
+            this.libraryBookMarkInfoPanel = bookMarkInfoPanel.GetComponent<LibraryBookMarkInfoPanel>();
+        }
 
         // JML: 어드레서블로 스프라이트 로드
         Sprite categorySprite = await Addressables.LoadAssetAsync<Sprite>(categorySpriteKey).ToUniTask();
@@ -50,12 +65,6 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
         loadedBookmarkSprite = bookmarkSprite;
 
         SetIcons(categorySprite, bookmarkSprite);
-
-        // JML: 장착 여부에 따라 equipIcon 활성화/비활성화
-        if (equipIcon != null)
-        {
-            equipIcon.SetActive(bookMark.IsEquipped);
-        }
     }
 
     private void SetIcons(Sprite categorySprite, Sprite bookmarkSprite)
@@ -66,20 +75,52 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
             bookMarkIcon.sprite = bookmarkSprite;
     }
 
+    /// <summary>
+    /// 장착 아이콘 활성/비활성화
+    /// </summary>
+    public void SetEquipIconActive(bool active)
+    {
+        if (equipIcon != null)
+        {
+            equipIcon.SetActive(active);
+        }
+    }
+
     public void OnClickSlot()
     {
         Debug.Log("[CraftSceneBookMarkSlot] Slot clicked!");
 
-        if (bookMarkData != null && bookMarkInfo != null)
+        if (bookMarkData == null)
         {
-            // JML: 책갈피 정보를 Info 패널에 전달
-            string description = GenerateDescription(bookMarkData);
+            // 데이터 없으면 패널만 활성화 (기존 동작)
+            if (bookMarkInfoPanel != null)
+                bookMarkInfoPanel.SetActive(true);
+            return;
+        }
+
+        string description = GenerateDescription(bookMarkData);
+
+        // LibraryBookMarkInfoPanel 사용 (LibraryManagementScene)
+        if (libraryBookMarkInfoPanel != null)
+        {
+            libraryBookMarkInfoPanel.OpenInfoPanel(
+                loadedBookmarkSprite,
+                bookMarkData.Name,
+                description,
+                bookMarkData,
+                this  // 슬롯 참조 전달
+            );
+        }
+        // BookMarkInfo 사용 (BookMarkCraftScene)
+        else if (bookMarkInfo != null)
+        {
             bookMarkInfo.OpenInfoPanel(loadedBookmarkSprite, bookMarkData.Name, description);
         }
         else
         {
-            // JML: 데이터 없으면 패널만 활성화 (기존 동작)
-            bookMarkInfoPanel.SetActive(true);
+            // 둘 다 없으면 패널만 활성화
+            if (bookMarkInfoPanel != null)
+                bookMarkInfoPanel.SetActive(true);
         }
     }
 
