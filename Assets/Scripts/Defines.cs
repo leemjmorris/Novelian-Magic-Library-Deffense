@@ -114,7 +114,9 @@ public enum BookmarkType
 {
     None = 0,
     Stat = 1,
-    Skill = 2
+    Skill = 2,
+    SubSkill = 3,   // JML: 보조스킬 (추후 구현)
+    All = 99        // JML: 전체 필터용
 }
 
 public enum CurrencyType

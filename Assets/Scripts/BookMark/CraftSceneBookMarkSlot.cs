@@ -7,6 +7,7 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
 {
     [SerializeField] private Image categoryIcon;
     [SerializeField] private Image bookMarkIcon;
+    [SerializeField] private GameObject equipIcon;
     [SerializeField] private GameObject bookMarkInfoPanel;
     [SerializeField] private GameObject choicePanel;
 
@@ -16,6 +17,9 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
 
     // JML: 로드된 스프라이트 캐싱 (Info 패널에 전달용)
     private Sprite loadedBookmarkSprite;
+
+    // JML: 필터링용 타입 프로퍼티
+    public BookmarkType BookmarkType => bookMarkData?.Type ?? BookmarkType.None;
 
     /// <summary>
     /// 슬롯 초기화 - BookMark 데이터와 아이콘 키를 받음
@@ -46,6 +50,12 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
         loadedBookmarkSprite = bookmarkSprite;
 
         SetIcons(categorySprite, bookmarkSprite);
+
+        // JML: 장착 여부에 따라 equipIcon 활성화/비활성화
+        if (equipIcon != null)
+        {
+            equipIcon.SetActive(bookMark.IsEquipped);
+        }
     }
 
     private void SetIcons(Sprite categorySprite, Sprite bookmarkSprite)

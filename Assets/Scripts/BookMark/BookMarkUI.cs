@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
+using MoreMountains.Feedbacks;
 using NovelianMagicLibraryDefense.Core;
 using TMPro;
 using UnityEngine;
@@ -23,6 +24,7 @@ public class BookMarkUI : MonoBehaviour
     [SerializeField] private GameObject BookmarkUISlotPrefab;
     [SerializeField] private Transform statBookmarkSlotParent;
     [SerializeField] private GameObject bookMarkInfoPanel;
+    [SerializeField] private TMP_Dropdown filterDropdown;
 
     [Header("Recipe Panel")]
     [SerializeField] private GameObject recipePanel;
@@ -111,6 +113,12 @@ public class BookMarkUI : MonoBehaviour
         {
             BookMarkManager.Instance.OnBookmarkAdded += OnBookmarkAdded;
         }
+
+        // JML: 필터 드롭다운 이벤트 연결
+        if (filterDropdown != null)
+        {
+            filterDropdown.onValueChanged.AddListener(OnFilterChanged);
+        }
     }
 
     private void OnDestroy()
@@ -142,6 +150,12 @@ public class BookMarkUI : MonoBehaviour
         if (BookMarkManager.Instance != null)
         {
             BookMarkManager.Instance.OnBookmarkAdded -= OnBookmarkAdded;
+        }
+
+        // JML: 필터 드롭다운 이벤트 해제
+        if (filterDropdown != null)
+        {
+            filterDropdown.onValueChanged.RemoveListener(OnFilterChanged);
         }
     }
 
@@ -465,6 +479,43 @@ public class BookMarkUI : MonoBehaviour
     }
 
     /// <summary>
+    /// JML: 필터 드롭다운 변경 시 슬롯 필터링
+    /// 드롭다운 인덱스: 0=스텟, 1=스킬, 2=보조스킬(추후), 3=전체
+    /// </summary>
+    private void OnFilterChanged(int index)
+    {
+        // JML: 드롭다운 인덱스를 BookmarkType으로 변환
+        BookmarkType filterType = index switch
+        {
+            0 => BookmarkType.All,
+            1 => BookmarkType.Stat,
+            2 => BookmarkType.Skill,
+            3 => BookmarkType.SubSkill,  // 추후 구현
+             _ => BookmarkType.All
+        };
+
+        // JML: 슬롯들 필터링
+        foreach (var slot in bookSlotList)
+        {
+            if (slot == null) continue;
+
+            if (filterType == BookmarkType.All)
+            {
+                // 전체 보기: 모든 슬롯 활성화
+                slot.gameObject.SetActive(true);
+            }
+            else
+            {
+                // 특정 타입만 표시
+                bool shouldShow = (slot.BookmarkType == filterType);
+                slot.gameObject.SetActive(shouldShow);
+            }
+        }
+
+        Debug.Log($"[BookMarkUI] 필터 변경: {filterType}");
+    }
+
+    /// <summary>
     /// JML: 카테고리 아이콘 키 반환
     /// TODO: 나중에 IconPathTable에서 조회하도록 변경
     /// </summary>
@@ -472,8 +523,8 @@ public class BookMarkUI : MonoBehaviour
     {
         return type switch
         {
-            BookmarkType.Stat => "PictoIcon_Attack",
-            BookmarkType.Skill => "PictoIcon_Attack",
+            BookmarkType.Stat => "PictoIcon_Buff",
+            BookmarkType.Skill => "PictoIcon_Battle",
             _ => "PictoIcon_Attack"
         };
     }

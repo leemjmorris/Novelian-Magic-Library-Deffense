@@ -1860,7 +1860,7 @@ GameObject:
   - component: {fileID: 476630684}
   - component: {fileID: 476630683}
   m_Layer: 5
-  m_Name: Dropdown
+  m_Name: FilterDropdown
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1939,7 +1939,10 @@ MonoBehaviour:
   m_MultiSelect: 0
   m_Options:
     m_Options:
-    - m_Text: "\uC2A4\uD15F"
+    - m_Text: "\uC804\uCCB4"
+      m_Image: {fileID: 0}
+      m_Color: {r: 1, g: 1, b: 1, a: 1}
+    - m_Text: "\uC2A4\uD0EF"
       m_Image: {fileID: 0}
       m_Color: {r: 1, g: 1, b: 1, a: 1}
     - m_Text: "\uC2A4\uD0AC"
@@ -5147,7 +5150,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uC2A4\uD15F"
+  m_text: "\uC804\uCCB4"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: c0abb1aa60f13734ea6c1f447b1d19e2, type: 2}
   m_sharedMaterial: {fileID: -4949568771798549868, guid: c0abb1aa60f13734ea6c1f447b1d19e2, type: 2}
@@ -19820,6 +19823,7 @@ MonoBehaviour:
   BookmarkUISlotPrefab: {fileID: 1295064869796971210, guid: a93cd4642ad8f134db9d34329be41f2d, type: 3}
   statBookmarkSlotParent: {fileID: 588579695}
   bookMarkInfoPanel: {fileID: 1215711404}
+  filterDropdown: {fileID: 476630683}
   recipePanel: {fileID: 7697575698864833324}
   statRecipeLayout: {fileID: 277210503784955081}
   skillRecipeLayout: {fileID: 1048204639}
