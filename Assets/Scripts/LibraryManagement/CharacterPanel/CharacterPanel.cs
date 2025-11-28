@@ -9,16 +9,16 @@ public class CharacterPanel : MonoBehaviour
     [SerializeField] private GameObject characterInfoPanel;
     [SerializeField] private CharacterInfoPanel infoPanel;
 
-    
+
     private List<LibraryCharacterSlot> characterSlots = new List<LibraryCharacterSlot>();
 
     private async UniTaskVoid Start()
     {
         // CSV 로딩 완료될 때까지 대기
         await UniTask.WaitUntil(() => CSVLoader.Instance != null && CSVLoader.Instance.IsInit);
-        
+
         CsvTable<CharacterData> characterTable = CSVLoader.Instance.GetTable<CharacterData>();
-        
+
         // null 체크도 추가
         if (characterTable == null)
         {
@@ -46,5 +46,3 @@ public class CharacterPanel : MonoBehaviour
         characterInfoPanel.SetActive(false);
     }
 }
-
-// 장르 이름 강화 정렬
