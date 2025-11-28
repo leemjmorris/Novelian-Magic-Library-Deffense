@@ -14,16 +14,16 @@ namespace NovelianMagicLibraryDefense.UI
     {
          public void OnLobbyButton()
         {
-            LoadSceneWithLoadingUI("LobbyScene").Forget();
+            LoadSceneWithFadeOnly("LobbyScene").Forget();
         }
         public void OnBookMarkButton()
         {
-            LoadSceneWithLoadingUI("BookMarkCraftScene").Forget();
+            LoadSceneWithFadeOnly("BookMarkCraftScene").Forget();
         }
 
         public void OnGameStartButton()
         {
-            LoadSceneWithLoadingUI("StageScene").Forget();
+            LoadSceneWithFadeOnly("StageScene").Forget();
         }
 
 
@@ -34,12 +34,40 @@ namespace NovelianMagicLibraryDefense.UI
 
         public void OnInventoryButton()
         {
-            LoadSceneWithLoadingUI("Inventory").Forget();
+            LoadSceneWithFadeOnly("Inventory").Forget();
         }
 
         public void OnLibraryManagementButton()
         {
-            LoadSceneWithLoadingUI("LibraryManagementScene(LCB)").Forget();
+            LoadSceneWithFadeOnly("LibraryManagementScene(LCB)").Forget();
+        }
+
+        /// <summary>
+        /// LCB: 로딩 UI 없이 페이드 효과만으로 씬을 전환하는 메서드
+        /// LCB: 페이드 아웃 → 씬 로드 → 페이드 인
+        /// </summary>
+        private async UniTaskVoid LoadSceneWithFadeOnly(string sceneName)
+        {
+            // 매니저가 없으면 직접 씬 로드 (fallback)
+            if (FadeController.Instance == null)
+            {
+                Debug.LogWarning("FadeController not available, loading scene directly");
+                await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
+                return;
+            }
+
+            // Step 1: 페이드 아웃 (화면 어두워짐)
+            FadeController.Instance.fadePanel.SetActive(true);
+            await FadeController.Instance.FadeOut(0.5f);
+
+            // Step 2: 씬 로드
+            await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
+
+            // Step 3: 페이드 인 (새 씬 밝아짐)
+            await FadeController.Instance.FadeIn(0.5f);
+
+            // Step 4: 페이드 패널 비활성화
+            FadeController.Instance.fadePanel.SetActive(false);
         }
 
         /// <summary>
