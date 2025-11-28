@@ -196,7 +196,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
     }
 
     /// <summary>
-    /// 변경 버튼 클릭 - 기존 책갈피 해제 후 새 책갈피 장착
+    /// 변경 버튼 클릭 - 기존 책갈피 해제 후 새 책갈피 장착 (스왑 지원)
     /// </summary>
     private void OnChangeButtonClicked()
     {
@@ -209,37 +209,37 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
         int targetSlotIndex = characterInfoPanel.GetSelectedSlotIndex();
         int characterID = characterInfoPanel.CharacterID;
 
-        // Case 1: 현재 책갈피가 다른 슬롯에 장착되어 있는 경우 → 기존 슬롯에서 해제
+        // 스왑을 위한 변수 저장
+        int oldSlotIndex = -1;
+        bool needsSwap = false;
+        BookMark bookmarkToSwap = previousBookmark; // 타겟 슬롯에 있던 책갈피
+
+        // Case 1: 현재 책갈피가 다른 슬롯에 장착되어 있는 경우
         if (currentBookmark.IsEquipped)
         {
-            int oldSlotIndex = currentBookmark.EquipSlotIndex;
+            oldSlotIndex = currentBookmark.EquipSlotIndex;
+
+            // 스왑이 필요한 경우: 현재 책갈피가 장착되어 있고, 타겟 슬롯에도 다른 책갈피가 있음
+            needsSwap = bookmarkToSwap != null && oldSlotIndex != targetSlotIndex;
 
             // 기존 슬롯에서 해제
             BookMarkManager.Instance.UnequipBookmarkFromCharacter(characterID, oldSlotIndex);
-
-            // 기존 슬롯 UI 업데이트
-            characterInfoPanel.UpdateSlotText(oldSlotIndex, $"책갈피 슬롯 {oldSlotIndex + 1}");
         }
 
         // Case 2: 타겟 슬롯에 다른 책갈피가 있는 경우 → 해제
-        if (previousBookmark != null)
+        CraftSceneBookMarkSlot previousSlot = null;
+        if (bookmarkToSwap != null)
         {
-            // 기존 책갈피의 UI 슬롯 찾기 (equipIcon 비활성화용)
-            CraftSceneBookMarkSlot previousSlot = bookmarkEquipPanel != null
-                ? bookmarkEquipPanel.FindSlotByBookmark(previousBookmark)
+            // 기존 책갈피의 UI 슬롯 찾기 (equipIcon 업데이트용)
+            previousSlot = bookmarkEquipPanel != null
+                ? bookmarkEquipPanel.FindSlotByBookmark(bookmarkToSwap)
                 : null;
 
             // 타겟 슬롯의 기존 책갈피 해제
             BookMarkManager.Instance.UnequipBookmarkFromCharacter(characterID, targetSlotIndex);
-
-            // 기존 책갈피 슬롯의 equipIcon 비활성화
-            if (previousSlot != null)
-            {
-                previousSlot.SetEquipIconActive(false);
-            }
         }
 
-        // 새 책갈피 장착
+        // 새 책갈피를 타겟 슬롯에 장착
         bool equipSuccess = BookMarkManager.Instance.EquipBookmarkToCharacter(
             characterID,
             currentBookmark,
@@ -250,7 +250,6 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
         {
             // UI 업데이트
             characterInfoPanel.UpdateSlotText(targetSlotIndex, currentBookmark.Name);
-            characterInfoPanel.RefreshBookmarkUI();
 
             // 새 책갈피 슬롯의 장착 아이콘 활성화
             if (currentSlot != null)
@@ -259,6 +258,58 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
             }
 
             Debug.Log($"[LibraryBookMarkInfoPanel] 책갈피 '{currentBookmark.Name}' 슬롯 {targetSlotIndex}으로 변경 완료!");
+
+            // 스왑 처리: 타겟 슬롯에 있던 책갈피를 원래 슬롯으로 이동
+            if (needsSwap && bookmarkToSwap != null && oldSlotIndex >= 0)
+            {
+                bool swapSuccess = BookMarkManager.Instance.EquipBookmarkToCharacter(
+                    characterID,
+                    bookmarkToSwap,
+                    oldSlotIndex
+                );
+
+                if (swapSuccess)
+                {
+                    // 스왑된 책갈피의 슬롯 UI 업데이트
+                    characterInfoPanel.UpdateSlotText(oldSlotIndex, bookmarkToSwap.Name);
+
+                    // 스왑된 책갈피의 equipIcon은 여전히 활성 상태 유지
+                    if (previousSlot != null)
+                    {
+                        previousSlot.SetEquipIconActive(true);
+                    }
+
+                    Debug.Log($"[LibraryBookMarkInfoPanel] 스왑 완료: '{bookmarkToSwap.Name}' → 슬롯 {oldSlotIndex}");
+                }
+                else
+                {
+                    // 스왑 실패 시 기존 슬롯 텍스트 초기화
+                    characterInfoPanel.UpdateSlotText(oldSlotIndex, $"책갈피 슬롯 {oldSlotIndex + 1}");
+
+                    if (previousSlot != null)
+                    {
+                        previousSlot.SetEquipIconActive(false);
+                    }
+
+                    Debug.LogWarning($"[LibraryBookMarkInfoPanel] 스왑 실패: '{bookmarkToSwap.Name}'");
+                }
+            }
+            else
+            {
+                // 스왑이 아닌 경우: 기존 슬롯 UI 업데이트
+                if (oldSlotIndex >= 0)
+                {
+                    characterInfoPanel.UpdateSlotText(oldSlotIndex, $"책갈피 슬롯 {oldSlotIndex + 1}");
+                }
+
+                // 기존 책갈피 슬롯의 equipIcon 비활성화
+                if (previousSlot != null)
+                {
+                    previousSlot.SetEquipIconActive(false);
+                }
+            }
+
+            characterInfoPanel.RefreshBookmarkUI();
 
             // 패널 닫기
             ClosePanel();
