@@ -27,6 +27,25 @@ public class DeckSlot : MonoBehaviour
     public int SlotIndex => slotIndex;
     public bool IsSet => characterId > 0;
 
+    private void OnEnable()
+    {
+        // 초기화
+        if (selectFrame != null)
+            selectFrame.SetActive(false);
+    }
+    private void OnDisable()
+    {
+        StopBlinking();
+        if (selectFrame != null)
+            selectFrame.SetActive(false);
+    }
+
+    private void Start()
+    {
+        // 시작하면 깜빡이기 시작
+        ClearSlot();
+    }
+
     /// <summary>
     /// 슬롯 선택 상태 설정 (SeletFrame 활성화/비활성화)
     /// </summary>
@@ -34,12 +53,6 @@ public class DeckSlot : MonoBehaviour
     {
         if (selectFrame != null)
             selectFrame.SetActive(isSelected);
-    }
-
-    private void Start()
-    {
-        // 시작하면 깜빡이기 시작
-        ClearSlot();
     }
 
     /// <summary>
