@@ -9,7 +9,7 @@ using System.Threading;
 public class DeckSlot : MonoBehaviour
 {
     [SerializeField] private CanvasGroup plusCanvasGroup;
-    [SerializeField] private GameObject characterInfoGroup; // 캐릭터 정보 UI 그룹
+    [SerializeField] private GameObject selectFrame; // 선택 프레임 (SeletFrame)
     [SerializeField] private Image characterImage;
     [SerializeField] private Image genreIcon;
     [SerializeField] private TextMeshProUGUI characterNameText;
@@ -26,6 +26,15 @@ public class DeckSlot : MonoBehaviour
     public int CharacterId => characterId;
     public int SlotIndex => slotIndex;
     public bool IsSet => characterId > 0;
+
+    /// <summary>
+    /// 슬롯 선택 상태 설정 (SeletFrame 활성화/비활성화)
+    /// </summary>
+    public void SetSelected(bool isSelected)
+    {
+        if (selectFrame != null)
+            selectFrame.SetActive(isSelected);
+    }
 
     private void Start()
     {
@@ -80,8 +89,6 @@ public class DeckSlot : MonoBehaviour
             plusCanvasGroup.alpha = 1f;
 
         // 캐릭터 정보 UI 활성화
-        if (characterInfoGroup != null)
-            characterInfoGroup.SetActive(true);
         if (genreIcon != null)
             genreIcon.gameObject.SetActive(true);
         if (characterNameText != null)
@@ -117,8 +124,6 @@ public class DeckSlot : MonoBehaviour
         characterId = -1;
 
         // 캐릭터 정보 숨기기
-        if (characterInfoGroup != null)
-            characterInfoGroup.SetActive(false);
         if (genreIcon != null)
             genreIcon.gameObject.SetActive(false);
         if (characterNameText != null)
@@ -207,46 +212,22 @@ public class DeckSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// 깜빡이기 루프 (페이드인 → 페이드아웃 반복)
+    /// 깜빡이기 루프 (Time.time 기반 동기화)
     /// </summary>
     private async UniTaskVoid BlinkLoopAsync(CancellationToken ct)
     {
         if (plusCanvasGroup == null) return;
 
+        float totalDuration = fadeInDuration + fadeOutDuration;
+
         while (!ct.IsCancellationRequested)
         {
-            // 페이드 인 (투명 → 불투명)
-            await FadePlusAsync(0f, 1f, fadeInDuration, ct);
-
-            // 페이드 아웃 (불투명 → 투명)
-            await FadePlusAsync(1f, 0f, fadeOutDuration, ct);
-        }
-    }
-
-    /// <summary>
-    /// plusCanvasGroup 페이드 애니메이션 실행
-    /// </summary>
-    private async UniTask FadePlusAsync(float from, float to, float duration, CancellationToken ct)
-    {
-        if (plusCanvasGroup == null) return;
-
-        float elapsed = 0f;
-        plusCanvasGroup.alpha = from;
-
-        while (elapsed < duration)
-        {
-            if (ct.IsCancellationRequested) return;
-
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-
-            plusCanvasGroup.alpha = Mathf.Lerp(from, to, t);
+            // Time.time 기반으로 알파값 계산 (모든 슬롯이 같은 시간 기준)
+            float t = Mathf.PingPong(Time.time / totalDuration * 2f, 1f);
+            plusCanvasGroup.alpha = t;
 
             await UniTask.Yield(ct);
         }
-
-        // 최종값 보정
-        plusCanvasGroup.alpha = to;
     }
 
     private void OnDestroy()

@@ -22,6 +22,9 @@ public class TeamSetupPanel : MonoBehaviour
     [Header("Deck Slots")]
     [SerializeField] private List<DeckSlot> deckSlots = new List<DeckSlot>();
 
+    [Header("Deck Unset Panel")]
+    [SerializeField] private GameObject deckUnsetPanel;
+
     private List<DeckCharacterSlot> characterSlots = new List<DeckCharacterSlot>();
     private int selectedDeckSlotIndex = -1; // 현재 선택된 덱 슬롯
     private bool isInitialized = false;
@@ -118,11 +121,27 @@ public class TeamSetupPanel : MonoBehaviour
     /// </summary>
     public void OnDeckSlotClicked(int slotIndex)
     {
+        // 기존 선택된 슬롯의 프레임 비활성화
+        if (selectedDeckSlotIndex >= 0 && selectedDeckSlotIndex < deckSlots.Count)
+        {
+            deckSlots[selectedDeckSlotIndex].SetSelected(false);
+        }
+
+        // 새 슬롯 선택 및 프레임 활성화
         selectedDeckSlotIndex = slotIndex;
+        deckSlots[slotIndex].SetSelected(true);
+
         Debug.Log($"[TeamSetupPanel] 덱 슬롯 {slotIndex} 선택됨");
 
-        // 캐릭터 탭 열기
-        OnTabCharacterButtonClicked();
+        // 캐릭터가 설정되어 있으면 해제 패널 표시, 아니면 캐릭터 탭 열기
+        if (deckSlots[slotIndex].IsSet)
+        {
+            ShowDeckUnsetPanel();
+        }
+        else
+        {
+            OnTabCharacterButtonClicked();
+        }
     }
 
     /// <summary>
@@ -161,7 +180,8 @@ public class TeamSetupPanel : MonoBehaviour
         // 선택된 덱 슬롯에 캐릭터 설정
         deckSlots[selectedDeckSlotIndex].SetCharacter(characterId);
 
-        // 선택 초기화
+        // 선택 프레임 비활성화 및 선택 초기화
+        deckSlots[selectedDeckSlotIndex].SetSelected(false);
         selectedDeckSlotIndex = -1;
 
         Debug.Log($"[TeamSetupPanel] 캐릭터 ID {characterId} 설정 완료. 현재 덱: {GetSetDeckCount()}/4");
@@ -202,6 +222,84 @@ public class TeamSetupPanel : MonoBehaviour
         partyTab.SetActive(false);
         characterTab.SetActive(true);
     }
+
+    #region Deck Unset Panel
+
+    /// <summary>
+    /// 덱 해제 패널 표시
+    /// </summary>
+    private void ShowDeckUnsetPanel()
+    {
+        if (deckUnsetPanel != null)
+        {
+            deckUnsetPanel.SetActive(true);
+            Debug.Log("[TeamSetupPanel] 덱 해제 패널 표시");
+        }
+    }
+
+    /// <summary>
+    /// 덱 해제 패널 숨기기
+    /// </summary>
+    private void HideDeckUnsetPanel()
+    {
+        if (deckUnsetPanel != null)
+        {
+            deckUnsetPanel.SetActive(false);
+            Debug.Log("[TeamSetupPanel] 덱 해제 패널 숨김");
+        }
+    }
+
+    /// <summary>
+    /// 해제 버튼 클릭 (Inspector Button OnClick에서 연결)
+    /// </summary>
+    public void OnUnsetButtonClicked()
+    {
+        if (selectedDeckSlotIndex >= 0 && selectedDeckSlotIndex < deckSlots.Count)
+        {
+            int characterId = deckSlots[selectedDeckSlotIndex].CharacterId;
+
+            // UI 슬롯 초기화
+            deckSlots[selectedDeckSlotIndex].ClearSlot();
+
+            // DeckManager에서도 해제
+            if (DeckManager.Instance != null)
+            {
+                DeckManager.Instance.SetCharacterAtIndex(selectedDeckSlotIndex, 0);
+            }
+
+            Debug.Log($"[TeamSetupPanel] 슬롯 {selectedDeckSlotIndex}에서 캐릭터 ID {characterId} 해제 완료");
+        }
+
+        // 선택 프레임 비활성화 및 선택 초기화
+        if (selectedDeckSlotIndex >= 0 && selectedDeckSlotIndex < deckSlots.Count)
+        {
+            deckSlots[selectedDeckSlotIndex].SetSelected(false);
+        }
+        selectedDeckSlotIndex = -1;
+
+        // 패널 숨기기
+        HideDeckUnsetPanel();
+    }
+
+    /// <summary>
+    /// 취소 버튼 클릭 (Inspector Button OnClick에서 연결)
+    /// </summary>
+    public void OnCancelButtonClicked()
+    {
+        // 선택 프레임 비활성화 및 선택 초기화
+        if (selectedDeckSlotIndex >= 0 && selectedDeckSlotIndex < deckSlots.Count)
+        {
+            deckSlots[selectedDeckSlotIndex].SetSelected(false);
+        }
+        selectedDeckSlotIndex = -1;
+
+        // 패널 숨기기
+        HideDeckUnsetPanel();
+
+        Debug.Log("[TeamSetupPanel] 덱 해제 취소");
+    }
+
+    #endregion
 
     private void OnDisable()
     {
