@@ -147,15 +147,24 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// JML: 스킬 ID로 스킬 이름 가져오기
+    /// JML: 스킬 ID로 스킬 이름 가져오기 (MainSkillTable/SupportSkillTable 연동)
     /// </summary>
     private string GetSkillName(int skillID)
     {
-        var skillData = CSVLoader.Instance.GetData<SkillData>(skillID);
-        if (skillData != null && !string.IsNullOrEmpty(skillData.Skill_Name))
+        // MainSkillTable에서 먼저 검색
+        var mainSkillData = CSVLoader.Instance.GetData<MainSkillData>(skillID);
+        if (mainSkillData != null && !string.IsNullOrEmpty(mainSkillData.skill_name))
         {
-            return skillData.Skill_Name;
+            return mainSkillData.skill_name;
         }
+
+        // SupportSkillTable에서 검색
+        var supportSkillData = CSVLoader.Instance.GetData<SupportSkillData>(skillID);
+        if (supportSkillData != null && !string.IsNullOrEmpty(supportSkillData.support_name))
+        {
+            return supportSkillData.support_name;
+        }
+
         return $"알 수 없는 스킬 ({skillID})";
     }
 

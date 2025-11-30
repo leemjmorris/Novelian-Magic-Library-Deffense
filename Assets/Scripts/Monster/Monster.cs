@@ -137,7 +137,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 wall.TakeDamage(damage);
                 monsterAnimator.SetTrigger(ANIM_ATTACK);
                 attackTimer = 0f;
-                Debug.Log($"[Monster] Attacked Wall! Damage: {damage}");
+                
             }
         }
         else if (!isDizzy)

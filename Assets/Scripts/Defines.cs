@@ -60,9 +60,10 @@ public static class AddressableKey
     // 스킬 Prefab 데이터베이스
     public static readonly string SkillPrefabDatabase = "SkillPrefabDatabase";
 
+    // JML: 범용 프리팹 방식 - 단일 키 반환 (Issue #320)
     public static string GetCharacterKey(int characterId)
     {
-        return $"Character_{characterId:D2}";
+        return "Character";  // 모든 캐릭터가 동일한 프리팹 사용
     }
 
     public static string GetCardSpriteKey(int characterId)

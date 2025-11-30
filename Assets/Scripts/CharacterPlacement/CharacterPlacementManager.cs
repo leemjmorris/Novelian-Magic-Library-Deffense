@@ -50,31 +50,25 @@ public class CharacterPlacementManager : MonoBehaviour
         await PreloadCharacterPrefabs();
     }
 
-    //JML: Preload all character prefabs from Addressables
+    //JML: 범용 프리팹 1개 로드 (Issue #320)
     private async UniTask PreloadCharacterPrefabs()
     {
-        Debug.Log("[CharacterPlacementManager] Preloading character prefabs...");
+        Debug.Log("[CharacterPlacementManager] Preloading character prefab...");
 
-        //TODO: 하드코딩 (나중에 CSV로 대체: CSVLoader.GetAll<CharacterTableData>())
-        int[] characterIds = { 1, 2, 3, 4, 5 };
+        string characterKey = "Character";  // 단일 프리팹 키
 
-        foreach (int characterId in characterIds)
+        try
         {
-            string characterKey = AddressableKey.GetCharacterKey(characterId);
-
-            try
-            {
-                GameObject prefab = await Addressables.LoadAssetAsync<GameObject>(characterKey).Task;
-                loadedCharacterPrefabs[characterKey] = prefab;
-                Debug.Log($"[CharacterPlacementManager] Loaded character ID {characterId}: {characterKey}");
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"[CharacterPlacementManager] Failed to load '{characterKey}' (ID: {characterId}): {e.Message}");
-            }
+            GameObject prefab = await Addressables.LoadAssetAsync<GameObject>(characterKey).Task;
+            loadedCharacterPrefabs[characterKey] = prefab;
+            Debug.Log($"[CharacterPlacementManager] Loaded character prefab: {characterKey}");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[CharacterPlacementManager] Failed to load '{characterKey}': {e.Message}");
         }
 
-        Debug.Log($"[CharacterPlacementManager] Preloaded {loadedCharacterPrefabs.Count}/{characterIds.Length} character prefabs");
+        Debug.Log("[CharacterPlacementManager] Character prefab preload complete");
         isPreloadComplete = true;
     }
 
@@ -178,6 +172,13 @@ public class CharacterPlacementManager : MonoBehaviour
             gridParent
         );
         characterObj.name = $"Character_{characterId}_Slot{targetSlot.GetSlotIndex()}";
+
+        // JML: CSV 데이터 기반 초기화 (Issue #320)
+        var character = characterObj.GetComponent<Novelian.Combat.Character>();
+        if (character != null)
+        {
+            character.Initialize(characterId);  // CSV에서 스킬/스텟 로드 + 책갈피 적용
+        }
 
         // Place in slot
         targetSlot.PlaceCharacter(characterObj);

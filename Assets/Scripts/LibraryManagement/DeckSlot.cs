@@ -42,8 +42,12 @@ public class DeckSlot : MonoBehaviour
 
     private void Start()
     {
-        // 시작하면 깜빡이기 시작
-        ClearSlot();
+        // 이미 캐릭터가 설정되어 있으면 ClearSlot 호출하지 않음
+        // (TeamSetupPanel.Start에서 RestoreDeckFromManager로 먼저 설정된 경우)
+        if (!IsSet)
+        {
+            ClearSlot();
+        }
     }
 
     /// <summary>
