@@ -268,15 +268,39 @@ public class CardSelectionManager : MonoBehaviour
             return;
         }
 
+        // JML: CSV에서 캐릭터 이름 가져오기 (Issue #320)
+        string characterName = GetCharacterNameFromCSV(characterId);
+        Debug.Log($"[CardSelectionManager] 카드 선택: {characterName} (ID: {characterId})");
+
         if (placementManager != null)
         {
             placementManager.SpawnCharacterById(characterId);
-            Debug.Log($"[CardSelectionManager] 월드 좌표에 캐릭터 배치 완료: ID {characterId}");
+            Debug.Log($"[CardSelectionManager] 캐릭터 배치 완료: {characterName} (ID: {characterId})");
         }
         else
         {
             Debug.LogError("[CardSelectionManager] CharacterPlacementManager를 찾을 수 없습니다!");
         }
+    }
+
+    /// <summary>
+    /// JML: CSV에서 캐릭터 이름 가져오기 (Issue #320)
+    /// </summary>
+    string GetCharacterNameFromCSV(int characterId)
+    {
+        if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
+        {
+            return $"Character_{characterId}";
+        }
+
+        var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
+        if (characterData == null)
+        {
+            return $"Character_{characterId}";
+        }
+
+        var stringData = CSVLoader.Instance.GetData<StringTable>(characterData.Character_Name_ID);
+        return stringData?.Text ?? $"Character_{characterId}";
     }
 
     public void ShowCardPanel()

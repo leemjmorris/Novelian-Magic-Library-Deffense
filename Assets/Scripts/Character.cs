@@ -149,14 +149,61 @@ namespace Novelian.Combat
         private bool isInitialized = false;
         private bool isChanneling = false;
 
+        // JML: 책갈피 시스템 (Issue #320)
+        private int characterId = -1;
+        private bool isManuallyInitialized = false;  // Initialize()로 초기화되었는지 여부
+
         private void Start()
         {
+            // Initialize()로 이미 초기화되었으면 스킵
+            if (isManuallyInitialized) return;
+
+            // 기존 방식 (프리팹 Inspector 값 사용) - 하위 호환성
+            ApplyBookmarksIfAvailable();
             LoadSkillData();
             InitializeProjectilePool();
             InitializeActiveSkillPool();
             StartAttackLoop();
             StartActiveSkillLoop();
             isInitialized = true;
+        }
+
+        /// <summary>
+        /// JML: CSV 데이터 기반 초기화 (Issue #320)
+        /// CharacterPlacementManager에서 호출
+        /// </summary>
+        public void Initialize(int csvCharacterId)
+        {
+            characterId = csvCharacterId;
+            isManuallyInitialized = true;
+
+            Debug.Log($"[Character] Initialize 시작 (CharacterID: {csvCharacterId})");
+
+            // 1. CSV에서 캐릭터 데이터 로드
+            var characterData = CSVLoader.Instance?.GetData<CharacterData>(csvCharacterId);
+            if (characterData != null)
+            {
+                // Base_Skill_ID를 기본 공격 스킬로 설정
+                basicAttackSkillId = characterData.Base_Skill_ID;
+                Debug.Log($"[Character] CSV에서 Base_Skill_ID 로드: {basicAttackSkillId}");
+            }
+            else
+            {
+                Debug.LogWarning($"[Character] CharacterData를 찾을 수 없음 (ID: {csvCharacterId}). 기본값 사용.");
+            }
+
+            // 2. 책갈피 적용 (스탯 + 스킬)
+            ApplyBookmarksIfAvailable();
+
+            // 3. 스킬 데이터 로드 및 초기화
+            LoadSkillData();
+            InitializeProjectilePool();
+            InitializeActiveSkillPool();
+            StartAttackLoop();
+            StartActiveSkillLoop();
+
+            isInitialized = true;
+            Debug.Log($"[Character] Initialize 완료 (CharacterID: {csvCharacterId}, BasicSkill: {basicAttackSkillId})");
         }
 
         //LMJ : Load skill data from CSV and PrefabDatabase
@@ -1004,5 +1051,126 @@ namespace Novelian.Combat
             supportSkillId = supportId;
             LoadSkillData();
         }
+
+        #region 책갈피 시스템 (Issue #320)
+
+        /// <summary>
+        /// JML: CharacterPlacementManager에서 호출하여 characterId 설정
+        /// </summary>
+        public void SetCharacterId(int id)
+        {
+            characterId = id;
+        }
+
+        /// <summary>
+        /// JML: characterId 가져오기 (설정되지 않으면 프리팹 이름에서 파싱)
+        /// </summary>
+        private int GetCharacterId()
+        {
+            if (characterId > 0) return characterId;
+
+            // Fallback: 프리팹 이름에서 파싱 "Character_01_Slot0" → 1
+            string objName = gameObject.name;
+            if (objName.Contains("Character_"))
+            {
+                string idPart = objName.Replace("Character_", "").Split('_')[0];
+                if (int.TryParse(idPart, out int parsed))
+                {
+                    return parsed;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// JML: 장착된 책갈피 적용 (스탯 + 스킬)
+        /// 책갈피가 없으면 프리팹 기본값 사용 (하위 호환성)
+        /// </summary>
+        private void ApplyBookmarksIfAvailable()
+        {
+            int charId = GetCharacterId();
+            if (charId <= 0) return;
+
+            if (BookMarkManager.Instance == null) return;
+
+            var bookmarks = BookMarkManager.Instance.GetEquippedBookmarksForCharacter(charId);
+            if (bookmarks == null || bookmarks.Count == 0) return;
+
+            Debug.Log($"[Character] 책갈피 {bookmarks.Count}개 적용 시작 (CharacterID: {charId})");
+
+            foreach (var bookmark in bookmarks)
+            {
+                if (bookmark.Type == BookmarkType.Stat)
+                {
+                    ApplyStatBookmark(bookmark);
+                }
+                else if (bookmark.Type == BookmarkType.Skill)
+                {
+                    ApplySkillBookmark(bookmark);
+                }
+            }
+        }
+
+        /// <summary>
+        /// JML: 스탯 책갈피 적용 (OptionType에 따라 스탯 변형)
+        /// </summary>
+        private void ApplyStatBookmark(BookMark bookmark)
+        {
+            switch (bookmark.OptionType)
+            {
+                case 1: // AttackPower → damageModifier
+                    damageModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 데미지 +{bookmark.OptionValue}% (총 {damageModifier}%)");
+                    break;
+                case 2: // AttackSpeed
+                    attackSpeedModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 공격속도 +{bookmark.OptionValue}% (총 {attackSpeedModifier}%)");
+                    break;
+                case 3: // ProjectileSpeed
+                    projectileSpeedModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 투사체속도 +{bookmark.OptionValue}% (총 {projectileSpeedModifier}%)");
+                    break;
+                case 4: // Range
+                    rangeModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 사거리 +{bookmark.OptionValue}% (총 {rangeModifier}%)");
+                    break;
+                default:
+                    Debug.LogWarning($"[Character] 알 수 없는 OptionType: {bookmark.OptionType}");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// JML: 스킬 책갈피 적용 (MainSkill → activeSkillId, SupportSkill → supportSkillId)
+        /// </summary>
+        private void ApplySkillBookmark(BookMark bookmark)
+        {
+            if (bookmark.SkillID <= 0) return;
+
+            // MainSkillData 확인
+            var mainSkill = CSVLoader.Instance?.GetData<MainSkillData>(bookmark.SkillID);
+            if (mainSkill != null)
+            {
+                if (activeSkillId == 0) // 비어있을 때만 설정
+                {
+                    activeSkillId = bookmark.SkillID;
+                    Debug.Log($"[Character] 스킬 책갈피: activeSkillId = {bookmark.SkillID} ({mainSkill.skill_name})");
+                }
+                return;
+            }
+
+            // SupportSkillData 확인
+            var supportSkill = CSVLoader.Instance?.GetData<SupportSkillData>(bookmark.SkillID);
+            if (supportSkill != null)
+            {
+                if (supportSkillId == 0) // 비어있을 때만 설정
+                {
+                    supportSkillId = bookmark.SkillID;
+                    Debug.Log($"[Character] 서포트 책갈피: supportSkillId = {bookmark.SkillID} ({supportSkill.support_name})");
+                }
+            }
+        }
+
+        #endregion
     }
 }

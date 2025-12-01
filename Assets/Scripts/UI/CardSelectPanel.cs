@@ -254,7 +254,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void OnCardClicked(CardData cardData)
         {
-            Debug.Log($"[CardSelectPanel] Card clicked: {cardData.Type} ID {cardData.Id}");
+            // JML: CSV에서 캐릭터 이름 가져오기 (Issue #320)
+            string characterName = GetCharacterNameFromCSV(cardData.Id);
+            Debug.Log($"[CardSelectPanel] 카드 선택: {characterName} (Type: {cardData.Type}, ID: {cardData.Id})");
 
             // Process card based on type
             if (cardData.Type == CardType.Character)
@@ -263,6 +265,7 @@ namespace NovelianMagicLibraryDefense.UI
                 if (placementManager != null)
                 {
                     placementManager.SpawnCharacterById(cardData.Id);
+                    Debug.Log($"[CardSelectPanel] 캐릭터 배치 완료: {characterName} (ID: {cardData.Id})");
                 }
                 else
                 {
@@ -284,6 +287,26 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
+        /// JML: CSV에서 캐릭터 이름 가져오기 (Issue #320)
+        /// </summary>
+        private string GetCharacterNameFromCSV(int characterId)
+        {
+            if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
+            {
+                return $"Character_{characterId}";
+            }
+
+            var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
+            if (characterData == null)
+            {
+                return $"Character_{characterId}";
+            }
+
+            var stringData = CSVLoader.Instance.GetData<StringTable>(characterData.Character_Name_ID);
+            return stringData?.Text ?? $"Character_{characterId}";
+        }
+
+        /// <summary>
         /// Clear all spawned cards
         /// </summary>
         private void ClearCards()
@@ -299,19 +322,25 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// Get N random character IDs
+        /// JML: DeckManager에서 캐릭터 ID 가져오기 (Issue #320)
         /// </summary>
         private int[] GetRandomCharacterIds(int count)
         {
-            // TODO: Get from CharacterTableData or config
-            // For now, hardcoded pool
-            int[] characterPool = { 1, 2, 3, 4, 5 };
+            // DeckManager에서 덱 가져오기
+            var deck = DeckManager.Instance?.GetValidCharacters();
 
-            int[] selected = new int[count];
-            int[] shuffled = (int[])characterPool.Clone();
+            if (deck == null || deck.Count == 0)
+            {
+                Debug.LogWarning("[CardSelectPanel] DeckManager가 없거나 덱이 비어있습니다!");
+                return new int[0];
+            }
+
+            // 덱에서 랜덤하게 count개 선택
+            int[] selected = new int[Math.Min(count, deck.Count)];
+            var shuffled = new System.Collections.Generic.List<int>(deck);
 
             // Fisher-Yates shuffle
-            for (int i = shuffled.Length - 1; i > 0; i--)
+            for (int i = shuffled.Count - 1; i > 0; i--)
             {
                 int j = UnityEngine.Random.Range(0, i + 1);
                 int temp = shuffled[i];
@@ -319,30 +348,34 @@ namespace NovelianMagicLibraryDefense.UI
                 shuffled[j] = temp;
             }
 
-            Array.Copy(shuffled, selected, count);
+            for (int i = 0; i < selected.Length; i++)
+            {
+                selected[i] = shuffled[i];
+            }
+
+            Debug.Log($"[CardSelectPanel] DeckManager에서 캐릭터 {selected.Length}개 선택: [{string.Join(", ", selected)}]");
             return selected;
         }
 
         /// <summary>
-        /// Get N random mixed cards (character + ability)
+        /// JML: DeckManager 연동된 혼합 카드 (Issue #320)
         /// </summary>
         private CardData[] GetRandomMixedCards(int count)
         {
-            // TODO: Get from CardTableData or config
-            // For now, hardcoded pools
-            int[] characterPool = { 1, 2, 3, 4, 5 };
-            int[] abilityPool = { 1, 2, 3, 4, 5 };
+            // DeckManager에서 캐릭터 풀 가져오기
+            var characterPool = DeckManager.Instance?.GetValidCharacters();
+            int[] abilityPool = { 1, 2, 3, 4, 5 };  // TODO: AbilityTable 연동
 
             CardData[] cards = new CardData[count];
 
             for (int i = 0; i < count; i++)
             {
-                // 50% chance for character or ability
+                // 50% 확률로 캐릭터 또는 어빌리티
                 bool isCharacter = UnityEngine.Random.value > 0.5f;
 
-                if (isCharacter)
+                if (isCharacter && characterPool != null && characterPool.Count > 0)
                 {
-                    int randomId = characterPool[UnityEngine.Random.Range(0, characterPool.Length)];
+                    int randomId = characterPool[UnityEngine.Random.Range(0, characterPool.Count)];
                     cards[i] = new CardData(CardType.Character, randomId);
                 }
                 else

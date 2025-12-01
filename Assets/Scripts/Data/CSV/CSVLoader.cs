@@ -67,6 +67,13 @@ public class CSVLoader : MonoBehaviour
                 RegisterTableAsync<EnhancementLevelData>(AddressableKey.EnhancementLevelTable, x => x.Pw_Level),
                 RegisterTableAsync<CharacterEnhancementData>(AddressableKey.CharacterEnhancementTable, x => x.Character_PwUp_ID),
                 RegisterTableAsync<StringTable>(AddressableKey.StringTable, x => x.Text_ID),
+                RegisterTableAsync<StageData>(AddressableKey.StageTable, x => x.Stage_ID),
+                RegisterTableAsync<WaveData>(AddressableKey.WaveTable, x => x.Wave_ID),
+                RegisterTableAsync<MonsterLevelData>(AddressableKey.MonsterLevelTable, x => x.Mon_Level_ID),
+                RegisterTableAsync<MonsterData>(AddressableKey.MonsterTable, x => x.Monster_ID),
+                RegisterTableAsync<RewardData>(AddressableKey.RewardTable, x => x.Reward_ID),
+                RegisterTableAsync<RewardGroupData>(AddressableKey.RewardGroupTable, x => x.Reward_Group_ID),
+
 
                 // 새 스킬 테이블 (3행 헤더 형식)
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "MainSkillTable.csv", x => x.skill_id),

@@ -34,6 +34,12 @@ public static class AddressableKey
     public static readonly string SkillTable = "SkillTable";
     public static readonly string EnhancementLevelTable = "EnhancementLevelTable";
     public static readonly string CharacterEnhancementTable = "CharacterEnhancementTable";
+    public static readonly string StageTable = "StageTable";
+    public static readonly string WaveTable = "WaveTable";
+    public static readonly string MonsterLevelTable = "MonsterLevelTable";
+    public static readonly string MonsterTable = "MonsterTable";
+    public static readonly string RewardTable = "RewardTable";
+    public static readonly string RewardGroupTable = "RewardGroupTable";
     public static readonly string StringTable = "StringTable";
 
 
@@ -54,9 +60,10 @@ public static class AddressableKey
     // 스킬 Prefab 데이터베이스
     public static readonly string SkillPrefabDatabase = "SkillPrefabDatabase";
 
+    // JML: 범용 프리팹 방식 - 단일 키 반환 (Issue #320)
     public static string GetCharacterKey(int characterId)
     {
-        return $"Character_{characterId:D2}";
+        return "Character";  // 모든 캐릭터가 동일한 프리팹 사용
     }
 
     public static string GetCardSpriteKey(int characterId)
