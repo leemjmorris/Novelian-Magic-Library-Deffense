@@ -22,7 +22,8 @@ namespace NovelianMagicLibraryDefense.Managers
         [Header("Dependencies")]
         [SerializeField] private WaveManager waveManager;
         [SerializeField] private StageManager stageManager;
-        [SerializeField] private GameResultPanel gameResultPanel;
+        [SerializeField] private StageClearPanel stageClearPanel; // JML: 클리어 패널 (로비/다음 스테이지 선택)
+        [SerializeField] private StageFailedPanel stageFailedPanel; // JML: 실패 패널 (로비/재시작 선택)
         [SerializeField] private Wall wall;
         [SerializeField] private StageEvents stageEvents;
         [SerializeField] private WallEvents wallEvents;
@@ -129,25 +130,35 @@ namespace NovelianMagicLibraryDefense.Managers
             if (newState == StageState.Cleared)
             {
                 Debug.Log("[StageStateManager] Stage Cleared!");
-                if (gameResultPanel != null)
+
+                // JML: 스테이지 클리어 시 진행도 저장 (다음 스테이지 해금)
+                if (SelectedStage.HasSelection)
                 {
-                    gameResultPanel.ShowVictoryPanel("S", stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetKillCount(), stageManager.GetReward());
+                    int clearedStageNumber = SelectedStage.Data.Chapter_Number;
+                    StageProgressManager.Instance?.OnStageClear(clearedStageNumber);
+                }
+
+                // JML: StageClearPanel 사용 (로비/다음 스테이지 선택)
+                if (stageClearPanel != null)
+                {
+                    stageClearPanel.Show();
                 }
                 else
                 {
-                    Debug.LogError("[StageStateManager] GameResultPanel is null! Inspector에서 할당해주세요.");
+                    Debug.LogError("[StageStateManager] StageClearPanel is null! Inspector에서 할당해주세요.");
                 }
             }
             else if (newState == StageState.Failed)
             {
                 Debug.Log("[StageStateManager] Stage Failed!");
-                if (gameResultPanel != null)
+                // JML: StageFailedPanel 사용 (로비/재시작 선택 가능)
+                if (stageFailedPanel != null)
                 {
-                    gameResultPanel.ShowDefeatPanel("F", stageManager.StageName, stageManager.GetProgressTime(), waveManager.GetRemainderCount());
+                    stageFailedPanel.Show();
                 }
                 else
                 {
-                    Debug.LogError("[StageStateManager] GameResultPanel is null! Inspector에서 할당해주세요.");
+                    Debug.LogError("[StageStateManager] StageFailedPanel is null! Inspector에서 할당해주세요.");
                 }
             }
         }

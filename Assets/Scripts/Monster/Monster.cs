@@ -24,6 +24,31 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     public int Exp { get; private set; } = 11; // JML: Example exp amount
 
+    /// <summary>
+    /// CSV 데이터 기반으로 몬스터 스탯 초기화 (MonsterLevelData)
+    /// OnSpawn() 후 WaveManager에서 호출
+    /// </summary>
+    public void Initialize(MonsterLevelData levelData)
+    {
+        if (levelData == null)
+        {
+            Debug.LogWarning("[Monster] MonsterLevelData is null, using default stats");
+            return;
+        }
+
+        // BaseEntity의 maxHealth 설정
+        SetMaxHealth(levelData.HP);
+
+        // Monster 스탯 설정
+        damage = levelData.ATK;
+        moveSpeed = levelData.Move_Speed;
+        attackInterval = 1f / levelData.Attack_Speed; // Attack_Speed는 초당 공격 횟수
+        Exp = levelData.Exp_Value;
+
+        Debug.Log($"[Monster] Initialized - HP:{levelData.HP}, ATK:{levelData.ATK}, " +
+                  $"MoveSpeed:{levelData.Move_Speed}, Exp:{levelData.Exp_Value}");
+    }
+
     private float attackTimer = 0f;
     private bool isWallHit = false; // 물리 충돌 백업용
     private bool isInAttackRange = false; // 공격 범위 내 진입 여부

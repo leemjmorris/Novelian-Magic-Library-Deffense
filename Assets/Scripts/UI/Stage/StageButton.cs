@@ -1,12 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.UI
 {
     /// <summary>
     /// Individual stage button controller
     /// Handles locked/unlocked state with overlay effect
+    /// CSV 데이터 연동으로 스테이지 정보 관리
     /// </summary>
     public class StageButton : MonoBehaviour
     {
@@ -25,6 +27,9 @@ namespace NovelianMagicLibraryDefense.UI
         private bool isLocked = true;
         [SerializeField] private bool startLocked = true; // Inspector에서 초기 잠금 상태 설정
 
+        // CSV에서 로드된 스테이지 데이터
+        private StageData cachedStageData;
+
         private void Awake()
         {
             if (button == null)
@@ -33,9 +38,22 @@ namespace NovelianMagicLibraryDefense.UI
 
         private void Start()
         {
-            // 시작할 때 잠금 상태 적용
+            // 시작할 때 스테이지 번호 표시
             SetStageNumber(stageNumber);
-            SetLocked(startLocked);
+
+            // JML: StageProgressManager에서 해금 상태 확인
+            if (StageProgressManager.Instance != null)
+            {
+                bool isUnlocked = StageProgressManager.Instance.IsStageUnlocked(stageNumber);
+                SetLocked(!isUnlocked);
+                Debug.Log($"[StageButton] Stage {stageNumber} - Unlocked: {isUnlocked}");
+            }
+            else
+            {
+                // StageProgressManager가 없으면 Inspector 설정값 사용
+                SetLocked(startLocked);
+                Debug.LogWarning("[StageButton] StageProgressManager not found, using Inspector setting");
+            }
         }
 
         /// <summary>
@@ -85,6 +103,50 @@ namespace NovelianMagicLibraryDefense.UI
             stageNumber = number;
             if (stageNumberText != null)
                 stageNumberText.text = number.ToString();
+        }
+
+        /// <summary>
+        /// 버튼 클릭 시 호출 - CSV에서 스테이지 데이터 로드 후 SelectedStage에 저장
+        /// Inspector의 Button OnClick 이벤트에 연결
+        /// </summary>
+        public void OnStageButtonClicked()
+        {
+            // CSV에서 stageNumber에 해당하는 스테이지 데이터 조회
+            if (CSVLoader.Instance == null)
+            {
+                Debug.LogError("[StageButton] CSVLoader가 초기화되지 않음");
+                return;
+            }
+
+            var table = CSVLoader.Instance.GetTable<StageData>();
+            if (table == null)
+            {
+                Debug.LogError("[StageButton] StageTable이 로드되지 않음");
+                return;
+            }
+
+            // Chapter_Number로 스테이지 찾기
+            cachedStageData = table.Find(s => s.Chapter_Number == stageNumber);
+
+            if (cachedStageData == null)
+            {
+                Debug.LogError($"[StageButton] stageNumber {stageNumber}에 해당하는 스테이지를 찾을 수 없음");
+                return;
+            }
+
+            // SelectedStage에 저장 (씬 전환 후에도 유지)
+            SelectedStage.Data = cachedStageData;
+
+            Debug.Log($"[StageButton] 스테이지 선택: Stage_ID={cachedStageData.Stage_ID}, " +
+                      $"Time_Limit={cachedStageData.Time_Limit}, Barrier_HP={cachedStageData.Barrier_HP}");
+        }
+
+        /// <summary>
+        /// 현재 캐시된 스테이지 데이터 반환
+        /// </summary>
+        public StageData GetStageData()
+        {
+            return cachedStageData;
         }
     }
 }

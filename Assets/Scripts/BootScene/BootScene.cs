@@ -23,6 +23,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private BookMarkManager bookMarkManager;
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private CharacterEnhancementManager characterEnhancementManager;
+    [SerializeField] private StageProgressManager stageProgressManager;
 
     [SerializeField] private LoadingUIManager loadingUIManager;
 
@@ -105,6 +106,28 @@ public class BootScene : MonoBehaviour
         else
         {
             Debug.LogError("✗ FadeController failed to initialize!");
+        }
+    }
+
+    private async UniTask InitializeStageProgressManager()
+    {
+        Log("Initializing StageProgressManager...");
+
+        if (stageProgressManager == null)
+        {
+            Debug.LogError("✗ StageProgressManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+        // JML: Wait for Awake to complete
+        await UniTask.WaitUntil(() => StageProgressManager.Instance != null);
+        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start
+        if (StageProgressManager.Instance != null)
+        {
+            Log("✓ StageProgressManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ StageProgressManager failed to initialize!");
         }
     }
 

@@ -57,6 +57,36 @@ namespace NovelianMagicLibraryDefense.Managers
         }
         public void OnLoadGameScene()
         {
+            // 1. SelectedStage 데이터 확인
+            if (!SelectedStage.HasSelection)
+            {
+                Debug.LogError("[StageSceneManager] 스테이지가 선택되지 않음");
+                return;
+            }
+
+            var stageData = SelectedStage.Data;
+            int apCost = stageData.AP_Cost;
+
+            // 2. AP 잔량 확인
+            if (CurrencyManager.Instance == null)
+            {
+                Debug.LogError("[StageSceneManager] CurrencyManager가 초기화되지 않음");
+                return;
+            }
+
+            if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.AP_ID, apCost))
+            {
+                int currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
+                Debug.LogWarning($"[StageSceneManager] AP 부족! 필요: {apCost}, 보유: {currentAP}");
+                // TODO JML: AP 부족 팝업 추가하세요
+                return;
+            }
+
+            // 3. AP 소모
+            CurrencyManager.Instance.SpendCurrency(CurrencyManager.AP_ID, apCost);
+            Debug.Log($"[StageSceneManager] AP {apCost} 소모. Stage_ID: {stageData.Stage_ID}로 게임 시작");
+
+            // 4. 씬 전환
             LoadGameSceneAsync().Forget();
         }
 

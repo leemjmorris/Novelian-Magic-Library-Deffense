@@ -254,9 +254,11 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void OnCardClicked(CardData cardData)
         {
-            // JML: CSV에서 캐릭터 이름 가져오기 (Issue #320)
-            string characterName = GetCharacterNameFromCSV(cardData.Id);
-            Debug.Log($"[CardSelectPanel] 카드 선택: {characterName} (Type: {cardData.Type}, ID: {cardData.Id})");
+            // JML: 캐릭터 타입일 때만 CSV에서 이름 가져오기 (Issue #320)
+            string cardName = cardData.Type == CardType.Character
+                ? GetCharacterNameFromCSV(cardData.Id)
+                : $"Ability_{cardData.Id}";
+            Debug.Log($"[CardSelectPanel] 카드 선택: {cardName} (Type: {cardData.Type}, ID: {cardData.Id})");
 
             // Process card based on type
             if (cardData.Type == CardType.Character)
@@ -265,7 +267,7 @@ namespace NovelianMagicLibraryDefense.UI
                 if (placementManager != null)
                 {
                     placementManager.SpawnCharacterById(cardData.Id);
-                    Debug.Log($"[CardSelectPanel] 캐릭터 배치 완료: {characterName} (ID: {cardData.Id})");
+                    Debug.Log($"[CardSelectPanel] 캐릭터 배치 완료: {cardName} (ID: {cardData.Id})");
                 }
                 else
                 {

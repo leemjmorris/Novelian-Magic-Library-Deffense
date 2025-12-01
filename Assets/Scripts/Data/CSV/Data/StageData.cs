@@ -10,5 +10,6 @@ public class StageData
     public float Time_Limit { get; set; }
     public float Barrier_HP { get; set; }
     public int Reward_Group_ID { get; set; }
+    public int AP_Cost_ID { get; set; }
     public int AP_Cost { get; set; }
 }

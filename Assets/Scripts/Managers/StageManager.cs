@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
@@ -20,6 +21,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private UIManager uiManager;
         [SerializeField] private MonsterEvents monsterEvents;
         [SerializeField] private StageEvents stageEvents;
+        [SerializeField] private Wall wallComponent; // JML: Wall 참조 (Barrier HP 설정용)
 
         [Header("Settings")]
         [SerializeField] private StageSettings stageSettings;
@@ -56,17 +58,14 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             // Debug.Log("[StageManager] Initializing stage");
 
-            StageName = $"Stage 1-1"; //TODO JML: CSV Loaded
+            // JML: CSV 데이터 기반 스테이지 초기화
+            InitializeFromCSV();
 
             // LMJ: Subscribe to monster death event for exp via EventChannel
             if (monsterEvents != null)
             {
                 monsterEvents.AddMonsterDiedListener(AddExp);
             }
-
-            // LMJ: Initialize wave manager with hardcoded values (can be loaded from CSV later)
-            waveManager.Initialize(totalEnemies: 20, bossCount: 0);
-            waveManager.WaveLoop().Forget();
 
             // LMJ: Start stage timer using UniTask (no MonoBehaviour required!)
             timerCts = new CancellationTokenSource();
@@ -76,6 +75,98 @@ namespace NovelianMagicLibraryDefense.Managers
             ShowStartCardSelection().Forget();
 
             // Debug.Log("[StageManager] Initialized");
+        }
+
+        /// <summary>
+        /// JML: CSV 데이터 기반으로 스테이지 초기화
+        /// SelectedStage.Data에서 Time_Limit, Wave ID, Barrier_HP 등을 가져옴
+        /// </summary>
+        private void InitializeFromCSV()
+        {
+            if (!SelectedStage.HasSelection)
+            {
+                Debug.LogWarning("[StageManager] No stage selected, using default stage (010101)");
+                StageName = "Stage 1-1";
+
+                // JML: 기본 스테이지 데이터 로드 (스테이지 선택 없이 GameScene 직접 실행 시)
+                StageData defaultStage = CSVLoader.Instance.GetTable<StageData>().GetId(010101);
+                if (defaultStage != null)
+                {
+                    SelectedStage.Data = defaultStage;
+                }
+                else
+                {
+                    Debug.LogError("[StageManager] Default stage (010101) not found in CSV!");
+                    return;
+                }
+            }
+
+            StageData stageData = SelectedStage.Data;
+            CurrentStageId = stageData.Stage_ID;
+            StageName = $"Stage {stageData.Chapter_Number}";
+
+            // 1. Time Limit 설정
+            SetStageDuration(stageData.Time_Limit);
+            Debug.Log($"[StageManager] Time Limit set to {stageData.Time_Limit} seconds");
+
+            // 2. Wall(Barrier) HP 설정
+            if (wallComponent != null)
+            {
+                wallComponent.SetMaxHealth(stageData.Barrier_HP);
+                Debug.Log($"[StageManager] Wall HP set to {stageData.Barrier_HP}");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] wallComponent is null! Cannot set Barrier HP.");
+            }
+
+            // 3. Wave 데이터 수집 및 WaveManager 초기화
+            List<WaveData> waveDataList = CollectWaveData(stageData);
+            if (waveDataList.Count > 0)
+            {
+                waveManager.InitializeWithWaveData(waveDataList);
+                waveManager.WaveLoop().Forget();
+                Debug.Log($"[StageManager] Initialized with {waveDataList.Count} waves from CSV");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] No wave data found! Check Wave IDs in StageTable.csv");
+            }
+        }
+
+        /// <summary>
+        /// JML: StageData에서 Wave ID들을 수집하여 WaveData 리스트로 반환
+        /// Wave_1_ID ~ Wave_4_ID 중 0이 아닌 것만 가져옴
+        /// </summary>
+        private List<WaveData> CollectWaveData(StageData stageData)
+        {
+            List<WaveData> waveDataList = new List<WaveData>();
+            int[] waveIds = new int[]
+            {
+                stageData.Wave_1_ID,
+                stageData.Wave_2_ID,
+                stageData.Wave_3_ID,
+                stageData.Wave_4_ID
+            };
+
+            foreach (int waveId in waveIds)
+            {
+                if (waveId == 0) continue;
+
+                WaveData waveData = CSVLoader.Instance.GetTable<WaveData>().GetId(waveId);
+                if (waveData != null)
+                {
+                    waveDataList.Add(waveData);
+                    Debug.Log($"[StageManager] Added Wave {waveId}: Monster_ID={waveData.Monster_ID}, " +
+                              $"Count={waveData.Monster_Count}, Spawn_Time={waveData.Spawn_Time}s");
+                }
+                else
+                {
+                    Debug.LogWarning($"[StageManager] Wave data not found for ID: {waveId}");
+                }
+            }
+
+            return waveDataList;
         }
 
         /// <summary>

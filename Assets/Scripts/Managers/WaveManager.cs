@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
@@ -43,6 +44,10 @@ namespace NovelianMagicLibraryDefense.Managers
         private int enemyCount;
         private int initialEnemyCount;
         private int bossCount;
+
+        // JML: 다중 웨이브 지원을 위한 필드
+        private List<WaveData> waveDataList = new List<WaveData>();
+        private bool useCSVWaveData = false;
         #endregion
 
         protected override void OnInitialize()
@@ -134,6 +139,10 @@ namespace NovelianMagicLibraryDefense.Managers
             bossCount = 0;
             // waveId = 0;
             // rushProgressPoints.Clear();
+
+            // JML: 다중 웨이브 관련 필드 초기화
+            waveDataList.Clear();
+            useCSVWaveData = false;
         }
 
         protected override void OnDispose()
@@ -165,6 +174,9 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void Initialize(int totalEnemies, int bossCount = 0)
         {
+            useCSVWaveData = false;
+            waveDataList.Clear();
+
             enemyCount = totalEnemies;
             initialEnemyCount = totalEnemies;
             this.bossCount = bossCount;
@@ -173,6 +185,27 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 uiManager.UpdateMonsterCount(enemyCount);
             }
+        }
+
+        /// <summary>
+        /// JML: CSV WaveData 리스트 기반 초기화 (다중 웨이브 지원)
+        /// </summary>
+        public void InitializeWithWaveData(List<WaveData> waves)
+        {
+            useCSVWaveData = true;
+            waveDataList = waves ?? new List<WaveData>();
+
+            // 전체 몬스터 수 계산 (모든 웨이브의 Monster_Count 합산)
+            enemyCount = waveDataList.Sum(w => w.Monster_Count);
+            initialEnemyCount = enemyCount;
+            bossCount = 0; // TODO: CSV에서 보스 데이터 지원 시 수정
+
+            if (uiManager != null)
+            {
+                uiManager.UpdateMonsterCount(enemyCount);
+            }
+
+            Debug.Log($"[WaveManager] Initialized with {waveDataList.Count} waves, total monsters: {enemyCount}");
         }
 
         /// <summary>
@@ -189,7 +222,15 @@ namespace NovelianMagicLibraryDefense.Managers
             spawnCts?.Dispose();
             spawnCts = new System.Threading.CancellationTokenSource();
 
-            SpawnEnemy(spawnCts.Token).Forget();
+            // JML: CSV 웨이브 데이터 사용 시 다중 웨이브 스폰
+            if (useCSVWaveData && waveDataList.Count > 0)
+            {
+                SpawnMultipleWaves(spawnCts.Token).Forget();
+            }
+            else
+            {
+                SpawnEnemy(spawnCts.Token).Forget();
+            }
         }
 
         private void HandleMonsterDied(Monster monster)
@@ -227,6 +268,100 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 stageEvents.RaiseBossDefeated();
             }
+        }
+
+        /// <summary>
+        /// JML: CSV 기반 다중 웨이브 스폰 (Spawn_Time 스케줄링)
+        /// 각 웨이브의 Spawn_Time에 따라 해당 시점에 스폰 시작
+        /// </summary>
+        private async UniTaskVoid SpawnMultipleWaves(System.Threading.CancellationToken cancellationToken)
+        {
+            // 게임 시작 시간 기록
+            float gameStartTime = Time.time;
+
+            // 각 웨이브를 Spawn_Time 순으로 정렬
+            var sortedWaves = waveDataList.OrderBy(w => w.Spawn_Time).ToList();
+
+            foreach (var waveData in sortedWaves)
+            {
+                if (cancellationToken.IsCancellationRequested || !isPoolReady)
+                    break;
+
+                // 해당 웨이브의 Spawn_Time까지 대기
+                float waitUntil = gameStartTime + waveData.Spawn_Time;
+                float remainingWait = waitUntil - Time.time;
+
+                if (remainingWait > 0)
+                {
+                    Debug.Log($"[WaveManager] Waiting {remainingWait:F1}s for Wave {waveData.Wave_ID} (Spawn_Time: {waveData.Spawn_Time}s)");
+                    await UniTask.Delay((int)(remainingWait * 1000), cancellationToken: cancellationToken);
+                }
+
+                if (cancellationToken.IsCancellationRequested || !isPoolReady)
+                    break;
+
+                Debug.Log($"[WaveManager] Starting Wave {waveData.Wave_ID}: {waveData.Monster_Count} monsters, interval {waveData.Spawn_Interval}s");
+
+                // 해당 웨이브의 몬스터들 스폰 (blocking - 웨이브 끝날 때까지 기다림)
+                await SpawnWaveMonsters(waveData, cancellationToken);
+            }
+
+            // 모든 웨이브 스폰 완료 후 보스 스폰
+            if (bossCount > 0 && isPoolReady && !cancellationToken.IsCancellationRequested)
+            {
+                SpawnBoss();
+            }
+        }
+
+        /// <summary>
+        /// JML: 단일 웨이브의 몬스터들 스폰
+        /// MonsterLevelData를 가져와서 Monster.Initialize() 호출
+        /// </summary>
+        private async UniTask SpawnWaveMonsters(WaveData waveData, System.Threading.CancellationToken cancellationToken)
+        {
+            // MonsterLevelData 가져오기
+            MonsterLevelData levelData = CSVLoader.Instance.GetTable<MonsterLevelData>().GetId(waveData.Mon_Level_ID);
+            if (levelData == null)
+            {
+                Debug.LogWarning($"[WaveManager] MonsterLevelData not found for ID: {waveData.Mon_Level_ID}");
+            }
+
+            int spawnedCount = 0;
+            int targetCount = waveData.Monster_Count;
+
+            while (spawnedCount < targetCount && isPoolReady && !cancellationToken.IsCancellationRequested)
+            {
+                // Check if spawner still exists (scene not destroyed)
+                if (monsterSpawner == null) break;
+
+                Vector3 spawnPos = monsterSpawner.GetRandomSpawnPosition();
+                var monster = poolManager.Spawn<Monster>(spawnPos);
+
+                if (monster != null)
+                {
+                    // JML: CSV 데이터로 몬스터 스탯 초기화
+                    if (levelData != null)
+                    {
+                        monster.Initialize(levelData);
+                    }
+
+                    // 목적지 설정 (Wall 위치로)
+                    if (wallTarget != null)
+                    {
+                        monster.SetDestination(wallTarget.position);
+                    }
+                }
+
+                spawnedCount++;
+
+                // 다음 몬스터 스폰 전 대기 (마지막 몬스터면 대기 안 함)
+                if (spawnedCount < targetCount)
+                {
+                    await UniTask.Delay((int)(waveData.Spawn_Interval * 1000), cancellationToken: cancellationToken);
+                }
+            }
+
+            Debug.Log($"[WaveManager] Wave {waveData.Wave_ID} completed: spawned {spawnedCount}/{targetCount} monsters");
         }
 
         private async UniTaskVoid SpawnEnemy(System.Threading.CancellationToken cancellationToken)

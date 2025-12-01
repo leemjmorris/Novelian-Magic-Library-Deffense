@@ -25,6 +25,15 @@ public abstract class BaseEntity : MonoBehaviour, IEntity, IPoolable
 
     public float GetHealth() => currentHealth;
     public float GetMaxHealth() => maxHealth;
+
+    /// <summary>
+    /// CSV 데이터 기반으로 최대 체력 설정
+    /// </summary>
+    public void SetMaxHealth(float hp)
+    {
+        maxHealth = hp;
+        currentHealth = maxHealth;
+    }
     public virtual bool IsAlive()
     {
         // JML: Check if Unity object is destroyed before accessing properties

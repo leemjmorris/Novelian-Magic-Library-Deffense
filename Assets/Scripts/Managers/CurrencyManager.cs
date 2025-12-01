@@ -19,6 +19,7 @@ public class CurrencyManager : MonoBehaviour
     public const int APPLICATION_ID = 1603; // 지원서
     public const int RECOMMENDATION_ID = 1604; // 추천서
     public const int MAGIC_STONE_ID = 1605; // 마석
+    public const int AP_ID = 1607;          // AP (행동력)
 
     // 기존 Gold 호환용
     public int Gold => GetCurrency(GOLD_ID);
@@ -51,6 +52,7 @@ public class CurrencyManager : MonoBehaviour
         currencies[RECOMMENDATION_ID] = 0;  // 추천서
         currencies[MAGIC_STONE_ID] = 0;     // 마석
         currencies[1606] = 0;               // 추가 재화 (StringTable 미등록)
+        currencies[AP_ID] = 30;             // AP (테스트용 최대치 30)
 
         Debug.Log($"[CurrencyManager] 초기화 완료. 재화 종류: {currencies.Count}개");
     }

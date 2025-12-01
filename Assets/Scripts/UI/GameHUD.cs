@@ -52,6 +52,7 @@ namespace NovelianMagicLibraryDefense.UI
 
         /// <summary>
         /// Initialize UI elements to default state
+        /// JML: Monster count는 WaveManager.InitializeWithWaveData()에서 설정됨
         /// </summary>
         private void InitializeUI()
         {
@@ -61,7 +62,8 @@ namespace NovelianMagicLibraryDefense.UI
             if (wallHealthSlider != null)
                 wallHealthSlider.value = 1f;
 
-            UpdateMonsterCount(0);
+            // JML: Monster count는 WaveManager가 초기화할 때 설정하므로 여기서 0으로 초기화하지 않음
+            // UpdateMonsterCount(0);
             UpdateWaveTimer(0f);
         }
 
@@ -118,10 +120,12 @@ namespace NovelianMagicLibraryDefense.UI
 
         /// <summary>
         /// Reset all UI elements to initial state
+        /// JML: Monster count는 WaveManager가 리셋 후 다시 초기화할 때 설정됨
         /// </summary>
         public void ResetUI()
         {
-            UpdateMonsterCount(0);
+            // JML: Monster count는 WaveManager가 초기화할 때 설정하므로 여기서 0으로 리셋하지 않음
+            // UpdateMonsterCount(0);
             UpdateWaveTimer(0f);
 
             if (experienceSlider != null)

@@ -146,6 +146,8 @@ namespace NovelianMagicLibraryDefense.Managers
             Type type = typeof(T);
             GameObject obj = UnityEngine.Object.Instantiate(prefabs[type]);
             obj.name = prefabs[type].name;
+            // JML: 새로 생성된 오브젝트는 비활성 상태로 시작 (Spawn에서 위치 설정 후 활성화)
+            obj.SetActive(false);
             return obj.GetComponent<T>();
         }
 
