@@ -101,6 +101,7 @@ namespace Novelian.Combat
             LoadSkillData(mainSkillId, supportId);
 
             // Spawn effect prefab as child if skillData is provided
+            Debug.Log($"[Projectile] Checking effect prefab: skillPrefabs={skillPrefabs != null}, projectilePrefab={skillPrefabs?.projectilePrefab != null}");
             if (skillPrefabs != null && skillPrefabs.projectilePrefab != null)
             {
                 // Clear any existing child effects
@@ -116,7 +117,11 @@ namespace Novelian.Combat
                 GameObject effectInstance = Object.Instantiate(skillPrefabs.projectilePrefab, transform);
                 effectInstance.transform.localPosition = Vector3.zero;
                 effectInstance.transform.localRotation = Quaternion.LookRotation(fixedDirection);
-                Debug.Log($"[Projectile] Effect prefab spawned as child: {skillPrefabs.projectilePrefab.name}");
+                Debug.Log($"[Projectile] Effect prefab spawned as child: {skillPrefabs.projectilePrefab.name}, position={transform.position}");
+            }
+            else
+            {
+                Debug.LogWarning($"[Projectile] No effect prefab available! skillPrefabs={skillPrefabs != null}");
             }
 
             // Initialize Chain state (only on first launch, not re-launch)
@@ -168,6 +173,7 @@ namespace Novelian.Combat
             }
 
             var prefabDb = SkillPrefabDatabase.Instance;
+            Debug.Log($"[Projectile] LoadSkillData: mainSkillId={mainSkillId}, prefabDb={prefabDb != null}");
 
             // Load main skill data
             if (mainSkillId > 0)
@@ -176,6 +182,11 @@ namespace Novelian.Combat
                 if (skillData != null)
                 {
                     skillPrefabs = prefabDb?.GetMainSkillEntry(mainSkillId);
+                    Debug.Log($"[Projectile] Loaded skillPrefabs for {mainSkillId}: entry={skillPrefabs != null}, projectilePrefab={skillPrefabs?.projectilePrefab != null}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[Projectile] skillData not found for ID={mainSkillId}");
                 }
             }
 
@@ -331,6 +342,9 @@ namespace Novelian.Combat
         //LMJ : Handle collision with monsters and obstacles (both Physics and Effect modes)
         private void OnTriggerEnter(Collider other)
         {
+            // 디버그: 모든 충돌 로그
+            Debug.Log($"[Projectile] OnTriggerEnter: {other.name}, Tag={other.tag}, Layer={LayerMask.LayerToName(other.gameObject.layer)}, isInitialized={isInitialized}");
+
             if (!isInitialized) return;
 
             // Obstacle collision
@@ -668,6 +682,8 @@ namespace Novelian.Combat
         //LMJ : Return projectile to pool
         private void ReturnToPool()
         {
+            // 디버그: 호출 스택 추적
+            Debug.Log($"[Projectile] ReturnToPool called! Position={transform.position}, StackTrace:\n{System.Environment.StackTrace}");
             lifetimeCts?.Cancel();
             GameManager.Instance.Pool.Despawn(this);
         }

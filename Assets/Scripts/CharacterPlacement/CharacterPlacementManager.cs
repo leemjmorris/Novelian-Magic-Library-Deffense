@@ -175,9 +175,12 @@ public class CharacterPlacementManager : MonoBehaviour
         }
 
         // Instantiate character prefab
+        Vector3 spawnPosition = targetSlot.GetWorldPosition();
+        Debug.Log($"[CharacterPlacementManager] Spawning character at slot {targetSlot.GetSlotIndex()}, position: {spawnPosition}");
+
         GameObject characterObj = Instantiate(
             loadedCharacterPrefabs[characterKey],
-            targetSlot.GetWorldPosition(),
+            spawnPosition,
             Quaternion.identity,
             gridParent
         );

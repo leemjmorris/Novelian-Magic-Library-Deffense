@@ -13,7 +13,7 @@ namespace Novelian.Combat
 
         [Header("스킬 장착 (Skill Equipment) - CSV ID 기반")]
         [SerializeField, Tooltip("기본 공격 스킬 ID (MainSkillTable)")]
-        private int basicAttackSkillId = 1001;
+        private int basicAttackSkillId = 39001;
 
         [SerializeField, Tooltip("액티브 스킬 ID (MainSkillTable)")]
         private int activeSkillId = 0;
@@ -402,12 +402,26 @@ namespace Novelian.Combat
         //LMJ : Attempt to attack nearest or highest weight target (skill-based)
         private void TryAttack()
         {
-            if (!isInitialized || basicAttackData == null) return;
+            // 디버그: 초기화 상태 확인
+            if (!isInitialized)
+            {
+                Debug.LogWarning("[Character] TryAttack skipped: not initialized");
+                return;
+            }
+            if (basicAttackData == null)
+            {
+                Debug.LogWarning("[Character] TryAttack skipped: basicAttackData is null");
+                return;
+            }
 
             // Find target with mark priority, then use weight/distance strategy
             ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, FinalRange, useWeightTargeting);
 
-            if (target == null) return;
+            if (target == null)
+            {
+                // 타겟이 없으면 공격 스킵 (정상적인 상황)
+                return;
+            }
 
             // Calculate spawn position (character position + offset)
             Vector3 spawnPos = transform.position + spawnOffset;
@@ -416,6 +430,9 @@ namespace Novelian.Combat
             // Get projectile prefab from database
             GameObject projectilePrefab = basicAttackPrefabs?.projectilePrefab;
             GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
+
+            // 디버그: 프리팹 상태 확인
+            Debug.Log($"[Character] TryAttack: projectilePrefab={projectilePrefab != null}, projectileTemplate={projectileTemplate != null}, basicAttackPrefabs={basicAttackPrefabs != null}");
 
             // Launch projectile
             if (projectilePrefab != null || projectileTemplate != null)
@@ -429,6 +446,8 @@ namespace Novelian.Combat
             // Instant attack (no projectile)
             else
             {
+                Debug.LogWarning($"[Character] No projectile prefab or template! Using instant attack for {basicAttackData.skill_name}");
+
                 // Hit effect
                 if (hitEffectPrefab != null)
                 {
