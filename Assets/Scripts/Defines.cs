@@ -63,6 +63,11 @@ public static class AddressableKey
     // 스킬 Prefab 데이터베이스
     public static readonly string SkillPrefabDatabase = "SkillPrefabDatabase";
 
+    // 인게임 카드 시스템 CSV 테이블
+    public static readonly string CardTable = "CardTable";
+    public static readonly string CardLevelTable = "CardLevelTable";
+    public static readonly string CardListTable = "CardListTable";
+
     // JML: 범용 프리팹 방식 - 단일 키 반환 (Issue #320)
     public static string GetCharacterKey(int characterId)
     {

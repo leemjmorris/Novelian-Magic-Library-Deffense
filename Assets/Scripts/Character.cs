@@ -54,10 +54,24 @@ namespace Novelian.Combat
         private MainSkillPrefabEntry activeSkillPrefabs;
         private SupportSkillPrefabEntry supportPrefabs;
 
-        // 최종 수치 계산 프로퍼티 (스킬 기본값 × 캐릭터 변형)
-        private float FinalDamage => basicAttackData != null
-            ? basicAttackData.base_damage * (1f + damageModifier / 100f)
-            : 0f;
+        // 스킬 레벨 데이터 (현재는 레벨 1 고정, 추후 레벨 시스템 추가 시 확장)
+        private int currentSkillLevel = 1;
+
+        // 최종 수치 계산 프로퍼티 (새 데미지 공식 적용)
+        // 공식: (기본 데미지) × (레벨 배율) × (보조 스킬 배율) × (캐릭터 변형)
+        private float FinalDamage
+        {
+            get
+            {
+                if (basicAttackData == null) return 0f;
+                // 레벨 데이터 조회 (없으면 배율 1)
+                float levelMult = 1f;
+                // DamageCalculator 사용
+                float baseDamage = DamageCalculator.CalculateSingleDamage(basicAttackData.base_damage, levelMult, 1f);
+                // 캐릭터 변형 적용
+                return baseDamage * (1f + damageModifier / 100f);
+            }
+        }
 
         private float FinalAttackSpeed => basicAttackData != null
             ? (1f / basicAttackData.cooldown) * (1f + attackSpeedModifier / 100f)
@@ -72,18 +86,24 @@ namespace Novelian.Combat
             : 1000f;
 
         private float FinalProjectileLifetime => basicAttackData != null
-            ? basicAttackData.projectile_lifetime
+            ? basicAttackData.skill_lifetime
             : 5f;
 
-        // Active Skill 최종 수치 계산 프로퍼티 (캐릭터 변형 + Support 스킬 변형)
+        // Active Skill 최종 수치 계산 프로퍼티 (새 데미지 공식 적용)
+        // 공식: (기본 데미지) × (레벨 배율) × (보조 스킬 배율) × (캐릭터 변형)
         private float FinalActiveDamage
         {
             get
             {
                 if (activeSkillData == null) return 0f;
-                float damage = activeSkillData.base_damage * (1f + damageModifier / 100f);
-                if (supportData != null) damage *= supportData.damage_mult;
-                return damage;
+                // 레벨 배율 (현재 레벨 1 고정)
+                float levelMult = 1f;
+                // 보조 스킬 배율
+                float supportMult = supportData?.damage_mult ?? 1f;
+                // DamageCalculator로 단일 데미지 계산
+                float baseDamage = DamageCalculator.CalculateSingleDamage(activeSkillData.base_damage, levelMult, supportMult);
+                // 캐릭터 변형 적용
+                return baseDamage * (1f + damageModifier / 100f);
             }
         }
 
@@ -118,7 +138,7 @@ namespace Novelian.Combat
             get
             {
                 if (activeSkillData == null) return 5f;
-                float lifetime = activeSkillData.projectile_lifetime;
+                float lifetime = activeSkillData.skill_lifetime;
                 // Support skill duration multiplier (currently not in CSV, future feature)
                 return lifetime;
             }

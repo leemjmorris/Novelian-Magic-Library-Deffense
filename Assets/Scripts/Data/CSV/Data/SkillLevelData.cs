@@ -20,9 +20,6 @@ public class SkillLevelData
     [Name("cooldown_mult")]
     public float cooldown_mult { get; set; }
 
-    [Name("mana_cost")]
-    public int mana_cost { get; set; }
-
     [Name("range_mult")]
     public float range_mult { get; set; }
 
@@ -43,7 +40,7 @@ public class SkillLevelData
 
     /// <summary>
     /// 복합 키 생성 (skill_id * 100 + level)
-    /// 예: skill_id=1001, level=3 → 100103
+    /// 예: skill_id=39002, level=3 → 3900203
     /// </summary>
     public int GetCompositeKey()
     {

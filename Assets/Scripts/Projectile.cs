@@ -58,6 +58,11 @@ namespace Novelian.Combat
         private System.Collections.Generic.HashSet<ITargetable> chainHitTargets;
         private float currentChainDamage = 0f;
 
+        // Pierce state tracking (관통 시스템)
+        private int currentPierceCount = 0;
+        private int maxPierceCount = 0;
+        private float baseDamageForPierce = 0f; // 관통 데미지 감소 계산을 위한 기본 데미지
+
         // Movement state
         private Vector3 fixedDirection;
         private float speed;
@@ -121,6 +126,19 @@ namespace Novelian.Combat
                 chainHitTargets = new System.Collections.Generic.HashSet<ITargetable>();
                 currentChainDamage = damageAmount;
                 Debug.Log($"[Projectile] Chain initialized: maxChainCount={maxChainCount}, initialDamage={currentChainDamage:F1}");
+            }
+
+            // Initialize Pierce state (관통 시스템 - 스킬 데이터 기반)
+            if (currentPierceCount == 0 && skillData != null && skillData.pierce_count > 0)
+            {
+                maxPierceCount = skillData.pierce_count;
+                // 서포트 스킬의 추가 관통
+                if (supportSkillData != null)
+                {
+                    maxPierceCount += supportSkillData.add_pierce;
+                }
+                baseDamageForPierce = damageAmount;
+                Debug.Log($"[Projectile] Pierce initialized: maxPierceCount={maxPierceCount}, baseDamage={baseDamageForPierce:F1}");
             }
 
             // Cancel previous lifetime token
@@ -357,8 +375,8 @@ namespace Novelian.Combat
                         ApplyStatusEffect(monster);
                     }
 
-                    // Apply damage
-                    float damageToApply = (maxChainCount > 0) ? currentChainDamage : damage;
+                    // Apply damage (새 데미지 공식 적용)
+                    float damageToApply = CalculateDamageToApply();
                     monster.TakeDamage(damageToApply);
 
                     // Spawn hit effect
@@ -374,7 +392,7 @@ namespace Novelian.Combat
                         chainHitTargets.Add(monster);
                     }
 
-                    // Process Chain
+                    // Process Chain (체이닝: DamageCalculator 사용)
                     if (supportSkillData != null && supportSkillData.GetStatusEffectType() == StatusEffectType.Chain && currentChainCount < maxChainCount)
                     {
                         // Spawn chain effect
@@ -388,10 +406,12 @@ namespace Novelian.Combat
 
                         if (nextTarget != null)
                         {
-                            currentChainDamage *= (1f - supportSkillData.chain_damage_reduction / 100f);
+                            // DamageCalculator로 체이닝 데미지 계산 (n번째 타격)
                             currentChainCount++;
+                            float reductionRate = supportSkillData.chain_damage_reduction / 100f;
+                            currentChainDamage = DamageCalculator.CalculatePierceChainDamage(baseDamageForPierce > 0 ? baseDamageForPierce : damage, reductionRate, currentChainCount);
 
-                            Debug.Log($"[Projectile] Chain {currentChainCount}/{maxChainCount}: Bouncing to {nextTarget.GetTransform().name}");
+                            Debug.Log($"[Projectile] Chain {currentChainCount}/{maxChainCount}: Bouncing to {nextTarget.GetTransform().name}, Damage={currentChainDamage:F1}");
 
                             Vector3 directionToNext = (nextTarget.GetPosition() - other.transform.position).normalized;
                             float spawnOffset = 1.0f;
@@ -400,6 +420,14 @@ namespace Novelian.Combat
                             Launch(spawnPos, nextTarget.GetPosition(), speed, lifetime, currentChainDamage, skillId, supportSkillId);
                             return;
                         }
+                    }
+
+                    // Process Pierce (관통: DamageCalculator 사용)
+                    if (maxPierceCount > 0 && currentPierceCount < maxPierceCount)
+                    {
+                        currentPierceCount++;
+                        Debug.Log($"[Projectile] Pierce {currentPierceCount}/{maxPierceCount}: Continuing through {monster.name}");
+                        return; // 관통하여 계속 진행 (풀로 돌아가지 않음)
                     }
                 }
 
@@ -426,8 +454,8 @@ namespace Novelian.Combat
                         ApplyStatusEffectToBoss(boss);
                     }
 
-                    // Apply damage
-                    float damageToApply = (maxChainCount > 0) ? currentChainDamage : damage;
+                    // Apply damage (새 데미지 공식 적용)
+                    float damageToApply = CalculateDamageToApply();
                     boss.TakeDamage(damageToApply);
 
                     // Spawn hit effect
@@ -443,7 +471,7 @@ namespace Novelian.Combat
                         chainHitTargets.Add(boss);
                     }
 
-                    // Process Chain
+                    // Process Chain (체이닝: DamageCalculator 사용)
                     if (supportSkillData != null && supportSkillData.GetStatusEffectType() == StatusEffectType.Chain && currentChainCount < maxChainCount)
                     {
                         if (supportPrefabs?.chainEffectPrefab != null && currentChainCount > 0)
@@ -455,8 +483,12 @@ namespace Novelian.Combat
 
                         if (nextTarget != null)
                         {
-                            currentChainDamage *= (1f - supportSkillData.chain_damage_reduction / 100f);
+                            // DamageCalculator로 체이닝 데미지 계산 (n번째 타격)
                             currentChainCount++;
+                            float reductionRate = supportSkillData.chain_damage_reduction / 100f;
+                            currentChainDamage = DamageCalculator.CalculatePierceChainDamage(baseDamageForPierce > 0 ? baseDamageForPierce : damage, reductionRate, currentChainCount);
+
+                            Debug.Log($"[Projectile] Chain {currentChainCount}/{maxChainCount}: Bouncing to {nextTarget.GetTransform().name}, Damage={currentChainDamage:F1}");
 
                             Vector3 directionToNext = (nextTarget.GetPosition() - other.transform.position).normalized;
                             float spawnOffset = 1.0f;
@@ -465,6 +497,14 @@ namespace Novelian.Combat
                             Launch(spawnPos, nextTarget.GetPosition(), speed, lifetime, currentChainDamage, skillId, supportSkillId);
                             return;
                         }
+                    }
+
+                    // Process Pierce (관통: DamageCalculator 사용)
+                    if (maxPierceCount > 0 && currentPierceCount < maxPierceCount)
+                    {
+                        currentPierceCount++;
+                        Debug.Log($"[Projectile] Pierce {currentPierceCount}/{maxPierceCount}: Continuing through {boss.name}");
+                        return; // 관통하여 계속 진행 (풀로 돌아가지 않음)
                     }
                 }
 
@@ -480,6 +520,30 @@ namespace Novelian.Combat
                     Destroy(gameObject);
                 }
             }
+        }
+
+        //LMJ : Calculate damage to apply (새 데미지 공식)
+        // 관통/체이닝 감소 공식: n번째 타격 데미지 = (단일 타격 데미지) × (1 - 감소율)^n
+        private float CalculateDamageToApply()
+        {
+            // 1. 체이닝 활성화된 경우
+            if (maxChainCount > 0)
+            {
+                return currentChainDamage;
+            }
+
+            // 2. 관통 활성화된 경우 - DamageCalculator 사용
+            if (maxPierceCount > 0 && currentPierceCount > 0)
+            {
+                // 관통 감소율: 서포트 스킬의 chain_damage_reduction 또는 기본값 30%
+                float reductionRate = supportSkillData?.chain_damage_reduction / 100f ?? 0.3f;
+                float pierceDamage = DamageCalculator.CalculatePierceChainDamage(baseDamageForPierce, reductionRate, currentPierceCount);
+                Debug.Log($"[Projectile] Pierce damage: {pierceDamage:F1} (hit #{currentPierceCount + 1}, reduction={reductionRate * 100}%)");
+                return pierceDamage;
+            }
+
+            // 3. 기본 데미지 반환
+            return damage;
         }
 
         //LMJ : Apply status effect to monster
@@ -647,6 +711,11 @@ namespace Novelian.Combat
             maxChainCount = 0;
             chainHitTargets = null;
             currentChainDamage = 0f;
+
+            // Reset pierce state
+            currentPierceCount = 0;
+            maxPierceCount = 0;
+            baseDamageForPierce = 0f;
 
             if (rb != null) rb.linearVelocity = Vector3.zero;
             lifetimeCts?.Cancel();
