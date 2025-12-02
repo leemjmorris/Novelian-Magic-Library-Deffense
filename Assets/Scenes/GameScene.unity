@@ -1095,9 +1095,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   panel: {fileID: 2027874392}
   cardContainer: {fileID: 282760298}
-  cardPrefab: {fileID: 1931262583211713607, guid: 618aa3661e4935b44b3a41abaec439f8, type: 3}
+  characterCardPrefab: {fileID: 0}
+  statCard_AttackSpeed: {fileID: 0}
+  statCard_Damage: {fileID: 0}
+  statCard_ProjectileSpeed: {fileID: 0}
+  statCard_Range: {fileID: 0}
   pauseOnGameStart: 1
   pauseOnLevelUp: 1
+  timerText: {fileID: 0}
 --- !u!1 &146888828
 GameObject:
   m_ObjectHideFlags: 0
@@ -2358,12 +2363,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   gridSlotPrefab: {fileID: 4056477079438549603, guid: e47fb86d82d07824b9dbc5ab73f7fa1b, type: 3}
   gridParent: {fileID: 6733495665422817014}
-  gridColumns: 5
-  gridRows: 2
+  gridColumns: 4
+  gridRows: 1
   gridSpacingX: 1.5
   gridSpacingZ: 1.5
-  gridStartPosition: {x: -3, y: 0, z: 25}
-  gridPlaneY: 0.1
+  gridCenterOffset: {x: 0, y: 0.5, z: 25}
 --- !u!4 &279134590
 Transform:
   m_ObjectHideFlags: 0

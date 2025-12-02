@@ -55,7 +55,9 @@ namespace Novelian.Combat
         private SupportSkillPrefabEntry supportPrefabs;
 
         // 스킬 레벨 데이터 (현재는 레벨 1 고정, 추후 레벨 시스템 추가 시 확장)
+#pragma warning disable CS0414 // 추후 레벨 시스템 구현 시 사용 예정
         private int currentSkillLevel = 1;
+#pragma warning restore CS0414
 
         // 최종 수치 계산 프로퍼티 (새 데미지 공식 적용)
         // 공식: (기본 데미지) × (레벨 배율) × (보조 스킬 배율) × (캐릭터 변형)
