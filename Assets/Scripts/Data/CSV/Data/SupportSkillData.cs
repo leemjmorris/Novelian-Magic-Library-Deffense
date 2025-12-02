@@ -3,7 +3,7 @@ using CsvHelper.Configuration.Attributes;
 
 /// <summary>
 /// SupportSkillTable.csv 데이터 클래스
-/// CSV에서 서포트 스킬 데이터를 파싱합니다.
+/// 새로운 보조 스킬 시스템 - ID 기반 타입
 /// </summary>
 [Serializable]
 public class SupportSkillData
@@ -35,9 +35,6 @@ public class SupportSkillData
     [Name("cooldown_mult")]
     public float cooldown_mult { get; set; }
 
-    [Name("mana_mult")]
-    public float mana_mult { get; set; }
-
     [Name("attack_speed_mult")]
     public float attack_speed_mult { get; set; }
 
@@ -56,9 +53,6 @@ public class SupportSkillData
     [Name("cc_slow_amount")]
     public float cc_slow_amount { get; set; }
 
-    [Name("dot_type")]
-    public int dot_type { get; set; }
-
     [Name("dot_duration")]
     public float dot_duration { get; set; }
 
@@ -67,9 +61,6 @@ public class SupportSkillData
 
     [Name("dot_damage_per_tick")]
     public float dot_damage_per_tick { get; set; }
-
-    [Name("mark_type")]
-    public int mark_type { get; set; }
 
     [Name("mark_duration")]
     public float mark_duration { get; set; }
@@ -95,108 +86,107 @@ public class SupportSkillData
     [Optional]
     public string description { get; set; }
 
-    #region Helper Properties (Enum 변환)
+    #region Helper Properties (Enum 변환 - 새 ID 체계)
 
     /// <summary>
     /// support_category를 SupportCategory로 변환
-    /// 8001=Projectile, 8002=AOE, 8003=StatusEffect, 8004=Chain
+    /// 3703801=Projectile, 3703902=AOE, 3704003=StatusEffect, etc.
     /// </summary>
     public SupportCategory GetSupportCategory()
     {
         return support_category switch
         {
-            8001 => SupportCategory.Projectile,
-            8002 => SupportCategory.AOE,
-            8003 => SupportCategory.StatusEffect,
-            8004 => SupportCategory.Chain,
+            3703801 => SupportCategory.Projectile,
+            3703902 => SupportCategory.AOE,
+            3704003 => SupportCategory.StatusEffect,
+            3704104 => SupportCategory.Chain,
+            3704205 => SupportCategory.SkillDamageUp,
+            3704306 => SupportCategory.ShootingTypeChange,
             _ => SupportCategory.Projectile
         };
     }
 
     /// <summary>
     /// status_effect를 StatusEffectType으로 변환
-    /// 4000=None, 4001=CC, 4002=DOT, 4003=Mark, 4004=Chain
+    /// 3301600=None, 3301701=CC, 3301802=DOT, 3301903=Mark, 3302004=Chain
     /// </summary>
     public StatusEffectType GetStatusEffectType()
     {
         return status_effect switch
         {
-            4000 => StatusEffectType.None,
-            4001 => StatusEffectType.CC,
-            4002 => StatusEffectType.DOT,
-            4003 => StatusEffectType.Mark,
-            4004 => StatusEffectType.Chain,
+            3301600 => StatusEffectType.None,
+            3301701 => StatusEffectType.CC,
+            3301802 => StatusEffectType.DOT,
+            3301903 => StatusEffectType.Mark,
+            3302004 => StatusEffectType.Chain,
             _ => StatusEffectType.None
         };
     }
 
     /// <summary>
     /// cc_type을 CCType으로 변환
-    /// 5000=None, 5001=Stun, 5002=Slow, etc.
+    /// 3402100=None, 3402201=Stun, 3402302=Slow, etc.
     /// </summary>
     public CCType GetCCType()
     {
         return cc_type switch
         {
-            5000 => CCType.None,
-            5001 => CCType.Stun,
-            5002 => CCType.Slow,
-            5003 => CCType.Root,
-            5004 => CCType.Freeze,
-            5005 => CCType.Knockback,
-            5006 => CCType.Silence,
+            3402100 => CCType.None,
+            3402201 => CCType.Stun,
+            3402302 => CCType.Slow,
+            3402403 => CCType.Root,
+            3402505 => CCType.Knockback,
             _ => CCType.None
         };
     }
 
     /// <summary>
-    /// dot_type을 DOTType으로 변환
-    /// 6000=None, 6001=Burn, 6002=Poison, etc.
+    /// 체이닝 지원 스킬인지 확인
+    /// </summary>
+    public bool IsChainSupport => status_effect == 3302004;
+
+    /// <summary>
+    /// 표식 지원 스킬인지 확인
+    /// </summary>
+    public bool IsMarkSupport => status_effect == 3301903;
+
+    /// <summary>
+    /// DOT 지원 스킬인지 확인
+    /// </summary>
+    public bool IsDOTSupport => status_effect == 3301802;
+
+    /// <summary>
+    /// DOT 타입 반환 (새 CSV 구조에서는 DOT 여부만 판단, 기본 Burn 반환)
     /// </summary>
     public DOTType GetDOTType()
     {
-        return dot_type switch
-        {
-            6000 => DOTType.None,
-            6001 => DOTType.Burn,
-            6002 => DOTType.Poison,
-            6003 => DOTType.Bleed,
-            6004 => DOTType.Corrosion,
-            6005 => DOTType.Curse,
-            _ => DOTType.None
-        };
+        // 새 CSV 구조에서는 별도 DOT 타입 필드가 없음
+        // DOT 서포트 스킬이면 기본 Burn 타입 반환
+        return IsDOTSupport ? DOTType.Burn : DOTType.None;
     }
 
     /// <summary>
-    /// mark_type을 MarkType으로 변환
-    /// 7000=None, 7001=Flame, 7002=Ice, etc.
+    /// Mark 타입 반환 (새 CSV 구조에서는 Mark 여부만 판단, 기본 Romance 반환)
     /// </summary>
     public MarkType GetMarkType()
     {
-        return mark_type switch
-        {
-            7000 => MarkType.None,
-            7001 => MarkType.Flame,
-            7002 => MarkType.Ice,
-            7003 => MarkType.Lightning,
-            7004 => MarkType.Poison,
-            7005 => MarkType.Holy,
-            7006 => MarkType.Curse,
-            7007 => MarkType.Focus,
-            _ => MarkType.None
-        };
+        // 새 CSV 구조에서는 별도 Mark 타입 필드가 없음
+        // Mark 서포트 스킬이면 기본 Romance 타입 반환
+        return IsMarkSupport ? MarkType.Romance : MarkType.None;
     }
 
     #endregion
 }
 
 /// <summary>
-/// 서포트 스킬 카테고리 (SkillEnumTable 기준)
+/// 서포트 스킬 카테고리 (새 ID 체계)
 /// </summary>
 public enum SupportCategory
 {
-    Projectile = 1,   // 발사체 변형
-    AOE = 2,          // 범위 변형
-    StatusEffect = 3, // 상태이상 부여
-    Chain = 4         // 연쇄 효과
+    Projectile = 1,        // 발사체 변형 (3703801)
+    AOE = 2,               // 범위 변형 (3703902)
+    StatusEffect = 3,      // 상태이상 부여 (3704003)
+    Chain = 4,             // 연쇄 효과 (3704104)
+    SkillDamageUp = 5,     // 스킬 데미지 증가 (3704205)
+    ShootingTypeChange = 6 // 발사 형식 변경 (3704306)
 }

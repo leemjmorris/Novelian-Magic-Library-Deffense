@@ -3,7 +3,7 @@ using CsvHelper.Configuration.Attributes;
 
 /// <summary>
 /// MainSkillTable.csv 데이터 클래스
-/// CSV에서 메인 스킬 데이터를 파싱합니다.
+/// 새로운 스킬 시스템 - 스킬 타입 ID 기반
 /// </summary>
 [Serializable]
 public class MainSkillData
@@ -11,23 +11,17 @@ public class MainSkillData
     [Name("skill_id")]
     public int skill_id { get; set; }
 
-    [Name("skill_type")]
-    public int skill_type { get; set; }
+    [Name("skill_type_ID")]
+    public int skill_type_ID { get; set; }
 
-    [Name("element_type")]
-    public int element_type { get; set; }
-
-    [Name("damage_type")]
-    public int damage_type { get; set; }
+    [Name("element_type_ID")]
+    public int element_type_ID { get; set; }
 
     [Name("base_damage")]
     public float base_damage { get; set; }
 
     [Name("cooldown")]
     public float cooldown { get; set; }
-
-    [Name("mana_cost")]
-    public float mana_cost { get; set; }
 
     [Name("cast_time")]
     public float cast_time { get; set; }
@@ -41,8 +35,8 @@ public class MainSkillData
     [Name("projectile_count")]
     public int projectile_count { get; set; }
 
-    [Name("projectile_lifetime")]
-    public float projectile_lifetime { get; set; }
+    [Name("skill_lifetime")]
+    public float skill_lifetime { get; set; }
 
     [Name("pierce_count")]
     public int pierce_count { get; set; }
@@ -74,71 +68,71 @@ public class MainSkillData
     [Optional]
     public string description { get; set; }
 
-    #region Helper Properties (Enum 변환)
+    #region Helper Properties (Enum 변환 - 새 ID 체계)
 
     /// <summary>
-    /// skill_type을 SkillEnumTable 기준 SkillAssetType으로 변환
-    /// 1000=Projectile, 1001=AOE, 1002=DOT, etc.
+    /// skill_type_ID를 SkillAssetType으로 변환
+    /// 3000100=Projectile, 3000201=InstantSingle, 3000302=AOE, etc.
     /// </summary>
     public SkillAssetType GetSkillType()
     {
-        return skill_type switch
+        return skill_type_ID switch
         {
-            1000 => SkillAssetType.Projectile,
-            1001 => SkillAssetType.AOE,
-            1002 => SkillAssetType.DOT,
-            1003 => SkillAssetType.Buff,
-            1004 => SkillAssetType.Debuff,
-            1005 => SkillAssetType.Heal,
-            1006 => SkillAssetType.Summon,
-            1007 => SkillAssetType.Teleport,
-            1008 => SkillAssetType.Dash,
-            1009 => SkillAssetType.Flicker,
-            1010 => SkillAssetType.Channeling,
-            1011 => SkillAssetType.Trap,
-            1012 => SkillAssetType.Mine,
-            1013 => SkillAssetType.Aura,
-            1014 => SkillAssetType.Shield,
+            3000100 => SkillAssetType.Projectile,
+            3000201 => SkillAssetType.InstantSingle,
+            3000302 => SkillAssetType.AOE,
+            3000403 => SkillAssetType.DOT,
+            3000504 => SkillAssetType.Buff,
+            3000605 => SkillAssetType.Debuff,
+            3000706 => SkillAssetType.Channeling,
+            3000807 => SkillAssetType.Trap,
+            3000908 => SkillAssetType.Mine,
             _ => SkillAssetType.Projectile
         };
     }
 
     /// <summary>
-    /// element_type을 ElementType으로 변환
-    /// 2000=None, 2001=Fire, 2002=Ice, etc.
+    /// element_type_ID를 ElementType으로 변환
+    /// 3101000=None, 3101101=Romance, 3101202=Comedy, etc.
     /// </summary>
     public ElementType GetElementType()
     {
-        return element_type switch
+        return element_type_ID switch
         {
-            2000 => ElementType.None,
-            2001 => ElementType.Fire,
-            2002 => ElementType.Ice,
-            2003 => ElementType.Lightning,
-            2004 => ElementType.Poison,
-            2005 => ElementType.Holy,
-            2006 => ElementType.Dark,
-            2007 => ElementType.Nature,
-            2008 => ElementType.Arcane,
+            3101000 => ElementType.None,
+            3101101 => ElementType.Romance,
+            3101202 => ElementType.Comedy,
+            3101303 => ElementType.Adventure,
+            3101404 => ElementType.Mystery,
+            3101505 => ElementType.Fear,
             _ => ElementType.None
         };
     }
 
     /// <summary>
-    /// damage_type을 DamageType으로 변환
-    /// 3000=Physical, 3001=Magical, 3002=Pure, 3003=Hybrid
+    /// 투사체 스킬인지 확인
     /// </summary>
-    public DamageType GetDamageType()
-    {
-        return damage_type switch
-        {
-            3000 => DamageType.Physical,
-            3001 => DamageType.Magical,
-            3002 => DamageType.Pure,
-            3003 => DamageType.Hybrid,
-            _ => DamageType.Physical
-        };
-    }
+    public bool IsProjectileSkill => skill_type_ID == 3000100;
+
+    /// <summary>
+    /// 범위 스킬인지 확인
+    /// </summary>
+    public bool IsAOESkill => skill_type_ID == 3000302;
+
+    /// <summary>
+    /// DOT 스킬인지 확인
+    /// </summary>
+    public bool IsDOTSkill => skill_type_ID == 3000403;
+
+    /// <summary>
+    /// 채널링 스킬인지 확인
+    /// </summary>
+    public bool IsChannelingSkill => skill_type_ID == 3000706;
+
+    /// <summary>
+    /// 함정/지뢰 스킬인지 확인
+    /// </summary>
+    public bool IsTrapSkill => skill_type_ID == 3000807 || skill_type_ID == 3000908;
 
     #endregion
 }

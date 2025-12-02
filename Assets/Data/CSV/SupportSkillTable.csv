@@ -1,8 +1,13 @@
-﻿서포트ID,//서포트명,서포트카테고리,호환타입,추가투사체,추가관통,데미지배율,속도배율,범위배율,쿨다운배율,마나배율,공속배율,시전배율,상태효과,CC타입,CC지속,슬로우량,DOT타입,DOT지속,DOT틱간격,DOT틱데미지,표식타입,표식지속,표식데미지배율,체인수,체인범위,체인데미지감소,//설명
-support_id,//support_name,support_category,compatible_types,add_projectiles,add_pierce,damage_mult,speed_mult,aoe_mult,cooldown_mult,mana_mult,attack_speed_mult,cast_time_mult,status_effect,cc_type,cc_duration,cc_slow_amount,dot_type,dot_duration,dot_tick_interval,dot_damage_per_tick,mark_type,mark_duration,mark_damage_mult,chain_count,chain_range,chain_damage_reduction,//description
-int,//string,int,int,int,int,float,float,float,float,float,float,float,int,int,float,float,int,float,float,float,int,float,float,int,float,float,//string
-2001,다중 발사체,8001,1000,3,0,1,1,1,1,1,1,1,4000,5000,0,0,6000,0,0,0,7000,0,0,0,0,0,다중 발사체 프로토타입
-2002,체이닝,8004,1000,0,0,1,1,1,1,1,1,1,4004,5000,0,0,6000,0,0,0,7000,0,0,5,10,5,체이닝 프로토타입
-2003,도트,8002,1000,0,0,1,1,1,1,1,1,1,4002,5000,0,0,6001,5,0.5,5,7000,0,0,0,0,0,도트 프로토타입
-2004,스턴,8003,1000,0,0,1,1,1,1,1,1,1,4001,5001,2,50,6000,0,0,0,7000,0,0,0,0,0,프로토타입 CC
-2005,표식,8003,1000,0,0,1,1,1,1,1,1,1,4003,5000,0,0,6000,0,0,0,7007,10,10,0,0,0,표식 프로토타입
+서포트ID,//서포트명,서포트카테고리,호환타입,추가투사체,추가관통,데미지배율,속도배율,범위배율,쿨다운배율,공속배율,시전배율,상태효과,CC타입,CC지속,슬로우량,DOT지속,DOT틱간격,DOT틱데미지,표식지속,표식데미지배율,체인수,체인범위,체인데미지감소,//설명
+support_id,//support_name,support_category,compatible_types,add_projectiles,add_pierce,damage_mult,speed_mult,aoe_mult,cooldown_mult,attack_speed_mult,cast_time_mult,status_effect,cc_type,cc_duration,cc_slow_amount,dot_duration,dot_tick_interval,dot_damage_per_tick,mark_duration,mark_damage_mult,chain_count,chain_range,chain_damage_reduction,//description
+int,//string,int,int,int,int,float,float,float,float,float,float,int,int,float,float,float,float,float,float,float,int,float,float,//string
+40001,관통력 증가,3703801,3000100,0,1,1,1,1,1,1,1,3301600,0,0,0,0,0,0,0,0,0,0,0,투사체의 관통력을 향상시켜 적들을 관통할 수 있도록 합니다
+40002,파편화,3703801,3000100,2,0,1,1,1,1,1,1,3301600,0,0,0,0,0,0,0,0,0,0,0,투사체가 적에게 명중 시 갈라지며 근처 가까운 적에게 날아갑니다
+40003,마력 범위 확대,3703902,3000302,0,0,1,1,1.2,1,1,1,3301600,0,0,0,0,0,0,1.5,1,0,0,0,광역 스킬 공격의 범위가 증가합니다
+40004,마력 농도 강화,3704003,3000605,0,0,0,0,0,0,0,0,3301903,0,0,0,0,0,0,1.2,2,0,0,0,더욱 강력한 마력 농도로 적에게 부착한 표식의 지속시간이 강화됩니다
+40005,동시 주문,3704306,3000100,2,0,1,1,0,1,1.2,1,3301600,0,0,0,0,0,0,0,0,0,0,0,주문에 집중해 투사체를 여러 적에게 동시에 발사할 수 있도록 합니다
+40006,연속발사,3704306,3000100,0,0,1,1,0,1,1.5,0.8,3301600,0,0,0,0,0,0,0,0,0,0,0,투사체를 빠른 속도로 연속 발사할 수 있도록 합니다
+40007,마력의 흔적,3704003,3000605,0,0,0,0,0,0,0,0,3301903,0,0,0,0,0,0,1,1.5,0,0,0,표식의 데미지 배율이 증가합니다
+40008,마력 유지 효율 증가,3704205,3000807,0,0,0,0,0,0,0,0,3301802,0,0,0,1,0.8,1.5,0,0,0,0,0,필드에 설치된 함정 스킬들의 데미지가 증가합니다
+40009,탄성 유지,3704104,3000100,0,0,1,1,1,0.7,1,1,3302004,0,0,0,0,0,0,0,0,3,20,30,투사체에 담긴 마력으로 탄성을 강하게 만들어 투사체가 적들 사이를 튕겨다닐 수 있게 만든다
+40010,고속 투사체,3703801,3000100,0,0,1.2,1.5,1,1,0.85,1,3301600,0,0,0,0,0,0,0,0,0,0,0,투사체의 속도를 대폭 증가시켜 적에게 빠르게 도달하게 합니다.

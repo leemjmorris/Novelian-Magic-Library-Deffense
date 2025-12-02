@@ -22,8 +22,11 @@ public class CSVLoader : MonoBehaviour
         public static CsvTable<T> Table;
     }
 
-    // 스킬 CSV 파일 경로 (에디터용)
-    private const string SKILL_CSV_PATH = "Assets/Data/CSV";
+    // CSV 파일 경로 (에디터용)
+    private const string CSV_PATH = "Assets/Data/CSV";
+
+    // 리로드 이벤트
+    public static event System.Action OnCSVReloaded;
 
     private void Awake()
     {
@@ -82,7 +85,12 @@ public class CSVLoader : MonoBehaviour
                 // 새 스킬 테이블 (3행 헤더 형식)
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "MainSkillTable.csv", x => x.skill_id),
                 RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "SupportSkillTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "SkillLevelTable.csv", x => x.GetCompositeKey())
+                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "SkillLevelTable.csv", x => x.GetCompositeKey()),
+
+                // 인게임 카드 시스템 테이블 (3행 헤더 형식)
+                RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "CardTable.csv", x => x.Card_ID),
+                RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "CardLevelTable.csv", x => x.Card_Level_ID),
+                RegisterSkillTableAsync<CardListData>(AddressableKey.CardListTable, "CardListTable.csv", x => x.Card_List_ID)
             );
 
             IsInit = true;
@@ -134,7 +142,7 @@ public class CSVLoader : MonoBehaviour
 
 #if UNITY_EDITOR
             // 에디터: 파일 직접 읽기 (CSV 수정 시 즉시 반영)
-            string filePath = Path.Combine(SKILL_CSV_PATH, fileName);
+            string filePath = $"{CSV_PATH}/{fileName}";
             if (File.Exists(filePath))
             {
                 csvText = File.ReadAllText(filePath);
@@ -212,6 +220,8 @@ public class CSVLoader : MonoBehaviour
 
     /// <summary>
     /// Load CSV table (internal helper method)
+    /// 에디터: 파일 직접 읽기 (즉시 반영)
+    /// 빌드: Addressables 사용
     /// </summary>
     private async UniTask<CsvTable<T>> LoadTableAsync<T>(string addressableKey, Func<T, int> idSelector) where T : class
     {
@@ -219,18 +229,38 @@ public class CSVLoader : MonoBehaviour
 
         try
         {
-            // Load TextAsset from Addressables
-            TextAsset asset = await Addressables.LoadAssetAsync<TextAsset>(addressableKey);
+            string csvText = null;
 
-            if (asset == null)
+#if UNITY_EDITOR
+            // 에디터: CSV 파일 직접 읽기 (CSV 수정 시 즉시 반영)
+            string fileName = addressableKey + ".csv";
+            string filePath = $"{CSV_PATH}/{fileName}";
+            if (File.Exists(filePath))
             {
-                Debug.LogError($"[CSVLoader] Failed to load TextAsset: {addressableKey}");
-                return null;
+                csvText = File.ReadAllText(filePath);
+                Debug.Log($"[CSVLoader] Editor mode: Direct file read from {filePath}");
+            }
+            else
+            {
+                Debug.LogWarning($"[CSVLoader] File not found: {filePath}, falling back to Addressables");
+            }
+#endif
+
+            // 빌드 또는 에디터에서 파일을 못 찾은 경우: Addressables 사용
+            if (string.IsNullOrEmpty(csvText))
+            {
+                TextAsset asset = await Addressables.LoadAssetAsync<TextAsset>(addressableKey);
+                if (asset == null)
+                {
+                    Debug.LogError($"[CSVLoader] Failed to load TextAsset: {addressableKey}");
+                    return null;
+                }
+                csvText = asset.text;
             }
 
             // Create and load CsvTable
             var table = new CsvTable<T>(idSelector);
-            string csvText = System.Text.RegularExpressions.Regex.Replace(asset.text, @",N/A(?=[,\r\n]|$)", ",0");
+            csvText = System.Text.RegularExpressions.Regex.Replace(csvText, @",N/A(?=[,\r\n]|$)", ",0");
             table.LoadFromText(csvText);
 
             Debug.Log($"[CSVLoader] Table loaded: {addressableKey} ({table.Count} rows)");
@@ -290,6 +320,62 @@ public class CSVLoader : MonoBehaviour
         );
 
         Debug.Log("[CSVLoader] Skill tables reloaded!");
+        OnCSVReloaded?.Invoke();
+    }
+
+    /// <summary>
+    /// 에디터에서 모든 CSV 테이블 다시 로드 (밸런싱 도구용)
+    /// </summary>
+    public async UniTask ReloadAllTablesAsync()
+    {
+        Debug.Log("[CSVLoader] Reloading ALL CSV tables...");
+
+        try
+        {
+            await UniTask.WhenAll(
+                // 표준 테이블
+                RegisterTableAsync<BookmarkData>(AddressableKey.BookmarkTable, x => x.Bookmark_ID),
+                RegisterTableAsync<BookmarkCraftData>(AddressableKey.BookmarkCraftTable, x => x.Recipe_ID),
+                RegisterTableAsync<BookmarkOptionData>(AddressableKey.BookmarkOptionTable, x => x.Option_ID),
+                RegisterTableAsync<BookmarkListData>(AddressableKey.BookmarkListTable, x => x.List_ID),
+                RegisterTableAsync<GradeData>(AddressableKey.GradeTable, x => x.Grade_ID),
+                RegisterTableAsync<CurrencyData>(AddressableKey.CurrencyTable, x => x.Currency_ID),
+                RegisterTableAsync<IngredientData>(AddressableKey.IngredientTable, x => x.Ingredient_ID),
+                RegisterTableAsync<CharacterData>(AddressableKey.CharacterTable, x => x.Character_ID),
+                RegisterTableAsync<LevelData>(AddressableKey.LevelTable, x => x.Cha_Level_ID),
+                RegisterTableAsync<SkillData>(AddressableKey.SkillTable, x => x.Skill_ID),
+                RegisterTableAsync<EnhancementLevelData>(AddressableKey.EnhancementLevelTable, x => x.Pw_Level),
+                RegisterTableAsync<CharacterEnhancementData>(AddressableKey.CharacterEnhancementTable, x => x.Character_PwUp_ID),
+                RegisterTableAsync<StringTable>(AddressableKey.StringTable, x => x.Text_ID),
+                RegisterTableAsync<StageData>(AddressableKey.StageTable, x => x.Stage_ID),
+                RegisterTableAsync<WaveData>(AddressableKey.WaveTable, x => x.Wave_ID),
+                RegisterTableAsync<MonsterLevelData>(AddressableKey.MonsterLevelTable, x => x.Mon_Level_ID),
+                RegisterTableAsync<MonsterData>(AddressableKey.MonsterTable, x => x.Monster_ID),
+                RegisterTableAsync<RewardData>(AddressableKey.RewardTable, x => x.Reward_ID),
+                RegisterTableAsync<RewardGroupData>(AddressableKey.RewardGroupTable, x => x.Reward_Group_ID),
+                RegisterTableAsync<DispatchCategoryData>(AddressableKey.DispatchCategoryTable, x => x.Dispatch_ID),
+                RegisterTableAsync<DispatchLocationData>(AddressableKey.DispatchLocationTable, x => x.Dispatch_Location_ID),
+                RegisterTableAsync<DispatchTimeTableData>(AddressableKey.DispatchTimeTable, x => x.Dispatch_Time_ID),
+                RegisterTableAsync<DispatchRewardTableData>(AddressableKey.DispatchRewardTable, x => x.Dispatch_Reward_ID),
+
+                // 스킬 테이블 (3행 헤더)
+                RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "MainSkillTable.csv", x => x.skill_id),
+                RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "SupportSkillTable.csv", x => x.support_id),
+                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "SkillLevelTable.csv", x => x.GetCompositeKey()),
+
+                // 인게임 카드 시스템 테이블 (3행 헤더)
+                RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "CardTable.csv", x => x.Card_ID),
+                RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "CardLevelTable.csv", x => x.Card_Level_ID),
+                RegisterSkillTableAsync<CardListData>(AddressableKey.CardListTable, "CardListTable.csv", x => x.Card_List_ID)
+            );
+
+            Debug.Log("[CSVLoader] All CSV tables reloaded successfully!");
+            OnCSVReloaded?.Invoke();
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[CSVLoader] Failed to reload tables: {e.Message}");
+        }
     }
 #endif
 }
