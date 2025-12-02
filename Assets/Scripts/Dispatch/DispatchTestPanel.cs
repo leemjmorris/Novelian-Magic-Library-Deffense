@@ -3,7 +3,6 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.VisualScripting;
 
 namespace Dispatch
 {
@@ -20,8 +19,9 @@ namespace Dispatch
         [Header("UI 요소")]
         [SerializeField] private Slider timeSlider;                      // 시간 선택 슬라이더
         [SerializeField] private TextMeshProUGUI selectedTimeText;       // 선택된 시간 표시
-        [SerializeField] private TextMeshProUGUI descriptionText;        // 파견 설명
+        //[SerializeField] private TextMeshProUGUI descriptionText;        // 파견 설명
         [SerializeField] private TextMeshProUGUI rewardInfoText;         // 보상 정보 표시
+        [SerializeField] private ScrollRect buttonScrollRect;            // 버튼 스크롤뷰
 
         [Header("전투형 버튼 (5개)")]
         [SerializeField] private Button combatButton1;  // 악몽의 창고
@@ -37,11 +37,26 @@ namespace Dispatch
         [SerializeField] private Button collectionButton4;  // 봉인구 안정성 확인
         [SerializeField] private Button collectionButton5;  // 마력 잔재 정화
 
+        [Header("덱 캐릭터 표시 (4개)")]
+        [SerializeField] private Image deckCharacterImage1;
+        [SerializeField] private Image deckCharacterImage2;
+        [SerializeField] private Image deckCharacterImage3;
+        [SerializeField] private Image deckCharacterImage4;
+
         [Header("파견 실행 버튼")]
         [SerializeField] private Button dispatchStartButton;  // 파견하기 버튼
         [SerializeField] private TextMeshProUGUI dispatchButtonText;  // 버튼 텍스트
         [SerializeField] private TextMeshProUGUI countdownTimerText;  // 카운트다운 타이머 텍스트
+
         [SerializeField] private GameObject sliderObject;  // 슬라이더 오브젝트 (숨김 처리용)
+        [SerializeField] private GameObject TipPanelObject;  // 팁표시 오브젝트 (숨김 처리용)
+
+        [Header("창고별 팁 텍스트 (5개)")]
+        [SerializeField] private GameObject tipText1;  // 악몽의 창고 팁
+        [SerializeField] private GameObject tipText2;  // 운명의 창고 팁
+        [SerializeField] private GameObject tipText3;  // 웃음의 창고 팁
+        [SerializeField] private GameObject tipText4;  // 진실의 창고 팁
+        [SerializeField] private GameObject tipText5;  // 미지의 창고 팁
 
         private int currentSelectedHours = 4;
         private int currentSelectedTimeID;
@@ -51,6 +66,13 @@ namespace Dispatch
         // 파견 상태 관리
         private bool isDispatching = false;
         private float remainingTime = 0f;
+
+        // 스냅 스크롤 관련
+        private int totalCombatButtons = 5;  // 전투형 5개
+        private int currentButtonIndex = 0;
+        private bool isDragging = false;
+        private float targetScrollPosition = 0f;
+        private float scrollVelocity = 0f;
 
         private void Start()
         {
@@ -62,6 +84,19 @@ namespace Dispatch
             // 초기 UI 상태 설정
             if (countdownTimerText != null)
                 countdownTimerText.gameObject.SetActive(false);
+
+            // 모든 팁 텍스트 초기 비활성화
+            HideAllTipTexts();
+
+            // 스크롤뷰를 맨 왼쪽(악몽의 창고)으로 이동
+            if (buttonScrollRect != null)
+                buttonScrollRect.horizontalNormalizedPosition = 0f;
+
+            // 덱 캐릭터 로드
+            LoadDeckCharacters();
+
+            // 첫 번째 창고(악몽의 창고) 팁 표시
+            ShowTipText(DispatchLocation.NightmareWarehouse);
 
             AddLog("파견 테스트 패널 초기화 완료");
         }
@@ -80,6 +115,18 @@ namespace Dispatch
                 }
 
                 UpdateCountdownDisplay();
+            }
+
+            // 스냅 스크롤 처리
+            if (buttonScrollRect != null && !isDragging)
+            {
+                // 부드럽게 타겟 위치로 이동
+                buttonScrollRect.horizontalNormalizedPosition = Mathf.SmoothDamp(
+                    buttonScrollRect.horizontalNormalizedPosition,
+                    targetScrollPosition,
+                    ref scrollVelocity,
+                    0.1f
+                );
             }
         }
 
@@ -140,6 +187,54 @@ namespace Dispatch
             {
                 dispatchStartButton.onClick.AddListener(OnDispatchStartButtonClicked);
             }
+
+            // 스크롤 드래그 이벤트 등록
+            if (buttonScrollRect != null)
+            {
+                var eventTrigger = buttonScrollRect.gameObject.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+                if (eventTrigger == null)
+                {
+                    eventTrigger = buttonScrollRect.gameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+                }
+
+                // BeginDrag 이벤트
+                var beginDragEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
+                beginDragEntry.eventID = UnityEngine.EventSystems.EventTriggerType.BeginDrag;
+                beginDragEntry.callback.AddListener((data) => { OnBeginDrag(); });
+                eventTrigger.triggers.Add(beginDragEntry);
+
+                // EndDrag 이벤트
+                var endDragEntry = new UnityEngine.EventSystems.EventTrigger.Entry();
+                endDragEntry.eventID = UnityEngine.EventSystems.EventTriggerType.EndDrag;
+                endDragEntry.callback.AddListener((data) => { OnEndDrag(); });
+                eventTrigger.triggers.Add(endDragEntry);
+            }
+        }
+
+        /// <summary>
+        /// 드래그 시작
+        /// </summary>
+        private void OnBeginDrag()
+        {
+            isDragging = true;
+        }
+
+        /// <summary>
+        /// 드래그 종료 - 가장 가까운 버튼으로 스냅
+        /// </summary>
+        private void OnEndDrag()
+        {
+            isDragging = false;
+
+            if (buttonScrollRect == null) return;
+
+            // 현재 스크롤 위치에서 가장 가까운 버튼 인덱스 계산
+            float currentPos = buttonScrollRect.horizontalNormalizedPosition;
+            currentButtonIndex = Mathf.RoundToInt(currentPos * (totalCombatButtons - 1));
+            currentButtonIndex = Mathf.Clamp(currentButtonIndex, 0, totalCombatButtons - 1);
+
+            // 타겟 위치 설정
+            targetScrollPosition = (float)currentButtonIndex / (totalCombatButtons - 1);
         }
 
         /// <summary>
@@ -198,6 +293,9 @@ namespace Dispatch
 
             AddLog($"📍 선택된 장소: {GetLocationName(location)}");
 
+            // 해당 창고의 팁 텍스트 표시
+            ShowTipText(location);
+
             // UI 업데이트 (보상 정보만 표시)
             UpdateTimeDisplay(Mathf.RoundToInt(timeSlider.value));
         }
@@ -247,10 +345,12 @@ namespace Dispatch
         /// </summary>
         private void UpdateDispatchUI()
         {
+            // 팁표시 숨김
+            if (TipPanelObject != null)
+                TipPanelObject.SetActive(false);
             // 슬라이더 숨김
             if (sliderObject != null)
                 sliderObject.SetActive(false);
-
             //시간 선택 텍스트 숨김
             if (selectedTimeText != null)
                 selectedTimeText.gameObject.SetActive(false);
@@ -362,6 +462,12 @@ namespace Dispatch
             // 슬라이더 다시 표시
             if (sliderObject != null)
                 sliderObject.SetActive(true);
+            //시간 선택 텍스트 표시
+            if (selectedTimeText != null)
+                selectedTimeText.gameObject.SetActive(true);
+            //팁 표시 다시 표시
+            if (TipPanelObject != null)
+                TipPanelObject.SetActive(true);
 
             // 카운트다운 타이머 숨김
             if (countdownTimerText != null)
@@ -403,7 +509,7 @@ namespace Dispatch
             var locationData = GetLocationData(currentSelectedLocation);
             if (locationData == null)
             {
-                descriptionText.text = "장소 정보를 찾을 수 없습니다.";
+                //descriptionText.text = "장소 정보를 찾을 수 없습니다.";
                 return;
             }
 
@@ -411,14 +517,14 @@ namespace Dispatch
             var rewardData = GetRewardData(locationData.Dispatch_Location_ID, currentSelectedTimeID);
             if (rewardData == null)
             {
-                descriptionText.text = $"{currentSelectedHours}시간 파견\n보상 정보를 찾을 수 없습니다.";
+                //descriptionText.text = $"{currentSelectedHours}시간 파견\n보상 정보를 찾을 수 없습니다.";
                 return;
             }
 
             // 설명 텍스트 (에디터 텍스트 크기 사용)
-            descriptionText.text = $"<b>{GetLocationName(currentSelectedLocation)}</b>\n" +
-                                   $"파견 시간: {currentSelectedHours}시간\n" +
-                                   $"<color=yellow>보상 배율: x{rewardData.Reward_Multiplier}</color>";
+            //descriptionText.text = $"<b>{GetLocationName(currentSelectedLocation)}</b>\n" +
+                                   //$"파견 시간: {currentSelectedHours}시간\n" +
+                                   //$"<color=yellow>보상 배율: x{rewardData.Reward_Multiplier}</color>";
 
             // 보상 상세 정보 표시
             DisplayRewardInfo(rewardData);
@@ -608,6 +714,124 @@ namespace Dispatch
             {
                 AddLog("⚠️ DispatchManager가 없어 파견은 시작되지 않았습니다. (보상 로직만 테스트)");
             }
+        }
+
+        /// <summary>
+        /// 모든 팁 텍스트 비활성화
+        /// </summary>
+        private void HideAllTipTexts()
+        {
+            if (tipText1 != null) tipText1.SetActive(false);
+            if (tipText2 != null) tipText2.SetActive(false);
+            if (tipText3 != null) tipText3.SetActive(false);
+            if (tipText4 != null) tipText4.SetActive(false);
+            if (tipText5 != null) tipText5.SetActive(false);
+        }
+
+        /// <summary>
+        /// 해당 창고의 팁 텍스트만 활성화
+        /// </summary>
+        private void ShowTipText(DispatchLocation location)
+        {
+            // 모든 팁 비활성화
+            HideAllTipTexts();
+
+            // 해당 창고의 팁만 활성화
+            GameObject targetTip = location switch
+            {
+                DispatchLocation.NightmareWarehouse => tipText1,
+                DispatchLocation.FateWarehouse => tipText2,
+                DispatchLocation.LaughterWarehouse => tipText3,
+                DispatchLocation.TruthWarehouse => tipText4,
+                DispatchLocation.UnknownWarehouse => tipText5,
+                _ => null
+            };
+
+            if (targetTip != null)
+            {
+                targetTip.SetActive(true);
+                AddLog($"✓ {GetLocationName(location)} 팁 표시");
+            }
+        }
+
+        /// <summary>
+        /// 덱 캐릭터 로드 및 이미지 표시
+        /// </summary>
+        private void LoadDeckCharacters()
+        {
+            if (DeckManager.Instance == null)
+            {
+                AddLog("⚠️ DeckManager가 없습니다.");
+                return;
+            }
+
+            AddLog("=== 덱 캐릭터 로드 시작 ===");
+
+            // 덱의 4개 슬롯 순회
+            for (int i = 0; i < 4; i++)
+            {
+                int characterId = DeckManager.Instance.GetCharacterAtIndex(i);
+                Image targetImage = GetDeckImageByIndex(i);
+
+                if (targetImage == null)
+                {
+                    AddLog($"⚠️ 덱 이미지 슬롯 {i + 1}이 할당되지 않았습니다.");
+                    continue;
+                }
+
+                if (characterId > 0)
+                {
+                    // 캐릭터가 있으면 이미지 로드
+                    LoadCharacterImageForSlot(i, characterId, targetImage);
+                    targetImage.gameObject.SetActive(true);
+                    AddLog($"✓ 슬롯 {i + 1}: 캐릭터 ID {characterId} 로드");
+                }
+                else
+                {
+                    // 빈 슬롯 처리 (비활성화)
+                    targetImage.gameObject.SetActive(false);
+                    AddLog($"✓ 슬롯 {i + 1}: 빈 슬롯 (비활성화)");
+                }
+            }
+
+            AddLog("=== 덱 캐릭터 로드 완료 ===");
+        }
+
+        /// <summary>
+        /// 인덱스로 덱 이미지 가져오기
+        /// </summary>
+        private Image GetDeckImageByIndex(int index)
+        {
+            return index switch
+            {
+                0 => deckCharacterImage1,
+                1 => deckCharacterImage2,
+                2 => deckCharacterImage3,
+                3 => deckCharacterImage4,
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// 캐릭터 이미지 로드 (Addressable)
+        /// </summary>
+        private void LoadCharacterImageForSlot(int slotIndex, int characterId, Image targetImage)
+        {
+            if (targetImage == null) return;
+
+            // 현재는 모든 캐릭터가 같은 이미지 사용 ("ChaIcon")
+            UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(AddressableKey.Icon_Character).Completed += handle =>
+            {
+                if (handle.Status == UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)
+                {
+                    targetImage.sprite = handle.Result;
+                    AddLog($"✓ 슬롯 {slotIndex + 1} 이미지 로드 성공");
+                }
+                else
+                {
+                    AddLog($"❌ 슬롯 {slotIndex + 1} 이미지 로드 실패");
+                }
+            };
         }
 
         /// <summary>
