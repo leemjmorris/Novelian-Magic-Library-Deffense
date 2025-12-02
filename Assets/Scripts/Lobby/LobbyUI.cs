@@ -40,7 +40,7 @@ public class LobbyUI : MonoBehaviour
 
     public void OnInventoryButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        LoadSceneWithFadeOnly(sceneName.Inventory).Forget();
     }
 
     // 오른쪽 버튼들
