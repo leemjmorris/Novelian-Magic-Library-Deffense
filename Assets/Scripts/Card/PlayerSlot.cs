@@ -8,7 +8,7 @@ using UnityEngine.UI;
 public class PlayerSlot : MonoBehaviour
 {
     [Header("슬롯 정보")]
-    public int slotIndex;             // 슬롯 번호 (0-9)
+    public int slotIndex;             // 슬롯 번호 (0-3)
     public bool isOccupied = false;   // 슬롯이 차있는지 여부
     
     [Header("UI 요소")]

@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 
 //JML: World coordinate-based character placement system manager
-//     - Creates and manages 5x2 grid
+//     - Creates and manages 4x1 grid (4 slots in a single row)
 //     - Places characters in random slots
 //     - Moves characters via drag and drop
 public class CharacterPlacementManager : MonoBehaviour
@@ -15,13 +15,12 @@ public class CharacterPlacementManager : MonoBehaviour
     [SerializeField] private Transform gridParent;       // Grid parent object
 
     [Header("Grid Layout")]
-    [SerializeField] private int gridColumns = 5;        // 5 columns
-    [SerializeField] private int gridRows = 2;           // 2 rows
+    [SerializeField] private int gridColumns = 4;        // 4 columns (changed from 5)
+    [SerializeField] private int gridRows = 1;           // 1 row (changed from 2)
     [SerializeField] private float gridSpacingX = 1.5f;  // X spacing
     [SerializeField] private float gridSpacingZ = 1.5f;  // Z spacing
-    [SerializeField] private Vector3 gridStartPosition = new Vector3(-3f, 0f, 0.75f); // Start position (XZ plane)
-    [SerializeField, Tooltip("그리드 높이 오프셋 (지형이 평평하지 않을 때 위로 올리기)")]
-    private float gridPlaneY = 0f;
+    [SerializeField, Tooltip("그리드 중앙 위치 오프셋 (그리드 전체를 이동시킬 때 사용)")]
+    private Vector3 gridCenterOffset = Vector3.zero;    // 그리드 중앙 위치 조절용
 
     // Grid slot list
     private List<GridSlot> gridSlots = new List<GridSlot>();
@@ -96,7 +95,7 @@ public class CharacterPlacementManager : MonoBehaviour
         InputManager.OnDrop -= HandleDrop;
     }
 
-    //JML: Create 5x2 grid
+    //JML: Create 4x1 grid (그리드 중앙이 원점이 되도록 자동 계산)
     private void CreateGrid()
     {
         if (gridSlotPrefab == null)
@@ -105,7 +104,18 @@ public class CharacterPlacementManager : MonoBehaviour
             return;
         }
 
-        Debug.Log($"[CharacterPlacementManager] CreateGrid started - gridRows={gridRows}, gridColumns={gridColumns}, gridParent={gridParent?.name ?? "null"}");
+        // 그리드 중앙이 gridCenterOffset 위치가 되도록 시작 위치 자동 계산
+        // 전체 너비 = (columns - 1) * spacingX
+        // 시작 X = -전체너비 / 2 + offset.x
+        float totalWidth = (gridColumns - 1) * gridSpacingX;
+        float totalDepth = (gridRows - 1) * gridSpacingZ;
+        Vector3 calculatedStartPosition = new Vector3(
+            -totalWidth / 2f + gridCenterOffset.x,
+            gridCenterOffset.y,
+            totalDepth / 2f + gridCenterOffset.z  // Z는 음수 방향으로 증가하므로 양수로 시작
+        );
+
+        Debug.Log($"[CharacterPlacementManager] CreateGrid started - gridRows={gridRows}, gridColumns={gridColumns}, centerOffset={gridCenterOffset}, calculatedStart={calculatedStartPosition}");
 
         int slotIndex = 0;
 
@@ -114,9 +124,9 @@ public class CharacterPlacementManager : MonoBehaviour
             for (int col = 0; col < gridColumns; col++)
             {
                 // Calculate grid position (XZ plane with Y height offset)
-                Vector3 position = gridStartPosition + new Vector3(
+                Vector3 position = calculatedStartPosition + new Vector3(
                     col * gridSpacingX,
-                    gridPlaneY,
+                    0f,
                     -row * gridSpacingZ
                 );
 
@@ -264,15 +274,15 @@ public class CharacterPlacementManager : MonoBehaviour
     {
         if (draggingCharacter == null) return;
 
-        // Convert screen coordinates to world position on the grid plane (Y = gridPlaneY)
+        // Convert screen coordinates to world position on the grid plane (Y = gridCenterOffset.y)
         Ray ray = mainCamera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
-        Plane gridPlane = new Plane(Vector3.up, new Vector3(0f, gridPlaneY, 0f));
+        Plane gridPlane = new Plane(Vector3.up, new Vector3(0f, gridCenterOffset.y, 0f));
 
         if (gridPlane.Raycast(ray, out float distance))
         {
             Vector3 worldPosition = ray.GetPoint(distance);
             // Keep the character at grid height
-            worldPosition.y = gridPlaneY;
+            worldPosition.y = gridCenterOffset.y;
             draggingCharacter.transform.position = worldPosition;
         }
     }
@@ -284,7 +294,7 @@ public class CharacterPlacementManager : MonoBehaviour
 
         // Convert screen coordinates to world position on the grid plane
         Ray ray = mainCamera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
-        Plane gridPlane = new Plane(Vector3.up, new Vector3(0f, gridPlaneY, 0f));
+        Plane gridPlane = new Plane(Vector3.up, new Vector3(0f, gridCenterOffset.y, 0f));
         Vector3 worldPosition = Vector3.zero;
 
         if (gridPlane.Raycast(ray, out float distance))
@@ -406,15 +416,24 @@ public class CharacterPlacementManager : MonoBehaviour
         Color occupiedColor = new Color(1f, 0f, 0f, 0.5f); // Red for occupied slots
         Color wireColor = new Color(1f, 1f, 0f, 0.8f);   // Yellow wireframe
 
+        // 그리드 중앙이 gridCenterOffset 위치가 되도록 시작 위치 계산 (CreateGrid와 동일한 로직)
+        float totalWidth = (gridColumns - 1) * gridSpacingX;
+        float totalDepth = (gridRows - 1) * gridSpacingZ;
+        Vector3 calculatedStartPosition = new Vector3(
+            -totalWidth / 2f + gridCenterOffset.x,
+            gridCenterOffset.y,
+            totalDepth / 2f + gridCenterOffset.z
+        );
+
         // Draw each grid slot
         for (int row = 0; row < gridRows; row++)
         {
             for (int col = 0; col < gridColumns; col++)
             {
                 // Calculate grid position (same as CreateGrid)
-                Vector3 position = gridStartPosition + new Vector3(
+                Vector3 position = calculatedStartPosition + new Vector3(
                     col * gridSpacingX,
-                    gridPlaneY,
+                    0f,
                     -row * gridSpacingZ
                 );
 
@@ -448,13 +467,9 @@ public class CharacterPlacementManager : MonoBehaviour
             }
         }
 
-        // Draw grid boundary
+        // Draw grid boundary (중앙이 gridCenterOffset)
         Gizmos.color = Color.cyan;
-        Vector3 gridCenter = gridStartPosition + new Vector3(
-            (gridColumns - 1) * gridSpacingX * 0.5f,
-            gridPlaneY,
-            -(gridRows - 1) * gridSpacingZ * 0.5f
-        );
+        Vector3 gridCenter = gridCenterOffset;  // 오프셋 위치가 중앙
         Vector3 gridBoundarySize = new Vector3(
             gridColumns * gridSpacingX,
             0.05f,
