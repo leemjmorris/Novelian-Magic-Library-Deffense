@@ -424,8 +424,8 @@ namespace Dispatch
                     {
                         AddLog($"💰 보상 배율: x{rewardData.Reward_Multiplier}");
 
-                        // 보상 상세 정보 출력
-                        LogRewardDetails(rewardData);
+                        // 실제 보상 드랍 계산 및 출력
+                        CalculateAndDropRewards(rewardData);
                     }
 
                     AddLog($"✅ 완료 시간: {System.DateTime.Now:yyyy-MM-dd HH:mm:ss}");
@@ -752,6 +752,106 @@ namespace Dispatch
                 targetTip.SetActive(true);
                 AddLog($"✓ {GetLocationName(location)} 팁 표시");
             }
+        }
+
+        /// <summary>
+        /// 실제 보상 계산 및 드랍
+        /// </summary>
+        private void CalculateAndDropRewards(DispatchRewardTableData rewardData)
+        {
+            // 보상 그룹 데이터 가져오기
+            var rewardGroupData = CSVLoader.Instance.GetData<RewardGroupData>(rewardData.Reward_Group_ID);
+            if (rewardGroupData == null)
+            {
+                AddLog("❌ 보상 그룹 정보 없음");
+                return;
+            }
+
+            AddLog("🎲 보상 드랍 결과:");
+
+            // Reward_1_ID ~ Reward_5_ID 체크
+            int[] rewardIDs = new int[]
+            {
+                rewardGroupData.Reward_1_ID,
+                rewardGroupData.Reward_2_ID,
+                rewardGroupData.Reward_3_ID,
+                rewardGroupData.Reward_4_ID,
+                rewardGroupData.Reward_5_ID
+            };
+
+            foreach (var rewardID in rewardIDs)
+            {
+                if (rewardID == 0) continue; // 보상 없음
+
+                var reward = CSVLoader.Instance.GetData<RewardData>(rewardID);
+                if (reward == null) continue;
+
+                // Is_Fixed = 1이면 무조건 드랍, 0이면 확률에 따라 드랍
+                bool shouldDrop = reward.Is_Fixed || Random.value <= reward.Probability;
+
+                if (shouldDrop)
+                {
+                    // 디버그: 원본 데이터 확인
+                    //AddLog($"  [DEBUG] 원본 Min: {reward.Min_Count}, Max: {reward.Max_Count}, 배율: {rewardData.Reward_Multiplier}");
+
+                    // 배율 적용한 드랍 수량 계산
+                    int minCount = Mathf.FloorToInt(reward.Min_Count * rewardData.Reward_Multiplier);
+                    int maxCount = Mathf.FloorToInt(reward.Max_Count * rewardData.Reward_Multiplier);
+
+                    //AddLog($"  [DEBUG] 계산된 Min: {minCount}, Max: {maxCount}");
+
+                    int dropCount = Random.Range(minCount, maxCount + 1);
+
+                    // 아이템 이름 가져오기
+                    string itemName = GetItemName(reward.Item_ID);
+
+                    // 드랍 로그
+                    string fixedText = reward.Is_Fixed ? "[고정]" : $"[{reward.Probability * 100:F1}% 성공]";
+                    AddLog($"  ✅ {fixedText} {itemName} x{dropCount}");
+
+                    // 실제 인벤토리에 추가
+                    if (IngredientManager.Instance != null)
+                    {
+                        IngredientManager.Instance.AddIngredient(reward.Item_ID, dropCount);
+                        AddLog($"  💼 인벤토리에 추가됨");
+                    }
+                    else
+                    {
+                        AddLog($"  ⚠️ IngredientManager가 없어서 인벤토리에 추가되지 않았습니다");
+                    }
+                }
+                else
+                {
+                    // 확률 실패
+                    string itemName = GetItemName(reward.Item_ID);
+                    AddLog($"  ❌ [{reward.Probability * 100:F1}% 실패] {itemName}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 아이템 ID로 아이템 이름 가져오기
+        /// </summary>
+        private string GetItemName(int itemID)
+        {
+            return itemID switch
+            {
+                10101 => "희미 종이",
+                10102 => "응축 종이",
+                10103 => "비범 종이",
+                10104 => "신성 종이",
+                10105 => "고대 종이",
+                10106 => "잉크",
+                10207 => "로맨스페이지",
+                10208 => "코미디페이지",
+                10209 => "모험페이지",
+                10210 => "공포페이지",
+                10211 => "추리페이지",
+                10313 => "클립",
+                10114 => "룬석",
+                1601 => "골드",
+                _ => $"알 수 없는 아이템 (ID: {itemID})"
+            };
         }
 
         /// <summary>
