@@ -140,20 +140,8 @@ public enum SkillCategory
     Support,    // 보조 스킬
 }
 
-/// <summary>
-/// 스탯 타입 (Buff/Debuff용)
-/// </summary>
-public enum StatType
-{
-    AttackSpeed,
-    MoveSpeed,
-    Damage,
-    Defense,
-    MaxHealth,
-    MaxMana,
-    CriticalChance,
-    CriticalDamage,
-}
+// JML: StatType은 Defines.cs에서 정의됨 (Issue #349)
+// CardLevelTable 기반 인게임 스텟 카드 시스템 통합
 
 /// <summary>
 /// 스탯 수정자 타입

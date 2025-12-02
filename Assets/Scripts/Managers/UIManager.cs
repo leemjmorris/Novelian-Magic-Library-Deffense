@@ -101,17 +101,6 @@ namespace NovelianMagicLibraryDefense.Managers
             }
         }
 
-        /// <summary>
-        /// Open card selection with specific cards
-        /// </summary>
-        public void OpenCardSelectWithCards(CardSelectPanel.CardData[] cards, bool pauseGame = false)
-        {
-            if (cardSelectPanel != null)
-            {
-                cardSelectPanel.OpenWithCards(cards, pauseGame);
-            }
-        }
-
         public void CloseCardSelect()
         {
             if (cardSelectPanel != null)

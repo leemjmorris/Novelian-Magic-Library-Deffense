@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Novelian.Combat;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.Settings;
@@ -22,6 +23,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private MonsterEvents monsterEvents;
         [SerializeField] private StageEvents stageEvents;
         [SerializeField] private Wall wallComponent; // JML: Wall 참조 (Barrier HP 설정용)
+        [SerializeField] private CharacterPlacementManager characterPlacementManager; // JML: Inspector에서 직접 참조 (Issue #349)
 
         [Header("Settings")]
         [SerializeField] private StageSettings stageSettings;
@@ -40,6 +42,15 @@ namespace NovelianMagicLibraryDefense.Managers
         private float RemainingTime { get; set; }
         private bool isStageCleared = false;
         private CancellationTokenSource timerCts;
+        #endregion
+
+        #region GlobalStatBuffs (Issue #349)
+        /// <summary>
+        /// JML: 전역 스텟 버프 저장소
+        /// 스텟 카드 선택 시 누적되며, 필드의 모든 캐릭터에 적용됨
+        /// 새로 소환되는 캐릭터에도 자동 적용
+        /// </summary>
+        private Dictionary<StatType, float> globalStatBuffs = new Dictionary<StatType, float>();
         #endregion
 
         /// <summary>
@@ -217,6 +228,9 @@ namespace NovelianMagicLibraryDefense.Managers
             isStageCleared = false;
             CurrentStageId = 0;
             Time.timeScale = 1f;
+
+            // JML: Reset global stat buffs (Issue #349)
+            globalStatBuffs.Clear();
         }
 
         protected override void OnDispose()
@@ -402,5 +416,84 @@ namespace NovelianMagicLibraryDefense.Managers
             int timeBonus = (int)(duration - RemainingTime) / 10;
             return baseReward + (level * 50) + timeBonus;
         }
+
+        #region GlobalStatBuff Methods (Issue #349)
+
+        /// <summary>
+        /// JML: 전역 스텟 버프 적용
+        /// 스텟 카드 선택 시 호출됨
+        /// 기존 필드 캐릭터 + 새로 소환되는 캐릭터 모두에 적용
+        /// </summary>
+        /// <param name="statType">스텟 타입 (StatType enum)</param>
+        /// <param name="value">증가 값 (% 단위, 예: 0.1 = 10%)</param>
+        public void ApplyGlobalStatBuff(StatType statType, float value)
+        {
+            // 1. 전역 버프 저장소에 누적
+            if (globalStatBuffs.ContainsKey(statType))
+            {
+                globalStatBuffs[statType] += value;
+            }
+            else
+            {
+                globalStatBuffs[statType] = value;
+            }
+
+            Debug.Log($"[StageManager] Global Stat Buff Applied: {statType} +{value * 100f}% (Total: {globalStatBuffs[statType] * 100f}%)");
+
+            // 2. 현재 필드의 모든 캐릭터에 버프 적용
+            ApplyBuffToAllCharacters(statType, value);
+        }
+
+        /// <summary>
+        /// JML: 특정 스텟의 전역 버프 총합 조회
+        /// 새로 소환되는 캐릭터에 적용할 때 사용
+        /// </summary>
+        public float GetGlobalStatBuff(StatType statType)
+        {
+            return globalStatBuffs.TryGetValue(statType, out float value) ? value : 0f;
+        }
+
+        /// <summary>
+        /// JML: 모든 전역 스텟 버프 조회
+        /// 새로 소환되는 캐릭터에 모든 버프 적용 시 사용
+        /// </summary>
+        public Dictionary<StatType, float> GetAllGlobalStatBuffs()
+        {
+            return new Dictionary<StatType, float>(globalStatBuffs);
+        }
+
+        /// <summary>
+        /// JML: 현재 필드의 모든 캐릭터에 버프 적용
+        /// CharacterPlacementManager의 GetAllCharacters() 사용
+        /// Inspector에서 직접 참조 설정 필요 (Tag 기반 lookup 제거)
+        /// </summary>
+        private void ApplyBuffToAllCharacters(StatType statType, float value)
+        {
+            // JML: Inspector에서 설정한 CharacterPlacementManager 참조 사용
+            if (characterPlacementManager == null)
+            {
+                Debug.LogWarning("[StageManager] CharacterPlacementManager 참조가 없습니다! Inspector에서 설정해주세요.");
+                return;
+            }
+
+            var characters = characterPlacementManager.GetAllCharacters();
+            if (characters == null || characters.Count == 0)
+            {
+                Debug.Log("[StageManager] No characters in field to apply buff.");
+                return;
+            }
+
+            foreach (var character in characters)
+            {
+                if (character != null)
+                {
+                    character.ApplyStatBuff(statType, value);
+                }
+            }
+
+            Debug.Log($"[StageManager] Buff applied to {characters.Count} characters");
+        }
+
+        #endregion
     }
 }

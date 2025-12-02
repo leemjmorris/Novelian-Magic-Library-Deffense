@@ -90,7 +90,8 @@ public class CSVLoader : MonoBehaviour
                 // 인게임 카드 시스템 테이블 (3행 헤더 형식)
                 RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "CardTable.csv", x => x.Card_ID),
                 RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "CardLevelTable.csv", x => x.Card_Level_ID),
-                RegisterSkillTableAsync<CardListData>(AddressableKey.CardListTable, "CardListTable.csv", x => x.Card_List_ID)
+                RegisterSkillTableAsync<CardListData>(AddressableKey.CardListTable, "CardListTable.csv", x => x.Card_List_ID),
+                RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID)
             );
 
             IsInit = true;
@@ -366,7 +367,8 @@ public class CSVLoader : MonoBehaviour
                 // 인게임 카드 시스템 테이블 (3행 헤더)
                 RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "CardTable.csv", x => x.Card_ID),
                 RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "CardLevelTable.csv", x => x.Card_Level_ID),
-                RegisterSkillTableAsync<CardListData>(AddressableKey.CardListTable, "CardListTable.csv", x => x.Card_List_ID)
+                RegisterSkillTableAsync<CardListData>(AddressableKey.CardListTable, "CardListTable.csv", x => x.Card_List_ID),
+                RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID)
             );
 
             Debug.Log("[CSVLoader] All CSV tables reloaded successfully!");

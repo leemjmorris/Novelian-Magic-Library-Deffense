@@ -73,6 +73,7 @@ public static class AddressableKey
     public static readonly string CardTable = "CardTable";
     public static readonly string CardLevelTable = "CardLevelTable";
     public static readonly string CardListTable = "CardListTable";
+    public static readonly string PlayerLevelTable = "PlayerLevelTable";
 
     // JML: 범용 프리팹 방식 - 단일 키 반환 (Issue #320)
     public static string GetCharacterKey(int characterId)
@@ -183,5 +184,22 @@ public enum DispatchLocation
     SpellbookCoverRestoration = 8,  // 마도서 표지 복원
     SealStabilityCheck = 9,         // 봉인구 안정성 확인
     MagicResiduePurification = 10   // 마력 잔재 정화
+}
+
+/// <summary>
+/// 인게임 스텟 카드 타입 (CardLevelTable 기준)
+/// Issue #349 - 카드 선택 UI 로직 개선
+/// </summary>
+public enum StatType
+{
+    Damage = 0,             // 공격력 증가 (25001~25003)
+    CritMultiplier = 1,     // 치명타 배율 증가 (25004~25006)
+    AttackSpeed = 2,        // 공격속도 증가 (25007~25009)
+    CritChance = 3,         // 치명타 확률 증가 (25010~25012)
+    ProjectileSpeed = 4,    // 투사체 발사 속도 증가 (25013~25015)
+    TotalDamage = 5,        // 총 공격력 증가 (25016~25018)
+    BonusDamage = 6,        // 추가 데미지 추가 (25019~25021)
+    HealthRegen = 7,        // 체력 회복 (25022~25024)
+    Range = 8               // 사거리 증가 (25085~25087)
 }
 

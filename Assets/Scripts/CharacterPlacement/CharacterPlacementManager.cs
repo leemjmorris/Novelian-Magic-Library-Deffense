@@ -191,6 +191,9 @@ public class CharacterPlacementManager : MonoBehaviour
         if (character != null)
         {
             character.Initialize(characterId);  // CSV에서 스킬/스텟 로드 + 책갈피 적용
+
+            // JML: 전역 스텟 버프 적용 (Issue #349)
+            ApplyGlobalBuffsToCharacter(character);
         }
 
         // Place in slot
@@ -410,6 +413,111 @@ public class CharacterPlacementManager : MonoBehaviour
 
         Debug.Log("[CharacterPlacementManager] All slots cleared (characters destroyed)");
     }
+
+    #region Issue #349 - 전역 스텟 버프 시스템
+
+    /// <summary>
+    /// JML: 현재 필드에 배치된 모든 캐릭터 조회
+    /// StageManager.ApplyBuffToAllCharacters()에서 호출
+    /// </summary>
+    public List<Novelian.Combat.Character> GetAllCharacters()
+    {
+        List<Novelian.Combat.Character> characters = new List<Novelian.Combat.Character>();
+
+        foreach (GridSlot slot in gridSlots)
+        {
+            if (!slot.IsEmpty())
+            {
+                GameObject characterObj = slot.GetCurrentCharacter();
+                if (characterObj != null)
+                {
+                    var character = characterObj.GetComponent<Novelian.Combat.Character>();
+                    if (character != null)
+                    {
+                        characters.Add(character);
+                    }
+                }
+            }
+        }
+
+        return characters;
+    }
+
+    /// <summary>
+    /// JML: 현재 필드에 배치된 캐릭터 ID 목록 조회
+    /// 카드 풀 로직에서 필드 캐릭터 포함 시 사용
+    /// </summary>
+    public List<int> GetAllCharacterIds()
+    {
+        List<int> characterIds = new List<int>();
+
+        foreach (GridSlot slot in gridSlots)
+        {
+            if (!slot.IsEmpty())
+            {
+                GameObject characterObj = slot.GetCurrentCharacter();
+                if (characterObj != null)
+                {
+                    // GameObject 이름에서 ID 추출: "Character_{id}_Slot{slotIndex}"
+                    string name = characterObj.name;
+                    if (name.StartsWith("Character_"))
+                    {
+                        string[] parts = name.Split('_');
+                        if (parts.Length >= 2 && int.TryParse(parts[1], out int charId))
+                        {
+                            characterIds.Add(charId);
+                        }
+                    }
+                }
+            }
+        }
+
+        return characterIds;
+    }
+
+    /// <summary>
+    /// JML: 특정 캐릭터 ID를 가진 Character 컴포넌트 조회
+    /// 캐릭터 성급 업그레이드 시 사용
+    /// </summary>
+    public Novelian.Combat.Character GetCharacterById(int characterId)
+    {
+        foreach (GridSlot slot in gridSlots)
+        {
+            if (!slot.IsEmpty())
+            {
+                GameObject characterObj = slot.GetCurrentCharacter();
+                if (characterObj != null && characterObj.name.Contains($"Character_{characterId}_"))
+                {
+                    return characterObj.GetComponent<Novelian.Combat.Character>();
+                }
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// JML: 새로 소환된 캐릭터에 전역 스텟 버프 적용
+    /// StageManager에서 누적된 모든 버프를 한 번에 적용
+    /// </summary>
+    private void ApplyGlobalBuffsToCharacter(Novelian.Combat.Character character)
+    {
+        if (character == null) return;
+
+        var stageManager = GameManager.Instance?.Stage;
+        if (stageManager == null) return;
+
+        var globalBuffs = stageManager.GetAllGlobalStatBuffs();
+        if (globalBuffs == null || globalBuffs.Count == 0) return;
+
+        Debug.Log($"[CharacterPlacementManager] Applying {globalBuffs.Count} global buffs to new character");
+
+        foreach (var buff in globalBuffs)
+        {
+            character.ApplyStatBuff(buff.Key, buff.Value);
+        }
+    }
+
+    #endregion
 
     //JML: Draw grid in SceneView using Gizmos
     private void OnDrawGizmos()
