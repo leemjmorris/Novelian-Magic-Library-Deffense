@@ -44,9 +44,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
         moveSpeed = levelData.Move_Speed;
         attackInterval = 1f / levelData.Attack_Speed; // Attack_Speed는 초당 공격 횟수
         Exp = levelData.Exp_Value;
-
-        Debug.Log($"[Monster] Initialized - HP:{levelData.HP}, ATK:{levelData.ATK}, " +
-                  $"MoveSpeed:{levelData.Move_Speed}, Exp:{levelData.Exp_Value}");
     }
 
     private float attackTimer = 0f;

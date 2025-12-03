@@ -443,8 +443,6 @@ namespace Novelian.Combat
             GameObject projectilePrefab = basicAttackPrefabs?.projectilePrefab;
             GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
 
-            // 디버그: 프리팹 상태 확인
-            Debug.Log($"[Character] TryAttack: projectilePrefab={projectilePrefab != null}, projectileTemplate={projectileTemplate != null}, basicAttackPrefabs={basicAttackPrefabs != null}");
 
             // Launch projectile
             if (projectilePrefab != null || projectileTemplate != null)
@@ -453,13 +451,10 @@ namespace Novelian.Combat
                 Projectile projectile = pool.Spawn<Projectile>(spawnPos);
                 projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, 0);
 
-                Debug.Log($"[Character] Fired projectile {basicAttackData.skill_name} at {target.GetTransform().name} (Damage: {FinalDamage:F1})");
             }
             // Instant attack (no projectile)
             else
             {
-                Debug.LogWarning($"[Character] No projectile prefab or template! Using instant attack for {basicAttackData.skill_name}");
-
                 // Hit effect
                 if (hitEffectPrefab != null)
                 {
@@ -478,8 +473,6 @@ namespace Novelian.Combat
                     BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                     if (boss != null) boss.TakeDamage(FinalDamage);
                 }
-
-                Debug.Log($"[Character] Instant attack {basicAttackData.skill_name} at {target.GetTransform().name} (Instant Damage: {FinalDamage:F1})");
             }
         }
 

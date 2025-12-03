@@ -8,13 +8,13 @@ public static class Tag
     public static readonly string Obstacle = "Obstacle";
 }
 
-public static class sceneName
+public static class SceneName
 {
     public static readonly string LobbyScene = "LobbyScene";
     public static readonly string StageScene = "StageScene";
-    public static readonly string GameScene = "GameScene (JML)";
+    public static readonly string GameScene = "GameScene";
     public static readonly string Inventory = "Inventory";
-    public static readonly string LibraryManagementScene = "LibraryManagementScene(LCB)";
+    public static readonly string LibraryManagementScene = "LibraryManagementScene";
     public static readonly string DispatchSystemScene = "DispatchSystemScene";
     public static readonly string BookMarkCraftScene = "BookMarkCraftScene";
 }

@@ -274,6 +274,7 @@ GameObject:
   - component: {fileID: 729743810}
   - component: {fileID: 729743811}
   - component: {fileID: 729743812}
+  - component: {fileID: 729743813}
   m_Layer: 0
   m_Name: ManagerObj
   m_TagString: Untagged
@@ -416,6 +417,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 866150ca20fd22741bec689715d0e79e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &729743813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 729743801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f8d6c464959532489ad945c91f87612, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1862903901
 GameObject:
   m_ObjectHideFlags: 0
@@ -455,6 +468,7 @@ MonoBehaviour:
   deckManager: {fileID: 729743809}
   characterEnhancementManager: {fileID: 729743810}
   stageProgressManager: {fileID: 729743812}
+  characterOwnershipManager: {fileID: 729743813}
   loadingUIManager: {fileID: 729743811}
   minimumLoadTime: 1
 --- !u!4 &1862903903

@@ -7,15 +7,111 @@ using UnityEngine;
 
 public class LobbyUI : MonoBehaviour
 {
+    [Header("Currency Display")]
+    [SerializeField] private TextMeshProUGUI apText;
+    [SerializeField] private TextMeshProUGUI goldText;
+    [SerializeField] private TextMeshProUGUI premiumText;
+    private int maxAP = 30;
+
     [Header("Warning Panel")]
     [SerializeField] private GameObject warningPanel;
     [SerializeField] private CanvasGroup warningCanvasGroup;
-    [SerializeField] private TMP_Text warningText;
+    [SerializeField] private TextMeshProUGUI warningText;
     [SerializeField] private float fadeDuration = 0.3f;
     [SerializeField] private float displayDuration = 1.5f;
 
     private const string FEATURE_NOT_READY_MESSAGE = "준비 중인 기능입니다";
     private CancellationTokenSource warningCts;
+
+    private void OnEnable()
+    {
+        InitializeAP();
+
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCurrencyChanged -= OnCurrencyChanged;
+        }
+    }
+
+    private void InitializeAP()
+    {
+        // CurrencyTable에서 최대 AP 조회
+        if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
+        {
+            var currencyData = CSVLoader.Instance.GetData<CurrencyData>(CurrencyManager.AP_ID);
+            if (currencyData != null && currencyData.Currency_Max_Count > 0)
+            {
+                maxAP = currencyData.Currency_Max_Count;
+            }
+        }
+
+        UpdateAPText();
+        UpdateGoldText();
+        UpdatePremiumText();
+    }
+
+    private void UpdateAPText()
+    {
+        if (apText == null) return;
+
+        int currentAP = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
+        }
+
+        apText.text = $"{currentAP}/{maxAP}";
+    }
+
+    private void UpdateGoldText()
+    {
+        if (goldText == null) return;
+
+        int gold = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            gold = CurrencyManager.Instance.GetCurrency(CurrencyManager.GOLD_ID);
+        }
+
+        goldText.text = $"{gold}";
+    }
+
+    private void UpdatePremiumText()
+    {
+        if (premiumText == null) return;
+
+        int magicStone = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            magicStone = CurrencyManager.Instance.GetCurrency(CurrencyManager.MAGIC_STONE_ID);
+        }
+
+        premiumText.text = $"{magicStone}";
+    }
+
+    private void OnCurrencyChanged(int currencyId, int newAmount)
+    {
+        if (currencyId == CurrencyManager.AP_ID && apText != null)
+        {
+            apText.text = $"{newAmount}/{maxAP}";
+        }
+        else if (currencyId == CurrencyManager.GOLD_ID && goldText != null)
+        {
+            goldText.text = $"{newAmount} G";
+        }
+        else if (currencyId == CurrencyManager.MAGIC_STONE_ID && premiumText != null)
+        {
+            premiumText.text = $"{newAmount}";
+        }
+    }
 
     // 왼쪽 버튼들
     public void OnPassTicketButton()
@@ -40,7 +136,7 @@ public class LobbyUI : MonoBehaviour
 
     public void OnInventoryButton()
     {
-        LoadSceneWithFadeOnly(sceneName.Inventory).Forget();
+        LoadSceneWithFadeOnly(SceneName.Inventory).Forget();
     }
 
     // 오른쪽 버튼들
@@ -67,23 +163,23 @@ public class LobbyUI : MonoBehaviour
     // 중앙 버튼
     public void OnBattleButton()
     {
-        LoadSceneWithLoadingUI(sceneName.StageScene).Forget();
+        LoadSceneWithLoadingUI(SceneName.StageScene).Forget();
     }
 
     // 하단 버튼들
     public void OnDispatchButton()
     {
-        LoadSceneWithFadeOnly(sceneName.DispatchSystemScene).Forget();
+        LoadSceneWithFadeOnly(SceneName.DispatchSystemScene).Forget();
     }
 
     public void OnCraftButton()
     {
-        LoadSceneWithFadeOnly(sceneName.BookMarkCraftScene).Forget();
+        LoadSceneWithFadeOnly(SceneName.BookMarkCraftScene).Forget();
     }
 
     public void OnLibrarianManageButton()
     {
-        LoadSceneWithFadeOnly(sceneName.LibraryManagementScene).Forget();
+        LoadSceneWithFadeOnly(SceneName.LibraryManagementScene).Forget();
     }
 
     public void OnChallengeDungeonButton()

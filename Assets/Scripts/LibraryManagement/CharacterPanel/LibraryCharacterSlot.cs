@@ -15,8 +15,14 @@ public class LibraryCharacterSlot : MonoBehaviour
     [SerializeField] private Slider characterLevelBar;
     [SerializeField] private Image characterSprite;
     [SerializeField] private Button characterInfoButton;
+    [SerializeField] private CanvasGroup canvasGroup;
+
+    [Header("Ownership Settings")]
+    [SerializeField] private float unownedAlpha = 0.4f;
+
     private int currentLevel;
     private CharacterInfoPanel infoPanel;
+    private bool isOwned = true;
 
     private void Start()
     {
@@ -76,6 +82,44 @@ public class LibraryCharacterSlot : MonoBehaviour
 
         // 8. 캐릭터 스프라이트 로드 (Addressables 사용)
         LoadCharacterSprite(data.Character_ID);
+
+        // 9. 보유 여부 확인 및 UI 적용
+        ApplyOwnershipState();
+    }
+
+    /// <summary>
+    /// 보유 여부에 따른 UI 상태 적용
+    /// </summary>
+    private void ApplyOwnershipState()
+    {
+        // 보유 여부 확인
+        isOwned = CharacterOwnershipManager.Instance != null
+            ? CharacterOwnershipManager.Instance.IsOwned(characterID)
+            : true; // Manager 없으면 기본 보유로 처리
+
+        if (isOwned)
+        {
+            // 보유 캐릭터: 밝게 + 클릭 가능
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = 1f;
+            }
+            characterInfoButton.interactable = true;
+        }
+        else
+        {
+            // 미보유 캐릭터: 어둡게 + 클릭 불가 + 슬라이더 0
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = unownedAlpha;
+            }
+            characterInfoButton.interactable = false;
+
+            // 미보유 캐릭터는 레벨 0으로 표시
+            characterLevelBar.value = 0f;
+            characterSliderLevelText.text = "0/10";
+            characterLevel.text = "Lv 0";
+        }
     }
     // 강화 레벨에 따라 올바른 LevelData ID 반환
     private int GetLevelDataID(CharacterData data, int enhanceLevel)
