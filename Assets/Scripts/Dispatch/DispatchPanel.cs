@@ -8,29 +8,30 @@ using Cysharp.Threading.Tasks;
 namespace Dispatch
 {
     /// <summary>
-    /// 파견 상태 저장 데이터
-    /// </summary>
-    [System.Serializable]
-    public class DispatchSaveData
-    {
-        public bool isDispatching;
-        public float totalDispatchTime; // 전체 파견 시간 (초)
-        public string startTimeString; // 파견 시작 시간 (DateTime 직렬화)
-        public DispatchLocation selectedLocation;
-        public int selectedHours;
-        public int selectedTimeID;
-    }
-
-    /// <summary>
-    /// 파견 시스템 테스트 UI 패널
+    /// 전투형 파견 시스템 UI 패널
     /// CSV 데이터 기반 보상 시스템
-    /// DisPatchSelect(전투형/채집형)별로 버튼 생성하여 장소별 보상 로직 테스트
+    /// 전투형 장소별 보상 로직 테스트
     /// </summary>
-    public class DispatchTestPanel : MonoBehaviour
+    public class CombatDispatchPanel : MonoBehaviour
     {
+        /// <summary>
+        /// 파견 상태 저장 데이터
+        /// </summary>
+        [System.Serializable]
+        private class DispatchSaveData
+        {
+            public bool isDispatching;
+            public float totalDispatchTime; // 전체 파견 시간 (초)
+            public string startTimeString; // 파견 시작 시간 (DateTime 직렬화)
+            public int selectedLocation; // DispatchLocation enum 값 (int로 저장)
+            public int selectedHours;
+            public int selectedTimeID;
+        }
+
         private const string DISPATCH_SAVE_KEY = "DispatchTestPanel_SaveData";
         [Header("파견 매니저 참조")]
         [SerializeField] private DispatchManager dispatchManager;
+        [SerializeField] private CombatDispatchController combatDispatchController;
 
         [Header("UI 요소")]
         [SerializeField] private Slider timeSlider;                      // 시간 선택 슬라이더
@@ -473,6 +474,11 @@ namespace Dispatch
             if (dispatchStartButton != null)
                 dispatchStartButton.interactable = true;
 
+            // CombatDispatchController에게 파견 완료 알림 (Red Dot 활성화)
+            if (combatDispatchController != null)
+            {
+                combatDispatchController.OnDispatchCompleted();
+            }
         }
 
         /// <summary>
@@ -1086,7 +1092,7 @@ namespace Dispatch
                 isDispatching = isDispatching,
                 totalDispatchTime = currentSelectedHours, // 전체 파견 시간 (테스트용 초 단위)
                 startTimeString = dispatchStartTime.ToString("o"), // ISO 8601 형식
-                selectedLocation = currentSelectedLocation,
+                selectedLocation = (int)currentSelectedLocation,
                 selectedHours = currentSelectedHours,
                 selectedTimeID = currentSelectedTimeID
             };
@@ -1138,7 +1144,7 @@ namespace Dispatch
             {
                 remainingTime = 0f;
                 isDispatching = true; // 완료 상태로 설정
-                currentSelectedLocation = saveData.selectedLocation;
+                currentSelectedLocation = (DispatchLocation)saveData.selectedLocation;
                 currentSelectedHours = saveData.selectedHours;
                 currentSelectedTimeID = saveData.selectedTimeID;
 
@@ -1151,7 +1157,7 @@ namespace Dispatch
             {
                 // 저장된 상태 복원
                 isDispatching = saveData.isDispatching;
-                currentSelectedLocation = saveData.selectedLocation;
+                currentSelectedLocation = (DispatchLocation)saveData.selectedLocation;
                 currentSelectedHours = saveData.selectedHours;
                 currentSelectedTimeID = saveData.selectedTimeID;
 

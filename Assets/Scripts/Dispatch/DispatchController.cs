@@ -6,17 +6,18 @@ using System.Threading;
 namespace Dispatch
 {
     /// <summary>
-    /// 지하 파견 시스템 UI 컨트롤러
+    /// 전투형 파견 시스템 UI 컨트롤러
     /// Ground dispatch의 느낌표 패널 버튼을 클릭하면 SelectImage-M이 SelectImage-S 크기로 축소 애니메이션되고,
     /// 애니메이션 완료 후 선택하기 버튼이 활성화됩니다.
     /// 선택하기 버튼 클릭 시 Map 오브젝트가 비활성화되고 combatDispatch가 활성화됩니다.
     /// </summary>
-    public class DispatchController : MonoBehaviour
+    public class CombatDispatchController : MonoBehaviour
     {
         [Header("Ground Dispatch UI")]
         [SerializeField] private Button exclamationPanelButton;    // 느낌표 패널 버튼
         [SerializeField] private RectTransform selectImageM;       // SelectImage-M (축소될 이미지, Scale X: 1.08 -> 1.0)
         [SerializeField] private Button selectButton;              // 선택하기 버튼 (SlelectButton)
+        [SerializeField] private GameObject redDotImage;           // Red Dot 이미지 (파견 완료 알림)
 
         [Header("Scene Objects")]
         [SerializeField] private GameObject mapObject;             // Map 오브젝트
@@ -30,34 +31,12 @@ namespace Dispatch
         private Vector2 originalSizeM;  // SelectImage-M의 원본 크기 저장
         private bool isAnimationComplete = false;
         private bool isDispatching = false; // 파견 중 여부
-        private bool hasReceivedReward = false; // 보상 받았는지 여부 (OnDisable에서 참조)
         private CancellationTokenSource cancellationTokenSource;
-
-        [System.Serializable]
-        private class DispatchState
-        {
-            public bool isDispatching;
-            public bool mapActive;
-            public bool combatDispatchActive;
-            public bool rewardReceived; // 보상 받았는지 여부
-        }
 
         private void Start()
         {
-            // 저장된 상태 복원
-            bool stateRestored = LoadDispatchState();
-
-            // 초기 상태 설정 (저장된 상태가 없을 때만)
-            if (!stateRestored)
-            {
-                InitializeUI();
-            }
-        }
-
-        private void OnDisable()
-        {
-            // 파견 중이거나 보상 받은 상태일 때 저장
-            SaveDispatchState(rewardReceived: hasReceivedReward);
+            // 항상 초기 상태로 시작 (Red Dot은 파견 완료 시에만 활성화됨)
+            InitializeUI();
         }
 
         /// <summary>
@@ -91,6 +70,13 @@ namespace Dispatch
             {
                 mapObject.SetActive(true);
                 Debug.Log("[DispatchController] Map 초기 활성화");
+            }
+
+            // Red Dot 비활성화 (초기 상태)
+            if (redDotImage != null)
+            {
+                redDotImage.SetActive(false);
+                Debug.Log("[DispatchController] Red Dot 초기 비활성화");
             }
         }
 
@@ -213,127 +199,6 @@ namespace Dispatch
 
             // 파견 중 상태로 설정
             isDispatching = true;
-
-            // 상태 저장
-            SaveDispatchState();
-        }
-
-        /// <summary>
-        /// 파견 상태 저장
-        /// </summary>
-        private void SaveDispatchState(bool rewardReceived = false)
-        {
-            // 파견 중이거나 보상을 받은 상태일 때만 저장
-            if (!isDispatching && !rewardReceived) return;
-
-            DispatchState state = new DispatchState
-            {
-                isDispatching = isDispatching,
-                mapActive = mapObject != null && mapObject.activeSelf,
-                combatDispatchActive = combatDispatch != null && combatDispatch.activeSelf,
-                rewardReceived = rewardReceived
-            };
-
-            string json = JsonUtility.ToJson(state);
-            PlayerPrefs.SetString(DISPATCH_STATE_KEY, json);
-            PlayerPrefs.Save();
-
-            Debug.Log($"[DispatchController] 파견 상태 저장됨 - Map: {state.mapActive}, CombatDispatch: {state.combatDispatchActive}, RewardReceived: {rewardReceived}");
-        }
-
-        /// <summary>
-        /// 파견 상태 복원
-        /// </summary>
-        /// <returns>상태가 복원되었으면 true, 아니면 false</returns>
-        private bool LoadDispatchState()
-        {
-            if (!PlayerPrefs.HasKey(DISPATCH_STATE_KEY))
-            {
-                Debug.Log("[DispatchController] 저장된 파견 상태 없음");
-                return false;
-            }
-
-            string json = PlayerPrefs.GetString(DISPATCH_STATE_KEY);
-            DispatchState state = JsonUtility.FromJson<DispatchState>(json);
-
-            if (state == null)
-            {
-                Debug.Log("[DispatchController] 파견 상태 파싱 실패");
-                return false;
-            }
-
-            // 보상을 받은 경우 -> Map 패널로 초기화
-            if (state.rewardReceived)
-            {
-                Debug.Log("[DispatchController] 보상 받은 상태 -> Map 패널로 복원");
-                InitializeUI();
-                ClearDispatchState();
-                hasReceivedReward = false; // 플래그 리셋
-                return true;
-            }
-
-            // 파견 중이 아니면 복원 안 함
-            if (!state.isDispatching)
-            {
-                Debug.Log("[DispatchController] 파견 중이 아님");
-                return false;
-            }
-
-            // 파견 중 상태 복원
-            isDispatching = state.isDispatching;
-            isAnimationComplete = true; // 애니메이션은 이미 완료된 상태
-
-            // 잘못된 상태 감지: Map과 CombatDispatch가 둘 다 꺼진 경우 -> 초기화
-            if (!state.mapActive && !state.combatDispatchActive)
-            {
-                Debug.LogWarning("[DispatchController] 잘못된 상태 감지 (둘 다 비활성) - 초기 상태로 복원");
-                InitializeUI();
-                ClearDispatchState();
-                return true;
-            }
-
-            // Map 상태 복원
-            if (mapObject != null)
-            {
-                mapObject.SetActive(state.mapActive);
-            }
-
-            // combatDispatch 상태 복원
-            if (combatDispatch != null)
-            {
-                combatDispatch.SetActive(state.combatDispatchActive);
-            }
-
-            // SelectImage-M 비활성화 (애니메이션 완료 후 상태)
-            if (selectImageM != null)
-            {
-                selectImageM.gameObject.SetActive(false);
-            }
-
-            // 선택하기 버튼 비활성화
-            if (selectButton != null)
-            {
-                selectButton.interactable = false;
-            }
-
-            Debug.Log($"[DispatchController] ✅ 파견 상태 복원됨 - Map: {state.mapActive}, CombatDispatch: {state.combatDispatchActive}");
-            return true;
-        }
-
-        /// <summary>
-        /// 파견 상태 초기화
-        /// </summary>
-        private void ClearDispatchState()
-        {
-            if (PlayerPrefs.HasKey(DISPATCH_STATE_KEY))
-            {
-                PlayerPrefs.DeleteKey(DISPATCH_STATE_KEY);
-                PlayerPrefs.Save();
-                Debug.Log("[DispatchController] 파견 상태 삭제됨");
-            }
-
-            isDispatching = false;
-            hasReceivedReward = false;
         }
 
         /// <summary>
@@ -355,11 +220,27 @@ namespace Dispatch
         }
 
         /// <summary>
+        /// 파견 완료 처리 (CombatDispatchPanel에서 호출)
+        /// Red Dot만 활성화, 상태 저장 없음 (씬 나가면 사라짐)
+        /// </summary>
+        public void OnDispatchCompleted()
+        {
+            Debug.Log("[CombatDispatchController] 파견 완료 - Red Dot 활성화 (현재 씬에서만 유지)");
+
+            // Red Dot 활성화
+            if (redDotImage != null)
+            {
+                redDotImage.SetActive(true);
+            }
+        }
+
+        /// <summary>
         /// 보상 받기 처리
+        /// Red Dot만 비활성화 (상태 저장 없음)
         /// </summary>
         private void OnRewardReceived()
         {
-            Debug.Log("[DispatchController] 보상 받기 - rewardReceived 플래그 저장");
+            Debug.Log("[CombatDispatchController] 보상 받기 - Red Dot 비활성화");
 
             // 파견 상태를 false로 변경
             isDispatching = false;
@@ -367,14 +248,13 @@ namespace Dispatch
             // 애니메이션 플래그 리셋
             isAnimationComplete = false;
 
-            // 보상 받은 상태 플래그 설정
-            hasReceivedReward = true;
+            // Red Dot 비활성화
+            if (redDotImage != null)
+            {
+                redDotImage.SetActive(false);
+            }
 
-            // rewardReceived 플래그를 true로 저장
-            // 다음에 씬 들어올 때 Map 패널로 전환됨
-            SaveDispatchState(rewardReceived: true);
-
-            Debug.Log("[DispatchController] ✅ 보상 받기 완료 - 다음 씬 진입 시 Map 패널로 전환됩니다");
+            Debug.Log("[CombatDispatchController] ✅ 보상 받기 완료");
         }
 
         /// <summary>
@@ -392,12 +272,12 @@ namespace Dispatch
             isAnimationComplete = false;
 
             // 파견 상태 초기화
-            ClearDispatchState();
+            isDispatching = false;
 
             // UI 초기 상태로 복원
             InitializeUI();
 
-            Debug.Log("[DispatchController] 초기 상태로 리셋됨");
+            Debug.Log("[CombatDispatchController] 초기 상태로 리셋됨");
         }
 
         private void OnDestroy()
