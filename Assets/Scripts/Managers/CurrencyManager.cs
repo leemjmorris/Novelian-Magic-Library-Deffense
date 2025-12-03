@@ -21,6 +21,11 @@ public class CurrencyManager : MonoBehaviour
     public const int MAGIC_STONE_ID = 1605; // 마석
     public const int AP_ID = 1607;          // AP (행동력)
 
+    // AP 회복 설정
+    public const float AP_RECOVERY_INTERVAL_SECONDS = 900f; // 15분 = 900초
+    private float apRecoveryTimer = 0f;
+    private int maxAP = 30;
+
     // 기존 Gold 호환용
     public int Gold => GetCurrency(GOLD_ID);
 
@@ -54,7 +59,65 @@ public class CurrencyManager : MonoBehaviour
         currencies[1606] = 0;               // 추가 재화 (StringTable 미등록)
         currencies[AP_ID] = 30;             // AP (테스트용 최대치 30)
 
-        Debug.Log($"[CurrencyManager] 초기화 완료. 재화 종류: {currencies.Count}개");
+        // CurrencyTable에서 최대 AP 조회
+        if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
+        {
+            var currencyData = CSVLoader.Instance.GetData<CurrencyData>(AP_ID);
+            if (currencyData != null && currencyData.Currency_Max_Count > 0)
+            {
+                maxAP = currencyData.Currency_Max_Count;
+            }
+        }
+
+        Debug.Log($"[CurrencyManager] 초기화 완료. 재화 종류: {currencies.Count}개, 최대 AP: {maxAP}");
+    }
+
+    private void Update()
+    {
+        UpdateAPRecovery();
+    }
+
+    private void UpdateAPRecovery()
+    {
+        int currentAP = GetCurrency(AP_ID);
+
+        // AP가 최대치면 회복 불필요 - 타이머 리셋
+        if (currentAP >= maxAP)
+        {
+            apRecoveryTimer = 0f;
+            return;
+        }
+
+        // AP가 최대치 미만이면 회복 타이머 작동
+        apRecoveryTimer += Time.deltaTime;
+
+        if (apRecoveryTimer >= AP_RECOVERY_INTERVAL_SECONDS)
+        {
+            apRecoveryTimer = 0f;
+            AddCurrency(AP_ID, 1);
+            Debug.Log($"[CurrencyManager] AP 회복! 현재 AP: {GetCurrency(AP_ID)}/{maxAP}");
+        }
+    }
+
+    /// <summary>
+    /// 다음 AP 회복까지 남은 시간 (초)
+    /// AP가 최대치면 0 반환
+    /// </summary>
+    public float GetAPRecoveryRemainingTime()
+    {
+        if (GetCurrency(AP_ID) >= maxAP)
+        {
+            return 0f;
+        }
+        return AP_RECOVERY_INTERVAL_SECONDS - apRecoveryTimer;
+    }
+
+    /// <summary>
+    /// 최대 AP 값 반환
+    /// </summary>
+    public int GetMaxAP()
+    {
+        return maxAP;
     }
 
     #region 범용 재화 API

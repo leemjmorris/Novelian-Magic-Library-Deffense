@@ -32,8 +32,47 @@ namespace NovelianMagicLibraryDefense.Managers
         public string StageName { get; private set; }
 
         #region PlayerStageLevel
+        private const int MAX_LEVEL = 50;
         private int currentExp = 0;
         private int level = 0;
+
+        /// <summary>
+        /// 다음 레벨업에 필요한 경험치를 CSV에서 가져오기
+        /// </summary>
+        private int GetRequiredExpForNextLevel()
+        {
+            int targetLevel = level + 1;
+
+            // 최대 레벨 체크
+            if (targetLevel > MAX_LEVEL)
+            {
+                return int.MaxValue; // 레벨업 불가
+            }
+
+            // Level_ID 계산: 0701, 0702, ... 0750
+            int levelId = 700 + targetLevel;
+
+            // CSV에서 PlayerLevelData 조회
+            if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
+            {
+                var levelData = CSVLoader.Instance.GetData<PlayerLevelData>(levelId);
+                if (levelData != null)
+                {
+                    return (int)levelData.Req_EXP;
+                }
+            }
+
+            // fallback: stageSettings 사용
+            return stageSettings != null ? stageSettings.expPerLevel : 100;
+        }
+
+        /// <summary>
+        /// 최대 레벨 도달 여부 확인
+        /// </summary>
+        private bool IsMaxLevel()
+        {
+            return level >= MAX_LEVEL;
+        }
 
         // LCB: Debug - Press 'L' key to instantly level up (add 100 exp)
         #endregion
@@ -309,7 +348,13 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void AddExp(Monster monster)
         {
-            int maxExp = stageSettings != null ? stageSettings.expPerLevel : 100;
+            // 최대 레벨이면 경험치 획득 무시
+            if (IsMaxLevel())
+            {
+                return;
+            }
+
+            int maxExp = GetRequiredExpForNextLevel();
             currentExp += monster.Exp;
             // Debug.Log($"[StageManager] Exp +{monster.Exp} -> {currentExp}/{maxExp}"); // LCB: Debug exp gain
             uiManager.UpdateExperience(currentExp, maxExp);
@@ -328,15 +373,18 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             var previousTimeScale = Time.timeScale;
             // Debug.Log($"타임 스케일 {previousTimeScale}"); // LCB: Debug previous time scale
-            int maxExp = stageSettings != null ? stageSettings.expPerLevel : 100;
-            while (currentExp >= maxExp)
+            int maxExp = GetRequiredExpForNextLevel();
+            while (currentExp >= maxExp && !IsMaxLevel())
             {
                 currentExp -= maxExp;
                 level++;
+
+                // 다음 레벨의 필요 경험치로 갱신
+                maxExp = GetRequiredExpForNextLevel();
                 uiManager.UpdateExperience(currentExp, maxExp);
 
                 // LMJ: Open card selection for level up
-                Debug.Log($"[StageManager] Level up to {level}!");
+                Debug.Log($"[StageManager] Level up to {level}! (Next: {maxExp} exp)");
 
                 if (uiManager != null)
                 {
@@ -387,7 +435,11 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public float GetExpProgress()
         {
-            int maxExp = stageSettings != null ? stageSettings.expPerLevel : 100;
+            if (IsMaxLevel())
+            {
+                return 1f; // 최대 레벨이면 100%로 표시
+            }
+            int maxExp = GetRequiredExpForNextLevel();
             return (float)currentExp / maxExp;
         }
 

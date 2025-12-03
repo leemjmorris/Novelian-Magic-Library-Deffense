@@ -1,4 +1,3 @@
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
@@ -7,88 +6,174 @@ using UnityEngine;
 
 public class LobbyUI : MonoBehaviour
 {
-    [Header("Warning Panel")]
-    [SerializeField] private GameObject warningPanel;
-    [SerializeField] private CanvasGroup warningCanvasGroup;
-    [SerializeField] private TMP_Text warningText;
-    [SerializeField] private float fadeDuration = 0.3f;
-    [SerializeField] private float displayDuration = 1.5f;
+    [Header("Currency Display")]
+    [SerializeField] private TextMeshProUGUI apText;
+    [SerializeField] private TextMeshProUGUI goldText;
+    [SerializeField] private TextMeshProUGUI premiumText;
+    private int maxAP = 30;
 
-    private const string FEATURE_NOT_READY_MESSAGE = "준비 중인 기능입니다";
-    private CancellationTokenSource warningCts;
+    private void OnEnable()
+    {
+        InitializeAP();
+
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCurrencyChanged -= OnCurrencyChanged;
+        }
+    }
+
+    private void InitializeAP()
+    {
+        // CurrencyTable에서 최대 AP 조회
+        if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
+        {
+            var currencyData = CSVLoader.Instance.GetData<CurrencyData>(CurrencyManager.AP_ID);
+            if (currencyData != null && currencyData.Currency_Max_Count > 0)
+            {
+                maxAP = currencyData.Currency_Max_Count;
+            }
+        }
+
+        UpdateAPText();
+        UpdateGoldText();
+        UpdatePremiumText();
+    }
+
+    private void UpdateAPText()
+    {
+        if (apText == null) return;
+
+        int currentAP = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
+        }
+
+        apText.text = $"{currentAP}/{maxAP}";
+    }
+
+    private void UpdateGoldText()
+    {
+        if (goldText == null) return;
+
+        int gold = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            gold = CurrencyManager.Instance.GetCurrency(CurrencyManager.GOLD_ID);
+        }
+
+        goldText.text = $"{gold}";
+    }
+
+    private void UpdatePremiumText()
+    {
+        if (premiumText == null) return;
+
+        int magicStone = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            magicStone = CurrencyManager.Instance.GetCurrency(CurrencyManager.MAGIC_STONE_ID);
+        }
+
+        premiumText.text = $"{magicStone}";
+    }
+
+    private void OnCurrencyChanged(int currencyId, int newAmount)
+    {
+        if (currencyId == CurrencyManager.AP_ID && apText != null)
+        {
+            apText.text = $"{newAmount}/{maxAP}";
+        }
+        else if (currencyId == CurrencyManager.GOLD_ID && goldText != null)
+        {
+            goldText.text = $"{newAmount} G";
+        }
+        else if (currencyId == CurrencyManager.MAGIC_STONE_ID && premiumText != null)
+        {
+            premiumText.text = $"{newAmount}";
+        }
+    }
 
     // 왼쪽 버튼들
     public void OnPassTicketButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnNoticeButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnAttendanceButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnQuestButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnInventoryButton()
     {
-        LoadSceneWithFadeOnly(sceneName.Inventory).Forget();
+        LoadSceneWithFadeOnly(SceneName.Inventory).Forget();
     }
 
     // 오른쪽 버튼들
     public void OnSettingsButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnShopButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnSpecialDealButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnMailButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     // 중앙 버튼
     public void OnBattleButton()
     {
-        LoadSceneWithLoadingUI(sceneName.StageScene).Forget();
+        LoadSceneWithLoadingUI(SceneName.StageScene).Forget();
     }
 
     // 하단 버튼들
     public void OnDispatchButton()
     {
-        LoadSceneWithFadeOnly(sceneName.DispatchSystemScene).Forget();
+        LoadSceneWithFadeOnly(SceneName.DispatchSystemScene).Forget();
     }
 
     public void OnCraftButton()
     {
-        LoadSceneWithFadeOnly(sceneName.BookMarkCraftScene).Forget();
+        LoadSceneWithFadeOnly(SceneName.BookMarkCraftScene).Forget();
     }
 
     public void OnLibrarianManageButton()
     {
-        LoadSceneWithFadeOnly(sceneName.LibraryManagementScene).Forget();
+        LoadSceneWithFadeOnly(SceneName.LibraryManagementScene).Forget();
     }
 
     public void OnChallengeDungeonButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
 
@@ -156,62 +241,6 @@ public class LobbyUI : MonoBehaviour
 
         // Step 7: 페이드 패널 비활성화
         FadeController.Instance.fadePanel.SetActive(false);
-    }
-
-    /// <summary>
-    /// 경고 메시지를 페이드 인/아웃으로 표시
-    /// </summary>
-    private async UniTaskVoid ShowWarningAsync(string message)
-    {
-        // 기존 경고 애니메이션 취소
-        warningCts?.Cancel();
-        warningCts?.Dispose();
-        warningCts = new CancellationTokenSource();
-        var token = warningCts.Token;
-
-        try
-        {
-            // 텍스트 설정 & 패널 활성화
-            warningText.text = message;
-            warningCanvasGroup.alpha = 0f;
-            warningPanel.SetActive(true);
-
-            // 페이드 인
-            await FadeCanvasGroupAsync(0f, 1f, fadeDuration, token);
-
-            // 대기
-            await UniTask.Delay((int)(displayDuration * 1000), cancellationToken: token);
-
-            // 페이드 아웃
-            await FadeCanvasGroupAsync(1f, 0f, fadeDuration, token);
-
-            // 패널 비활성화
-            warningPanel.SetActive(false);
-        }
-        catch (System.OperationCanceledException)
-        {
-            // 취소됨 - 새 경고가 시작되므로 무시
-        }
-    }
-
-    /// <summary>
-    /// CanvasGroup 알파값을 페이드
-    /// </summary>
-    private async UniTask FadeCanvasGroupAsync(float from, float to, float duration, CancellationToken token)
-    {
-        float elapsed = 0f;
-        warningCanvasGroup.alpha = from;
-
-        while (elapsed < duration)
-        {
-            token.ThrowIfCancellationRequested();
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            warningCanvasGroup.alpha = Mathf.Lerp(from, to, t);
-            await UniTask.Yield(token);
-        }
-
-        warningCanvasGroup.alpha = to;
     }
 }
 

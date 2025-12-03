@@ -479,8 +479,6 @@ namespace Novelian.Combat
             GameObject projectilePrefab = basicAttackPrefabs?.projectilePrefab;
             GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
 
-            // 디버그: 프리팹 상태 확인
-            Debug.Log($"[Character] TryAttack: projectilePrefab={projectilePrefab != null}, projectileTemplate={projectileTemplate != null}, basicAttackPrefabs={basicAttackPrefabs != null}");
 
             // Launch projectile(s) - 다중 발사 지원 (add_projectiles)
             if (projectilePrefab != null || projectileTemplate != null)
@@ -518,8 +516,6 @@ namespace Novelian.Combat
             // Instant attack (no projectile)
             else
             {
-                Debug.LogWarning($"[Character] No projectile prefab or template! Using instant attack for {basicAttackData.skill_name}");
-
                 // Hit effect
                 if (hitEffectPrefab != null)
                 {
@@ -538,8 +534,6 @@ namespace Novelian.Combat
                     BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                     if (boss != null) boss.TakeDamage(FinalDamage);
                 }
-
-                Debug.Log($"[Character] Instant attack {basicAttackData.skill_name} at {target.GetTransform().name} (Instant Damage: {FinalDamage:F1})");
             }
         }
 

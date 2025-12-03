@@ -42,6 +42,13 @@ public class TeamSetupPanel : MonoBehaviour
 
         foreach (var characterData in allCharacters)
         {
+            // 보유 캐릭터만 슬롯 생성
+            if (CharacterOwnershipManager.Instance != null &&
+                !CharacterOwnershipManager.Instance.IsOwned(characterData.Character_ID))
+            {
+                continue; // 미보유 캐릭터는 건너뛰기
+            }
+
             // 슬롯 인스턴스 생성
             GameObject slotObj = Instantiate(characterSlotPrefab, characterSlotContainer);
             DeckCharacterSlot slot = slotObj.GetComponent<DeckCharacterSlot>();

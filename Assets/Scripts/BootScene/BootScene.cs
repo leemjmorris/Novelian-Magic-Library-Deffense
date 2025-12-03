@@ -24,7 +24,8 @@ public class BootScene : MonoBehaviour
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private CharacterEnhancementManager characterEnhancementManager;
     [SerializeField] private StageProgressManager stageProgressManager;
-
+    [SerializeField] private CharacterOwnershipManager characterOwnershipManager;
+    [SerializeField] private WarningUIManager warningUIManager; 
     [SerializeField] private LoadingUIManager loadingUIManager;
 
     [Header("Loading Progress")]
@@ -80,10 +81,59 @@ public class BootScene : MonoBehaviour
             InitializeBookMarkManager(),
             InitializeLoadingUIManager(), // LCB: 로딩 UI 매니저 초기화 (병렬 처리)
             InitializeDeckManager(),
-            InitializeCharacterEnhancementManager()
+            InitializeCharacterEnhancementManager(),
+            InitializeCharacterOwnershipManager(),
+            InitializeWarningUIManager()
         );
 
         Log("--- All Boot Systems Initialized ---");
+    }
+
+    private async UniTask InitializeWarningUIManager()
+    {
+        Log("Initializing WarningUIManager...");
+
+        if (warningUIManager == null)
+        {
+            Debug.LogError("✗ WarningUIManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+        // JML: Wait for Awake to complete
+        await UniTask.WaitUntil(() => WarningUIManager.Instance != null);
+        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start()
+
+        if (WarningUIManager.Instance != null)
+        {
+            Log("✓ WarningUIManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ WarningUIManager failed to initialize!");
+        }
+    }
+
+    private async UniTask InitializeCharacterOwnershipManager()
+    {
+        Log("Initializing CharacterOwnershipManager...");
+
+        if (characterOwnershipManager == null)
+        {
+            Debug.LogError("✗ CharacterOwnershipManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+
+        // JML: Wait for Awake to complete
+        await UniTask.WaitUntil(() => CharacterOwnershipManager.Instance != null);
+        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start()
+
+        if (CharacterOwnershipManager.Instance != null)
+        {
+            Log("✓ CharacterOwnershipManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ CharacterOwnershipManager failed to initialize!");
+        }
     }
 
     /// <summary>

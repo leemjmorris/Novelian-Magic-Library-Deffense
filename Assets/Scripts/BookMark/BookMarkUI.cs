@@ -162,7 +162,7 @@ public class BookMarkUI : MonoBehaviour
     #region Choice Panel
     private async UniTaskVoid OnCloseChicePanelButtonClicked()
     {
-        await FadeController.Instance.LoadSceneWithFade(sceneName.LobbyScene);
+        await FadeController.Instance.LoadSceneWithFade(SceneName.LobbyScene);
     }
 
     private void OnSelectionStatButtonClicked()

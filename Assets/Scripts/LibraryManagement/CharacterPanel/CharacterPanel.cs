@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
+
 public class CharacterPanel : MonoBehaviour
 {
     [SerializeField] private const int MAX_CHARACTERS = 20;
@@ -8,7 +10,6 @@ public class CharacterPanel : MonoBehaviour
     [SerializeField] private GameObject characterSlotPrefab;
     [SerializeField] private GameObject characterInfoPanel;
     [SerializeField] private CharacterInfoPanel infoPanel;
-
 
     private List<LibraryCharacterSlot> characterSlots = new List<LibraryCharacterSlot>();
 
@@ -26,8 +27,14 @@ public class CharacterPanel : MonoBehaviour
             return;
         }
 
+        // 보유 캐릭터가 앞에 오도록 정렬
+        var sortedCharacters = characterTable.GetAll()
+            .OrderByDescending(c => IsCharacterOwned(c.Character_ID)) // 보유 캐릭터 먼저
+            .ThenBy(c => c.Character_ID) // 그 다음 ID순
+            .ToList();
+
         int slotIndex = 0;
-        foreach (var characterData in characterTable.GetAll())
+        foreach (var characterData in sortedCharacters)
         {
             if (slotIndex >= MAX_CHARACTERS) break;
 
@@ -44,5 +51,16 @@ public class CharacterPanel : MonoBehaviour
             slotIndex++;
         }
         characterInfoPanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// 캐릭터 보유 여부 확인 (정렬용)
+    /// </summary>
+    private bool IsCharacterOwned(int characterId)
+    {
+        if (CharacterOwnershipManager.Instance == null)
+            return true; // Manager 없으면 전부 보유로 처리
+
+        return CharacterOwnershipManager.Instance.IsOwned(characterId);
     }
 }

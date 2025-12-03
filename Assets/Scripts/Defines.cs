@@ -8,13 +8,13 @@ public static class Tag
     public static readonly string Obstacle = "Obstacle";
 }
 
-public static class sceneName
+public static class SceneName
 {
     public static readonly string LobbyScene = "LobbyScene";
     public static readonly string StageScene = "StageScene";
-    public static readonly string GameScene = "GameScene (JML)";
+    public static readonly string GameScene = "GameScene";
     public static readonly string Inventory = "Inventory";
-    public static readonly string LibraryManagementScene = "LibraryManagementScene(LCB)";
+    public static readonly string LibraryManagementScene = "LibraryManagementScene";
     public static readonly string DispatchSystemScene = "DispatchSystemScene";
     public static readonly string BookMarkCraftScene = "BookMarkCraftScene";
 }
@@ -202,5 +202,13 @@ public enum StatType
     BonusDamage = 6,        // 추가 데미지 추가 (25019~25021)
     HealthRegen = 7,        // 체력 회복 (25022~25024)
     Range = 8               // 사거리 증가 (25085~25087)
+}
+
+/// <summary>
+/// 경고/알림 메시지 텍스트 상수
+/// </summary>
+public static class WarningText
+{
+    public const string FeatureNotReady = "준비 중인 기능입니다";
 }
 

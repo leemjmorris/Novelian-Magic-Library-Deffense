@@ -3,9 +3,24 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 
 namespace Dispatch
 {
+    /// <summary>
+    /// 파견 상태 저장 데이터
+    /// </summary>
+    [System.Serializable]
+    public class DispatchSaveData
+    {
+        public bool isDispatching;
+        public float totalDispatchTime; // 전체 파견 시간 (초)
+        public string startTimeString; // 파견 시작 시간 (DateTime 직렬화)
+        public DispatchLocation selectedLocation;
+        public int selectedHours;
+        public int selectedTimeID;
+    }
+
     /// <summary>
     /// 파견 시스템 테스트 UI 패널
     /// CSV 데이터 기반 보상 시스템
@@ -13,6 +28,7 @@ namespace Dispatch
     /// </summary>
     public class DispatchTestPanel : MonoBehaviour
     {
+        private const string DISPATCH_SAVE_KEY = "DispatchTestPanel_SaveData";
         [Header("파견 매니저 참조")]
         [SerializeField] private DispatchManager dispatchManager;
 
@@ -74,6 +90,12 @@ namespace Dispatch
         private float targetScrollPosition = 0f;
         private float scrollVelocity = 0f;
 
+        private void OnEnable()
+        {
+            // 저장된 파견 상태 복원
+            LoadDispatchState();
+        }
+
         private void Start()
         {
             LoadCSVData();
@@ -82,21 +104,22 @@ namespace Dispatch
             SetupLocationButtons();
 
             // 초기 UI 상태 설정
-            if (countdownTimerText != null)
+            if (!isDispatching && countdownTimerText != null)
                 countdownTimerText.gameObject.SetActive(false);
 
             // 모든 팁 텍스트 초기 비활성화
             HideAllTipTexts();
 
-            // 스크롤뷰를 맨 왼쪽(악몽의 창고)으로 이동
-            if (buttonScrollRect != null)
+            // 스크롤뷰를 맨 왼쪽(악몽의 창고)으로 이동 (파견 중이 아닐 때만)
+            if (!isDispatching && buttonScrollRect != null)
                 buttonScrollRect.horizontalNormalizedPosition = 0f;
 
             // 덱 캐릭터 로드
             LoadDeckCharacters();
 
-            // 첫 번째 창고(악몽의 창고) 팁 표시
-            ShowTipText(DispatchLocation.NightmareWarehouse);
+            // 첫 번째 창고(악몽의 창고) 팁 표시 (파견 중이 아닐 때만)
+            if (!isDispatching)
+                ShowTipText(DispatchLocation.NightmareWarehouse);
 
             AddLog("파견 테스트 패널 초기화 완료");
         }
@@ -127,6 +150,12 @@ namespace Dispatch
                     ref scrollVelocity,
                     0.1f
                 );
+            }
+
+            // 스와이프 중일 때 실시간으로 창고 변경 감지
+            if (buttonScrollRect != null && isDragging)
+            {
+                CheckAndUpdateWarehouse();
             }
         }
 
@@ -238,6 +267,47 @@ namespace Dispatch
         }
 
         /// <summary>
+        /// 스크롤 위치에 따라 창고를 확인하고 UI 업데이트
+        /// </summary>
+        private void CheckAndUpdateWarehouse()
+        {
+            if (buttonScrollRect == null) return;
+
+            // 현재 스크롤 위치에서 가장 가까운 버튼 인덱스 계산
+            float currentPos = buttonScrollRect.horizontalNormalizedPosition;
+            int newButtonIndex = Mathf.RoundToInt(currentPos * (totalCombatButtons - 1));
+            newButtonIndex = Mathf.Clamp(newButtonIndex, 0, totalCombatButtons - 1);
+
+            // 창고가 변경되었을 때만 업데이트
+            if (newButtonIndex != currentButtonIndex)
+            {
+                currentButtonIndex = newButtonIndex;
+
+                // 인덱스에 따라 창고 위치 결정
+                DispatchLocation newLocation = newButtonIndex switch
+                {
+                    0 => DispatchLocation.NightmareWarehouse,
+                    1 => DispatchLocation.FateWarehouse,
+                    2 => DispatchLocation.LaughterWarehouse,
+                    3 => DispatchLocation.TruthWarehouse,
+                    4 => DispatchLocation.UnknownWarehouse,
+                    _ => DispatchLocation.NightmareWarehouse
+                };
+
+                // 창고 변경
+                currentSelectedLocation = newLocation;
+
+                // 팁 텍스트 업데이트
+                ShowTipText(newLocation);
+
+                // 보상 정보 업데이트
+                UpdateTimeDisplay(Mathf.RoundToInt(timeSlider.value));
+
+                AddLog($"📍 스와이프로 창고 변경: {GetLocationName(newLocation)}");
+            }
+        }
+
+        /// <summary>
         /// 장소별 버튼 이벤트 설정
         /// </summary>
         private void SetupLocationButtons()
@@ -327,6 +397,9 @@ namespace Dispatch
 
             // 파견 실행 및 보상 로직 콘솔 출력
             ExecuteDispatch(currentSelectedLocation);
+
+            // 파견 시작 시간 기록
+            dispatchStartTime = System.DateTime.Now;
 
             // 파견 시작 상태로 전환
             isDispatching = true;
@@ -437,6 +510,9 @@ namespace Dispatch
             // 파견 상태 초기화
             ResetDispatchUI();
 
+            // 저장된 파견 상태 삭제
+            ClearDispatchState();
+
             AddLog("==============================================\n");
             // 슬라이더 다시 표시
             if (sliderObject != null)
@@ -468,6 +544,9 @@ namespace Dispatch
             //팁 표시 다시 표시
             if (TipPanelObject != null)
                 TipPanelObject.SetActive(true);
+
+            // 현재 선택된 창고의 팁 텍스트 표시
+            ShowTipText(currentSelectedLocation);
 
             // 카운트다운 타이머 숨김
             if (countdownTimerText != null)
@@ -568,8 +647,11 @@ namespace Dispatch
                     int minCount = Mathf.FloorToInt(reward.Min_Count * rewardData.Reward_Multiplier);
                     int maxCount = Mathf.FloorToInt(reward.Max_Count * rewardData.Reward_Multiplier);
 
-                    string fixedText = reward.Is_Fixed ? "[고정]" : $"[{reward.Probability * 100:F0}%]";
-                    rewardTexts.Add($"{fixedText} 아이템 ID {reward.Item_ID}: {minCount}~{maxCount}개");
+                    // 아이템 이름 가져오기
+                    string itemName = GetItemName(reward.Item_ID);
+
+                    string fixedText = reward.Is_Fixed ? "" : $"[{reward.Probability * 100:F0}%]";
+                    rewardTexts.Add($"{fixedText} {itemName} {minCount}~{maxCount}개");
                 }
             }
 
@@ -983,6 +1065,165 @@ namespace Dispatch
             Debug.Log($"[DispatchTestPanel] {message}");
         }
 
+        // 파견 시작 시간 저장용
+        private System.DateTime dispatchStartTime;
+
+        /// <summary>
+        /// 파견 상태 저장
+        /// </summary>
+        private void SaveDispatchState()
+        {
+            DispatchSaveData saveData = new DispatchSaveData
+            {
+                isDispatching = isDispatching,
+                totalDispatchTime = currentSelectedHours, // 전체 파견 시간 (테스트용 초 단위)
+                startTimeString = dispatchStartTime.ToString("o"), // ISO 8601 형식
+                selectedLocation = currentSelectedLocation,
+                selectedHours = currentSelectedHours,
+                selectedTimeID = currentSelectedTimeID
+            };
+
+            string json = JsonUtility.ToJson(saveData);
+            PlayerPrefs.SetString(DISPATCH_SAVE_KEY, json);
+            PlayerPrefs.Save();
+
+            AddLog($"💾 파견 상태 저장됨 - 남은 시간: {remainingTime}초");
+        }
+
+        /// <summary>
+        /// 파견 상태 복원
+        /// </summary>
+        private void LoadDispatchState()
+        {
+            if (!PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+            {
+                AddLog("📂 저장된 파견 상태 없음");
+                return;
+            }
+
+            string json = PlayerPrefs.GetString(DISPATCH_SAVE_KEY);
+            DispatchSaveData saveData = JsonUtility.FromJson<DispatchSaveData>(json);
+
+            if (saveData == null || !saveData.isDispatching)
+            {
+                AddLog("📂 파견 중이 아님");
+                return;
+            }
+
+            // 시작 시간 파싱
+            if (!System.DateTime.TryParse(saveData.startTimeString, out dispatchStartTime))
+            {
+                AddLog("❌ 파견 시작 시간 파싱 실패");
+                ClearDispatchState();
+                return;
+            }
+
+            // 경과 시간 계산
+            System.TimeSpan elapsed = System.DateTime.Now - dispatchStartTime;
+            float elapsedSeconds = (float)elapsed.TotalSeconds;
+
+            // 남은 시간 계산
+            remainingTime = saveData.totalDispatchTime - elapsedSeconds;
+
+            // 이미 파견 완료된 경우
+            if (remainingTime <= 0f)
+            {
+                remainingTime = 0f;
+                isDispatching = true; // 완료 상태로 설정
+                currentSelectedLocation = saveData.selectedLocation;
+                currentSelectedHours = saveData.selectedHours;
+                currentSelectedTimeID = saveData.selectedTimeID;
+
+                AddLog($"📂 파견 완료! 보상을 획득하세요.");
+
+                // UI 업데이트
+                RestoreDispatchUI().Forget();
+            }
+            else
+            {
+                // 저장된 상태 복원
+                isDispatching = saveData.isDispatching;
+                currentSelectedLocation = saveData.selectedLocation;
+                currentSelectedHours = saveData.selectedHours;
+                currentSelectedTimeID = saveData.selectedTimeID;
+
+                AddLog($"📂 파견 상태 복원됨 - 장소: {GetLocationName(currentSelectedLocation)}, 남은 시간: {remainingTime:F0}초");
+
+                // UI 업데이트 (Start 이후에 호출되므로 다음 프레임에서 실행)
+                RestoreDispatchUI().Forget();
+            }
+        }
+
+        /// <summary>
+        /// 파견 UI 복원 (UniTask)
+        /// </summary>
+        private async UniTaskVoid RestoreDispatchUI()
+        {
+            // 다음 프레임까지 대기 (UI 요소들이 초기화될 때까지)
+            await UniTask.Yield();
+
+            // 파견 중인 창고 위치로 스크롤 이동
+            MoveScrollToCurrentWarehouse();
+
+            // 파견 UI 상태 복원
+            UpdateDispatchUI();
+
+            // 파견 완료 상태라면 획득하기 버튼 활성화
+            if (isDispatching && remainingTime <= 0f)
+            {
+                if (dispatchStartButton != null)
+                    dispatchStartButton.interactable = true;
+
+                AddLog("✅ 파견 UI 복원 완료 - 획득하기 버튼 활성화");
+            }
+            else
+            {
+                AddLog("✅ 파견 UI 복원 완료");
+            }
+        }
+
+        /// <summary>
+        /// 현재 선택된 창고 위치로 스크롤뷰 이동
+        /// </summary>
+        private void MoveScrollToCurrentWarehouse()
+        {
+            if (buttonScrollRect == null) return;
+
+            // 현재 선택된 창고에 해당하는 인덱스 찾기
+            int warehouseIndex = currentSelectedLocation switch
+            {
+                DispatchLocation.NightmareWarehouse => 0,
+                DispatchLocation.FateWarehouse => 1,
+                DispatchLocation.LaughterWarehouse => 2,
+                DispatchLocation.TruthWarehouse => 3,
+                DispatchLocation.UnknownWarehouse => 4,
+                _ => 0
+            };
+
+            // 버튼 인덱스 업데이트
+            currentButtonIndex = warehouseIndex;
+
+            // 스크롤 위치 계산 및 이동
+            float scrollPosition = (float)warehouseIndex / (totalCombatButtons - 1);
+            buttonScrollRect.horizontalNormalizedPosition = scrollPosition;
+            targetScrollPosition = scrollPosition;
+
+            AddLog($"📍 스크롤 이동: {GetLocationName(currentSelectedLocation)} (인덱스: {warehouseIndex})");
+        }
+
+        /// <summary>
+        /// 저장된 파견 상태 삭제
+        /// </summary>
+        private void ClearDispatchState()
+        {
+            if (PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+            {
+                PlayerPrefs.DeleteKey(DISPATCH_SAVE_KEY);
+                PlayerPrefs.Save();
+                AddLog("🗑️ 파견 상태 삭제됨");
+            }
+        }
+
         private void OnDestroy()
         {
             // 이벤트 리스너 제거
@@ -991,6 +1232,15 @@ namespace Dispatch
 
             if (dispatchStartButton != null)
                 dispatchStartButton.onClick.RemoveListener(OnDispatchStartButtonClicked);
+        }
+
+        private void OnDisable()
+        {
+            // 파견 중일 때만 상태 저장
+            if (isDispatching)
+            {
+                SaveDispatchState();
+            }
         }
     }
 }
