@@ -475,6 +475,9 @@ namespace Novelian.Combat
             Vector3 spawnPos = transform.position + spawnOffset;
             Vector3 targetPos = target.GetPosition();
 
+            // Flatten target position to horizontal plane (수평 발사)
+            targetPos.y = spawnPos.y;
+
             // Get projectile prefab from database
             GameObject projectilePrefab = basicAttackPrefabs?.projectilePrefab;
             GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
@@ -798,10 +801,19 @@ namespace Novelian.Combat
             }
         }
 
-        //LMJ : Use AOE skill (Meteor style)
+        //LMJ : Use AOE skill (Meteor style) - also handles DOT, Debuff, Trap, Mine skills with aoe_radius
         private async UniTaskVoid UseAOESkillAsync(ITargetable target)
         {
-            if (activeSkillData == null || activeSkillData.GetSkillType() != SkillAssetType.AOE) return;
+            if (activeSkillData == null) return;
+
+            // Allow skill types that use AOE-style effects (범위 이펙트가 필요한 스킬 타입들)
+            var skillType = activeSkillData.GetSkillType();
+            bool isValidType = skillType == SkillAssetType.AOE
+                            || skillType == SkillAssetType.DOT
+                            || skillType == SkillAssetType.Debuff
+                            || skillType == SkillAssetType.Trap
+                            || skillType == SkillAssetType.Mine;
+            if (!isValidType) return;
 
             GameObject castEffect = null;
             GameObject meteorEffect = null;
@@ -862,8 +874,8 @@ namespace Novelian.Combat
                     impactPos = new Vector3(targetPos.x, 0f, targetPos.z);
                 }
 
-                // 4. Meteor Effect
-                if (projectileEffectPrefab != null)
+                // 4. Meteor Effect (only if projectile_speed > 0, otherwise instant AOE)
+                if (activeSkillData.projectile_speed > 0 && projectileEffectPrefab != null)
                 {
                     Vector3 meteorStartPos = impactPos + Vector3.up * 20f;
                     meteorEffect = Object.Instantiate(projectileEffectPrefab, meteorStartPos, Quaternion.identity);
@@ -937,6 +949,171 @@ namespace Novelian.Combat
             catch (System.OperationCanceledException)
             {
                 Debug.Log("[Character] AOE skill cancelled");
+            }
+            finally
+            {
+                if (castEffect != null) Object.Destroy(castEffect);
+            }
+        }
+
+        //LMJ : Use Instant Single skill - immediate damage to single target
+        private async UniTaskVoid UseInstantSkillAsync(ITargetable target)
+        {
+            if (activeSkillData == null) return;
+
+            var skillType = activeSkillData.GetSkillType();
+            if (skillType != SkillAssetType.InstantSingle) return;
+
+            GameObject castEffect = null;
+            GameObject hitEffect = null;
+
+            try
+            {
+                Debug.Log($"[Character] Starting Instant skill: {activeSkillData.skill_name}");
+
+                // Get prefabs
+                GameObject castEffectPrefab = activeSkillPrefabs?.castEffectPrefab;
+                GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
+
+                // 1. Cast Effect
+                float castTime = activeSkillData.cast_time;
+                if (supportData != null) castTime *= supportData.cast_time_mult;
+
+                if (castTime > 0f && castEffectPrefab != null)
+                {
+                    Vector3 spawnPos = transform.position + spawnOffset;
+                    castEffect = Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
+                    await UniTask.Delay((int)(castTime * 1000));
+                    if (castEffect != null) Object.Destroy(castEffect);
+                }
+
+                // 2. Get target position
+                Vector3 targetPos;
+                if (target != null && target.IsAlive())
+                {
+                    targetPos = target.GetPosition();
+                }
+                else
+                {
+                    ITargetable newTarget = TargetRegistry.Instance.FindTarget(transform.position, FinalActiveRange, useWeightTargeting);
+                    if (newTarget != null)
+                    {
+                        target = newTarget;
+                        targetPos = newTarget.GetPosition();
+                    }
+                    else
+                    {
+                        Debug.Log("[Character] Instant skill cancelled: No valid targets");
+                        return;
+                    }
+                }
+
+                // 3. Hit Effect at target position
+                if (hitEffectPrefab != null)
+                {
+                    hitEffect = Object.Instantiate(hitEffectPrefab, targetPos, Quaternion.identity);
+                }
+
+                // 4. Apply damage - aoe_radius가 있으면 범위 데미지, 없으면 단일 데미지
+                float damageToApply = FinalActiveDamage;
+                if (supportData != null) damageToApply *= supportData.damage_mult;
+
+                if (activeSkillData.aoe_radius > 0)
+                {
+                    // 범위 내 모든 적에게 데미지
+                    float finalRadius = activeSkillData.aoe_radius;
+                    if (supportData != null) finalRadius *= supportData.aoe_mult;
+
+                    Collider[] hits = Physics.OverlapSphere(targetPos, finalRadius);
+                    foreach (var hit in hits)
+                    {
+                        if (!hit.CompareTag(Tag.Monster) && !hit.CompareTag(Tag.BossMonster))
+                            continue;
+
+                        ITargetable hitTarget = hit.GetComponent<ITargetable>();
+                        if (hitTarget != null && hitTarget.IsAlive())
+                        {
+                            hitTarget.TakeDamage(damageToApply);
+                        }
+                    }
+                }
+                else
+                {
+                    // 단일 타겟에게 데미지
+                    if (target != null && target.IsAlive())
+                    {
+                        target.TakeDamage(damageToApply);
+                    }
+                }
+
+                // Cleanup
+                if (hitEffect != null)
+                {
+                    Object.Destroy(hitEffect, 2f);
+                }
+            }
+            catch (System.OperationCanceledException)
+            {
+                Debug.Log("[Character] Instant skill cancelled");
+            }
+            finally
+            {
+                if (castEffect != null) Object.Destroy(castEffect);
+            }
+        }
+
+        //LMJ : Use Buff skill - apply buff to self or allies
+        private async UniTaskVoid UseBuffSkillAsync()
+        {
+            if (activeSkillData == null) return;
+
+            var skillType = activeSkillData.GetSkillType();
+            if (skillType != SkillAssetType.Buff) return;
+
+            GameObject castEffect = null;
+            GameObject hitEffect = null;
+
+            try
+            {
+                Debug.Log($"[Character] Starting Buff skill: {activeSkillData.skill_name}");
+
+                // Get prefabs
+                GameObject castEffectPrefab = activeSkillPrefabs?.castEffectPrefab;
+                GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
+
+                // 1. Cast Effect
+                float castTime = activeSkillData.cast_time;
+                if (supportData != null) castTime *= supportData.cast_time_mult;
+
+                if (castTime > 0f && castEffectPrefab != null)
+                {
+                    Vector3 spawnPos = transform.position + spawnOffset;
+                    castEffect = Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
+                    await UniTask.Delay((int)(castTime * 1000));
+                    if (castEffect != null) Object.Destroy(castEffect);
+                }
+
+                // 2. Hit Effect at self position (버프는 자신 위치에서 발동)
+                Vector3 effectPos = transform.position;
+                if (hitEffectPrefab != null)
+                {
+                    hitEffect = Object.Instantiate(hitEffectPrefab, effectPos, Quaternion.identity);
+                }
+
+                // 3. Apply buff effect
+                // TODO: 버프 시스템 구현 필요 (공격속도 증가, 치명타 확률 증가 등)
+                // 현재는 이펙트만 재생
+                Debug.Log($"[Character] Buff skill effect played: {activeSkillData.skill_name} (버프 로직 미구현)");
+
+                // Cleanup
+                if (hitEffect != null)
+                {
+                    Object.Destroy(hitEffect, 2f);
+                }
+            }
+            catch (System.OperationCanceledException)
+            {
+                Debug.Log("[Character] Buff skill cancelled");
             }
             finally
             {
@@ -1168,10 +1345,80 @@ namespace Novelian.Combat
 
         /// <summary>
         /// 테스트용: 수동으로 공격 발사 (SkillTestManager에서 호출)
+        /// 스킬 타입에 따라 적절한 메서드를 호출
         /// </summary>
         public void ForceAttack()
         {
-            TryAttack();
+            if (!isInitialized || basicAttackData == null)
+            {
+                Debug.LogWarning("[Character] ForceAttack skipped: not initialized or no skill data");
+                return;
+            }
+
+            // Find target first
+            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, FinalRange, useWeightTargeting);
+            if (target == null)
+            {
+                Debug.LogWarning("[Character] ForceAttack skipped: no target found");
+                return;
+            }
+
+            // Check skill type and call appropriate method
+            var skillType = basicAttackData.GetSkillType();
+            Debug.Log($"[Character] ForceAttack: {basicAttackData.skill_name} (Type: {skillType})");
+
+            switch (skillType)
+            {
+                // 투사체 스킬 - 투사체 발사
+                case SkillAssetType.Projectile:
+                    TryAttack();
+                    break;
+
+                // 단일 즉발 스킬 - 타겟에게 즉시 데미지/효과
+                case SkillAssetType.InstantSingle:
+                    UseInstantSkillAsync(target).Forget();
+                    break;
+
+                // 범위 스킬 - 타겟 위치에 AOE 효과
+                case SkillAssetType.AOE:
+                    UseAOESkillAsync(target).Forget();
+                    break;
+
+                // DOT 스킬 - 범위 내 적에게 지속 데미지 (AOE 방식)
+                case SkillAssetType.DOT:
+                    UseAOESkillAsync(target).Forget();
+                    break;
+
+                // 버프 스킬 - 아군에게 버프 적용
+                case SkillAssetType.Buff:
+                    UseBuffSkillAsync().Forget();
+                    break;
+
+                // 디버프 스킬 - 범위 내 적에게 디버프 적용 (AOE 방식)
+                case SkillAssetType.Debuff:
+                    UseAOESkillAsync(target).Forget();
+                    break;
+
+                // 채널링 스킬 - 지속 시전
+                case SkillAssetType.Channeling:
+                    UseChannelingSkillAsync(target).Forget();
+                    break;
+
+                // 트랩 스킬 - 타겟 위치에 트랩 설치 (AOE 방식)
+                case SkillAssetType.Trap:
+                    UseAOESkillAsync(target).Forget();
+                    break;
+
+                // 지뢰 스킬 - 타겟 위치에 지뢰 설치 (AOE 방식)
+                case SkillAssetType.Mine:
+                    UseAOESkillAsync(target).Forget();
+                    break;
+
+                default:
+                    Debug.LogWarning($"[Character] Unknown skill type: {skillType}, falling back to TryAttack()");
+                    TryAttack();
+                    break;
+            }
         }
 
         /// <summary>
