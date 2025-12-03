@@ -16,6 +16,7 @@ public class BookmarkEquipPanel : MonoBehaviour
     [Header("Panel References")]
     [SerializeField] private GameObject characterInfoPanel;
     [SerializeField] private GameObject libraryBookMarkInfoPanel;
+    [SerializeField] private GameObject raycastPanel;
 
     [Header("Manager")]
     [SerializeField] private BookMarkManager bmManager;
@@ -25,6 +26,7 @@ public class BookmarkEquipPanel : MonoBehaviour
 
     private void OnEnable()
     {
+        raycastPanel?.SetActive(true);
         CreateBookmarkSlots();
     }
 
@@ -154,6 +156,7 @@ public class BookmarkEquipPanel : MonoBehaviour
     public void ClosePanel()
     {
         gameObject.SetActive(false);
+        raycastPanel?.SetActive(false);
         if (characterInfoPanel != null)
         {
             characterInfoPanel.SetActive(true);

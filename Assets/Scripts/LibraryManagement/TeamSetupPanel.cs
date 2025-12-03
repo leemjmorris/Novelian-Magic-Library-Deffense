@@ -24,6 +24,7 @@ public class TeamSetupPanel : MonoBehaviour
 
     [Header("Deck Unset Panel")]
     [SerializeField] private GameObject deckUnsetPanel;
+    [SerializeField] private GameObject raycastPanel;
 
     private List<DeckCharacterSlot> characterSlots = new List<DeckCharacterSlot>();
     private int selectedDeckSlotIndex = -1; // 현재 선택된 덱 슬롯
@@ -246,6 +247,7 @@ public class TeamSetupPanel : MonoBehaviour
     {
         if (deckUnsetPanel != null)
         {
+            raycastPanel?.SetActive(true);
             deckUnsetPanel.SetActive(true);
             Debug.Log("[TeamSetupPanel] 덱 해제 패널 표시");
         }
@@ -259,6 +261,7 @@ public class TeamSetupPanel : MonoBehaviour
         if (deckUnsetPanel != null)
         {
             deckUnsetPanel.SetActive(false);
+            raycastPanel?.SetActive(false);
             Debug.Log("[TeamSetupPanel] 덱 해제 패널 숨김");
         }
     }

@@ -23,9 +23,14 @@ public class EnhancementPanel : MonoBehaviour
     [Header("Reference")]
     [SerializeField] private CharacterInfoPanel characterInfoPanel;
     [SerializeField] private GameObject characterInfoPanelObject;
-    
-    
+    [SerializeField] private GameObject raycastPanel;
+
     private int characterID;
+
+    private void OnEnable()
+    {
+        raycastPanel?.SetActive(true);
+    }
 
     /// <summary>
     /// 캐릭터 ID 설정 및 UI 초기화
@@ -171,6 +176,7 @@ public class EnhancementPanel : MonoBehaviour
     public void ClosePanel()
     {
         gameObject.SetActive(false);
+        raycastPanel?.SetActive(false);
         characterInfoPanel?.RefreshLevelUI();
         characterInfoPanel?.RefreshBookmarkUI();
         characterInfoPanelObject.SetActive(true);
