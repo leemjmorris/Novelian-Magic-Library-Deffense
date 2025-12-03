@@ -15,6 +15,7 @@ public class MonsterData
     public int Mon_Level_9_ID { get; set; }
     public int Mon_Level_10_ID { get; set; }
     public int Effect_ID { get; set; }
+    public int Path_ID { get; set; }
     public int Description_ID { get; set; }
     
 }
