@@ -18,6 +18,7 @@ public class InventoryItemSlot : MonoBehaviour, IPointerDownHandler, IPointerUpH
     [Header("UI References")]
     [SerializeField] private Image itemIconImage;           // 아이템 아이콘 이미지
     [SerializeField] private TextMeshProUGUI countText;     // 아이템 수량 텍스트 (X 999)
+    [SerializeField] private Sprite defaultIconSprite;      // 아이콘 로드 실패 시 사용할 기본 스프라이트
 
     [Header("Long Press Settings")]
     [SerializeField] private float longPressDuration = 0.5f; // 길게 누르기 감지 시간 (초)

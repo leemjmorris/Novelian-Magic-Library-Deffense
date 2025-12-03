@@ -152,8 +152,8 @@ namespace Dispatch
                 );
             }
 
-            // 스와이프 중일 때 실시간으로 창고 변경 감지
-            if (buttonScrollRect != null && isDragging)
+            // 스와이프 중일 때 실시간으로 창고 변경 감지 (파견 중이 아닐 때만)
+            if (buttonScrollRect != null && isDragging && !isDispatching)
             {
                 CheckAndUpdateWarehouse();
             }
@@ -443,6 +443,10 @@ namespace Dispatch
             if (dispatchStartButton != null)
                 dispatchStartButton.interactable = false;
 
+            // 스크롤 비활성화 (파견 중에는 스와이프 불가)
+            if (buttonScrollRect != null)
+                buttonScrollRect.enabled = false;
+
             UpdateCountdownDisplay();
         }
 
@@ -558,6 +562,10 @@ namespace Dispatch
 
             if (dispatchStartButton != null)
                 dispatchStartButton.interactable = true;
+
+            // 스크롤 다시 활성화
+            if (buttonScrollRect != null)
+                buttonScrollRect.enabled = true;
         }
 
         /// <summary>
