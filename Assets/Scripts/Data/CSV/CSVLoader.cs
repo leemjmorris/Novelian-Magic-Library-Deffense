@@ -85,6 +85,7 @@ public class CSVLoader : MonoBehaviour
                 // 새 스킬 테이블 (3행 헤더 형식)
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "MainSkillTable.csv", x => x.skill_id),
                 RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "SupportSkillTable.csv", x => x.support_id),
+                RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "SupportCompatibilityTable.csv", x => x.support_id),
                 RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "SkillLevelTable.csv", x => x.GetCompositeKey()),
 
                 // 인게임 카드 시스템 테이블 (3행 헤더 형식)
@@ -362,6 +363,7 @@ public class CSVLoader : MonoBehaviour
                 // 스킬 테이블 (3행 헤더)
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "MainSkillTable.csv", x => x.skill_id),
                 RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "SupportSkillTable.csv", x => x.support_id),
+                RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "SupportCompatibilityTable.csv", x => x.support_id),
                 RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "SkillLevelTable.csv", x => x.GetCompositeKey()),
 
                 // 인게임 카드 시스템 테이블 (3행 헤더)

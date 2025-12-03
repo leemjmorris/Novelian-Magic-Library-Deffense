@@ -24,6 +24,18 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     public int Exp { get; private set; } = 11; // JML: Example exp amount
 
+    // 테스트용 무적 모드
+    private bool isInvincible = false;
+
+    /// <summary>
+    /// 테스트용 무적 모드 설정
+    /// </summary>
+    public void SetInvincible(bool invincible)
+    {
+        isInvincible = invincible;
+        Debug.Log($"[Monster] 무적 모드: {isInvincible}");
+    }
+
     /// <summary>
     /// CSV 데이터 기반으로 몬스터 스탯 초기화 (MonsterLevelData)
     /// OnSpawn() 후 WaveManager에서 호출
@@ -172,6 +184,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public override void TakeDamage(float damage)
     {
         if (isDead) return;
+
+        // 무적 모드일 때 데미지 무시 (테스트용)
+        if (isInvincible)
+        {
+            Debug.Log("[Monster] 무적 모드로 데미지 무시");
+            return;
+        }
 
         // Apply Mark damage multiplier if active
         float finalDamage = damage;

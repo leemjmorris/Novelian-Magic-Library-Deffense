@@ -124,18 +124,21 @@ namespace Novelian.Combat
                 maxChainCount = supportSkillData.chain_count;
                 chainHitTargets = new System.Collections.Generic.HashSet<ITargetable>();
                 currentChainDamage = damageAmount;
+                Debug.Log($"[Projectile] Chain initialized: maxChainCount={maxChainCount}, initialDamage={currentChainDamage:F1}");
             }
 
-            // Initialize Pierce state (관통 시스템 - 스킬 데이터 기반)
-            if (currentPierceCount == 0 && skillData != null && skillData.pierce_count > 0)
+            // Initialize Pierce state (관통 시스템 - 메인 스킬 또는 서포트 스킬에서 관통 가능)
+            if (currentPierceCount == 0)
             {
-                maxPierceCount = skillData.pierce_count;
-                // 서포트 스킬의 추가 관통
-                if (supportSkillData != null)
+                int basePierce = skillData?.pierce_count ?? 0;
+                int supportPierce = supportSkillData?.add_pierce ?? 0;
+
+                if (basePierce > 0 || supportPierce > 0)
                 {
-                    maxPierceCount += supportSkillData.add_pierce;
+                    maxPierceCount = basePierce + supportPierce;
+                    baseDamageForPierce = damageAmount;
+                    Debug.Log($"[Projectile] Pierce initialized: maxPierceCount={maxPierceCount} (base={basePierce}, support={supportPierce}), baseDamage={baseDamageForPierce:F1}");
                 }
-                baseDamageForPierce = damageAmount;
             }
 
             // Cancel previous lifetime token
@@ -421,6 +424,14 @@ namespace Novelian.Combat
                         Debug.Log($"[Projectile] Pierce {currentPierceCount}/{maxPierceCount}: Continuing through {monster.name}");
                         return; // 관통하여 계속 진행 (풀로 돌아가지 않음)
                     }
+
+                    // Process Fragmentation (파편화 40002: 명중 시 분열)
+                    // 원본 + add_projectiles = 총 발사체 수 (부채꼴로 퍼짐)
+                    if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
+                    {
+                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 3발
+                        SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection);
+                    }
                 }
 
                 // Cleanup
@@ -497,6 +508,14 @@ namespace Novelian.Combat
                         currentPierceCount++;
                         Debug.Log($"[Projectile] Pierce {currentPierceCount}/{maxPierceCount}: Continuing through {boss.name}");
                         return; // 관통하여 계속 진행 (풀로 돌아가지 않음)
+                    }
+
+                    // Process Fragmentation (파편화 40002: 명중 시 분열)
+                    // 원본 + add_projectiles = 총 발사체 수 (부채꼴로 퍼짐)
+                    if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
+                    {
+                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 3발
+                        SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection);
                     }
                 }
 
@@ -655,6 +674,41 @@ namespace Novelian.Combat
             }
 
             return closestTarget;
+        }
+
+        //LMJ : Spawn fragment projectiles in fan pattern on hit (파편화 40002)
+        // 원본 진행 방향을 기준으로 부채꼴 형태로 발사
+        private void SpawnFragmentProjectilesFan(Vector3 hitPosition, int totalCount, Vector3 originalDirection)
+        {
+            if (totalCount <= 0) return;
+
+            var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
+            float spawnOffset = 0.5f;
+            float spreadAngle = 30f; // 부채꼴 총 각도 (좌우 각각 15도씩)
+
+            for (int i = 0; i < totalCount; i++)
+            {
+                // 부채꼴 각도 계산: 중앙을 0도로 하여 좌우로 퍼짐
+                // 예: 3발이면 -30도, 0도, +30도
+                float angleOffset = 0f;
+                if (totalCount > 1)
+                {
+                    angleOffset = spreadAngle * (i - (totalCount - 1) / 2f);
+                }
+
+                // Y축 회전을 적용하여 부채꼴 방향 계산
+                Vector3 fragmentDirection = Quaternion.Euler(0, angleOffset, 0) * originalDirection;
+                Vector3 spawnPos = hitPosition + fragmentDirection * spawnOffset;
+                Vector3 targetPos = spawnPos + fragmentDirection * 50f;
+
+                Projectile fragment = pool.Spawn<Projectile>(spawnPos);
+                // 분열 발사체는 supportSkillId = 0으로 설정하여 재분열 방지
+                fragment.Launch(spawnPos, targetPos, speed, lifetime, damage, skillId, 0);
+
+                Debug.Log($"[Projectile] Fragment {i + 1}/{totalCount}: Fired at angle {angleOffset:F0}°");
+            }
+
+            Debug.Log($"[Projectile] Fragmentation complete: {totalCount} fragments spawned in fan pattern");
         }
 
         //LMJ : Return projectile to pool

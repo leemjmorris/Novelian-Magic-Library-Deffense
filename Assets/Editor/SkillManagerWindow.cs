@@ -37,6 +37,36 @@ public class SkillManagerWindow : EditorWindow
     // CSV 경로
     private const string CSV_PATH = "Assets/Data/CSV";
 
+    // GUIStyle 캐싱 (Unity 6 호환성)
+    private GUIStyle _okStyle;
+    private GUIStyle _errorStyle;
+
+    private GUIStyle OkStyle
+    {
+        get
+        {
+            if (_okStyle == null)
+            {
+                _okStyle = new GUIStyle(EditorStyles.label);
+                _okStyle.normal.textColor = Color.green;
+            }
+            return _okStyle;
+        }
+    }
+
+    private GUIStyle ErrorStyle
+    {
+        get
+        {
+            if (_errorStyle == null)
+            {
+                _errorStyle = new GUIStyle(EditorStyles.label);
+                _errorStyle.normal.textColor = Color.red;
+            }
+            return _errorStyle;
+        }
+    }
+
     [MenuItem("Tools/Skills/Skill Manager", false, 100)]
     public static void ShowWindow()
     {
@@ -161,9 +191,7 @@ public class SkillManagerWindow : EditorWindow
             EditorGUILayout.LabelField(skill.GetSkillType().ToString(), GUILayout.Width(80));
 
             // Status
-            var statusStyle = new GUIStyle(EditorStyles.label);
-            statusStyle.normal.textColor = hasAnyPrefab ? Color.green : Color.red;
-            EditorGUILayout.LabelField(hasAnyPrefab ? "OK" : "X", statusStyle, GUILayout.Width(60));
+            EditorGUILayout.LabelField(hasAnyPrefab ? "OK" : "X", hasAnyPrefab ? OkStyle : ErrorStyle, GUILayout.Width(60));
 
             // Projectile Prefab
             entry.projectilePrefab = (GameObject)EditorGUILayout.ObjectField(
@@ -240,9 +268,7 @@ public class SkillManagerWindow : EditorWindow
             EditorGUILayout.LabelField(skill.GetSupportCategory().ToString(), GUILayout.Width(80));
 
             // Status
-            var statusStyle = new GUIStyle(EditorStyles.label);
-            statusStyle.normal.textColor = hasAnyPrefab ? Color.green : Color.red;
-            EditorGUILayout.LabelField(hasAnyPrefab ? "OK" : "X", statusStyle, GUILayout.Width(60));
+            EditorGUILayout.LabelField(hasAnyPrefab ? "OK" : "X", hasAnyPrefab ? OkStyle : ErrorStyle, GUILayout.Width(60));
 
             // Effect Prefab
             entry.effectPrefab = (GameObject)EditorGUILayout.ObjectField(
@@ -324,10 +350,7 @@ public class SkillManagerWindow : EditorWindow
 
         EditorGUILayout.BeginHorizontal();
 
-        var style = new GUIStyle(EditorStyles.label);
-        style.normal.textColor = exists ? Color.green : Color.red;
-
-        EditorGUILayout.LabelField(exists ? "[OK]" : "[X]", style, GUILayout.Width(40));
+        EditorGUILayout.LabelField(exists ? "[OK]" : "[X]", exists ? OkStyle : ErrorStyle, GUILayout.Width(40));
         EditorGUILayout.LabelField(fileName);
 
         if (exists)

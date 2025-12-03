@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스킬 테스트 씬 UI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { background: #1a1a2e; display: flex; justify-content: center; padding: 20px; }
+
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: #0a0a14;
+            border-radius: 40px;
+            border: 6px solid #333;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 50px 15px 30px;
+        }
+
+        /* 게임 뷰 */
+        .game-view {
+            flex: 1;
+            background: #111;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .invincible-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .invincible-btn.on { background: #00d26a; color: #fff; }
+        .invincible-btn.off { background: #ff4757; color: #fff; }
+
+        .monster-count { color: #aaa; font-size: 12px; line-height: 32px; }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+
+        .monsters { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        .monster {
+            width: 45px; height: 55px;
+            background: #e74c3c;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            position: relative;
+        }
+        .monster .badge {
+            position: absolute;
+            top: -5px; right: -5px;
+            background: #f1c40f;
+            color: #000;
+            font-size: 8px;
+            padding: 2px 4px;
+            border-radius: 6px;
+        }
+
+        .character {
+            width: 60px; height: 70px;
+            background: #9b59b6;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        /* 컨트롤 패널 */
+        .controls {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 15px;
+        }
+
+        .section { margin-bottom: 12px; }
+        .section-title { font-size: 11px; color: #888; margin-bottom: 6px; }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            background: #0f3460;
+            border: 1px solid #e94560;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .btn-group { display: flex; gap: 6px; }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn.add { background: #27ae60; color: #fff; font-size: 16px; }
+        .btn.remove { background: #e74c3c; color: #fff; font-size: 16px; }
+        .btn.reset { background: #f39c12; color: #000; font-size: 11px; }
+
+        .pattern-btns { display: flex; gap: 6px; margin-top: 8px; }
+        .pattern-btn {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #333;
+            background: transparent;
+            color: #888;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .pattern-btn.active { border-color: #e94560; color: #fff; }
+
+        /* 수치 표시 */
+        .stats-box {
+            background: #0f3460;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 11px;
+            color: #aaa;
+        }
+        .stat-row .value { color: #fff; }
+        .stat-row .change { color: #2ecc71; font-size: 10px; }
+
+        /* 발사 버튼 */
+        .fire-btn {
+            width: 100%;
+            padding: 16px;
+            margin-top: 12px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <!-- 게임 뷰 -->
+        <div class="game-view">
+            <div class="game-header">
+                <button class="invincible-btn on" onclick="toggleInvincible(this)">무적 ON</button>
+                <span class="monster-count">몬스터: <span id="count">3</span></span>
+            </div>
+            <div class="game-area">
+                <div class="monsters" id="monsters">
+                    <div class="monster">👹<span class="badge">무적</span></div>
+                    <div class="monster">👹<span class="badge">무적</span></div>
+                    <div class="monster">👹<span class="badge">무적</span></div>
+                </div>
+                <div class="character">🧙</div>
+            </div>
+        </div>
+
+        <!-- 컨트롤 -->
+        <div class="controls">
+            <div class="section">
+                <select id="main-skill">
+                    <option>메인: 화염 화살</option>
+                    <option>메인: 냉기 창</option>
+                    <option>메인: 번개 구체</option>
+                </select>
+                <select id="support-skill">
+                    <option>서포트: 없음</option>
+                    <option>서포트: 슬로우</option>
+                    <option>서포트: 스턴</option>
+                </select>
+            </div>
+
+            <div class="section">
+                <div class="btn-group">
+                    <button class="btn add" onclick="addMonster()">+</button>
+                    <button class="btn remove" onclick="removeMonster()">-</button>
+                    <button class="btn reset" onclick="resetMonster()">Reset</button>
+                </div>
+                <div class="pattern-btns">
+                    <button class="pattern-btn active">일렬</button>
+                    <button class="pattern-btn">원형</button>
+                    <button class="pattern-btn">무작위</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">적용 수치 (서포트 반영)</div>
+                <div class="stats-box">
+                    <div class="stat-row">
+                        <span>데미지</span>
+                        <span><span class="value">120</span> <span class="change">(+20%)</span></span>
+                    </div>
+                    <div class="stat-row">
+                        <span>쿨다운</span>
+                        <span class="value">1.35초</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>CC</span>
+                        <span class="value">슬로우 30% / 2초</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="fire-btn">🔥 발사</button>
+        </div>
+    </div>
+
+    <script>
+        let count = 3;
+        let invincible = true;
+
+        function toggleInvincible(btn) {
+            invincible = !invincible;
+            btn.textContent = invincible ? '무적 ON' : '무적 OFF';
+            btn.className = 'invincible-btn ' + (invincible ? 'on' : 'off');
+            document.querySelectorAll('.badge').forEach(b => b.style.display = invincible ? 'block' : 'none');
+        }
+
+        function addMonster() {
+            if (count >= 8) return;
+            count++;
+            document.getElementById('count').textContent = count;
+            const m = document.createElement('div');
+            m.className = 'monster';
+            m.innerHTML = '👹' + (invincible ? '<span class="badge">무적</span>' : '');
+            document.getElementById('monsters').appendChild(m);
+        }
+
+        function removeMonster() {
+            if (count <= 1) return;
+            count--;
+            document.getElementById('count').textContent = count;
+            document.getElementById('monsters').lastChild.remove();
+        }
+
+        function resetMonster() {
+            count = 1;
+            document.getElementById('count').textContent = count;
+            document.getElementById('monsters').innerHTML = '<div class="monster">👹' + (invincible ? '<span class="badge">무적</span>' : '') + '</div>';
+        }
+
+        document.querySelectorAll('.pattern-btn').forEach(btn => {
+            btn.onclick = function() {
+                document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            };
+        });
+    </script>
+</body>
+</html>

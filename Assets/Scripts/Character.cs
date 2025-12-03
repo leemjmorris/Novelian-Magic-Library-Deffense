@@ -80,20 +80,41 @@ namespace Novelian.Combat
                 if (basicAttackData == null) return 0f;
                 // 레벨 데이터 조회 (없으면 배율 1)
                 float levelMult = 1f;
+                // 보조 스킬 배율
+                float supportMult = supportData?.damage_mult ?? 1f;
                 // DamageCalculator 사용
-                float baseDamage = DamageCalculator.CalculateSingleDamage(basicAttackData.base_damage, levelMult, 1f);
+                float baseDamage = DamageCalculator.CalculateSingleDamage(basicAttackData.base_damage, levelMult, supportMult);
                 // 캐릭터 변형 적용
                 return baseDamage * (1f + damageModifier / 100f);
             }
         }
 
-        private float FinalAttackSpeed => basicAttackData != null
-            ? (1f / basicAttackData.cooldown) * (1f + attackSpeedModifier / 100f)
-            : 1f;
+        private float FinalAttackSpeed
+        {
+            get
+            {
+                if (basicAttackData == null) return 1f;
+                // 쿨다운에 서포트 배율 적용
+                float cooldown = basicAttackData.cooldown;
+                if (supportData != null) cooldown *= supportData.cooldown_mult;
+                cooldown = Mathf.Max(cooldown, 0.1f); // 최소 쿨다운 보장
+                // 공격 속도 계산
+                float attackSpeed = (1f / cooldown) * (1f + attackSpeedModifier / 100f);
+                if (supportData != null) attackSpeed *= supportData.attack_speed_mult;
+                return Mathf.Max(attackSpeed, 0.1f); // 음수 방지
+            }
+        }
 
-        private float FinalProjectileSpeed => basicAttackData != null
-            ? basicAttackData.projectile_speed * (1f + projectileSpeedModifier / 100f)
-            : 10f;
+        private float FinalProjectileSpeed
+        {
+            get
+            {
+                if (basicAttackData == null) return 10f;
+                float speed = basicAttackData.projectile_speed * (1f + projectileSpeedModifier / 100f);
+                if (supportData != null) speed *= supportData.speed_mult;
+                return speed;
+            }
+        }
 
         private float FinalRange => basicAttackData != null
             ? basicAttackData.range * (1f + rangeModifier / 100f)
@@ -126,9 +147,14 @@ namespace Novelian.Combat
             get
             {
                 if (activeSkillData == null) return 1f;
-                float attackSpeed = (1f / activeSkillData.cooldown) * (1f + attackSpeedModifier / 100f);
+                // 쿨다운에 서포트 배율 적용
+                float cooldown = activeSkillData.cooldown;
+                if (supportData != null) cooldown *= supportData.cooldown_mult;
+                cooldown = Mathf.Max(cooldown, 0.1f); // 최소 쿨다운 보장
+                // 공격 속도 계산
+                float attackSpeed = (1f / cooldown) * (1f + attackSpeedModifier / 100f);
                 if (supportData != null) attackSpeed *= supportData.attack_speed_mult;
-                return attackSpeed;
+                return Mathf.Max(attackSpeed, 0.1f); // 음수 방지
             }
         }
 
@@ -158,21 +184,17 @@ namespace Novelian.Combat
             }
         }
 
-        // Active Skill 발사체 개수 (Support 스킬이 있으면 총 개수로 대체)
+        // Active Skill 발사체 개수 (기본 개수 + 서포트 추가 개수)
         private int FinalActiveProjectileCount
         {
             get
             {
                 if (activeSkillData == null) return 1;
 
-                // Support 스킬이 있고 add_projectiles > 0이면 총 개수로 사용
-                if (supportData != null && supportData.add_projectiles > 0)
-                {
-                    return supportData.add_projectiles;
-                }
-
-                // Support 스킬이 없으면 Active Skill의 기본 개수 사용
-                return activeSkillData.projectile_count;
+                // 기본 발사체 개수 + 서포트 스킬 추가 개수
+                int baseCount = activeSkillData.projectile_count;
+                int additionalCount = supportData?.add_projectiles ?? 0;
+                return Mathf.Max(1, baseCount + additionalCount);
             }
         }
 
@@ -186,6 +208,7 @@ namespace Novelian.Combat
         // JML: 책갈피 시스템 (Issue #320)
         private int characterId = -1;
         private bool isManuallyInitialized = false;  // Initialize()로 초기화되었는지 여부
+        private bool autoAttackEnabled = true;  // 자동 공격 활성화 여부 (테스트 씬에서 false로 설정)
 
         private void Start()
         {
@@ -197,8 +220,14 @@ namespace Novelian.Combat
             LoadSkillData();
             InitializeProjectilePool();
             InitializeActiveSkillPool();
-            StartAttackLoop();
-            StartActiveSkillLoop();
+
+            // 자동 공격이 활성화된 경우에만 공격 루프 시작
+            if (autoAttackEnabled)
+            {
+                StartAttackLoop();
+                StartActiveSkillLoop();
+            }
+
             isInitialized = true;
         }
 
@@ -288,12 +317,19 @@ namespace Novelian.Combat
                 if (supportData != null)
                 {
                     supportPrefabs = prefabDb?.GetSupportSkillEntry(supportSkillId);
-                    Debug.Log($"[Character] Loaded support skill: {supportData.support_name} (ID: {supportSkillId})");
+                    Debug.Log($"[Character] Loaded support skill: {supportData.support_name} (ID: {supportSkillId}, speed_mult: {supportData.speed_mult}, damage_mult: {supportData.damage_mult})");
                 }
                 else
                 {
                     Debug.LogWarning($"[Character] Support skill ID {supportSkillId} not found in CSV!");
                 }
+            }
+            else
+            {
+                // 서포트 스킬이 없을 때 초기화
+                supportData = null;
+                supportPrefabs = null;
+                Debug.Log("[Character] No support skill selected (supportData = null)");
             }
         }
 
@@ -444,13 +480,38 @@ namespace Novelian.Combat
             GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
 
 
-            // Launch projectile
+            // Launch projectile(s) - 다중 발사 지원 (add_projectiles)
             if (projectilePrefab != null || projectileTemplate != null)
             {
                 var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
-                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
-                projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, 0);
 
+                // 발사체 개수 계산 (기본 1 + 서포트 추가)
+                // 파편화(40002)는 명중 시 분열이므로 발사 시에는 1발만 발사
+                int projectileCount = 1;
+                if (supportData != null && supportData.support_id != 40002)
+                {
+                    projectileCount += supportData.add_projectiles;
+                }
+                float spreadAngle = 15f; // 발사체 간 각도
+
+                for (int i = 0; i < projectileCount; i++)
+                {
+                    // 각도 계산 (0번은 정면, 나머지는 좌우로 퍼짐)
+                    float angle = 0f;
+                    if (projectileCount > 1)
+                    {
+                        angle = spreadAngle * (i - (projectileCount - 1) / 2f);
+                    }
+
+                    Vector3 direction = (targetPos - spawnPos).normalized;
+                    Vector3 rotatedDir = Quaternion.Euler(0, angle, 0) * direction;
+                    Vector3 adjustedTargetPos = spawnPos + rotatedDir * (targetPos - spawnPos).magnitude;
+
+                    Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                    projectile.Launch(spawnPos, adjustedTargetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                }
+
+                Debug.Log($"[Character] Fired {projectileCount} projectile(s) {basicAttackData.skill_name} (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1}, Support: {supportSkillId}, supportData: {(supportData != null ? supportData.support_name : "null")})");
             }
             // Instant attack (no projectile)
             else
@@ -593,14 +654,17 @@ namespace Novelian.Combat
                 GameObject areaEffectPrefab = activeSkillPrefabs?.areaEffectPrefab;
                 GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
 
-                // 1. Cast Effect (시전 준비)
-                if (activeSkillData.cast_time > 0f && castEffectPrefab != null)
+                // 1. Cast Effect (시전 준비) - cast_time_mult 적용
+                float castTime = activeSkillData.cast_time;
+                if (supportData != null) castTime *= supportData.cast_time_mult;
+
+                if (castTime > 0f && castEffectPrefab != null)
                 {
                     Vector3 spawnPos = transform.position + spawnOffset;
                     castEffect = Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
-                    Debug.Log($"[Character] Cast Effect started ({activeSkillData.cast_time:F1}s)");
+                    Debug.Log($"[Character] Cast Effect started ({castTime:F1}s)");
 
-                    await UniTask.Delay((int)(activeSkillData.cast_time * 1000), cancellationToken: ct);
+                    await UniTask.Delay((int)(castTime * 1000), cancellationToken: ct);
 
                     if (castEffect != null) Object.Destroy(castEffect);
                 }
@@ -752,13 +816,16 @@ namespace Novelian.Combat
                 GameObject projectileEffectPrefab = activeSkillPrefabs?.projectilePrefab;
                 GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
 
-                // 1. Cast Effect
-                if (activeSkillData.cast_time > 0f && castEffectPrefab != null)
+                // 1. Cast Effect - cast_time_mult 적용
+                float castTime = activeSkillData.cast_time;
+                if (supportData != null) castTime *= supportData.cast_time_mult;
+
+                if (castTime > 0f && castEffectPrefab != null)
                 {
                     Vector3 spawnPos = transform.position + spawnOffset;
                     castEffect = Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
 
-                    await UniTask.Delay((int)(activeSkillData.cast_time * 1000));
+                    await UniTask.Delay((int)(castTime * 1000));
 
                     if (castEffect != null) Object.Destroy(castEffect);
                 }
@@ -833,8 +900,9 @@ namespace Novelian.Combat
                     hitEffect = Object.Instantiate(hitEffectPrefab, impactPos, Quaternion.identity);
                 }
 
-                // 6. AOE damage
+                // 6. AOE damage - aoe_mult 적용
                 float aoeRadius = activeSkillData.aoe_radius > 0 ? activeSkillData.aoe_radius : 3f;
+                if (supportData != null) aoeRadius *= supportData.aoe_mult;
                 Collider[] hits = Physics.OverlapSphere(impactPos, aoeRadius);
                 float damageToApply = FinalActiveDamage;
 
@@ -1096,6 +1164,44 @@ namespace Novelian.Combat
             activeSkillId = activeId;
             supportSkillId = supportId;
             LoadSkillData();
+        }
+
+        /// <summary>
+        /// 테스트용: 수동으로 공격 발사 (SkillTestManager에서 호출)
+        /// </summary>
+        public void ForceAttack()
+        {
+            TryAttack();
+        }
+
+        /// <summary>
+        /// 테스트용: 자동 공격 루프 활성화/비활성화 (SkillTestManager에서 사용)
+        /// Start() 전에 호출하면 자동 공격 시작을 방지, 후에 호출하면 루프 중지/재시작
+        /// </summary>
+        public void SetAutoAttackEnabled(bool enabled)
+        {
+            autoAttackEnabled = enabled;
+
+            if (!enabled)
+            {
+                // 자동 공격 루프 중지 (이미 시작된 경우)
+                attackCts?.Cancel();
+                attackCts?.Dispose();
+                attackCts = null;
+
+                activeSkillCts?.Cancel();
+                activeSkillCts?.Dispose();
+                activeSkillCts = null;
+
+                Debug.Log("[Character] 자동 공격 비활성화");
+            }
+            else if (isInitialized)
+            {
+                // 이미 초기화된 후에 활성화하면 루프 재시작
+                StartAttackLoop();
+                StartActiveSkillLoop();
+                Debug.Log("[Character] 자동 공격 활성화");
+            }
         }
 
         #region 책갈피 시스템 (Issue #320)

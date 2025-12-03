@@ -93,6 +93,10 @@ public class CSVBalancingTool : EditorWindow
     // 수정 추적
     private HashSet<string> modifiedTables = new HashSet<string>();
 
+    // GUIStyle 캐싱 (Unity 6 호환성)
+    private GUIStyle _selectedStyle;
+    private Texture2D _selectedBgTex;
+
     [MenuItem("Tools/CSV Balancing Tool", false, 1)]
     public static void ShowWindow()
     {
@@ -1145,9 +1149,13 @@ public class CSVBalancingTool : EditorWindow
 
     private GUIStyle GetSelectedStyle()
     {
-        var style = new GUIStyle(EditorStyles.helpBox);
-        style.normal.background = MakeTex(2, 2, new Color(0.3f, 0.5f, 0.8f, 0.3f));
-        return style;
+        if (_selectedStyle == null)
+        {
+            _selectedStyle = new GUIStyle(EditorStyles.helpBox);
+            _selectedBgTex = MakeTex(2, 2, new Color(0.3f, 0.5f, 0.8f, 0.3f));
+            _selectedStyle.normal.background = _selectedBgTex;
+        }
+        return _selectedStyle;
     }
 
     private Texture2D MakeTex(int width, int height, Color col)
@@ -1156,6 +1164,7 @@ public class CSVBalancingTool : EditorWindow
         for (int i = 0; i < pix.Length; i++)
             pix[i] = col;
         Texture2D result = new Texture2D(width, height);
+        result.hideFlags = HideFlags.HideAndDontSave; // Unity 6 에러 방지
         result.SetPixels(pix);
         result.Apply();
         return result;

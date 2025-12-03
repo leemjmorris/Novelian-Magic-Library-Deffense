@@ -64,6 +64,7 @@ public static class AddressableKey
     // 새 스킬 시스템 CSV 테이블
     public static readonly string MainSkillTable = "MainSkillTable";
     public static readonly string SupportSkillTable = "SupportSkillTable";
+    public static readonly string SupportCompatibilityTable = "SupportCompatibilityTable";
     public static readonly string SkillLevelTable = "SkillLevelTable";
 
     // 스킬 Prefab 데이터베이스
