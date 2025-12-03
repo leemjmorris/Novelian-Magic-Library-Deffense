@@ -21,6 +21,7 @@ public static class SceneName
 
 public static class AddressableKey
 {
+    public static readonly string PathTable = "PathTable";
     public static readonly string Monster = "Monster";
     public static readonly string BossMonster = "BossMonster";
     public static readonly string Projectile = "Projectile";
@@ -89,6 +90,35 @@ public static class AddressableKey
     public static string GetItemIconKey(int itemId)
     {
         return $"ItemIcon_{itemId}";
+    }
+
+    /// <summary>
+    /// JML: Monster_ID로 어드레서블 키 조회
+    /// Monster_ID → MonsterData.Path_ID → PathData.Addressable_Key
+    /// </summary>
+    public static string GetMonsterAddressableKey(int monsterId)
+    {
+        if (CSVLoader.Instance == null)
+        {
+            UnityEngine.Debug.LogError("[AddressableKey] CSVLoader.Instance is null");
+            return null;
+        }
+
+        var monsterData = CSVLoader.Instance.GetData<MonsterData>(monsterId);
+        if (monsterData == null)
+        {
+            UnityEngine.Debug.LogError($"[AddressableKey] MonsterData not found for ID: {monsterId}");
+            return null;
+        }
+
+        var pathData = CSVLoader.Instance.GetData<PathData>(monsterData.Path_ID);
+        if (pathData == null)
+        {
+            UnityEngine.Debug.LogError($"[AddressableKey] PathData not found for Path_ID: {monsterData.Path_ID}");
+            return null;
+        }
+
+        return pathData.Addressable_Key;
     }
 }
 

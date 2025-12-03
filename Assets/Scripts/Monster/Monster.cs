@@ -71,6 +71,18 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private Collider wallCollider; // Wall Collider 참조 (ClosestPoint 계산용)
     private System.Threading.CancellationTokenSource weightUpdateCts;
 
+    // JML: 키 기반 풀링용 - 이 몬스터가 스폰된 Addressable 키
+    private string spawnedAddressableKey;
+
+    /// <summary>
+    /// JML: 스폰 시 WaveManager에서 호출하여 Addressable 키 설정
+    /// DespawnByKey에서 사용됨
+    /// </summary>
+    public void SetAddressableKey(string key)
+    {
+        spawnedAddressableKey = key;
+    }
+
     // Mark state tracking
     private MarkType currentMarkType = MarkType.None;
     private float markDamageMultiplier = 0f;
@@ -807,7 +819,19 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             collider3D.enabled = false;
         }
-        NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
+
+        // JML: 키 기반 풀링 사용 시 DespawnByKey 호출
+        if (!string.IsNullOrEmpty(spawnedAddressableKey))
+        {
+            Debug.Log($"[Monster] DespawnMonster 호출 - Key: '{spawnedAddressableKey}', ID: {GetInstanceID()}, Active: {gameObject.activeSelf}");
+            NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.DespawnByKey(spawnedAddressableKey, this);
+        }
+        else
+        {
+            Debug.LogWarning($"[Monster] DespawnMonster - spawnedAddressableKey가 비어있음! ID: {GetInstanceID()}");
+            // 기존 타입 기반 풀링 (하위 호환)
+            NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
+        }
     }
     private void OnCollisionEnter(Collision collision)
     {
