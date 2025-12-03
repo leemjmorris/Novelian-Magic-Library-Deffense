@@ -203,3 +203,11 @@ public enum StatType
     Range = 8               // 사거리 증가 (25085~25087)
 }
 
+/// <summary>
+/// 경고/알림 메시지 텍스트 상수
+/// </summary>
+public static class WarningText
+{
+    public const string FeatureNotReady = "준비 중인 기능입니다";
+}
+

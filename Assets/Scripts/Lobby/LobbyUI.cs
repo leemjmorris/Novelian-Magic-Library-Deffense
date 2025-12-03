@@ -1,4 +1,3 @@
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
@@ -12,16 +11,6 @@ public class LobbyUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI goldText;
     [SerializeField] private TextMeshProUGUI premiumText;
     private int maxAP = 30;
-
-    [Header("Warning Panel")]
-    [SerializeField] private GameObject warningPanel;
-    [SerializeField] private CanvasGroup warningCanvasGroup;
-    [SerializeField] private TextMeshProUGUI warningText;
-    [SerializeField] private float fadeDuration = 0.3f;
-    [SerializeField] private float displayDuration = 1.5f;
-
-    private const string FEATURE_NOT_READY_MESSAGE = "준비 중인 기능입니다";
-    private CancellationTokenSource warningCts;
 
     private void OnEnable()
     {
@@ -116,22 +105,22 @@ public class LobbyUI : MonoBehaviour
     // 왼쪽 버튼들
     public void OnPassTicketButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnNoticeButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnAttendanceButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnQuestButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnInventoryButton()
@@ -142,22 +131,22 @@ public class LobbyUI : MonoBehaviour
     // 오른쪽 버튼들
     public void OnSettingsButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnShopButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnSpecialDealButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     public void OnMailButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     // 중앙 버튼
@@ -184,7 +173,7 @@ public class LobbyUI : MonoBehaviour
 
     public void OnChallengeDungeonButton()
     {
-        ShowWarningAsync(FEATURE_NOT_READY_MESSAGE).Forget();
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
 
@@ -252,62 +241,6 @@ public class LobbyUI : MonoBehaviour
 
         // Step 7: 페이드 패널 비활성화
         FadeController.Instance.fadePanel.SetActive(false);
-    }
-
-    /// <summary>
-    /// 경고 메시지를 페이드 인/아웃으로 표시
-    /// </summary>
-    private async UniTaskVoid ShowWarningAsync(string message)
-    {
-        // 기존 경고 애니메이션 취소
-        warningCts?.Cancel();
-        warningCts?.Dispose();
-        warningCts = new CancellationTokenSource();
-        var token = warningCts.Token;
-
-        try
-        {
-            // 텍스트 설정 & 패널 활성화
-            warningText.text = message;
-            warningCanvasGroup.alpha = 0f;
-            warningPanel.SetActive(true);
-
-            // 페이드 인
-            await FadeCanvasGroupAsync(0f, 1f, fadeDuration, token);
-
-            // 대기
-            await UniTask.Delay((int)(displayDuration * 1000), cancellationToken: token);
-
-            // 페이드 아웃
-            await FadeCanvasGroupAsync(1f, 0f, fadeDuration, token);
-
-            // 패널 비활성화
-            warningPanel.SetActive(false);
-        }
-        catch (System.OperationCanceledException)
-        {
-            // 취소됨 - 새 경고가 시작되므로 무시
-        }
-    }
-
-    /// <summary>
-    /// CanvasGroup 알파값을 페이드
-    /// </summary>
-    private async UniTask FadeCanvasGroupAsync(float from, float to, float duration, CancellationToken token)
-    {
-        float elapsed = 0f;
-        warningCanvasGroup.alpha = from;
-
-        while (elapsed < duration)
-        {
-            token.ThrowIfCancellationRequested();
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
-            warningCanvasGroup.alpha = Mathf.Lerp(from, to, t);
-            await UniTask.Yield(token);
-        }
-
-        warningCanvasGroup.alpha = to;
     }
 }
 
