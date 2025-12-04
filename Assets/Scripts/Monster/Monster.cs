@@ -447,7 +447,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         }
 
         // Start DOT coroutine
-        StartDOT(dotType, damagePerTick, tickInterval, duration).Forget();
+        StartDOT(dotType, damagePerTick, tickInterval, duration, dotEffectPrefab).Forget();
     }
 
     private async Cysharp.Threading.Tasks.UniTaskVoid StartDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration, GameObject dotEffectPrefab)

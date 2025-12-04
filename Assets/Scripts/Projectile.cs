@@ -1156,24 +1156,26 @@ namespace Novelian.Combat
                     if (isBoomerang)
                     {
                         return;
+                    }
+
                     // Process Fragmentation (파편화 40002: 명중 시 분열)
                     if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
                     {
                         int totalFragments = 1 + supportSkillData.add_projectiles;
                         SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection, other);
                     }
-                }
 
-                // Cleanup
-                if (mode == ProjectileMode.Physics)
-                {
-                    ReturnToPool();
-                }
-                else if (mode == ProjectileMode.Effect)
-                {
-                    lifetimeCts?.Cancel();
-                    onHitCallback?.Invoke(other.transform.position);
-                    Destroy(gameObject);
+                    // Cleanup
+                    if (mode == ProjectileMode.Physics)
+                    {
+                        ReturnToPool();
+                    }
+                    else if (mode == ProjectileMode.Effect)
+                    {
+                        lifetimeCts?.Cancel();
+                        onHitCallback?.Invoke(other.transform.position);
+                        Destroy(gameObject);
+                    }
                 }
             }
             else if (other.CompareTag(Tag.BossMonster))
@@ -1302,24 +1304,26 @@ namespace Novelian.Combat
                     if (isBoomerang)
                     {
                         return;
+                    }
+
                     // Process Fragmentation (파편화 40002: 명중 시 분열)
                     if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
                     {
                         int totalFragments = 1 + supportSkillData.add_projectiles;
                         SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection, other);
                     }
-                }
 
-                // Cleanup
-                if (mode == ProjectileMode.Physics)
-                {
-                    ReturnToPool();
-                }
-                else if (mode == ProjectileMode.Effect)
-                {
-                    lifetimeCts?.Cancel();
-                    onHitCallback?.Invoke(other.transform.position);
-                    Destroy(gameObject);
+                    // Cleanup
+                    if (mode == ProjectileMode.Physics)
+                    {
+                        ReturnToPool();
+                    }
+                    else if (mode == ProjectileMode.Effect)
+                    {
+                        lifetimeCts?.Cancel();
+                        onHitCallback?.Invoke(other.transform.position);
+                        Destroy(gameObject);
+                    }
                 }
             }
         }
