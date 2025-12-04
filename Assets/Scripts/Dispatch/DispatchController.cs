@@ -6,14 +6,18 @@ using System.Threading;
 namespace Dispatch
 {
     /// <summary>
-    /// 전투형 파견 시스템 UI 컨트롤러
-    /// Ground dispatch의 느낌표 패널 버튼을 클릭하면 SelectImage-M이 SelectImage-S 크기로 축소 애니메이션되고,
+    /// 파견 시스템 UI 컨트롤러 (전투형/채집형 통합)
+    /// 느낌표 패널 버튼을 클릭하면 SelectImage-M이 SelectImage-S 크기로 축소 애니메이션되고,
     /// 애니메이션 완료 후 선택하기 버튼이 활성화됩니다.
-    /// 선택하기 버튼 클릭 시 Map 오브젝트가 비활성화되고 combatDispatch가 활성화됩니다.
+    /// 선택하기 버튼 클릭 시 Map 오브젝트가 비활성화되고 해당 파견 패널이 활성화됩니다.
     /// </summary>
     public class CombatDispatchController : MonoBehaviour
     {
-        [Header("Ground Dispatch UI")]
+        [Header("Dispatch Type")]
+        [SerializeField] private DispatchType dispatchType = DispatchType.Combat; // 파견 타입 (Inspector에서 선택)
+        [SerializeField] private string dispatchSaveKey = "CombatDispatch_SaveData"; // 파견 상태 저장 키 (전투형: CombatDispatch_SaveData, 채집형: GatheringDispatch_SaveData)
+
+        [Header("Dispatch UI")]
         [SerializeField] private Button exclamationPanelButton;    // 느낌표 패널 버튼
         [SerializeField] private RectTransform selectImageM;       // SelectImage-M (축소될 이미지, Scale X: 1.08 -> 1.0)
         [SerializeField] private Button selectButton;              // 선택하기 버튼 (SlelectButton)
@@ -21,17 +25,18 @@ namespace Dispatch
 
         [Header("Scene Objects")]
         [SerializeField] private GameObject mapObject;             // Map 오브젝트
-        [SerializeField] private GameObject combatDispatch;   // combat dispatch 오브젝트
+        [SerializeField] private GameObject dispatchPanel;   // 파견 패널 오브젝트 (전투형/채집형)
 
         [Header("Animation Settings")]
         [SerializeField] private float animationDuration = 1.0f;   // 애니메이션 지속 시간 (초)
-
-        private const string DISPATCH_STATE_KEY = "DispatchController_State";
 
         private Vector2 originalSizeM;  // SelectImage-M의 원본 크기 저장
         private bool isAnimationComplete = false;
         private bool isDispatching = false; // 파견 중 여부
         private CancellationTokenSource cancellationTokenSource;
+
+        // 타입별 로그 태그
+        private string LogTag => $"[{dispatchType}DispatchController]";
 
         private void Start()
         {
@@ -51,35 +56,35 @@ namespace Dispatch
             if (selectImageM != null)
             {
                 selectImageM.gameObject.SetActive(false);
-                Debug.Log("[DispatchController] SelectImage-M 초기 비활성화");
+                Debug.Log($"{LogTag} SelectImage-M 초기 비활성화");
             }
 
             // 선택하기 버튼 비활성화
             if (selectButton != null)
             {
                 selectButton.interactable = false;
-                Debug.Log("[DispatchController] 선택하기 버튼 초기 비활성화");
+                Debug.Log($"{LogTag} 선택하기 버튼 초기 비활성화");
             }
 
-            // combatDispatch 비활성화 (초기 상태)
-            if (combatDispatch != null)
+            // dispatchPanel 비활성화 (초기 상태)
+            if (dispatchPanel != null)
             {
-                combatDispatch.SetActive(false);
-                Debug.Log("[DispatchController] combatDispatch 초기 비활성화");
+                dispatchPanel.SetActive(false);
+                Debug.Log($"{LogTag} {dispatchType} 패널 초기 비활성화");
             }
 
             // Map 활성화 (초기 상태)
             if (mapObject != null)
             {
                 mapObject.SetActive(true);
-                Debug.Log("[DispatchController] Map 초기 활성화");
+                Debug.Log($"{LogTag} Map 초기 활성화");
             }
 
             // Red Dot은 초기 비활성화 (파견 상태 확인 후 활성화 여부 결정)
             if (redDotImage != null)
             {
                 redDotImage.SetActive(false);
-                Debug.Log("[DispatchController] Red Dot 초기 비활성화");
+                Debug.Log($"{LogTag} Red Dot 초기 비활성화");
             }
         }
 
@@ -88,27 +93,25 @@ namespace Dispatch
         /// </summary>
         private void CheckDispatchStateAndShowRedDot()
         {
-            const string DISPATCH_SAVE_KEY = "DispatchTestPanel_SaveData";
-
-            if (!PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+            if (!PlayerPrefs.HasKey(dispatchSaveKey))
             {
-                Debug.Log("[DispatchController] 저장된 파견 상태 없음");
+                Debug.Log($"{LogTag} 저장된 파견 상태 없음");
                 return;
             }
 
-            string json = PlayerPrefs.GetString(DISPATCH_SAVE_KEY);
+            string json = PlayerPrefs.GetString(dispatchSaveKey);
             var saveData = JsonUtility.FromJson<DispatchSaveData>(json);
 
             if (saveData == null || !saveData.isDispatching)
             {
-                Debug.Log("[DispatchController] 파견 중이 아님");
+                Debug.Log($"{LogTag} 파견 중이 아님");
                 return;
             }
 
             // 시작 시간 파싱
             if (!System.DateTime.TryParse(saveData.startTimeString, out System.DateTime startTime))
             {
-                Debug.LogError("[DispatchController] 파견 시작 시간 파싱 실패");
+                Debug.LogError($"{LogTag} 파견 시작 시간 파싱 실패");
                 return;
             }
 
@@ -123,12 +126,12 @@ namespace Dispatch
                 if (redDotImage != null)
                 {
                     redDotImage.SetActive(true);
-                    Debug.Log("[DispatchController] ✅ 파견 완료 - Map에 Red Dot 표시");
+                    Debug.Log($"{LogTag} ✅ 파견 완료 - Map에 Red Dot 표시");
                 }
             }
             else
             {
-                Debug.Log($"[DispatchController] 파견 진행 중 - 남은 시간: {remainingTime:F0}초");
+                Debug.Log($"{LogTag} 파견 진행 중 - 남은 시간: {remainingTime:F0}초");
             }
         }
 
@@ -156,23 +159,23 @@ namespace Dispatch
 
         private async UniTaskVoid OnExclamationButtonClickedAsync()
         {
-            Debug.Log($"[DispatchController] OnExclamationButtonClickedAsync 호출됨");
+            Debug.Log($"{LogTag} OnExclamationButtonClickedAsync 호출됨");
 
             if (isAnimationComplete)
             {
-                Debug.Log("[DispatchController] 애니메이션이 이미 완료되었습니다.");
+                Debug.Log($"{LogTag} 애니메이션이 이미 완료되었습니다.");
                 return;
             }
 
             if (selectImageM == null)
             {
-                Debug.LogError("[DispatchController] SelectImage-M이 할당되지 않았습니다!");
+                Debug.LogError($"{LogTag} SelectImage-M이 할당되지 않았습니다!");
                 return;
             }
 
             // SelectImage-M 활성화 (애니메이션 시작 전)
             selectImageM.gameObject.SetActive(true);
-            Debug.Log("[DispatchController] SelectImage-M 활성화됨");
+            Debug.Log($"{LogTag} SelectImage-M 활성화됨");
 
             // 애니메이션 캔슬 토큰 생성
             cancellationTokenSource?.Cancel();
@@ -186,7 +189,7 @@ namespace Dispatch
             // 초기 크기를 350으로 설정
             selectImageM.sizeDelta = new Vector2(startWidth, currentHeight);
 
-            Debug.Log($"[DispatchController] 축소 애니메이션 시작 - 시작 Width: {startWidth}, 목표 Width: {targetWidth}, 지속시간: {animationDuration}초");
+            Debug.Log($"{LogTag} 축소 애니메이션 시작 - 시작 Width: {startWidth}, 목표 Width: {targetWidth}, 지속시간: {animationDuration}초");
 
             // UniTask를 사용한 부드러운 Width 축소 애니메이션
             float elapsedTime = 0f;
@@ -196,7 +199,7 @@ namespace Dispatch
             {
                 if (cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    Debug.LogWarning("[DispatchController] 애니메이션이 취소되었습니다.");
+                    Debug.LogWarning($"{LogTag} 애니메이션이 취소되었습니다.");
                     return;
                 }
 
@@ -213,7 +216,7 @@ namespace Dispatch
                 frameCount++;
                 if (frameCount % 10 == 0) // 10프레임마다 로그 출력
                 {
-                    Debug.Log($"[DispatchController] 애니메이션 진행중 - t: {t:F2}, easedT: {easedT:F2}, 현재 Width: {newWidth:F1}");
+                    Debug.Log($"{LogTag} 애니메이션 진행중 - t: {t:F2}, easedT: {easedT:F2}, 현재 Width: {newWidth:F1}");
                 }
 
                 await UniTask.Yield(PlayerLoopTiming.Update, cancellationTokenSource.Token);
@@ -222,7 +225,7 @@ namespace Dispatch
             // 최종 Width 확정
             selectImageM.sizeDelta = new Vector2(targetWidth, currentHeight);
 
-            Debug.Log($"[DispatchController] ✅ 축소 애니메이션 완료 - 최종 Width: {targetWidth}, 총 프레임: {frameCount}");
+            Debug.Log($"{LogTag} ✅ 축소 애니메이션 완료 - 최종 Width: {targetWidth}, 총 프레임: {frameCount}");
 
             // 애니메이션 완료 플래그 설정
             isAnimationComplete = true;
@@ -239,16 +242,16 @@ namespace Dispatch
             if (selectButton != null)
             {
                 selectButton.interactable = true;
-                Debug.Log("[UndergroundDispatchController] ✅ 선택하기 버튼 활성화됨");
+                Debug.Log($"{LogTag} ✅ 선택하기 버튼 활성화됨");
             }
         }
 
         /// <summary>
-        /// 선택하기 버튼 클릭 시 - Map 비활성화 및 Underground dispatch 활성화 (Inspector OnClick에서 연결)
+        /// 선택하기 버튼 클릭 시 - Map 비활성화 및 파견 패널 활성화 (Inspector OnClick에서 연결)
         /// </summary>
         public void OnSelectButtonClicked()
         {
-            Debug.Log("[DispatchController] 선택하기 버튼 클릭");
+            Debug.Log($"{LogTag} 선택하기 버튼 클릭");
 
             // Map 오브젝트 비활성화
             if (mapObject != null)
@@ -256,11 +259,11 @@ namespace Dispatch
                 mapObject.SetActive(false);
             }
 
-            // combatDispatch 오브젝트 활성화
-            if (combatDispatch != null)
+            // 파견 패널 오브젝트 활성화
+            if (dispatchPanel != null)
             {
-                combatDispatch.SetActive(true);
-                Debug.Log("[DispatchController] ✅ combatDispatch 활성화");
+                dispatchPanel.SetActive(true);
+                Debug.Log($"{LogTag} ✅ {dispatchType} 패널 활성화");
             }
 
             // 파견 중 상태로 설정
@@ -280,23 +283,35 @@ namespace Dispatch
             }
             else
             {
-                // 파견 중이 아닐 때 = 아무 동작 없음 (DispatchTestPanel 등에서 처리)
-                Debug.Log("[DispatchController] 파견 중이 아닙니다. (다른 컨트롤러에서 처리)");
+                // 파견 중이 아닐 때 = 아무 동작 없음 (DispatchPanel 등에서 처리)
+                Debug.Log($"{LogTag} 파견 중이 아닙니다. (다른 컨트롤러에서 처리)");
             }
         }
 
         /// <summary>
-        /// 파견 완료 처리 (CombatDispatchPanel에서 호출)
+        /// 파견 완료 처리 (DispatchPanel에서 호출)
         /// Red Dot만 활성화, 상태 저장 없음 (씬 나가면 사라짐)
         /// </summary>
         public void OnDispatchCompleted()
         {
-          
-                Debug.Log("[CombatDispatchController] 파견 완료 - Map에 Red Dot 활성화");
+            Debug.Log($"{LogTag} 파견 완료 - Map에 Red Dot 활성화");
             // Red Dot 활성화
             if (redDotImage != null)
             {
                 redDotImage.SetActive(true);
+            }
+        }
+
+        /// <summary>
+        /// 보상 획득 처리 (DispatchPanel에서 호출)
+        /// Red Dot 비활성화
+        /// </summary>
+        public void OnRewardClaimed()
+        {
+            Debug.Log($"{LogTag} 보상 획득 - Red Dot 비활성화");
+            if (redDotImage != null)
+            {
+                redDotImage.SetActive(false);
             }
         }
 
@@ -306,7 +321,7 @@ namespace Dispatch
         /// </summary>
         private void OnRewardReceived()
         {
-            Debug.Log("[CombatDispatchController] 보상 받기 - Red Dot 비활성화");
+            Debug.Log($"{LogTag} 보상 받기 - Red Dot 비활성화");
 
             // 파견 상태를 false로 변경
             isDispatching = false;
@@ -320,7 +335,7 @@ namespace Dispatch
                 redDotImage.SetActive(false);
             }
 
-            Debug.Log("[CombatDispatchController] ✅ 보상 받기 완료");
+            Debug.Log($"{LogTag} ✅ 보상 받기 완료");
         }
 
         /// <summary>
@@ -343,7 +358,7 @@ namespace Dispatch
             // UI 초기 상태로 복원
             InitializeUI();
 
-            Debug.Log("[CombatDispatchController] 초기 상태로 리셋됨");
+            Debug.Log($"{LogTag} 초기 상태로 리셋됨");
         }
 
         private void OnDestroy()
