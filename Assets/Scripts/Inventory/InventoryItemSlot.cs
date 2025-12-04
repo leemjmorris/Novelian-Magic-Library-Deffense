@@ -82,41 +82,60 @@ public class InventoryItemSlot : MonoBehaviour, IPointerDownHandler, IPointerUpH
             itemIconImage.enabled = true;
             string iconKey = itemInfo.IconPath;
 
-            // 아이콘 로드 
+            // 아이콘 로드
             if (!string.IsNullOrEmpty(iconKey))
             {
-            // 1) 캐시에 있는지 먼저 확인
-            if (IconCache.TryGetValue(iconKey, out var cachedSprite) && cachedSprite != null)
-            {
-                itemIconImage.sprite = cachedSprite;
+                // 1) 캐시에 있는지 먼저 확인
+                if (IconCache.TryGetValue(iconKey, out var cachedSprite) && cachedSprite != null)
+                {
+                    itemIconImage.sprite = cachedSprite;
+                }
+                else
+                {
+                    // 2) Addressables에 키가 존재하는지 먼저 확인
+                    var locationsHandle = Addressables.LoadResourceLocationsAsync(iconKey);
+                    var locations = await locationsHandle.Task;
+
+                    if (locations != null && locations.Count > 0)
+                    {
+                        try
+                        {
+                            var handle = Addressables.LoadAssetAsync<Sprite>(iconKey);
+                            Sprite icon = await handle.Task;
+
+                            if (icon != null)
+                            {
+                                IconCache[iconKey] = icon;
+
+                                if (itemInfo != null && itemInfo.IconPath == iconKey)
+                                {
+                                    itemIconImage.sprite = icon;
+                                }
+                            }
+                        }
+                        catch (System.Exception e)
+                        {
+                            Debug.LogWarning($"[InventoryItemSlot] 아이콘 로드 실패: {iconKey}\n{e.Message}");
+                            if (defaultIconSprite != null)
+                            {
+                                itemIconImage.sprite = defaultIconSprite;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 키가 존재하지 않으면 아이콘 비활성화
+                        itemIconImage.enabled = false;
+                    }
+
+                    Addressables.Release(locationsHandle);
+                }
             }
             else
             {
-                try
-                {
-                    // 2) 없으면 한 번만 로드해서 캐시에 저장
-                    var handle = Addressables.LoadAssetAsync<Sprite>(iconKey);
-                    Sprite icon = await handle.Task;
-
-                    if (icon != null)
-                    {
-                        IconCache[iconKey] = icon;
-
-                        // await 동안 다른 아이템으로 바뀌었을 수 있으니 방어
-                        if (itemInfo != null && itemInfo.IconPath == iconKey)
-                        {
-                            itemIconImage.sprite = icon;
-                        }
-                    }
-                }
-                catch (System.Exception e)
-                {
-                    Debug.LogWarning($"[InventoryItemSlot] 아이콘 로드 실패: {iconKey}\n{e.Message}");
-                }
+                // iconKey가 없으면 아이콘 비활성화
+                itemIconImage.enabled = false;
             }
-        }
-
-        
         }
 
         // 수량 텍스트 설정

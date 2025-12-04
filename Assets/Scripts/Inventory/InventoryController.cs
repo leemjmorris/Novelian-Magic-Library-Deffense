@@ -272,19 +272,38 @@ public class InventoryController : MonoBehaviour
 
         if (!string.IsNullOrEmpty(itemInfo.IconPath))
         {
-            try
+            // 키가 존재하는지 먼저 확인
+            var locationsHandle = Addressables.LoadResourceLocationsAsync(itemInfo.IconPath);
+            var locations = await locationsHandle.Task;
+
+            if (locations != null && locations.Count > 0)
             {
-                Sprite icon = await Addressables.LoadAssetAsync<Sprite>(itemInfo.IconPath).Task;
-                if (icon != null && popupItemIcon != null)
+                try
                 {
-                    popupItemIcon.sprite = icon;
-                    popupItemIcon.enabled = true;
+                    Sprite icon = await Addressables.LoadAssetAsync<Sprite>(itemInfo.IconPath).Task;
+                    if (icon != null && popupItemIcon != null)
+                    {
+                        popupItemIcon.sprite = icon;
+                        popupItemIcon.enabled = true;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[InventoryController] 팝업 아이콘 로드 실패: {itemInfo.IconPath}\n{e.Message}");
+                    popupItemIcon.enabled = false;
                 }
             }
-            catch (System.Exception e)
+            else
             {
-                Debug.LogWarning($"[InventoryController] 팝업 아이콘 로드 실패: {itemInfo.IconPath}\n{e.Message}");
+                // 키가 없으면 아이콘 숨김
+                popupItemIcon.enabled = false;
             }
+
+            Addressables.Release(locationsHandle);
+        }
+        else
+        {
+            popupItemIcon.enabled = false;
         }
     }
 
