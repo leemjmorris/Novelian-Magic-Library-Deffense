@@ -437,6 +437,8 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         if (isDead) return;
 
+        // Start DOT (틱마다 이펙트 재생)
+        StartDOT(dotType, damagePerTick, tickInterval, duration, dotEffectPrefab).Forget();
         // DOT 이펙트 생성 (몬스터를 따라다니면서 재생)
         if (dotEffectPrefab != null)
         {
@@ -448,7 +450,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         StartDOT(dotType, damagePerTick, tickInterval, duration).Forget();
     }
 
-    private async Cysharp.Threading.Tasks.UniTaskVoid StartDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration)
+    private async Cysharp.Threading.Tasks.UniTaskVoid StartDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration, GameObject dotEffectPrefab)
     {
         float elapsed = 0f;
 
@@ -459,6 +461,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
             elapsed += tickInterval;
             TakeDamage(damagePerTick);
+
+            // 틱마다 히트 이펙트 재생
+            if (dotEffectPrefab != null)
+            {
+                GameObject tickEffect = Instantiate(dotEffectPrefab, transform.position, Quaternion.identity);
+                Destroy(tickEffect, 0.5f);
+            }
+
+            Debug.Log($"[Monster] {dotType} tick: {damagePerTick} damage");
         }
     }
 
@@ -521,6 +532,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private float originalDamage;
     private float originalMoveSpeed;
     private System.Threading.CancellationTokenSource debuffCts;
+    private GameObject currentDebuffEffect; // 현재 재생 중인 디버프 이펙트
 
     /// <summary>
     /// 디버프 효과 적용
@@ -564,17 +576,97 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 break;
         }
 
-        // Spawn debuff effect
-        if (debuffEffectPrefab != null)
+        // 기존 디버프 이펙트 정리
+        if (currentDebuffEffect != null)
         {
-            GameObject debuffEffect = Instantiate(debuffEffectPrefab, transform.position + Vector3.up, Quaternion.identity, transform);
-            Destroy(debuffEffect, duration);
+            Destroy(currentDebuffEffect);
+            currentDebuffEffect = null;
         }
 
-        // Start debuff duration
-        StartDebuff(duration, debuffCts.Token).Forget();
+        // Start debuff duration with looping effect
+        StartDebuffWithEffect(duration, debuffEffectPrefab, debuffCts.Token).Forget();
     }
 
+    /// <summary>
+    /// 디버프 지속시간 동안 이펙트를 반복 재생하며 디버프 상태 유지
+    /// </summary>
+    private async Cysharp.Threading.Tasks.UniTaskVoid StartDebuffWithEffect(float duration, GameObject effectPrefab, System.Threading.CancellationToken ct)
+    {
+        const float EFFECT_INTERVAL = 1.5f; // 이펙트 반복 주기 (초)
+        float elapsed = 0f;
+
+        try
+        {
+            // 이펙트가 있으면 첫 번째 이펙트 생성
+            if (effectPrefab != null)
+            {
+                currentDebuffEffect = Instantiate(effectPrefab, transform.position + Vector3.up, Quaternion.identity, transform);
+            }
+
+            while (elapsed < duration && !ct.IsCancellationRequested)
+            {
+                await Cysharp.Threading.Tasks.UniTask.Delay((int)(EFFECT_INTERVAL * 1000), cancellationToken: ct);
+                elapsed += EFFECT_INTERVAL;
+
+                // 지속시간 내에 있고 이펙트 프리팹이 있으면 이펙트 갱신
+                if (elapsed < duration && effectPrefab != null && !ct.IsCancellationRequested)
+                {
+                    // 기존 이펙트 제거 후 새로 생성 (루프 이펙트 효과)
+                    if (currentDebuffEffect != null)
+                    {
+                        Destroy(currentDebuffEffect);
+                    }
+                    currentDebuffEffect = Instantiate(effectPrefab, transform.position + Vector3.up, Quaternion.identity, transform);
+                }
+            }
+
+            if (!ct.IsCancellationRequested)
+            {
+                // 디버프 종료 - 원래 값 복원
+                EndDebuff();
+            }
+        }
+        catch (System.OperationCanceledException)
+        {
+            // Expected when cancelled
+        }
+        finally
+        {
+            // 이펙트 정리
+            if (currentDebuffEffect != null)
+            {
+                Destroy(currentDebuffEffect);
+                currentDebuffEffect = null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 디버프 종료 처리 - 원래 값 복원
+    /// </summary>
+    private void EndDebuff()
+    {
+        switch (currentDebuffType)
+        {
+            case DeBuffType.ATK_Damage_Down:
+                damage = originalDamage;
+                break;
+
+            case DeBuffType.ATK_Speed_Down:
+                moveSpeed = originalMoveSpeed;
+                break;
+
+            case DeBuffType.Take_Damage_UP:
+                markDamageMultiplier -= debuffValue / 100f;
+                break;
+        }
+
+        currentDebuffType = DeBuffType.None;
+        debuffValue = 0f;
+        Debug.Log($"[Monster] Debuff ended");
+    }
+
+    // 기존 StartDebuff는 하위 호환성을 위해 유지 (다른 곳에서 사용할 수 있음)
     private async Cysharp.Threading.Tasks.UniTaskVoid StartDebuff(float duration, System.Threading.CancellationToken ct)
     {
         try
@@ -583,22 +675,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
             if (!ct.IsCancellationRequested)
             {
-                // Restore original values
-                switch (currentDebuffType)
-                {
-                    case DeBuffType.ATK_Damage_Down:
-                        damage = originalDamage;
-                        break;
-
-                    case DeBuffType.ATK_Speed_Down:
-                        moveSpeed = originalMoveSpeed;
-                        break;
-
-                    case DeBuffType.Take_Damage_UP:
-                        markDamageMultiplier -= debuffValue / 100f;
-                        break;
-                }
-
+                EndDebuff();
                 currentDebuffType = DeBuffType.None;
                 debuffValue = 0f;
             }

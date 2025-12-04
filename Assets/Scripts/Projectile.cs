@@ -63,6 +63,44 @@ namespace Novelian.Combat
         private int maxPierceCount = 0;
         private float baseDamageForPierce = 0f; // 관통 데미지 감소 계산을 위한 기본 데미지
 
+        // Boomerang state tracking (부메랑 시스템)
+        private bool isBoomerang = false;
+        private bool isReturning = false;
+        private Vector3 ownerPosition; // 발사자 위치 (돌아올 목표)
+        private float boomerangMaxDistance = 0f; // 최대 이동 거리
+        private float boomerangTraveledDistance = 0f; // 현재 이동한 거리
+        private System.Collections.Generic.Dictionary<int, int> boomerangHitCounts; // 적별 히트 횟수 (instanceID -> hitCount)
+
+        // Dynamite state tracking (다이너마이트 시스템 - 던진 후 N초 뒤 폭발)
+        private bool isDynamite = false;
+        private float dynamiteFuseTime = 0f; // 폭발까지 남은 시간
+        private float dynamiteAoeRadius = 0f; // 폭발 범위
+        private bool dynamiteExploded = false; // 이미 폭발했는지 체크
+        private bool dynamiteStopped = false; // 3번 튕긴 후 멈춤 상태
+        private int dynamiteBounceCount = 0; // 현재 튕긴 횟수
+        private const int DYNAMITE_MAX_BOUNCES = 3; // 최대 튕김 횟수
+        private float dynamiteVerticalVelocity = 0f; // Y축 속도 (튕김용)
+        private float dynamiteHorizontalSpeed = 0f; // 수평 속도 (동적 계산)
+        private float dynamiteGravity = 0f; // 중력 (동적 계산)
+        private Vector3 dynamiteTargetPosition; // 목표 위치
+
+        // Legendary Staff state tracking (전설의 지팡이 - 일직선 이동하며 경로상 AOE 데미지)
+        private bool isLegendaryStaff = false;
+        private float legendaryStaffAoeRadius = 0f; // 경로상 AOE 범위
+        private float legendaryStaffMaxRange = 0f; // 최대 사거리
+        private float legendaryStaffTraveledDistance = 0f; // 현재 이동 거리
+        private float legendaryStaffTickInterval = 0.1f; // AOE 틱 간격 (초)
+        private float legendaryStaffLastTickTime = 0f; // 마지막 틱 시간
+        private System.Collections.Generic.HashSet<int> legendaryStaffHitTargets; // 이미 맞은 적 목록
+
+        // Time Bomb state tracking (의문의 예고장 - 몬스터에 부착 후 시간 뒤 폭발)
+        private bool isTimeBomb = false;
+        private float timeBombFuseTime = 0f; // 폭발까지 남은 시간
+        private bool timeBombExploded = false; // 이미 폭발했는지 체크
+        private bool timeBombAttached = false; // 몬스터에 부착되었는지 체크
+        private Transform timeBombAttachTarget = null; // 부착된 몬스터 Transform
+        private GameObject timeBombEffectInstance = null; // 몬스터에 부착된 이펙트
+
         // Movement state
         private Vector3 fixedDirection;
         private float speed;
@@ -161,7 +199,8 @@ namespace Novelian.Combat
             }
 
             // Initialize Pierce state (관통 시스템 - 메인 스킬 또는 서포트 스킬에서 관통 가능)
-            if (currentPierceCount == 0)
+            // 부메랑 스킬은 pierce 시스템 대신 boomerang 시스템 사용
+            if (currentPierceCount == 0 && !isBoomerang)
             {
                 int basePierce = skillData?.pierce_count ?? 0;
                 int supportPierce = supportSkillData?.add_pierce ?? 0;
@@ -172,6 +211,86 @@ namespace Novelian.Combat
                     baseDamageForPierce = damageAmount;
                     // JML: Pierce init 로그 제거
                 }
+            }
+
+            // Initialize Boomerang state (부메랑 시스템)
+            if (skillData != null && skillData.IsBoomerangSkill && !isReturning)
+            {
+                isBoomerang = true;
+                ownerPosition = spawnPos;
+                boomerangMaxDistance = skillData.range; // CSV의 range 값을 최대 거리로 사용
+                boomerangTraveledDistance = 0f;
+                boomerangHitCounts = new System.Collections.Generic.Dictionary<int, int>();
+                Debug.Log($"[Projectile] Boomerang initialized: maxDistance={boomerangMaxDistance}, ownerPos={ownerPosition}");
+            }
+
+            // Initialize Dynamite state (다이너마이트 시스템 - 타겟 거리 기반 동적 물리 계산)
+            if (skillData != null && skillData.IsDynamiteSkill)
+            {
+                isDynamite = true;
+                dynamiteFuseTime = skillData.skill_lifetime; // skill_lifetime을 폭발 딜레이로 사용
+                dynamiteAoeRadius = skillData.aoe_radius; // 폭발 범위
+                dynamiteExploded = false;
+                dynamiteStopped = false;
+                dynamiteBounceCount = 0;
+                dynamiteTargetPosition = targetPos;
+
+                // 타겟까지의 수평 거리 계산
+                Vector3 toTarget = targetPos - spawnPos;
+                float horizontalDistance = new Vector3(toTarget.x, 0f, toTarget.z).magnitude;
+
+                // 3번 튕겨서 타겟에 도착하도록 물리값 계산
+                // 총 비행 시간 = 3번의 튕김 (각 튕김당 약 0.5초 기준)
+                // 튕김 후 속도 감소: 수직 60%, 수평 70%
+                // 총 수평 이동 거리 = v * (t1 + t2*0.7 + t3*0.7^2)
+                // t1 = t2 = t3 ≈ 0.5초라고 가정하면 계수 = 1 + 0.7 + 0.49 = 2.19
+
+                float totalFlightTime = 1.5f; // 총 비행 시간 (3번 튕김, 각 0.5초)
+                float horizontalSpeedCoefficient = 1f + 0.7f + 0.49f; // 속도 감소 계수
+                float effectiveFlightTime = totalFlightTime * horizontalSpeedCoefficient / 3f; // 유효 비행 시간
+
+                // 수평 속도 계산: 거리 / 유효 시간
+                dynamiteHorizontalSpeed = horizontalDistance / (effectiveFlightTime * 1.5f);
+
+                // 최소/최대 속도 제한
+                dynamiteHorizontalSpeed = Mathf.Clamp(dynamiteHorizontalSpeed, 5f, 30f);
+
+                // 초기 수직 속도 계산 (포물선 높이 결정)
+                // 거리에 비례하여 높이 조절 (가까우면 낮게, 멀면 높게)
+                float heightFactor = Mathf.Clamp(horizontalDistance / 20f, 0.5f, 2f);
+                dynamiteVerticalVelocity = 6f * heightFactor;
+
+                // 중력 계산 (수직 속도와 튕김 시간에 맞게)
+                // 첫 튕김까지 시간 = 2 * v0 / g (올라갔다 내려오는 시간)
+                // 목표: 약 0.5초 내에 첫 튕김
+                float firstBounceTime = 0.5f;
+                dynamiteGravity = (2f * dynamiteVerticalVelocity) / firstBounceTime;
+
+                Debug.Log($"[Projectile] Dynamite initialized: distance={horizontalDistance:F1}, hSpeed={dynamiteHorizontalSpeed:F1}, vSpeed={dynamiteVerticalVelocity:F1}, gravity={dynamiteGravity:F1}");
+            }
+
+            // Initialize Legendary Staff state (전설의 지팡이 - 일직선 이동하며 경로상 AOE 데미지)
+            if (skillData != null && skillData.IsLegendaryStaffSkill)
+            {
+                isLegendaryStaff = true;
+                legendaryStaffAoeRadius = skillData.aoe_radius; // 경로상 AOE 범위
+                legendaryStaffMaxRange = skillData.range; // 최대 사거리
+                legendaryStaffTraveledDistance = 0f;
+                legendaryStaffLastTickTime = 0f;
+                legendaryStaffHitTargets = new System.Collections.Generic.HashSet<int>();
+                Debug.Log($"[Projectile] LegendaryStaff initialized: aoeRadius={legendaryStaffAoeRadius}, maxRange={legendaryStaffMaxRange}");
+            }
+
+            // Initialize Time Bomb state (의문의 예고장 - 몬스터에 부착 후 시간 뒤 폭발)
+            if (skillData != null && skillData.IsTimeBombSkill)
+            {
+                isTimeBomb = true;
+                timeBombFuseTime = skillData.skill_lifetime; // 부착 후 폭발까지 시간
+                timeBombExploded = false;
+                timeBombAttached = false;
+                timeBombAttachTarget = null;
+                timeBombEffectInstance = null;
+                Debug.Log($"[Projectile] TimeBomb initialized: fuseTime={timeBombFuseTime}s");
             }
 
             // Cancel previous lifetime token
@@ -288,6 +407,34 @@ namespace Novelian.Combat
                 return;
             }
 
+            // 부메랑 이동 처리
+            if (isBoomerang)
+            {
+                UpdateBoomerangMovement();
+                return;
+            }
+
+            // 다이너마이트 이동 및 폭발 처리
+            if (isDynamite)
+            {
+                UpdateDynamiteMovement();
+                return;
+            }
+
+            // 전설의 지팡이 이동 및 경로상 AOE 데미지 처리
+            if (isLegendaryStaff)
+            {
+                UpdateLegendaryStaffMovement();
+                return;
+            }
+
+            // 시한폭탄(의문의 예고장) 처리 - 부착 후 타이머
+            if (isTimeBomb)
+            {
+                UpdateTimeBombMovement();
+                return;
+            }
+
             // Rigidbody가 있으면 velocity로 이동, 없으면 transform 직접 이동
             if (rb != null)
             {
@@ -311,6 +458,463 @@ namespace Novelian.Combat
             if (Vector3.Distance(startPosition, transform.position) > OUT_OF_BOUNDS_DISTANCE)
             {
                 ReturnToPool();
+            }
+        }
+
+        //LMJ : Boomerang movement - go forward then return to owner
+        private void UpdateBoomerangMovement()
+        {
+            float moveDistance = speed * Time.fixedDeltaTime;
+
+            if (!isReturning)
+            {
+                // 전진 중
+                boomerangTraveledDistance += moveDistance;
+
+                if (rb != null)
+                {
+                    rb.linearVelocity = fixedDirection * speed;
+                }
+                else
+                {
+                    transform.position += fixedDirection * speed * Time.fixedDeltaTime;
+                }
+
+                // 최대 거리 도달 시 되돌아오기 시작
+                if (boomerangTraveledDistance >= boomerangMaxDistance)
+                {
+                    isReturning = true;
+                    fixedDirection = -fixedDirection; // 방향 반전
+                    Debug.Log($"[Projectile] Boomerang returning: traveled={boomerangTraveledDistance:F1}, maxDist={boomerangMaxDistance}");
+                }
+            }
+            else
+            {
+                // 되돌아오는 중
+                Vector3 toOwner = (ownerPosition - transform.position);
+                float distanceToOwner = toOwner.magnitude;
+
+                if (distanceToOwner <= moveDistance * 2f)
+                {
+                    // 발사자에게 도착 - 풀로 반환
+                    Debug.Log($"[Projectile] Boomerang returned to owner");
+                    ReturnToPool();
+                    return;
+                }
+
+                // 발사자 방향으로 이동
+                fixedDirection = toOwner.normalized;
+
+                if (rb != null)
+                {
+                    rb.linearVelocity = fixedDirection * speed;
+                }
+                else
+                {
+                    transform.position += fixedDirection * speed * Time.fixedDeltaTime;
+                }
+            }
+
+            // 회전 업데이트
+            if (fixedDirection != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(fixedDirection);
+            }
+        }
+
+        //LMJ : Dynamite movement - bouncing to target position (타겟 거리 기반 동적 계산)
+        private void UpdateDynamiteMovement()
+        {
+            if (dynamiteExploded) return;
+
+            // 퓨즈 타이머 감소 (멈춰있든 이동중이든 항상 감소)
+            dynamiteFuseTime -= Time.fixedDeltaTime;
+
+            // 퓨즈 타이머 완료 시 폭발 (유일한 폭발 조건)
+            if (dynamiteFuseTime <= 0f)
+            {
+                ExplodeDynamite();
+                return;
+            }
+
+            // 이미 멈춘 상태면 타이머만 감소하고 대기
+            if (dynamiteStopped)
+            {
+                return;
+            }
+
+            // 동적으로 계산된 중력 적용
+            dynamiteVerticalVelocity -= dynamiteGravity * Time.fixedDeltaTime;
+
+            // 수평 이동 (동적으로 계산된 수평 속도 사용)
+            Vector3 horizontalMove = new Vector3(fixedDirection.x, 0f, fixedDirection.z).normalized * dynamiteHorizontalSpeed * Time.fixedDeltaTime;
+
+            // 수직 이동
+            float verticalMove = dynamiteVerticalVelocity * Time.fixedDeltaTime;
+
+            // 위치 업데이트
+            Vector3 newPos = transform.position + horizontalMove;
+            newPos.y += verticalMove;
+
+            // 바닥 체크 (Y가 일정 이하면 튕김)
+            float groundY = 0.5f;
+            if (newPos.y <= groundY && dynamiteVerticalVelocity < 0)
+            {
+                // 튕김!
+                dynamiteBounceCount++;
+                newPos.y = groundY;
+
+                // 튕길 때마다 속도 감소 (수직 60%, 수평 70%)
+                dynamiteVerticalVelocity = Mathf.Abs(dynamiteVerticalVelocity) * 0.6f;
+                dynamiteHorizontalSpeed *= 0.7f;
+
+                Debug.Log($"[Projectile] Dynamite bounce {dynamiteBounceCount}/{DYNAMITE_MAX_BOUNCES} at {newPos}, hSpeed={dynamiteHorizontalSpeed:F1}, fuseRemaining={dynamiteFuseTime:F1}s");
+
+                // 3번째 튕김이면 멈추고 퓨즈 타이머 대기
+                if (dynamiteBounceCount >= DYNAMITE_MAX_BOUNCES)
+                {
+                    transform.position = newPos;
+                    dynamiteStopped = true;
+                    if (rb != null) rb.linearVelocity = Vector3.zero;
+                    Debug.Log($"[Projectile] Dynamite stopped, waiting for fuse: {dynamiteFuseTime:F1}s remaining");
+                    return;
+                }
+            }
+
+            transform.position = newPos;
+
+            // Rigidbody 속도도 업데이트 (물리 충돌용)
+            if (rb != null)
+            {
+                rb.linearVelocity = horizontalMove / Time.fixedDeltaTime + Vector3.up * dynamiteVerticalVelocity;
+            }
+
+            // 회전 업데이트 (이동 방향으로)
+            Vector3 moveDir = horizontalMove + Vector3.up * verticalMove;
+            if (moveDir.sqrMagnitude > 0.001f)
+            {
+                transform.rotation = Quaternion.LookRotation(moveDir.normalized);
+            }
+        }
+
+        //LMJ : Dynamite explosion - AOE damage at current position
+        private void ExplodeDynamite()
+        {
+            if (dynamiteExploded) return;
+            dynamiteExploded = true;
+
+            // 속도 멈춤
+            if (rb != null) rb.linearVelocity = Vector3.zero;
+
+            Vector3 explosionPos = transform.position;
+            Debug.Log($"[Projectile] Dynamite exploding at {explosionPos}, radius={dynamiteAoeRadius}");
+
+            // 폭발 이펙트 재생 (AOE 범위에 맞춰 스케일 조절)
+            GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
+            if (hitEffectPrefab != null)
+            {
+                GameObject explosionEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, explosionPos, Quaternion.identity);
+                // AOE 범위에 맞춰 스케일 조절
+                float baseEffectSize = 100f;
+                float scaleFactor = dynamiteAoeRadius / baseEffectSize;
+                explosionEffect.transform.localScale = Vector3.one * scaleFactor;
+                UnityEngine.Object.Destroy(explosionEffect, 2f);
+            }
+
+            // AOE 범위 내 모든 적에게 데미지
+            Collider[] hitColliders = Physics.OverlapSphere(explosionPos, dynamiteAoeRadius);
+            int hitCount = 0;
+
+            for (int i = 0; i < hitColliders.Length; i++)
+            {
+                Collider col = hitColliders[i];
+
+                if (col.CompareTag(Tag.Monster))
+                {
+                    Monster monster = col.GetComponent<Monster>();
+                    if (monster != null)
+                    {
+                        float damageToApply = CalculateDamageToApply();
+                        monster.TakeDamage(damageToApply);
+                        hitCount++;
+                        Debug.Log($"[Projectile] Dynamite hit {monster.name}: damage={damageToApply:F1}");
+                    }
+                }
+                else if (col.CompareTag(Tag.BossMonster))
+                {
+                    BossMonster boss = col.GetComponent<BossMonster>();
+                    if (boss != null)
+                    {
+                        float damageToApply = CalculateDamageToApply();
+                        boss.TakeDamage(damageToApply);
+                        hitCount++;
+                        Debug.Log($"[Projectile] Dynamite hit {boss.name}: damage={damageToApply:F1}");
+                    }
+                }
+            }
+
+            Debug.Log($"[Projectile] Dynamite explosion complete: hitCount={hitCount}");
+
+            // 폭발 후 풀로 반환
+            ReturnToPool();
+        }
+
+        //LMJ : Legendary Staff movement - straight line with AOE damage along path
+        private void UpdateLegendaryStaffMovement()
+        {
+            // 이동
+            float moveDistance = speed * Time.fixedDeltaTime;
+            legendaryStaffTraveledDistance += moveDistance;
+
+            Vector3 movement = fixedDirection * moveDistance;
+            transform.position += movement;
+
+            // Rigidbody 동기화
+            if (rb != null)
+            {
+                rb.linearVelocity = fixedDirection * speed;
+            }
+
+            // 회전 업데이트
+            if (fixedDirection != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(fixedDirection);
+            }
+
+            // 틱 간격마다 AOE 데미지 체크
+            legendaryStaffLastTickTime += Time.fixedDeltaTime;
+            if (legendaryStaffLastTickTime >= legendaryStaffTickInterval)
+            {
+                legendaryStaffLastTickTime = 0f;
+                ApplyLegendaryStaffAOEDamage();
+            }
+
+            // 최대 사거리 도달 시 소멸
+            if (legendaryStaffTraveledDistance >= legendaryStaffMaxRange)
+            {
+                Debug.Log($"[Projectile] LegendaryStaff reached max range: {legendaryStaffMaxRange}, totalHits={legendaryStaffHitTargets.Count}");
+                ReturnToPool();
+            }
+        }
+
+        //LMJ : Apply AOE damage at current position for Legendary Staff
+        private void ApplyLegendaryStaffAOEDamage()
+        {
+            Vector3 currentPos = transform.position;
+
+            // 현재 위치 주변의 적 탐지
+            Collider[] hitColliders = Physics.OverlapSphere(currentPos, legendaryStaffAoeRadius);
+
+            foreach (Collider col in hitColliders)
+            {
+                if (col.CompareTag(Tag.Monster))
+                {
+                    Monster monster = col.GetComponent<Monster>();
+                    if (monster != null)
+                    {
+                        int instanceId = monster.GetInstanceID();
+                        // 이미 맞은 적은 스킵 (한 번만 데미지)
+                        if (legendaryStaffHitTargets.Contains(instanceId)) continue;
+
+                        legendaryStaffHitTargets.Add(instanceId);
+                        float damageToApply = CalculateDamageToApply();
+                        monster.TakeDamage(damageToApply);
+
+                        // 히트 이펙트 재생 (콜라이더 중심점)
+                        SpawnHitEffectAtCollider(col);
+
+                        Debug.Log($"[Projectile] LegendaryStaff hit {monster.name}: damage={damageToApply:F1}");
+                    }
+                }
+                else if (col.CompareTag(Tag.BossMonster))
+                {
+                    BossMonster boss = col.GetComponent<BossMonster>();
+                    if (boss != null)
+                    {
+                        int instanceId = boss.GetInstanceID();
+                        // 이미 맞은 적은 스킵 (한 번만 데미지)
+                        if (legendaryStaffHitTargets.Contains(instanceId)) continue;
+
+                        legendaryStaffHitTargets.Add(instanceId);
+                        float damageToApply = CalculateDamageToApply();
+                        boss.TakeDamage(damageToApply);
+
+                        // 히트 이펙트 재생 (콜라이더 중심점)
+                        SpawnHitEffectAtCollider(col);
+
+                        Debug.Log($"[Projectile] LegendaryStaff hit {boss.name}: damage={damageToApply:F1}");
+                    }
+                }
+            }
+        }
+
+        //LMJ : Time Bomb movement - fly to target, attach to monster, then explode after fuse time
+        private void UpdateTimeBombMovement()
+        {
+            if (timeBombExploded) return;
+
+            // 이미 몬스터에 부착된 상태
+            if (timeBombAttached)
+            {
+                // 퓨즈 타이머 감소
+                timeBombFuseTime -= Time.fixedDeltaTime;
+
+                // 부착된 타겟이 죽었거나 사라진 경우 - 현재 위치에서 폭발
+                if (timeBombAttachTarget == null)
+                {
+                    Debug.Log($"[Projectile] TimeBomb target destroyed, exploding at current position");
+                    ExplodeTimeBomb();
+                    return;
+                }
+
+                // 몬스터를 따라다님 (부착 상태 유지)
+                transform.position = timeBombAttachTarget.position + Vector3.up * 1.5f;
+
+                // 이펙트도 몬스터를 따라다님
+                if (timeBombEffectInstance != null)
+                {
+                    timeBombEffectInstance.transform.position = timeBombAttachTarget.position + Vector3.up * 1.5f;
+                }
+
+                // 퓨즈 타이머 완료 시 폭발
+                if (timeBombFuseTime <= 0f)
+                {
+                    ExplodeTimeBomb();
+                }
+                return;
+            }
+
+            // 아직 부착되지 않은 상태 - 타겟을 향해 이동
+            if (rb != null)
+            {
+                rb.linearVelocity = fixedDirection * speed;
+            }
+            else
+            {
+                transform.position += fixedDirection * speed * Time.fixedDeltaTime;
+            }
+
+            if (fixedDirection != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(fixedDirection);
+            }
+        }
+
+        //LMJ : Time Bomb attach to monster
+        private void AttachTimeBombToMonster(Transform monsterTransform)
+        {
+            if (timeBombAttached || timeBombExploded) return;
+
+            timeBombAttached = true;
+            timeBombAttachTarget = monsterTransform;
+
+            // 부착 후에는 자체 타이머로 관리하므로 lifetime 추적 취소
+            lifetimeCts?.Cancel();
+
+            // 투사체 물리 멈춤
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.isKinematic = true;
+            }
+
+            // 충돌 비활성화
+            Collider col = GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+
+            // 투사체 본체는 숨기고 이펙트만 몬스터에 부착
+            // 기존 자식 이펙트들 비활성화
+            foreach (Transform child in transform)
+            {
+                child.gameObject.SetActive(false);
+            }
+
+            // 몬스터에 부착할 이펙트 생성
+            GameObject projectileEffectPrefab = skillPrefabs?.projectilePrefab;
+            if (projectileEffectPrefab != null)
+            {
+                Vector3 attachPos = monsterTransform.position + Vector3.up * 1.5f;
+                timeBombEffectInstance = Object.Instantiate(projectileEffectPrefab, attachPos, Quaternion.identity);
+                // 이펙트는 폭발 시 제거됨
+            }
+
+            Debug.Log($"[Projectile] TimeBomb attached to {monsterTransform.name}, fuseTime={timeBombFuseTime:F1}s");
+        }
+
+        //LMJ : Time Bomb explosion - damage to attached monster
+        private void ExplodeTimeBomb()
+        {
+            if (timeBombExploded) return;
+            timeBombExploded = true;
+
+            // 폭발 위치는 부착된 타겟 위치 사용 (타겟이 없으면 현재 위치)
+            Vector3 explosionPos = timeBombAttachTarget != null
+                ? timeBombAttachTarget.position
+                : transform.position;
+
+            Debug.Log($"[Projectile] TimeBomb exploding at {explosionPos}, skillPrefabs={(skillPrefabs != null ? "OK" : "NULL")}");
+
+            // 폭발 이펙트 재생 (hitEffect)
+            GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
+            Debug.Log($"[Projectile] TimeBomb hitEffectPrefab={(hitEffectPrefab != null ? hitEffectPrefab.name : "NULL")}");
+
+            if (hitEffectPrefab != null)
+            {
+                GameObject explosionEffect = Object.Instantiate(hitEffectPrefab, explosionPos, Quaternion.identity);
+                Object.Destroy(explosionEffect, 2f);
+                Debug.Log($"[Projectile] TimeBomb explosion effect spawned at {explosionPos}");
+            }
+            else
+            {
+                Debug.LogWarning($"[Projectile] TimeBomb hitEffectPrefab is null! skillId={skillId}");
+            }
+
+            // 부착된 이펙트 제거
+            if (timeBombEffectInstance != null)
+            {
+                Object.Destroy(timeBombEffectInstance);
+                timeBombEffectInstance = null;
+            }
+
+            // 부착된 타겟에게 데미지
+            if (timeBombAttachTarget != null)
+            {
+                float damageToApply = CalculateDamageToApply();
+
+                if (timeBombAttachTarget.CompareTag(Tag.Monster))
+                {
+                    Monster monster = timeBombAttachTarget.GetComponent<Monster>();
+                    if (monster != null)
+                    {
+                        monster.TakeDamage(damageToApply);
+                        Debug.Log($"[Projectile] TimeBomb hit {monster.name}: damage={damageToApply:F1}");
+                    }
+                }
+                else if (timeBombAttachTarget.CompareTag(Tag.BossMonster))
+                {
+                    BossMonster boss = timeBombAttachTarget.GetComponent<BossMonster>();
+                    if (boss != null)
+                    {
+                        boss.TakeDamage(damageToApply);
+                        Debug.Log($"[Projectile] TimeBomb hit {boss.name}: damage={damageToApply:F1}");
+                    }
+                }
+            }
+
+            // 폭발 후 풀로 반환
+            ReturnToPool();
+        }
+
+        //LMJ : Spawn hit effect at collider center (몬스터 몸통 중심에 이펙트 생성)
+        private void SpawnHitEffectAtCollider(Collider col)
+        {
+            if (col == null) return;
+            GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
+            if (hitEffectPrefab != null)
+            {
+                Vector3 hitPos = col.bounds.center;
+                GameObject hitEffect = Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                Object.Destroy(hitEffect, 2f);
             }
         }
 
@@ -399,6 +1003,19 @@ namespace Novelian.Combat
             // Ground collision
             if (other.gameObject.layer == LayerMask.NameToLayer("Ground"))
             {
+                // 다이너마이트: 바닥에 닿으면 멈추고 퓨즈 타이머 대기
+                if (isDynamite)
+                {
+                    if (rb != null) rb.linearVelocity = Vector3.zero;
+                    return;
+                }
+
+                // 전설의 지팡이: Ground 무시 (일직선 이동)
+                if (isLegendaryStaff)
+                {
+                    return;
+                }
+
                 if (mode == ProjectileMode.Physics)
                 {
                     ReturnToPool();
@@ -416,6 +1033,45 @@ namespace Novelian.Combat
                 Monster monster = other.GetComponent<Monster>();
                 if (monster != null)
                 {
+                    // 다이너마이트: 적과 충돌해도 무시 (퓨즈 타이머가 끝나야 폭발)
+                    if (isDynamite)
+                    {
+                        return;
+                    }
+
+                    // 전설의 지팡이: 충돌로 데미지 주지 않음 (AOE 틱으로 처리)
+                    if (isLegendaryStaff)
+                    {
+                        return;
+                    }
+
+                    // 시한폭탄(의문의 예고장): 몬스터에 부착 후 퓨즈 타이머 대기
+                    if (isTimeBomb && !timeBombAttached)
+                    {
+                        AttachTimeBombToMonster(other.transform);
+                        return;
+                    }
+
+                    // 부메랑: 같은 적을 최대 2번만 타격 가능 (가는 길 1번, 오는 길 1번)
+                    if (isBoomerang)
+                    {
+                        int instanceId = monster.GetInstanceID();
+                        if (boomerangHitCounts == null)
+                            boomerangHitCounts = new System.Collections.Generic.Dictionary<int, int>();
+
+                        if (!boomerangHitCounts.TryGetValue(instanceId, out int hitCount))
+                            hitCount = 0;
+
+                        if (hitCount >= 2)
+                        {
+                            // 이미 2번 맞은 적은 무시하고 통과
+                            return;
+                        }
+
+                        boomerangHitCounts[instanceId] = hitCount + 1;
+                        Debug.Log($"[Projectile] Boomerang hit {monster.name}: hitCount={hitCount + 1}/2, returning={isReturning}");
+                    }
+
                     // Apply status effects BEFORE damage
                     if (supportSkillData != null && supportSkillData.GetStatusEffectType() != StatusEffectType.Chain)
                     {
@@ -437,12 +1093,8 @@ namespace Novelian.Combat
 
                     monster.TakeDamage(damageToApply);
 
-                    // Spawn hit effect
-                    if (skillPrefabs != null && skillPrefabs.hitEffectPrefab != null)
-                    {
-                        GameObject hitEffect = Object.Instantiate(skillPrefabs.hitEffectPrefab, other.transform.position, Quaternion.identity);
-                        Object.Destroy(hitEffect, 2f);
-                    }
+                    // Spawn hit effect at monster collider center (몸통 중심)
+                    SpawnHitEffectAtCollider(other);
 
                     // Add to hit targets for chain tracking
                     if (maxChainCount > 0)
@@ -481,7 +1133,18 @@ namespace Novelian.Combat
                         }
                     }
 
+                    // Process Fragmentation (파편화 40002: 명중 시 분열)
+                    // 관통과 동시에 작동 - 관통 체크 전에 파편화 처리
+                    Debug.Log($"[Projectile] Hit - Fragmentation check: supportSkillId={supportSkillId}, supportSkillData={(supportSkillData != null ? "OK" : "NULL")}, add_projectiles={(supportSkillData?.add_projectiles ?? -1)}");
+                    if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
+                    {
+                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 5발
+                        Debug.Log($"[Projectile] Fragmentation triggered! Spawning {totalFragments} fragments at {other.transform.position}");
+                        SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection, other);
+                    }
+
                     // Process Pierce (관통: DamageCalculator 사용)
+                    // 파편화 후에도 관통 가능
                     if (maxPierceCount > 0 && currentPierceCount < maxPierceCount)
                     {
                         currentPierceCount++;
@@ -489,6 +1152,10 @@ namespace Novelian.Combat
                         return; // 관통하여 계속 진행 (풀로 돌아가지 않음)
                     }
 
+                    // 부메랑은 맞아도 계속 진행 (풀로 돌아가지 않음)
+                    if (isBoomerang)
+                    {
+                        return;
                     // Process Fragmentation (파편화 40002: 명중 시 분열)
                     if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
                     {
@@ -514,6 +1181,45 @@ namespace Novelian.Combat
                 BossMonster boss = other.GetComponent<BossMonster>();
                 if (boss != null)
                 {
+                    // 다이너마이트: 적과 충돌해도 무시 (퓨즈 타이머가 끝나야 폭발)
+                    if (isDynamite)
+                    {
+                        return;
+                    }
+
+                    // 전설의 지팡이: 충돌로 데미지 주지 않음 (AOE 틱으로 처리)
+                    if (isLegendaryStaff)
+                    {
+                        return;
+                    }
+
+                    // 시한폭탄(의문의 예고장): 보스 몬스터에 부착 후 퓨즈 타이머 대기
+                    if (isTimeBomb && !timeBombAttached)
+                    {
+                        AttachTimeBombToMonster(other.transform);
+                        return;
+                    }
+
+                    // 부메랑: 같은 적을 최대 2번만 타격 가능 (가는 길 1번, 오는 길 1번)
+                    if (isBoomerang)
+                    {
+                        int instanceId = boss.GetInstanceID();
+                        if (boomerangHitCounts == null)
+                            boomerangHitCounts = new System.Collections.Generic.Dictionary<int, int>();
+
+                        if (!boomerangHitCounts.TryGetValue(instanceId, out int hitCount))
+                            hitCount = 0;
+
+                        if (hitCount >= 2)
+                        {
+                            // 이미 2번 맞은 적은 무시하고 통과
+                            return;
+                        }
+
+                        boomerangHitCounts[instanceId] = hitCount + 1;
+                        Debug.Log($"[Projectile] Boomerang hit {boss.name}: hitCount={hitCount + 1}/2, returning={isReturning}");
+                    }
+
                     // Apply status effects BEFORE damage
                     if (supportSkillData != null && supportSkillData.GetStatusEffectType() != StatusEffectType.Chain)
                     {
@@ -535,12 +1241,8 @@ namespace Novelian.Combat
 
                     boss.TakeDamage(damageToApply);
 
-                    // Spawn hit effect
-                    if (skillPrefabs != null && skillPrefabs.hitEffectPrefab != null)
-                    {
-                        GameObject hitEffect = Object.Instantiate(skillPrefabs.hitEffectPrefab, other.transform.position, Quaternion.identity);
-                        Object.Destroy(hitEffect, 2f);
-                    }
+                    // Spawn hit effect at boss collider center (몸통 중심)
+                    SpawnHitEffectAtCollider(other);
 
                     // Add to hit targets for chain tracking
                     if (maxChainCount > 0)
@@ -577,7 +1279,18 @@ namespace Novelian.Combat
                         }
                     }
 
+                    // Process Fragmentation (파편화 40002: 명중 시 분열)
+                    // 관통과 동시에 작동 - 관통 체크 전에 파편화 처리
+                    Debug.Log($"[Projectile] Hit - Fragmentation check: supportSkillId={supportSkillId}, supportSkillData={(supportSkillData != null ? "OK" : "NULL")}, add_projectiles={(supportSkillData?.add_projectiles ?? -1)}");
+                    if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
+                    {
+                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 5발
+                        Debug.Log($"[Projectile] Fragmentation triggered! Spawning {totalFragments} fragments at {other.transform.position}");
+                        SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection, other);
+                    }
+
                     // Process Pierce (관통: DamageCalculator 사용)
+                    // 파편화 후에도 관통 가능
                     if (maxPierceCount > 0 && currentPierceCount < maxPierceCount)
                     {
                         currentPierceCount++;
@@ -585,6 +1298,10 @@ namespace Novelian.Combat
                         return; // 관통하여 계속 진행 (풀로 돌아가지 않음)
                     }
 
+                    // 부메랑은 맞아도 계속 진행 (풀로 돌아가지 않음)
+                    if (isBoomerang)
+                    {
+                        return;
                     // Process Fragmentation (파편화 40002: 명중 시 분열)
                     if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
                     {
@@ -929,7 +1646,63 @@ namespace Novelian.Combat
             maxPierceCount = 0;
             baseDamageForPierce = 0f;
 
-            if (rb != null) rb.linearVelocity = Vector3.zero;
+            // Reset boomerang state
+            isBoomerang = false;
+            isReturning = false;
+            ownerPosition = Vector3.zero;
+            boomerangMaxDistance = 0f;
+            boomerangTraveledDistance = 0f;
+            boomerangHitCounts = null;
+
+            // Reset dynamite state
+            isDynamite = false;
+            dynamiteFuseTime = 0f;
+            dynamiteAoeRadius = 0f;
+            dynamiteExploded = false;
+            dynamiteStopped = false;
+            dynamiteBounceCount = 0;
+            dynamiteVerticalVelocity = 0f;
+            dynamiteHorizontalSpeed = 0f;
+            dynamiteGravity = 0f;
+            dynamiteTargetPosition = Vector3.zero;
+
+            // Reset legendary staff state
+            isLegendaryStaff = false;
+            legendaryStaffAoeRadius = 0f;
+            legendaryStaffMaxRange = 0f;
+            legendaryStaffTraveledDistance = 0f;
+            legendaryStaffLastTickTime = 0f;
+            legendaryStaffHitTargets = null;
+
+            // Reset time bomb state
+            isTimeBomb = false;
+            timeBombFuseTime = 0f;
+            timeBombExploded = false;
+            timeBombAttached = false;
+            timeBombAttachTarget = null;
+            if (timeBombEffectInstance != null)
+            {
+                Object.Destroy(timeBombEffectInstance);
+                timeBombEffectInstance = null;
+            }
+
+            // Rigidbody 상태 복원 (시한폭탄에서 isKinematic을 true로 변경했을 수 있음)
+            // 주의: isKinematic을 먼저 false로 설정해야 linearVelocity 설정 가능
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.linearVelocity = Vector3.zero;
+            }
+
+            // Collider 활성화 복원 (시한폭탄에서 비활성화했을 수 있음)
+            Collider col = GetComponent<Collider>();
+            if (col != null) col.enabled = true;
+
+            // 자식 오브젝트 활성화 복원 (시한폭탄에서 비활성화했을 수 있음)
+            foreach (Transform child in transform)
+            {
+                child.gameObject.SetActive(true);
+            }
             lifetimeCts?.Cancel();
         }
 

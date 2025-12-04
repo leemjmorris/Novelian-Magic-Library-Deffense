@@ -185,6 +185,48 @@ public class MainSkillData
     public bool IsDebuffSkill => skill_type_ID == 3000605;
 
     /// <summary>
+    /// 부메랑 스킬인지 확인 (skill_id=39021)
+    /// 발사 후 일정 거리에서 돌아오며 경로상의 적을 두 번 타격
+    /// </summary>
+    public bool IsBoomerangSkill => skill_id == 39021;
+
+    /// <summary>
+    /// 다이너마이트 스킬인지 확인 (skill_id=39028)
+    /// 투사체를 던져서 skill_lifetime 후에 폭발하여 AOE 데미지
+    /// </summary>
+    public bool IsDynamiteSkill => skill_id == 39028;
+
+    /// <summary>
+    /// 전설의 지팡이 스킬인지 확인 (skill_id=39029)
+    /// 투사체가 일직선으로 날아가며 경로상의 모든 적에게 AOE 데미지
+    /// </summary>
+    public bool IsLegendaryStaffSkill => skill_id == 39029;
+
+    /// <summary>
+    /// 의문의 예고장 스킬인지 확인 (skill_id=39035)
+    /// 투사체가 몬스터에 부착되고, skill_lifetime 후에 폭발하여 데미지
+    /// </summary>
+    public bool IsTimeBombSkill => skill_id == 39035;
+
+    /// <summary>
+    /// 심장마비 스킬인지 확인 (skill_id=39046)
+    /// 체력 10% 이하인 적을 즉사시킴 (보스 제외)
+    /// </summary>
+    public bool IsInstantKillSkill => skill_id == 39046;
+
+    /// <summary>
+    /// Trap 타입 스킬인지 확인 (3000807)
+    /// 필드에 설치되어 범위 내 적에게 지속 효과
+    /// </summary>
+    public bool IsTrapTypeSkill => skill_type_ID == 3000807;
+
+    /// <summary>
+    /// Mine 타입 스킬인지 확인 (3000908)
+    /// 필드에 설치되어 밟으면 발동
+    /// </summary>
+    public bool IsMineTypeSkill => skill_type_ID == 3000908;
+
+    /// <summary>
     /// CC 타입 반환 (3302100=None, 3302201=Stun, 3302302=Slow)
     /// </summary>
     public CCType GetCCType()

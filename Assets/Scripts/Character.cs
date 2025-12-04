@@ -4,8 +4,10 @@ namespace Novelian.Combat
 {
     using UnityEngine;
     using Cysharp.Threading.Tasks;
+    using System;
     using System.Threading;
     using System.Collections.Generic;
+    using NovelianMagicLibraryDefense.Managers;
 
     public class Character : MonoBehaviour, IPoolable
     {
@@ -111,7 +113,9 @@ namespace Novelian.Combat
             get
             {
                 if (basicAttackData == null) return 10f;
-                float speed = basicAttackData.projectile_speed * (1f + projectileSpeedModifier / 100f);
+                // projectile_speed가 0이면 기본값 15 사용 (의문의 예고장 등)
+                float baseSpeed = basicAttackData.projectile_speed > 0 ? basicAttackData.projectile_speed : 15f;
+                float speed = baseSpeed * (1f + projectileSpeedModifier / 100f);
                 if (supportData != null) speed *= supportData.speed_mult;
                 return speed;
             }
@@ -498,6 +502,7 @@ namespace Novelian.Combat
         }
 
         //LMJ : Attempt to attack nearest or highest weight target (skill-based)
+        //      Now supports all skill types (same as ForceAttack)
         private void TryAttack()
         {
             // 디버그: 초기화 상태 확인
@@ -512,14 +517,109 @@ namespace Novelian.Combat
                 return;
             }
 
+            // Check skill type and call appropriate method
+            var skillType = basicAttackData.GetSkillType();
+
+            // 버프 스킬은 타겟이 필요 없음 (자기/아군 대상)
+            if (skillType == SkillAssetType.Buff)
+            {
+                UseBuffSkillAsync().Forget();
+                return;
+            }
+
+            // 타겟 탐색 범위 결정: range가 0이면 aoe_radius 사용 (관중의야유 등 전역 디버프)
+            float searchRange = FinalRange;
+            if (searchRange <= 0 && basicAttackData.aoe_radius > 0)
+            {
+                searchRange = basicAttackData.aoe_radius;
+            }
+            // 그래도 0이면 기본값 사용
+            if (searchRange <= 0) searchRange = 100f;
+
             // Find target with mark priority, then use weight/distance strategy
-            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, FinalRange, useWeightTargeting);
+            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, searchRange, useWeightTargeting);
 
             if (target == null)
             {
                 // 타겟이 없으면 공격 스킵 (정상적인 상황)
                 return;
             }
+
+            // 스킬 타입별 분기 처리
+            switch (skillType)
+            {
+                // 투사체 스킬 - 투사체 발사
+                case SkillAssetType.Projectile:
+                    LaunchProjectile(target);
+                    break;
+
+                // 단일 즉발 스킬 - 타겟에게 즉시 데미지/효과
+                case SkillAssetType.InstantSingle:
+                    // 심장마비: 체력 10% 이하 적 즉사 (보스 제외)
+                    if (basicAttackData.IsInstantKillSkill)
+                    {
+                        UseInstantKillSkill(target);
+                    }
+                    else
+                    {
+                        UseBasicAttackAOEAsync(target).Forget();
+                    }
+                    break;
+
+                // 범위 스킬 - 타겟 위치에 AOE 효과
+                case SkillAssetType.AOE:
+                    // 다이너마이트: 투사체를 던져서 N초 후 폭발 (특수 처리)
+                    if (basicAttackData.IsDynamiteSkill)
+                    {
+                        LaunchDynamiteProjectile(target);
+                    }
+                    // 전설의 지팡이: 투사체가 일직선으로 날아가며 경로상 AOE 데미지 (특수 처리)
+                    else if (basicAttackData.IsLegendaryStaffSkill)
+                    {
+                        LaunchLegendaryStaffProjectile(target);
+                    }
+                    else
+                    {
+                        UseBasicAttackAOEAsync(target).Forget();
+                    }
+                    break;
+
+                // DOT 스킬 - 범위 내 적에게 지속 데미지 (AOE 방식)
+                case SkillAssetType.DOT:
+                    UseBasicAttackAOEAsync(target).Forget();
+                    break;
+
+                // 디버프 스킬 - 범위 내 적에게 디버프 적용 (AOE 방식)
+                case SkillAssetType.Debuff:
+                    UseBasicAttackAOEAsync(target).Forget();
+                    break;
+
+                // 채널링 스킬 - 지속 시전
+                case SkillAssetType.Channeling:
+                    UseChannelingSkillAsync(target).Forget();
+                    break;
+
+                // 트랩 스킬 - 필드에 트랩 오브젝트 설치
+                case SkillAssetType.Trap:
+                    PlaceTrapObject(target);
+                    break;
+
+                // 지뢰 스킬 - 필드에 지뢰 오브젝트 설치
+                case SkillAssetType.Mine:
+                    PlaceMineObject(target);
+                    break;
+
+                default:
+                    Debug.LogWarning($"[Character] Unknown skill type: {skillType}, falling back to projectile");
+                    LaunchProjectile(target);
+                    break;
+            }
+        }
+
+        //LMJ : Launch projectile(s) - extracted from old TryAttack for reuse
+        private void LaunchProjectile(ITargetable target)
+        {
+            if (target == null || basicAttackData == null) return;
 
             // Calculate spawn position (character position + offset)
             Vector3 spawnPos = transform.position + spawnOffset;
@@ -532,48 +632,44 @@ namespace Novelian.Combat
             GameObject projectilePrefab = basicAttackPrefabs?.projectilePrefab;
             GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
 
-
             // Launch projectile(s) - 다중 발사 지원 (add_projectiles)
             if (projectilePrefab != null || projectileTemplate != null)
             {
                 var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
 
-                // 발사체 개수 계산 (기본 1 + 서포트 추가)
-                // 파편화(40002)는 명중 시 분열이므로 발사 시에는 1발만 발사
-                int projectileCount = 1;
+                // 발사체 개수 계산 (CSV의 projectile_count + 서포트 추가)
+                // 파편화(40002)는 명중 시 분열이므로 발사 시에는 서포트 추가분 제외
+                int projectileCount = basicAttackData.projectile_count;
+                if (projectileCount <= 0) projectileCount = 1; // 최소 1발 보장
                 if (supportData != null && supportData.support_id != 40002)
                 {
                     projectileCount += supportData.add_projectiles;
                 }
-                float spreadAngle = 15f; // 발사체 간 각도
 
-                for (int i = 0; i < projectileCount; i++)
+                // 연속 발사 (기관총처럼 순차 발사)
+                if (projectileCount > 1)
                 {
-                    // 각도 계산 (0번은 정면, 나머지는 좌우로 퍼짐)
-                    float angle = 0f;
-                    if (projectileCount > 1)
-                    {
-                        angle = spreadAngle * (i - (projectileCount - 1) / 2f);
-                    }
-
-                    Vector3 direction = (targetPos - spawnPos).normalized;
-                    Vector3 rotatedDir = Quaternion.Euler(0, angle, 0) * direction;
-                    Vector3 adjustedTargetPos = spawnPos + rotatedDir * (targetPos - spawnPos).magnitude;
-
-                    Projectile projectile = pool.Spawn<Projectile>(spawnPos);
-                    projectile.Launch(spawnPos, adjustedTargetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                    FireBurstProjectilesAsync(pool, spawnPos, targetPos, projectileCount).Forget();
                 }
-
-                Debug.Log($"[Character] Fired {projectileCount} projectile(s) {basicAttackData.skill_name} (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1}, Support: {supportSkillId}, supportData: {(supportData != null ? supportData.support_name : "null")})");
+                else
+                {
+                    // 1발만 발사하는 경우 즉시 발사
+                    Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                    projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                    Debug.Log($"[Character] Fired 1 projectile {basicAttackData.skill_name} (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1})");
+                }
             }
             // Instant attack (no projectile)
             else
             {
-                // Hit effect
+                // Hit effect at target collider center
+                Collider targetCol = target.GetTransform().GetComponent<Collider>();
+                Vector3 hitPos = targetCol != null ? targetCol.bounds.center : target.GetPosition();
+
                 if (hitEffectPrefab != null)
                 {
-                    GameObject hitEffect = Object.Instantiate(hitEffectPrefab, targetPos, Quaternion.identity);
-                    Object.Destroy(hitEffect, 2f);
+                    GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                    UnityEngine.Object.Destroy(hitEffect, 2f);
                 }
 
                 // Apply damage
@@ -587,6 +683,80 @@ namespace Novelian.Combat
                     BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                     if (boss != null) boss.TakeDamage(FinalDamage);
                 }
+            }
+        }
+
+        //LMJ : Launch dynamite projectile (던져서 N초 후 폭발)
+        private void LaunchDynamiteProjectile(ITargetable target)
+        {
+            if (target == null || basicAttackData == null) return;
+
+            // Calculate spawn position (character position + offset)
+            Vector3 spawnPos = transform.position + spawnOffset;
+            Vector3 targetPos = target.GetPosition();
+
+            // 다이너마이트는 타겟 위치로 던지기 (Y축 유지하지 않음 - 포물선 이동)
+            // targetPos.y = spawnPos.y; // 수평 발사 대신 포물선 이동을 위해 주석처리
+
+            // Get projectile prefab from database
+            GameObject projectilePrefab = basicAttackPrefabs?.projectilePrefab;
+
+            if (projectilePrefab != null || projectileTemplate != null)
+            {
+                var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
+
+                // Spawn projectile
+                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+
+                // Launch with dynamite parameters
+                // skill_lifetime을 폭발 딜레이로 사용, Projectile에서 다이너마이트 처리
+                float projectileSpeed = basicAttackData.projectile_speed > 0 ? basicAttackData.projectile_speed : 10f;
+                float lifetime = basicAttackData.skill_lifetime > 0 ? basicAttackData.skill_lifetime + 1f : 6f; // 퓨즈 시간 + 여유
+
+                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                Debug.Log($"[Character] Launched Dynamite projectile: speed={projectileSpeed}, fuseTime={basicAttackData.skill_lifetime}, damage={FinalDamage:F1}");
+            }
+            else
+            {
+                Debug.LogWarning("[Character] LaunchDynamiteProjectile: No projectile prefab found, falling back to instant AOE");
+                UseBasicAttackAOEAsync(target).Forget();
+            }
+        }
+
+        //LMJ : Launch legendary staff projectile (일직선 이동하며 경로상 AOE 데미지)
+        private void LaunchLegendaryStaffProjectile(ITargetable target)
+        {
+            if (target == null || basicAttackData == null) return;
+
+            // Calculate spawn position (character position + offset)
+            Vector3 spawnPos = transform.position + spawnOffset;
+            Vector3 targetPos = target.GetPosition();
+
+            // 수평 발사 (Y축 동일하게)
+            targetPos.y = spawnPos.y;
+
+            // Get projectile prefab from database
+            GameObject projectilePrefab = basicAttackPrefabs?.projectilePrefab;
+
+            if (projectilePrefab != null || projectileTemplate != null)
+            {
+                var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
+
+                // Spawn projectile
+                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+
+                // Launch with legendary staff parameters
+                // range를 투사체 속도로 사용 (CSV에 projectile_speed가 0)
+                float projectileSpeed = basicAttackData.projectile_speed > 0 ? basicAttackData.projectile_speed : 20f;
+                float lifetime = basicAttackData.range / projectileSpeed + 1f; // 사거리까지 이동 시간 + 여유
+
+                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                Debug.Log($"[Character] Launched LegendaryStaff projectile: speed={projectileSpeed}, range={basicAttackData.range}, aoeRadius={basicAttackData.aoe_radius}, damage={FinalDamage:F1}");
+            }
+            else
+            {
+                Debug.LogWarning("[Character] LaunchLegendaryStaffProjectile: No projectile prefab found, falling back to instant AOE");
+                UseBasicAttackAOEAsync(target).Forget();
             }
         }
 
@@ -661,8 +831,8 @@ namespace Novelian.Combat
                 // Hit effect
                 if (hitEffectPrefab != null)
                 {
-                    GameObject hitEffect = Object.Instantiate(hitEffectPrefab, targetPos, Quaternion.identity);
-                    Object.Destroy(hitEffect, 2f);
+                    GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, targetPos, Quaternion.identity);
+                    UnityEngine.Object.Destroy(hitEffect, 2f);
                 }
 
                 // Apply damage
@@ -714,12 +884,12 @@ namespace Novelian.Combat
                 if (castTime > 0f && castEffectPrefab != null)
                 {
                     Vector3 spawnPos = transform.position + spawnOffset;
-                    castEffect = Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
+                    castEffect = UnityEngine.Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
                     Debug.Log($"[Character] Cast Effect started ({castTime:F1}s)");
 
                     await UniTask.Delay((int)(castTime * 1000), cancellationToken: ct);
 
-                    if (castEffect != null) Object.Destroy(castEffect);
+                    if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
                 }
 
                 // Check if target is still valid after cast time
@@ -733,7 +903,7 @@ namespace Novelian.Combat
                 if (projectileEffectPrefab != null)
                 {
                     Vector3 spawnPos = transform.position + spawnOffset;
-                    startEffect = Object.Instantiate(projectileEffectPrefab, spawnPos, Quaternion.identity);
+                    startEffect = UnityEngine.Object.Instantiate(projectileEffectPrefab, spawnPos, Quaternion.identity);
                     startEffect.transform.SetParent(transform);
                     Debug.Log("[Character] Start Effect spawned");
                 }
@@ -747,7 +917,7 @@ namespace Novelian.Combat
                     for (int i = 0; i < chainTargets.Count; i++)
                     {
                         Vector3 spawnPos = (i == 0) ? transform.position + spawnOffset : chainTargets[i - 1].GetPosition();
-                        GameObject beamEffect = Object.Instantiate(areaEffectPrefab, spawnPos, Quaternion.identity);
+                        GameObject beamEffect = UnityEngine.Object.Instantiate(areaEffectPrefab, spawnPos, Quaternion.identity);
                         beamEffects.Add(beamEffect);
                     }
                     Debug.Log($"[Character] Created {beamEffects.Count} beam effects for {chainTargets.Count} targets");
@@ -758,7 +928,7 @@ namespace Novelian.Combat
                 {
                     for (int i = 0; i < chainTargets.Count; i++)
                     {
-                        GameObject hitEffect = Object.Instantiate(hitEffectPrefab, chainTargets[i].GetPosition(), Quaternion.identity);
+                        GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, chainTargets[i].GetPosition(), Quaternion.identity);
                         hitEffect.transform.SetParent(chainTargets[i].GetTransform());
                         hitEffects.Add(hitEffect);
                     }
@@ -785,12 +955,12 @@ namespace Novelian.Combat
                     {
                         if (chainTargets[i] == null || !chainTargets[i].IsAlive())
                         {
-                            if (beamEffects[i] != null) Object.Destroy(beamEffects[i]);
+                            if (beamEffects[i] != null) UnityEngine.Object.Destroy(beamEffects[i]);
                             beamEffects[i] = null;
 
                             if (i < hitEffects.Count && hitEffects[i] != null)
                             {
-                                Object.Destroy(hitEffects[i]);
+                                UnityEngine.Object.Destroy(hitEffects[i]);
                                 hitEffects[i] = null;
                             }
                             continue;
@@ -825,6 +995,13 @@ namespace Novelian.Combat
 
                             // Apply damage
                             chainTargets[i].TakeDamage(currentDamage);
+
+                            // 틱마다 히트 이펙트 재생 (타겟 위치에 새로 생성)
+                            if (hitEffectPrefab != null)
+                            {
+                                GameObject tickHitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, chainTargets[i].GetPosition(), Quaternion.identity);
+                                UnityEngine.Object.Destroy(tickHitEffect, 0.5f); // 짧은 시간 후 자동 삭제
+                            }
                         }
 
                         tickCount++;
@@ -844,15 +1021,15 @@ namespace Novelian.Combat
             }
             finally
             {
-                if (castEffect != null) Object.Destroy(castEffect);
-                if (startEffect != null) Object.Destroy(startEffect);
+                if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
+                if (startEffect != null) UnityEngine.Object.Destroy(startEffect);
                 foreach (var beam in beamEffects)
                 {
-                    if (beam != null) Object.Destroy(beam);
+                    if (beam != null) UnityEngine.Object.Destroy(beam);
                 }
                 foreach (var hitEffect in hitEffects)
                 {
-                    if (hitEffect != null) Object.Destroy(hitEffect);
+                    if (hitEffect != null) UnityEngine.Object.Destroy(hitEffect);
                 }
 
                 isChanneling = false;
@@ -893,31 +1070,23 @@ namespace Novelian.Combat
                 if (castTime > 0f && castEffectPrefab != null)
                 {
                     Vector3 spawnPos = transform.position + spawnOffset;
-                    castEffect = Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
+                    castEffect = UnityEngine.Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
 
                     await UniTask.Delay((int)(castTime * 1000));
 
-                    if (castEffect != null) Object.Destroy(castEffect);
+                    if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
                 }
 
-                // 2. Get target position
-                Vector3 targetPos;
-                if (target != null && target.IsAlive())
+                // 2. Get target position - 밀집 지역 기반 타겟팅
+                // AOE 스킬은 몬스터 origin이 아닌 가장 밀집된 Area를 타겟으로 함
+                float aoeRadius = activeSkillData.aoe_radius > 0 ? activeSkillData.aoe_radius : 3f;
+                if (supportData != null) aoeRadius *= supportData.aoe_mult;
+
+                Vector3 targetPos = FindBestAOETargetPosition(FinalActiveRange, aoeRadius);
+                if (targetPos == Vector3.zero)
                 {
-                    targetPos = target.GetPosition();
-                }
-                else
-                {
-                    ITargetable newTarget = TargetRegistry.Instance.FindTarget(transform.position, FinalActiveRange, useWeightTargeting);
-                    if (newTarget != null)
-                    {
-                        targetPos = newTarget.GetPosition();
-                    }
-                    else
-                    {
-                        Debug.Log("[Character] AOE cancelled: No valid targets");
-                        return;
-                    }
+                    Debug.Log("[Character] AOE cancelled: No valid targets in range");
+                    return;
                 }
 
                 // 3. Ground impact position
@@ -936,7 +1105,7 @@ namespace Novelian.Combat
                 if (activeSkillData.projectile_speed > 0 && projectileEffectPrefab != null)
                 {
                     Vector3 meteorStartPos = impactPos + Vector3.up * 20f;
-                    meteorEffect = Object.Instantiate(projectileEffectPrefab, meteorStartPos, Quaternion.identity);
+                    meteorEffect = UnityEngine.Object.Instantiate(projectileEffectPrefab, meteorStartPos, Quaternion.identity);
 
                     float meteorSpeed = FinalActiveProjectileSpeed > 0 ? FinalActiveProjectileSpeed : 10f;
                     float distance = Vector3.Distance(meteorStartPos, impactPos);
@@ -964,15 +1133,20 @@ namespace Novelian.Combat
                     }
                 }
 
-                // 5. Hit Effect
-                if (hitEffectPrefab != null)
+                // 5. Hit Effect - AOE 범위에 맞춰 스케일 조절
+                // (표식/CC 스킬은 각 타겟에 개별 적용하므로 중앙 이펙트 생략)
+                bool skipCentralEffect = activeSkillData.HasMarkEffect || activeSkillData.HasCCEffect;
+                if (hitEffectPrefab != null && !skipCentralEffect)
                 {
-                    hitEffect = Object.Instantiate(hitEffectPrefab, impactPos, Quaternion.identity);
+                    hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, impactPos, Quaternion.identity);
+
+                    // 기본 이펙트 크기를 100 단위로 가정하고 aoeRadius에 비례하여 스케일 조절
+                    float baseEffectSize = 100f;
+                    float scaleFactor = aoeRadius / baseEffectSize;
+                    hitEffect.transform.localScale = Vector3.one * scaleFactor;
                 }
 
-                // 6. AOE damage - aoe_mult 적용
-                float aoeRadius = activeSkillData.aoe_radius > 0 ? activeSkillData.aoe_radius : 3f;
-                if (supportData != null) aoeRadius *= supportData.aoe_mult;
+                // 6. AOE damage - aoeRadius는 위에서 이미 계산됨
                 Collider[] hits = Physics.OverlapSphere(impactPos, aoeRadius);
                 float damageToApply = FinalActiveDamage;
 
@@ -984,6 +1158,14 @@ namespace Novelian.Combat
                     ITargetable hitTarget = hit.GetComponent<ITargetable>();
                     if (hitTarget == null || !hitTarget.IsAlive())
                         continue;
+
+                    // 각 대상에게 히트 이펙트 생성 (표식/CC 스킬은 ApplyMark/ApplyCC에서 처리하므로 제외)
+                    if (hitEffectPrefab != null && !skipCentralEffect)
+                    {
+                        Vector3 hitTargetPos = hitTarget.GetPosition();
+                        GameObject targetHitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitTargetPos + Vector3.up, Quaternion.identity);
+                        UnityEngine.Object.Destroy(targetHitEffect, 1f);
+                    }
 
                     // 데미지 적용 (디버프 스킬은 데미지 0일 수 있음)
                     if (damageToApply > 0)
@@ -1004,11 +1186,11 @@ namespace Novelian.Combat
                 // Cleanup
                 if (meteorEffect != null)
                 {
-                    Object.Destroy(meteorEffect, 0.1f);
+                    UnityEngine.Object.Destroy(meteorEffect, 0.1f);
                 }
                 if (hitEffect != null)
                 {
-                    Object.Destroy(hitEffect, 2f);
+                    UnityEngine.Object.Destroy(hitEffect, 2f);
                 }
             }
             catch (System.OperationCanceledException)
@@ -1017,7 +1199,7 @@ namespace Novelian.Combat
             }
             finally
             {
-                if (castEffect != null) Object.Destroy(castEffect);
+                if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
             }
         }
 
@@ -1047,9 +1229,9 @@ namespace Novelian.Combat
                 if (castTime > 0f && castEffectPrefab != null)
                 {
                     Vector3 spawnPos = transform.position + spawnOffset;
-                    castEffect = Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
+                    castEffect = UnityEngine.Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
                     await UniTask.Delay((int)(castTime * 1000));
-                    if (castEffect != null) Object.Destroy(castEffect);
+                    if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
                 }
 
                 // 2. Get target position
@@ -1076,7 +1258,7 @@ namespace Novelian.Combat
                 // 3. Hit Effect at target position
                 if (hitEffectPrefab != null)
                 {
-                    hitEffect = Object.Instantiate(hitEffectPrefab, targetPos, Quaternion.identity);
+                    hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, targetPos, Quaternion.identity);
                 }
 
                 // 4. Apply damage - aoe_radius가 있으면 범위 데미지, 없으면 단일 데미지
@@ -1114,7 +1296,7 @@ namespace Novelian.Combat
                 // Cleanup
                 if (hitEffect != null)
                 {
-                    Object.Destroy(hitEffect, 2f);
+                    UnityEngine.Object.Destroy(hitEffect, 2f);
                 }
             }
             catch (System.OperationCanceledException)
@@ -1123,7 +1305,7 @@ namespace Novelian.Combat
             }
             finally
             {
-                if (castEffect != null) Object.Destroy(castEffect);
+                if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
             }
         }
 
@@ -1136,7 +1318,6 @@ namespace Novelian.Combat
             if (skillType != SkillAssetType.Buff) return;
 
             GameObject castEffect = null;
-            GameObject hitEffect = null;
 
             try
             {
@@ -1153,19 +1334,12 @@ namespace Novelian.Combat
                 if (castTime > 0f && castEffectPrefab != null)
                 {
                     Vector3 spawnPos = transform.position + spawnOffset;
-                    castEffect = Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
+                    castEffect = UnityEngine.Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
                     await UniTask.Delay((int)(castTime * 1000));
-                    if (castEffect != null) Object.Destroy(castEffect);
+                    if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
                 }
 
-                // 2. Hit Effect at self position (버프는 자신 위치에서 발동)
-                Vector3 effectPos = transform.position;
-                if (hitEffectPrefab != null)
-                {
-                    hitEffect = Object.Instantiate(hitEffectPrefab, effectPos, Quaternion.identity);
-                }
-
-                // 3. Apply buff effect to allies in range
+                // 2. Apply buff effect to allies in range
                 float buffValue = activeSkillData.base_buff_value;
                 if (supportData != null) buffValue *= supportData.buff_value_mult;
 
@@ -1180,10 +1354,21 @@ namespace Novelian.Combat
 
                 Debug.Log($"[Character] Buff skill applied: {activeSkillData.skill_name} (Type: {buffType}, Value: {buffValue}%, Duration: {buffDuration}s, Radius: {buffRadius})");
 
-                // Cleanup
-                if (hitEffect != null)
+                // 3. 버프 지속시간 동안 이펙트 반복 재생
+                if (hitEffectPrefab != null && buffDuration > 0)
                 {
-                    Object.Destroy(hitEffect, 2f);
+                    float effectTickInterval = 1f; // 1초마다 이펙트 재생
+                    float elapsed = 0f;
+
+                    while (elapsed < buffDuration)
+                    {
+                        Vector3 effectPos = transform.position;
+                        GameObject tickEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, effectPos, Quaternion.identity);
+                        UnityEngine.Object.Destroy(tickEffect, 0.8f); // 이펙트 0.8초 후 삭제
+
+                        await UniTask.Delay((int)(effectTickInterval * 1000));
+                        elapsed += effectTickInterval;
+                    }
                 }
             }
             catch (System.OperationCanceledException)
@@ -1192,24 +1377,50 @@ namespace Novelian.Combat
             }
             finally
             {
-                if (castEffect != null) Object.Destroy(castEffect);
+                if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
             }
         }
 
         /// <summary>
         /// 범위 내 아군에게 버프 적용
+        /// includeSelf: true면 자기 자신도 포함 (DevScene 테스트용)
         /// </summary>
-        private void ApplyBuffToAlliesInRange(BuffType buffType, float buffValue, float duration, float radius)
+        private void ApplyBuffToAlliesInRange(BuffType buffType, float buffValue, float duration, float radius, bool includeSelf = false)
         {
             // 범위 내 모든 캐릭터 찾기
             Collider[] hits = Physics.OverlapSphere(transform.position, radius);
+
+            // 아군이 없는 경우 (DevScene 테스트 등) 자기 자신에게 버프 적용
+            bool hasAllies = false;
+            foreach (var hit in hits)
+            {
+                if (hit.CompareTag(Tag.Character))
+                {
+                    Character ally = hit.GetComponent<Character>();
+                    if (ally != null && ally != this)
+                    {
+                        hasAllies = true;
+                        break;
+                    }
+                }
+            }
+
+            // 아군이 없으면 자동으로 자기 자신 포함
+            if (!hasAllies)
+            {
+                includeSelf = true;
+                Debug.Log("[Character] 범위 내 아군 없음 - 자기 자신에게 버프 적용");
+            }
 
             foreach (var hit in hits)
             {
                 if (!hit.CompareTag(Tag.Character)) continue;
 
                 Character ally = hit.GetComponent<Character>();
-                if (ally == null || ally == this) continue; // 자신 제외 (세레나데 등)
+                if (ally == null) continue;
+
+                // 자신 제외 (세레나데 등) - includeSelf가 true면 자기 자신도 포함
+                if (ally == this && !includeSelf) continue;
 
                 // 버프 타입에 따라 스탯 적용
                 float percentValue = buffValue / 100f; // % → 소수
@@ -1534,6 +1745,285 @@ namespace Novelian.Combat
             channelingCts?.Dispose();
         }
 
+        /// <summary>
+        /// 연속 발사 (기관총처럼 순차 발사)
+        /// projectile_count가 2 이상인 스킬에서 사용
+        /// </summary>
+        private async UniTaskVoid FireBurstProjectilesAsync(ObjectPoolManager pool, Vector3 spawnPos, Vector3 targetPos, int projectileCount)
+        {
+            const float BURST_INTERVAL = 0.1f; // 연속 발사 간격 (100ms)
+
+            Debug.Log($"[Character] Burst fire started: {projectileCount} projectiles ({basicAttackData.skill_name})");
+
+            for (int i = 0; i < projectileCount; i++)
+            {
+                // 발사 시점에 타겟 방향 재계산 (동일한 방향으로 연속 발사)
+                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+
+                // 마지막 발사가 아니면 대기
+                if (i < projectileCount - 1)
+                {
+                    await UniTask.Delay(TimeSpan.FromSeconds(BURST_INTERVAL));
+                }
+            }
+
+            Debug.Log($"[Character] Burst fire complete: {projectileCount} projectiles fired (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1})");
+        }
+
+        /// <summary>
+        /// ForceAttack용 AOE 스킬 처리 (basicAttackData 사용)
+        /// DevScene 테스트에서 기본 공격 슬롯에 AOE/Debuff 등을 설정했을 때 사용
+        /// </summary>
+        private async UniTaskVoid UseBasicAttackAOEAsync(ITargetable target)
+        {
+            if (basicAttackData == null) return;
+
+            var skillType = basicAttackData.GetSkillType();
+            Debug.Log($"[Character] UseBasicAttackAOEAsync: {basicAttackData.skill_name} (Type: {skillType})");
+
+            GameObject castEffect = null;
+            GameObject hitEffect = null;
+
+            try
+            {
+                // Get prefabs from basicAttackPrefabs
+                GameObject castEffectPrefab = basicAttackPrefabs?.castEffectPrefab;
+                GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
+
+                // 1. Cast Effect
+                float castTime = basicAttackData.cast_time;
+                if (supportData != null) castTime *= supportData.cast_time_mult;
+
+                if (castTime > 0f && castEffectPrefab != null)
+                {
+                    Vector3 spawnPos = transform.position + spawnOffset;
+                    castEffect = UnityEngine.Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
+                    await UniTask.Delay((int)(castTime * 1000));
+                    if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
+                }
+
+                // 2. Get target position - 밀집 지역 기반 또는 aoe_radius 기반
+                float aoeRadius = basicAttackData.aoe_radius > 0 ? basicAttackData.aoe_radius : 3f;
+                if (supportData != null) aoeRadius *= supportData.aoe_mult;
+
+                // range가 0이면 aoe_radius를 탐색 범위로 사용
+                float searchRange = FinalRange > 0 ? FinalRange : aoeRadius;
+                Vector3 targetPos = FindBestAOETargetPosition(searchRange, aoeRadius);
+                if (targetPos == Vector3.zero)
+                {
+                    // 밀집 지역을 못 찾으면 타겟 위치 사용
+                    targetPos = target.GetPosition();
+                }
+
+                // 3. Ground impact position
+                Vector3 impactPos = targetPos;
+                Ray groundRay = new Ray(targetPos + Vector3.up * 10f, Vector3.down);
+                if (Physics.Raycast(groundRay, out RaycastHit groundHit, 20f, LayerMask.GetMask("Ground")))
+                {
+                    impactPos = groundHit.point;
+                }
+                else
+                {
+                    impactPos = new Vector3(targetPos.x, 0f, targetPos.z);
+                }
+
+                // 5. Apply damage/debuff to all enemies in AOE radius
+                float damageToApply = FinalDamage;
+                int hitCount = 0;
+
+                // 맵 전역 스킬 (aoe_radius >= 500) - 모든 몬스터를 태그로 찾음
+                // 전역 스킬은 각 몬스터 위치에 개별 이펙트 생성
+                if (aoeRadius >= 500f)
+                {
+                    // Monster 태그로 모든 몬스터 찾기
+                    GameObject[] monsters = GameObject.FindGameObjectsWithTag(Tag.Monster);
+                    GameObject[] bossMonsters = GameObject.FindGameObjectsWithTag(Tag.BossMonster);
+
+                    // 표식/CC 스킬은 ApplySkillEffects에서 이펙트 처리
+                    bool skipEffect = basicAttackData.HasMarkEffect || basicAttackData.HasCCEffect;
+
+                    // 일반 몬스터 처리
+                    for (int i = 0; i < monsters.Length; i++)
+                    {
+                        ITargetable hitTarget = monsters[i].GetComponent<ITargetable>();
+                        if (hitTarget != null && hitTarget.IsAlive())
+                        {
+                            if (damageToApply > 0) hitTarget.TakeDamage(damageToApply);
+                            ApplySkillEffects(hitTarget, basicAttackData);
+                            hitCount++;
+
+                            // 각 몬스터에게 hit 이펙트 생성 (표식/CC 스킬은 ApplySkillEffects에서 처리)
+                            // 몬스터 콜라이더 중심점에 이펙트 생성
+                            if (hitEffectPrefab != null && !skipEffect)
+                            {
+                                Collider monsterCol = monsters[i].GetComponent<Collider>();
+                                Vector3 hitPos = monsterCol != null ? monsterCol.bounds.center : hitTarget.GetPosition();
+                                GameObject monsterHitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                                UnityEngine.Object.Destroy(monsterHitEffect, 2f);
+                            }
+                        }
+                    }
+
+                    // 보스 몬스터 처리
+                    for (int i = 0; i < bossMonsters.Length; i++)
+                    {
+                        ITargetable hitTarget = bossMonsters[i].GetComponent<ITargetable>();
+                        if (hitTarget != null && hitTarget.IsAlive())
+                        {
+                            if (damageToApply > 0) hitTarget.TakeDamage(damageToApply);
+                            ApplySkillEffects(hitTarget, basicAttackData);
+                            hitCount++;
+
+                            // 각 보스 몬스터에게 hit 이펙트 생성 (표식/CC 스킬은 ApplySkillEffects에서 처리)
+                            // 보스 콜라이더 중심점에 이펙트 생성
+                            if (hitEffectPrefab != null && !skipEffect)
+                            {
+                                Collider bossCol = bossMonsters[i].GetComponent<Collider>();
+                                Vector3 hitPos = bossCol != null ? bossCol.bounds.center : hitTarget.GetPosition();
+                                GameObject bossHitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                                UnityEngine.Object.Destroy(bossHitEffect, 2f);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // 표식/CC 스킬은 ApplySkillEffects에서 이펙트 처리
+                    bool skipEffect = basicAttackData.HasMarkEffect || basicAttackData.HasCCEffect;
+
+                    // 일반 AOE - impactPos에 단일 hit 이펙트 생성 (범위에 맞춰 스케일 조절, 표식/CC 스킬은 제외)
+                    if (hitEffectPrefab != null && !skipEffect)
+                    {
+                        hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, impactPos, Quaternion.identity);
+
+                        // 기본 이펙트 크기를 100 단위로 가정하고 aoeRadius에 비례하여 스케일 조절
+                        float baseEffectSize = 100f;
+                        float scaleFactor = aoeRadius / baseEffectSize;
+                        hitEffect.transform.localScale = Vector3.one * scaleFactor;
+                    }
+
+                    // OverlapSphere 사용
+                    Collider[] hits = Physics.OverlapSphere(impactPos, aoeRadius);
+
+                    for (int i = 0; i < hits.Length; i++)
+                    {
+                        Collider hit = hits[i];
+                        if (!hit.CompareTag(Tag.Monster) && !hit.CompareTag(Tag.BossMonster))
+                            continue;
+
+                        ITargetable hitTarget = hit.GetComponent<ITargetable>();
+                        if (hitTarget != null && hitTarget.IsAlive())
+                        {
+                            // 각 대상에게 히트 이펙트 생성 (표식/CC 스킬은 ApplySkillEffects에서 처리)
+                            // 콜라이더 중심점에 이펙트 생성
+                            if (hitEffectPrefab != null && !skipEffect)
+                            {
+                                Vector3 hitPos = hit.bounds.center;
+                                GameObject targetHitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                                UnityEngine.Object.Destroy(targetHitEffect, 1f);
+                            }
+
+                            if (damageToApply > 0) hitTarget.TakeDamage(damageToApply);
+                            ApplySkillEffects(hitTarget, basicAttackData);
+                            hitCount++;
+                        }
+                    }
+
+                    // 일반 AOE hit 이펙트 정리
+                    if (hitEffect != null)
+                    {
+                        UnityEngine.Object.Destroy(hitEffect, 2f);
+                    }
+                }
+
+                Debug.Log($"[Character] {basicAttackData.skill_name} hit {hitCount} targets (radius={aoeRadius:F1}, global={aoeRadius >= 500f})");
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.Log("[Character] BasicAttackAOE cancelled");
+            }
+            finally
+            {
+                if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
+            }
+        }
+
+        /// <summary>
+        /// 스킬 효과 적용 (디버프, CC 등)
+        /// </summary>
+        private void ApplySkillEffects(ITargetable target, MainSkillData skillData)
+        {
+            if (target == null || skillData == null) return;
+
+            // hitEffectPrefab 가져오기 (basicAttack 또는 activeSkill에서)
+            GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab ?? activeSkillPrefabs?.hitEffectPrefab;
+
+            // CC 효과 (cc_duration 동안 이펙트 유지)
+            if (skillData.HasCCEffect)
+            {
+                CCType ccType = skillData.GetCCType();
+                float duration = skillData.cc_duration;
+                float slowAmount = skillData.cc_slow_amount;
+
+                if (target.GetTransform().CompareTag(Tag.Monster))
+                {
+                    Monster monster = target.GetTransform().GetComponent<Monster>();
+                    monster?.ApplyCC(ccType, duration, slowAmount, hitEffectPrefab);
+                }
+                else if (target.GetTransform().CompareTag(Tag.BossMonster))
+                {
+                    BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
+                    boss?.ApplyCC(ccType, duration, slowAmount, hitEffectPrefab);
+                }
+            }
+
+            // 디버프 효과 (공격력 감소 등)
+            if (skillData.base_debuff_value > 0)
+            {
+                float debuffValue = skillData.base_debuff_value;
+                if (supportData != null) debuffValue *= supportData.debuff_value_mult;
+                Debug.Log($"[Character] Applied debuff {debuffValue} to {target.GetTransform().name}");
+            }
+
+            // DOT 효과 (지속 피해)
+            if (skillData.HasDOTEffect)
+            {
+                float dotDamage = skillData.dot_damage_per_tick;
+                float tickInterval = skillData.dot_tick_interval;
+                float duration = skillData.dot_duration;
+
+                Monster monster = target as Monster;
+                BossMonster boss = target as BossMonster;
+
+                if (monster != null)
+                {
+                    monster.ApplyDOT(DOTType.Burn, dotDamage, tickInterval, duration, hitEffectPrefab);
+                    Debug.Log($"[Character] Applied DOT to {monster.name}: {dotDamage}/tick every {tickInterval}s for {duration}s");
+                }
+                else if (boss != null)
+                {
+                    boss.ApplyDOT(DOTType.Burn, dotDamage, tickInterval, duration, hitEffectPrefab);
+                    Debug.Log($"[Character] Applied DOT to {boss.name}: {dotDamage}/tick every {tickInterval}s for {duration}s");
+                }
+            }
+
+            // 표식 효과 (mark_duration 동안 받는 데미지 증가)
+            if (skillData.HasMarkEffect)
+            {
+                if (target.GetTransform().CompareTag(Tag.Monster))
+                {
+                    Monster monster = target.GetTransform().GetComponent<Monster>();
+                    monster?.ApplyMark(skillData.GetElementBasedMarkType(), skillData.mark_duration, skillData.mark_damage_mult / 100f, hitEffectPrefab);
+                }
+                else if (target.GetTransform().CompareTag(Tag.BossMonster))
+                {
+                    BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
+                    boss?.ApplyMark(skillData.GetElementBasedMarkType(), skillData.mark_duration, skillData.mark_damage_mult / 100f, hitEffectPrefab);
+                }
+            }
+        }
+
         //LMJ : Set spawn offset from CharacterPreset (future feature)
         public void SetSpawnOffsetFromPreset(Vector3 offset)
         {
@@ -1555,6 +2045,134 @@ namespace Novelian.Combat
             LoadSkillData();
         }
 
+        //LMJ : Place trap object on field (Trap type skills)
+        private void PlaceTrapObject(ITargetable target)
+        {
+            if (basicAttackData == null || target == null) return;
+
+            // Get placement position
+            Vector3 placementPos = target.GetPosition();
+
+            // Raycast to ground for proper placement
+            Ray groundRay = new Ray(placementPos + Vector3.up * 10f, Vector3.down);
+            if (Physics.Raycast(groundRay, out RaycastHit groundHit, 20f, LayerMask.GetMask("Ground")))
+            {
+                placementPos = groundHit.point;
+            }
+            else
+            {
+                placementPos.y = 0f;
+            }
+
+            // Create trap object
+            GameObject trapObj = new GameObject($"Trap_{basicAttackData.skill_name}");
+            TrapObject trap = trapObj.AddComponent<TrapObject>();
+            trap.Initialize(basicAttackData, basicAttackPrefabs, supportData, FinalDamage, placementPos);
+
+            Debug.Log($"[Character] Placed Trap: {basicAttackData.skill_name} at {placementPos}");
+        }
+
+        //LMJ : Place mine object on field (Mine type skills)
+        private void PlaceMineObject(ITargetable target)
+        {
+            if (basicAttackData == null || target == null) return;
+
+            // Get placement position
+            Vector3 placementPos = target.GetPosition();
+
+            // Raycast to ground for proper placement
+            Ray groundRay = new Ray(placementPos + Vector3.up * 10f, Vector3.down);
+            if (Physics.Raycast(groundRay, out RaycastHit groundHit, 20f, LayerMask.GetMask("Ground")))
+            {
+                placementPos = groundHit.point;
+            }
+            else
+            {
+                placementPos.y = 0f;
+            }
+
+            // Create mine object
+            GameObject mineObj = new GameObject($"Mine_{basicAttackData.skill_name}");
+            MineObject mine = mineObj.AddComponent<MineObject>();
+            mine.Initialize(basicAttackData, basicAttackPrefabs, supportData, FinalDamage, placementPos);
+
+            Debug.Log($"[Character] Placed Mine: {basicAttackData.skill_name} at {placementPos}");
+        }
+
+        //LMJ : Use instant kill skill (심장마비 - 체력 10% 이하 적 즉사, 보스 제외)
+        private void UseInstantKillSkill(ITargetable target)
+        {
+            if (basicAttackData == null || target == null) return;
+
+            // Get hit effect prefab
+            GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
+
+            // Get target's collider for proper effect positioning
+            Collider targetCol = target.GetTransform().GetComponent<Collider>();
+            Vector3 hitPos = targetCol != null ? targetCol.bounds.center : target.GetPosition();
+
+            // Check if target is boss (cannot be instant killed)
+            if (target.GetTransform().CompareTag(Tag.BossMonster))
+            {
+                // Boss: apply normal damage instead
+                BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
+                if (boss != null)
+                {
+                    boss.TakeDamage(FinalDamage);
+
+                    // Spawn hit effect at boss center
+                    if (hitEffectPrefab != null)
+                    {
+                        GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                        UnityEngine.Object.Destroy(hitEffect, 2f);
+                    }
+
+                    Debug.Log($"[Character] InstantKill on Boss: Normal damage {FinalDamage} (bosses cannot be instant killed)");
+                }
+                return;
+            }
+
+            // Regular monster: check HP threshold (10%)
+            if (target.GetTransform().CompareTag(Tag.Monster))
+            {
+                Monster monster = target.GetTransform().GetComponent<Monster>();
+                if (monster != null)
+                {
+                    float hpRatio = monster.GetHealth() / monster.GetMaxHealth();
+                    float instantKillThreshold = 0.1f; // 10%
+
+                    if (hpRatio <= instantKillThreshold)
+                    {
+                        // Instant kill!
+                        monster.Die();
+
+                        // Spawn hit effect at monster center
+                        if (hitEffectPrefab != null)
+                        {
+                            GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                            UnityEngine.Object.Destroy(hitEffect, 2f);
+                        }
+
+                        Debug.Log($"[Character] InstantKill SUCCESS: {monster.name} (HP: {hpRatio * 100:F1}% <= {instantKillThreshold * 100}%)");
+                    }
+                    else
+                    {
+                        // HP too high: apply normal damage
+                        monster.TakeDamage(FinalDamage);
+
+                        // Spawn hit effect at monster center
+                        if (hitEffectPrefab != null)
+                        {
+                            GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                            UnityEngine.Object.Destroy(hitEffect, 2f);
+                        }
+
+                        Debug.Log($"[Character] InstantKill FAILED: {monster.name} HP {hpRatio * 100:F1}% > {instantKillThreshold * 100}%, applied {FinalDamage} damage");
+                    }
+                }
+            }
+        }
+
         /// <summary>
         /// 테스트용: 수동으로 공격 발사 (SkillTestManager에서 호출)
         /// 스킬 타입에 따라 적절한 메서드를 호출
@@ -1567,48 +2185,80 @@ namespace Novelian.Combat
                 return;
             }
 
-            // Find target first
-            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, FinalRange, useWeightTargeting);
-            if (target == null)
-            {
-                Debug.LogWarning("[Character] ForceAttack skipped: no target found");
-                return;
-            }
-
             // Check skill type and call appropriate method
             var skillType = basicAttackData.GetSkillType();
             Debug.Log($"[Character] ForceAttack: {basicAttackData.skill_name} (Type: {skillType})");
+
+            // 버프 스킬은 타겟이 필요 없음 (자기/아군 대상)
+            if (skillType == SkillAssetType.Buff)
+            {
+                UseBuffSkillAsync().Forget();
+                return;
+            }
+
+            // 타겟 탐색 범위 결정: range가 0이면 aoe_radius 사용 (관중의야유 등 전역 디버프)
+            float searchRange = FinalRange;
+            if (searchRange <= 0 && basicAttackData.aoe_radius > 0)
+            {
+                searchRange = basicAttackData.aoe_radius;
+            }
+            // 그래도 0이면 기본값 사용
+            if (searchRange <= 0) searchRange = 100f;
+
+            // Find target (버프 외 스킬은 타겟 필요)
+            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, searchRange, useWeightTargeting);
+            if (target == null)
+            {
+                Debug.LogWarning($"[Character] ForceAttack skipped: no target found (searchRange={searchRange})");
+                return;
+            }
 
             switch (skillType)
             {
                 // 투사체 스킬 - 투사체 발사
                 case SkillAssetType.Projectile:
-                    TryAttack();
+                    LaunchProjectile(target);
                     break;
 
                 // 단일 즉발 스킬 - 타겟에게 즉시 데미지/효과
                 case SkillAssetType.InstantSingle:
-                    UseInstantSkillAsync(target).Forget();
+                    // 심장마비: 체력 10% 이하 적 즉사 (보스 제외)
+                    if (basicAttackData.IsInstantKillSkill)
+                    {
+                        UseInstantKillSkill(target);
+                    }
+                    else
+                    {
+                        UseBasicAttackAOEAsync(target).Forget();
+                    }
                     break;
 
                 // 범위 스킬 - 타겟 위치에 AOE 효과
                 case SkillAssetType.AOE:
-                    UseAOESkillAsync(target).Forget();
+                    // 다이너마이트: 투사체를 던져서 N초 후 폭발 (특수 처리)
+                    if (basicAttackData.IsDynamiteSkill)
+                    {
+                        LaunchDynamiteProjectile(target);
+                    }
+                    // 전설의 지팡이: 투사체가 일직선으로 날아가며 경로상 AOE 데미지 (특수 처리)
+                    else if (basicAttackData.IsLegendaryStaffSkill)
+                    {
+                        LaunchLegendaryStaffProjectile(target);
+                    }
+                    else
+                    {
+                        UseBasicAttackAOEAsync(target).Forget();
+                    }
                     break;
 
                 // DOT 스킬 - 범위 내 적에게 지속 데미지 (AOE 방식)
                 case SkillAssetType.DOT:
-                    UseAOESkillAsync(target).Forget();
-                    break;
-
-                // 버프 스킬 - 아군에게 버프 적용
-                case SkillAssetType.Buff:
-                    UseBuffSkillAsync().Forget();
+                    UseBasicAttackAOEAsync(target).Forget();
                     break;
 
                 // 디버프 스킬 - 범위 내 적에게 디버프 적용 (AOE 방식)
                 case SkillAssetType.Debuff:
-                    UseAOESkillAsync(target).Forget();
+                    UseBasicAttackAOEAsync(target).Forget();
                     break;
 
                 // 채널링 스킬 - 지속 시전
@@ -1616,14 +2266,14 @@ namespace Novelian.Combat
                     UseChannelingSkillAsync(target).Forget();
                     break;
 
-                // 트랩 스킬 - 타겟 위치에 트랩 설치 (AOE 방식)
+                // 트랩 스킬 - 필드에 트랩 오브젝트 설치
                 case SkillAssetType.Trap:
-                    UseAOESkillAsync(target).Forget();
+                    PlaceTrapObject(target);
                     break;
 
-                // 지뢰 스킬 - 타겟 위치에 지뢰 설치 (AOE 방식)
+                // 지뢰 스킬 - 필드에 지뢰 오브젝트 설치
                 case SkillAssetType.Mine:
-                    UseAOESkillAsync(target).Forget();
+                    PlaceMineObject(target);
                     break;
 
                 default:
@@ -2119,6 +2769,97 @@ namespace Novelian.Combat
                     return;
                 }
             }
+        }
+
+        /// <summary>
+        /// LMJ: AOE 스킬의 최적 타겟 위치 계산 (기하학적 중심점 기반)
+        /// 사거리 내에서 가장 많은 적이 AOE 범위에 포함되는 위치를 반환
+        /// 적 위치뿐만 아니라 기하학적 중심점(centroid)도 후보로 포함
+        /// </summary>
+        /// <param name="attackRange">캐릭터의 공격 사거리</param>
+        /// <param name="aoeRadius">AOE 스킬의 범위 반경</param>
+        /// <returns>최적의 AOE 타겟 위치 (적이 없으면 Vector3.zero)</returns>
+        private Vector3 FindBestAOETargetPosition(float attackRange, float aoeRadius)
+        {
+            // 1. 사거리 내 모든 적 찾기
+            Collider[] enemiesInRange = Physics.OverlapSphere(transform.position, attackRange);
+            List<ITargetable> validTargets = new List<ITargetable>();
+
+            int count = enemiesInRange.Length;
+            for (int i = 0; i < count; i++)
+            {
+                Collider col = enemiesInRange[i];
+                if (!col.CompareTag(Tag.Monster) && !col.CompareTag(Tag.BossMonster))
+                    continue;
+
+                ITargetable target = col.GetComponent<ITargetable>();
+                if (target != null && target.IsAlive())
+                {
+                    validTargets.Add(target);
+                }
+            }
+
+            if (validTargets.Count == 0)
+            {
+                return Vector3.zero;
+            }
+
+            // 2. 적이 1마리면 그 위치 반환
+            if (validTargets.Count == 1)
+            {
+                return validTargets[0].GetPosition();
+            }
+
+            int targetCount = validTargets.Count;
+
+            // 3. 기하학적 중심점(centroid) 계산
+            Vector3 centroid = Vector3.zero;
+            for (int i = 0; i < targetCount; i++)
+            {
+                centroid += validTargets[i].GetPosition();
+            }
+            centroid /= targetCount;
+
+            // 4. 후보 위치 목록 생성 (적 위치들 + 기하학적 중심점)
+            List<Vector3> candidatePositions = new List<Vector3>(targetCount + 1);
+            for (int i = 0; i < targetCount; i++)
+            {
+                candidatePositions.Add(validTargets[i].GetPosition());
+            }
+            candidatePositions.Add(centroid); // 중심점도 후보에 추가
+
+            // 5. 각 후보 위치에서 AOE 범위 내 적 수 계산
+            Vector3 bestPosition = Vector3.zero;
+            int maxEnemiesInAOE = 0;
+
+            int candidateCount = candidatePositions.Count;
+            for (int i = 0; i < candidateCount; i++)
+            {
+                Vector3 candidatePos = candidatePositions[i];
+                int enemiesInAOE = 0;
+
+                // 해당 위치에 AOE를 쏘면 몇 마리가 맞는지 계산
+                for (int j = 0; j < targetCount; j++)
+                {
+                    Vector3 enemyPos = validTargets[j].GetPosition();
+                    float distance = Vector3.Distance(candidatePos, enemyPos);
+                    if (distance <= aoeRadius)
+                    {
+                        enemiesInAOE++;
+                    }
+                }
+
+                // 더 많은 적을 맞출 수 있는 위치 선택
+                if (enemiesInAOE > maxEnemiesInAOE)
+                {
+                    maxEnemiesInAOE = enemiesInAOE;
+                    bestPosition = candidatePos;
+                }
+            }
+
+            bool usedCentroid = (bestPosition == centroid);
+            Debug.Log($"[Character] AOE 밀집 지역 타겟팅: {targetCount}마리 중 {maxEnemiesInAOE}마리 적중 예상 (중심점 사용: {usedCentroid}) 위치 = {bestPosition}");
+            return bestPosition;
         }
 
         #endregion
