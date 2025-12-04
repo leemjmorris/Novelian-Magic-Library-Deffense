@@ -16,6 +16,9 @@ public class BookMarkUI : MonoBehaviour
     private List<CraftSceneBookMarkSlot> bookSlotList = new List<CraftSceneBookMarkSlot>();
     private BookmarkCraftData selectedRecipe = null;
 
+    // JML: 책갈피 등급 아이콘 캐시 (즉시 로딩용)
+    private Dictionary<Grade, Sprite> cachedBookmarkIcons = new Dictionary<Grade, Sprite>();
+
     [Header("Choice Panel")]
     [SerializeField] private GameObject choicePanel;
     [SerializeField] private Button selectionStatButton;
@@ -38,6 +41,7 @@ public class BookMarkUI : MonoBehaviour
     [Header("Stat Craft Panel")]
     [SerializeField] private GameObject craftPanel;
     [SerializeField] private GameObject statCraftPanel;
+    [SerializeField] private Image statCraftBookmarkIcon;  // JML: 제작할 책갈피 등급 아이콘
     [SerializeField] private TextMeshProUGUI statMetrial1NameText;
     [SerializeField] private Image statMetrial1IconImage;
     [SerializeField] private TextMeshProUGUI statMetrial1CountText;
@@ -52,6 +56,7 @@ public class BookMarkUI : MonoBehaviour
 
     [Header("Skill Craft Panel")]
     [SerializeField] private GameObject skillCraftPanel;
+    [SerializeField] private Image skillCraftBookmarkIcon;  // JML: 제작할 책갈피 등급 아이콘
     [SerializeField] private TextMeshProUGUI skillMetrial1NameText;
     [SerializeField] private Image skillMetrial1IconImage;
     [SerializeField] private TextMeshProUGUI skillMetrial1CountText;
@@ -76,6 +81,7 @@ public class BookMarkUI : MonoBehaviour
     private async UniTaskVoid Start()
     {
         await LoadRecipesFromCSV(); // TODO JML: 부트씬 로드하면 필요 없어짐
+        await PreloadBookmarkIcons(); // JML: 책갈피 아이콘 미리 캐싱
 
         // JML: Choice Panel Button Listeners
         selectionStatButton.onClick.AddListener(OnSelectionStatButtonClicked);
@@ -200,7 +206,8 @@ public class BookMarkUI : MonoBehaviour
     {
         selectedRecipe = recipe;
 
-
+        // JML: 제작할 책갈피 등급 아이콘 (캐시에서 즉시 적용)
+        SetCraftBookmarkIcon(recipe);
 
         switch (SelectedBookmarkType)
         {
@@ -530,19 +537,65 @@ public class BookMarkUI : MonoBehaviour
     }
 
     /// <summary>
-    /// JML: 책갈피 아이콘 키 반환
-    /// TODO: 나중에 IconPathTable에서 조회하도록 변경
+    /// JML: 책갈피 아이콘 키 반환 (등급별 아이콘)
     /// </summary>
     private string GetBookmarkIconKey(BookMark bookMark)
     {
-        // 현재: 하드코딩 (타입별 기본 아이콘)
-        // 나중에: CSVLoader.Instance.GetData<IconPathData>(bookMark.BookmarkDataID)?.Icon_Key
-        return bookMark.Type switch
+        return AddressableKey.GetBookmarkIconKey(bookMark.Grade);
+    }
+
+    /// <summary>
+    /// JML: Recipe_ID에서 등급 추출
+    /// Stat: 1201-1205 → Common-Mythic
+    /// Skill: 1206-1210 → Common-Mythic
+    /// </summary>
+    private Grade GetGradeFromRecipe(BookmarkCraftData recipe)
+    {
+        if (recipe.Recipe_Type == BookmarkType.Stat)
         {
-            BookmarkType.Stat => "PictoIcon_Attack",
-            BookmarkType.Skill => "PictoIcon_Attack",
-            _ => "PictoIcon_Attack"
-        };
+            return (Grade)(recipe.Recipe_ID - 1200);
+        }
+        else // Skill
+        {
+            return (Grade)(recipe.Recipe_ID - 1205);
+        }
+    }
+
+    /// <summary>
+    /// JML: 모든 등급 책갈피 아이콘 미리 캐싱 (시작 시 로드)
+    /// </summary>
+    private async UniTask PreloadBookmarkIcons()
+    {
+        Grade[] allGrades = { Grade.Common, Grade.Rare, Grade.Unique, Grade.Legendary, Grade.Mythic };
+
+        foreach (Grade grade in allGrades)
+        {
+            string iconKey = AddressableKey.GetBookmarkIconKey(grade);
+            var icon = await UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(iconKey).ToUniTask();
+
+            if (icon != null)
+            {
+                cachedBookmarkIcons[grade] = icon;
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// JML: 제작 패널 책갈피 등급 아이콘 로드 (캐시 사용으로 즉시 적용)
+    /// </summary>
+    private void SetCraftBookmarkIcon(BookmarkCraftData recipe)
+    {
+        Grade grade = GetGradeFromRecipe(recipe);
+
+        Image targetImage = (SelectedBookmarkType == BookmarkType.Stat)
+            ? statCraftBookmarkIcon
+            : skillCraftBookmarkIcon;
+
+        if (targetImage != null && cachedBookmarkIcons.TryGetValue(grade, out Sprite icon))
+        {
+            targetImage.sprite = icon;
+        }
     }
     #endregion
 
@@ -568,8 +621,8 @@ public class BookMarkUI : MonoBehaviour
             resultText.text = "제작 성공!";
         }
 
-        // JML: 2. 책갈피 아이콘 로드 (비동기)
-        LoadResultBookmarkIcon(result.CraftedBookmark).Forget();
+        // JML: 2. 책갈피 아이콘 (캐시에서 즉시 적용)
+        SetResultBookmarkIcon(result.CraftedBookmark);
 
         // JML: 3. 옵션 정보 텍스트 생성
         resultOptionText.text = GenerateResultOptionText(result.CraftedBookmark);
@@ -579,14 +632,11 @@ public class BookMarkUI : MonoBehaviour
     }
 
     /// <summary>
-    /// JML: 결과 패널 책갈피 아이콘 로드
+    /// JML: 결과 패널 책갈피 아이콘 (캐시에서 즉시 적용)
     /// </summary>
-    private async UniTaskVoid LoadResultBookmarkIcon(BookMark bookMark)
+    private void SetResultBookmarkIcon(BookMark bookMark)
     {
-        string iconKey = GetBookmarkIconKey(bookMark);
-        var icon = await UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(iconKey).ToUniTask();
-
-        if (ResultBookMarkImage != null && icon != null)
+        if (ResultBookMarkImage != null && cachedBookmarkIcons.TryGetValue(bookMark.Grade, out Sprite icon))
         {
             ResultBookMarkImage.sprite = icon;
         }

@@ -29,6 +29,7 @@ namespace NovelianMagicLibraryDefense.UI
         // 캐시된 결과 데이터
         private float cachedProgressTime;
         private int cachedKillCount;
+        private float cachedWallHpRatio; // Wall HP 비율 (0.0 ~ 1.0)
 
         public bool IsOpen => panel != null && panel.activeSelf;
 
@@ -68,10 +69,11 @@ namespace NovelianMagicLibraryDefense.UI
         /// <summary>
         /// 클리어 패널 표시 (데이터 포함)
         /// </summary>
-        public void Show(float progressTime, int killCount)
+        public void Show(float progressTime, int killCount, float wallHpRatio)
         {
             cachedProgressTime = progressTime;
             cachedKillCount = killCount;
+            cachedWallHpRatio = wallHpRatio;
 
             if (panel != null)
             {
@@ -87,7 +89,7 @@ namespace NovelianMagicLibraryDefense.UI
             // 보상 지급
             GiveRewards();
 
-            Debug.Log($"[StageClearPanel] Shown - Time: {progressTime:F1}s, Kills: {killCount}");
+            Debug.Log($"[StageClearPanel] Shown - Time: {progressTime:F1}s, Kills: {killCount}, WallHP: {wallHpRatio:P0}");
         }
 
         /// <summary>
@@ -95,7 +97,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void Show()
         {
-            Show(0f, 0);
+            Show(0f, 0, 1f);
         }
 
         /// <summary>
@@ -131,21 +133,16 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// 랭크 계산 (시간 기반)
+        /// 랭크 계산 (Wall HP 비율 기반)
+        /// S: 91~100%, A: 71~90%, B: 51~70%, C: 0~50%
         /// </summary>
         private string CalculateRank()
         {
-            if (!SelectedStage.HasSelection) return "S";
-
-            float timeLimit = SelectedStage.Data.Time_Limit;
-            float timeRatio = cachedProgressTime / timeLimit;
-
-            // 시간 비율에 따른 랭크 (빠를수록 높은 랭크)
-            if (timeRatio <= 0.3f) return "S";
-            if (timeRatio <= 0.5f) return "A";
-            if (timeRatio <= 0.7f) return "B";
-            if (timeRatio <= 0.9f) return "C";
-            return "D";
+            // Wall HP 비율에 따른 랭크 (HP가 많이 남을수록 높은 랭크)
+            if (cachedWallHpRatio >= 0.91f) return "S";
+            if (cachedWallHpRatio >= 0.71f) return "A";
+            if (cachedWallHpRatio >= 0.51f) return "B";
+            return "C";
         }
 
         /// <summary>
