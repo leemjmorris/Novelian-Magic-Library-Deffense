@@ -16,7 +16,7 @@ public class MouseOrbitImproved : MonoBehaviour
     public float distanceMin = .5f;
     public float distanceMax = 15f;
 
-    private Rigidbody rigidbody;
+    private new Rigidbody rigidbody;
 
     float x = 0.0f;
     float y = 0.0f;
