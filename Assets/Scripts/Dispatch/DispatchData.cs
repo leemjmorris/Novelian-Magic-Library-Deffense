@@ -4,12 +4,12 @@ using UnityEngine;
 namespace Dispatch
 {
     /// <summary>
-    /// 파견 타입 (채집형/전투형)
+    /// 파견 타입 (전투형/채집형)
     /// </summary>
     public enum DispatchType
     {
-        Combat = 1,      // 전투형 (지하 파견)
-        Collection = 2,  // 채집형 (지상 파견)
+        Combat = 1,      // 전투형 파견
+        Gathering = 2,   // 채집형 파견 (구 Collection)
     }
 
     /// <summary>

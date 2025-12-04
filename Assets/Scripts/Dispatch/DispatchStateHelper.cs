@@ -7,7 +7,9 @@ namespace Dispatch
     /// </summary>
     public static class DispatchStateHelper
     {
-        private const string DISPATCH_SAVE_KEY = "DispatchTestPanel_SaveData";
+        // 전투형/채집형 파견 저장 키
+        private const string COMBAT_DISPATCH_SAVE_KEY = "CombatDispatch_SaveData";
+        private const string GATHERING_DISPATCH_SAVE_KEY = "GatheringDispatch_SaveData";
 
         /// <summary>
         /// 파견 상태 저장 데이터 구조
@@ -24,19 +26,45 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 파견 완료 여부 확인
+        /// 파견 완료 여부 확인 (전투형 또는 채집형 중 하나라도 완료되면 true)
         /// </summary>
         /// <returns>파견 완료 상태면 true, 아니면 false</returns>
         public static bool IsDispatchCompleted()
         {
+            return IsDispatchCompleted(COMBAT_DISPATCH_SAVE_KEY) || IsDispatchCompleted(GATHERING_DISPATCH_SAVE_KEY);
+        }
+
+        /// <summary>
+        /// 전투형 파견 완료 여부 확인
+        /// </summary>
+        public static bool IsCombatDispatchCompleted()
+        {
+            return IsDispatchCompleted(COMBAT_DISPATCH_SAVE_KEY);
+        }
+
+        /// <summary>
+        /// 채집형 파견 완료 여부 확인
+        /// </summary>
+        public static bool IsGatheringDispatchCompleted()
+        {
+            return IsDispatchCompleted(GATHERING_DISPATCH_SAVE_KEY);
+        }
+
+        /// <summary>
+        /// 파견 완료 여부 확인 (커스텀 키)
+        /// </summary>
+        /// <param name="saveKey">확인할 파견 저장 키</param>
+        /// <returns>파견 완료 상태면 true, 아니면 false</returns>
+        public static bool IsDispatchCompleted(string saveKey)
+        {
             // 저장된 파견 상태가 없으면 false
-            if (!PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+            if (!PlayerPrefs.HasKey(saveKey))
             {
                 return false;
             }
 
             // 파견 상태 데이터 로드
-            string json = PlayerPrefs.GetString(DISPATCH_SAVE_KEY);
+            string json = PlayerPrefs.GetString(saveKey);
             var saveData = JsonUtility.FromJson<DispatchSaveData>(json);
 
             if (saveData == null || !saveData.isDispatching)
@@ -60,17 +88,37 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 남은 파견 시간 계산 (초 단위)
+        /// 남은 파견 시간 계산 (초 단위) - 전투형/채집형 중 파견 중인 것의 남은 시간 반환
         /// </summary>
         /// <returns>남은 시간 (초), 파견 중이 아니면 -1</returns>
         public static float GetRemainingTime()
         {
-            if (!PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+            float combatRemaining = GetRemainingTime(COMBAT_DISPATCH_SAVE_KEY);
+            float gatheringRemaining = GetRemainingTime(GATHERING_DISPATCH_SAVE_KEY);
+
+            // 둘 다 파견 중이면 더 짧은 남은 시간 반환
+            if (combatRemaining >= 0f && gatheringRemaining >= 0f)
+            {
+                return Mathf.Min(combatRemaining, gatheringRemaining);
+            }
+            // 하나만 파견 중이면 해당 시간 반환
+            if (combatRemaining >= 0f) return combatRemaining;
+            if (gatheringRemaining >= 0f) return gatheringRemaining;
+
+            return -1f;
+        }
+
+        /// <summary>
+        /// 특정 키의 남은 파견 시간 계산 (초 단위)
+        /// </summary>
+        private static float GetRemainingTime(string saveKey)
+        {
+            if (!PlayerPrefs.HasKey(saveKey))
             {
                 return -1f;
             }
 
-            string json = PlayerPrefs.GetString(DISPATCH_SAVE_KEY);
+            string json = PlayerPrefs.GetString(saveKey);
             var saveData = JsonUtility.FromJson<DispatchSaveData>(json);
 
             if (saveData == null || !saveData.isDispatching)
@@ -91,17 +139,25 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 파견 중인지 확인
+        /// 파견 중인지 확인 (전투형 또는 채집형 중 하나라도 파견 중이면 true)
         /// </summary>
         /// <returns>파견 중이면 true, 아니면 false</returns>
         public static bool IsDispatching()
         {
-            if (!PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+            return IsDispatchingByKey(COMBAT_DISPATCH_SAVE_KEY) || IsDispatchingByKey(GATHERING_DISPATCH_SAVE_KEY);
+        }
+
+        /// <summary>
+        /// 특정 키의 파견 중 여부 확인
+        /// </summary>
+        private static bool IsDispatchingByKey(string saveKey)
+        {
+            if (!PlayerPrefs.HasKey(saveKey))
             {
                 return false;
             }
 
-            string json = PlayerPrefs.GetString(DISPATCH_SAVE_KEY);
+            string json = PlayerPrefs.GetString(saveKey);
             var saveData = JsonUtility.FromJson<DispatchSaveData>(json);
 
             return saveData != null && saveData.isDispatching;

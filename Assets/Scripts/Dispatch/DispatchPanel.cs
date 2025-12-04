@@ -26,12 +26,24 @@ namespace Dispatch
             public int selectedLocation; // DispatchLocation enum 값 (int로 저장)
             public int selectedHours;
             public int selectedTimeID;
+            public int dispatchType; // 파견 타입 (Combat=1, Gathering=2)
         }
 
-        private const string DISPATCH_SAVE_KEY = "DispatchTestPanel_SaveData";
+        // 파견 타입별 저장 키 (전투형/채집형 분리)
+        // 패널의 고정된 타입을 사용
+        private string GetSaveKey()
+        {
+            return panelDispatchType == DispatchType.Combat
+                ? "CombatDispatch_SaveData"
+                : "GatheringDispatch_SaveData";
+        }
+        [Header("패널 타입 설정")]
+        [SerializeField] private DispatchType panelDispatchType = DispatchType.Combat; // 이 패널의 파견 타입 (Inspector에서 고정)
+
         [Header("파견 매니저 참조")]
         [SerializeField] private DispatchManager dispatchManager;
         [SerializeField] private CombatDispatchController combatDispatchController;
+        [SerializeField] private CombatDispatchController gatheringDispatchController; // 채집형 디스패치 컨트롤러
 
         [Header("UI 요소")]
         [SerializeField] private Slider timeSlider;                      // 시간 선택 슬라이더
@@ -74,6 +86,11 @@ namespace Dispatch
         [SerializeField] private GameObject tipText3;  // 웃음의 창고 팁
         [SerializeField] private GameObject tipText4;  // 진실의 창고 팁
         [SerializeField] private GameObject tipText5;  // 미지의 창고 팁
+        [SerializeField] private GameObject tipText6;  // 마도 서고 정돈 팁
+        [SerializeField] private GameObject tipText7;  // 마력 장벽 유지 검사 팁
+        [SerializeField] private GameObject tipText8;  // 마도서 표지 복원 팁
+        [SerializeField] private GameObject tipText9;  // 봉인구 안정성 확인 팁
+        [SerializeField] private GameObject tipText10; // 마력 잔재 정화 팁
 
         private int currentSelectedHours = 4;
         private int currentSelectedTimeID;
@@ -83,9 +100,11 @@ namespace Dispatch
         // 파견 상태 관리
         private bool isDispatching = false;
         private float remainingTime = 0f;
+        private DispatchType currentDispatchType = DispatchType.Combat; // 현재 파견 타입
 
         // 스냅 스크롤 관련
         private int totalCombatButtons = 5;  // 전투형 5개
+        private int totalGatheringButtons = 5; // 채집형 5개
         private int currentButtonIndex = 0;
         private bool isDragging = false;
         private float targetScrollPosition = 0f;
@@ -111,16 +130,24 @@ namespace Dispatch
             // 모든 팁 텍스트 초기 비활성화
             HideAllTipTexts();
 
-            // 스크롤뷰를 맨 왼쪽(악몽의 창고)으로 이동 (파견 중이 아닐 때만)
+            // 스크롤뷰를 맨 왼쪽으로 이동 (파견 중이 아닐 때만)
             if (!isDispatching && buttonScrollRect != null)
                 buttonScrollRect.horizontalNormalizedPosition = 0f;
 
             // 덱 캐릭터 로드
             LoadDeckCharacters();
 
-            // 첫 번째 창고(악몽의 창고) 팁 표시 (파견 중이 아닐 때만)
+            // 패널 타입에 따라 첫 번째 장소 설정 (파견 중이 아닐 때만)
             if (!isDispatching)
-                ShowTipText(DispatchLocation.NightmareWarehouse);
+            {
+                DispatchLocation initialLocation = panelDispatchType == DispatchType.Combat
+                    ? DispatchLocation.NightmareWarehouse
+                    : DispatchLocation.MagicLibraryOrganization;
+
+                currentSelectedLocation = initialLocation;
+                ShowTipText(initialLocation);
+                UpdateTimeDisplay(0);
+            }
 
             AddLog("파견 테스트 패널 초기화 완료");
         }
@@ -260,11 +287,16 @@ namespace Dispatch
 
             // 현재 스크롤 위치에서 가장 가까운 버튼 인덱스 계산
             float currentPos = buttonScrollRect.horizontalNormalizedPosition;
-            currentButtonIndex = Mathf.RoundToInt(currentPos * (totalCombatButtons - 1));
-            currentButtonIndex = Mathf.Clamp(currentButtonIndex, 0, totalCombatButtons - 1);
+
+            // 패널 타입으로 전투형/채집형 판단
+            bool isCombatPanel = panelDispatchType == DispatchType.Combat;
+
+            int totalButtons = isCombatPanel ? totalCombatButtons : totalGatheringButtons;
+            currentButtonIndex = Mathf.RoundToInt(currentPos * (totalButtons - 1));
+            currentButtonIndex = Mathf.Clamp(currentButtonIndex, 0, totalButtons - 1);
 
             // 타겟 위치 설정
-            targetScrollPosition = (float)currentButtonIndex / (totalCombatButtons - 1);
+            targetScrollPosition = (float)currentButtonIndex / (totalButtons - 1);
         }
 
         /// <summary>
@@ -274,18 +306,26 @@ namespace Dispatch
         {
             if (buttonScrollRect == null) return;
 
+            // 파견 중에는 장소 변경 불가
+            if (isDispatching) return;
+
             // 현재 스크롤 위치에서 가장 가까운 버튼 인덱스 계산
             float currentPos = buttonScrollRect.horizontalNormalizedPosition;
-            int newButtonIndex = Mathf.RoundToInt(currentPos * (totalCombatButtons - 1));
-            newButtonIndex = Mathf.Clamp(newButtonIndex, 0, totalCombatButtons - 1);
 
-            // 창고가 변경되었을 때만 업데이트
-            if (newButtonIndex != currentButtonIndex)
+            // 패널 타입으로 전투형/채집형 판단
+            bool isCombatPanel = panelDispatchType == DispatchType.Combat;
+
+            int totalButtons = isCombatPanel ? totalCombatButtons : totalGatheringButtons;
+            int newButtonIndex = Mathf.RoundToInt(currentPos * (totalButtons - 1));
+            newButtonIndex = Mathf.Clamp(newButtonIndex, 0, totalButtons - 1);
+
+            // 인덱스에 따라 창고 위치 결정 (전투형/채집형 구분)
+            DispatchLocation newLocation;
+
+            if (isCombatPanel)
             {
-                currentButtonIndex = newButtonIndex;
-
-                // 인덱스에 따라 창고 위치 결정
-                DispatchLocation newLocation = newButtonIndex switch
+                // 전투형 장소 (1-5)
+                newLocation = newButtonIndex switch
                 {
                     0 => DispatchLocation.NightmareWarehouse,
                     1 => DispatchLocation.FateWarehouse,
@@ -294,17 +334,30 @@ namespace Dispatch
                     4 => DispatchLocation.UnknownWarehouse,
                     _ => DispatchLocation.NightmareWarehouse
                 };
+            }
+            else
+            {
+                // 채집형 장소 (6-10)
+                newLocation = newButtonIndex switch
+                {
+                    0 => DispatchLocation.MagicLibraryOrganization,
+                    1 => DispatchLocation.MagicBarrierInspection,
+                    2 => DispatchLocation.SpellbookCoverRestoration,
+                    3 => DispatchLocation.SealStabilityCheck,
+                    4 => DispatchLocation.MagicResiduePurification,
+                    _ => DispatchLocation.MagicLibraryOrganization
+                };
+            }
 
-                // 창고 변경
-                currentSelectedLocation = newLocation;
+            // 창고가 변경되었을 때만 업데이트
+            if (newButtonIndex != currentButtonIndex || currentSelectedLocation != newLocation)
+            {
+                currentButtonIndex = newButtonIndex;
 
-                // 팁 텍스트 업데이트
-                ShowTipText(newLocation);
+                // OnLocationButtonClicked()를 호출하여 버튼 클릭과 동일한 로직 사용
+                OnLocationButtonClicked(newLocation);
 
-                // 보상 정보 업데이트
-                UpdateTimeDisplay(Mathf.RoundToInt(timeSlider.value));
-
-                AddLog($"📍 스와이프로 창고 변경: {GetLocationName(newLocation)}");
+                AddLog($"📍 스와이프로 장소 변경: {GetLocationName(newLocation)}");
             }
         }
 
@@ -360,6 +413,9 @@ namespace Dispatch
         /// </summary>
         private void OnLocationButtonClicked(DispatchLocation location)
         {
+            // 파견 중에는 장소 변경 불가
+            if (isDispatching) return;
+
             currentSelectedLocation = location;
 
             AddLog($"📍 선택된 장소: {GetLocationName(location)}");
@@ -474,10 +530,22 @@ namespace Dispatch
             if (dispatchStartButton != null)
                 dispatchStartButton.interactable = true;
 
-            // CombatDispatchController에게 파견 완료 알림 (Red Dot 활성화)
-            if (combatDispatchController != null)
+            // 패널 타입에 맞는 DispatchController에게 파견 완료 알림 (Red Dot 활성화)
+            if (panelDispatchType == DispatchType.Combat)
             {
-                combatDispatchController.OnDispatchCompleted();
+                if (combatDispatchController != null)
+                {
+                    combatDispatchController.OnDispatchCompleted();
+                    AddLog("✅ 전투형 파견 완료 - Red Dot 활성화");
+                }
+            }
+            else if (panelDispatchType == DispatchType.Gathering)
+            {
+                if (gatheringDispatchController != null)
+                {
+                    gatheringDispatchController.OnDispatchCompleted();
+                    AddLog("✅ 채집형 파견 완료 - Red Dot 활성화");
+                }
             }
         }
 
@@ -516,6 +584,24 @@ namespace Dispatch
             }
 
             AddLog("✅ 보상이 인벤토리에 추가되었습니다.");
+
+            // 패널 타입에 맞는 DispatchController에게 보상 획득 알림 (Red Dot 비활성화)
+            if (panelDispatchType == DispatchType.Combat)
+            {
+                if (combatDispatchController != null)
+                {
+                    combatDispatchController.OnRewardClaimed();
+                    AddLog("✅ 전투형 보상 획득 - Red Dot 비활성화");
+                }
+            }
+            else if (panelDispatchType == DispatchType.Gathering)
+            {
+                if (gatheringDispatchController != null)
+                {
+                    gatheringDispatchController.OnRewardClaimed();
+                    AddLog("✅ 채집형 보상 획득 - Red Dot 비활성화");
+                }
+            }
 
             // 파견 상태 초기화
             ResetDispatchUI();
@@ -776,7 +862,9 @@ namespace Dispatch
                 return;
             }
 
-            string dispatchTypeName = ((DispatchType)categoryData.Dispatch_Category) == DispatchType.Combat ? "전투형" : "채집형";
+            // 현재 파견 타입 저장
+            currentDispatchType = (DispatchType)categoryData.Dispatch_Category;
+            string dispatchTypeName = currentDispatchType == DispatchType.Combat ? "전투형" : "채집형";
             AddLog($"🎯 파견 타입: {dispatchTypeName}");
             AddLog($"⏰ 파견 시간: {currentSelectedHours}시간 (Time ID: {currentSelectedTimeID})");
 
@@ -822,6 +910,11 @@ namespace Dispatch
             if (tipText3 != null) tipText3.SetActive(false);
             if (tipText4 != null) tipText4.SetActive(false);
             if (tipText5 != null) tipText5.SetActive(false);
+            if (tipText6 != null) tipText6.SetActive(false);
+            if (tipText7 != null) tipText7.SetActive(false);
+            if (tipText8 != null) tipText8.SetActive(false);
+            if (tipText9 != null) tipText9.SetActive(false);
+            if (tipText10 != null) tipText10.SetActive(false);
         }
 
         /// <summary>
@@ -835,11 +928,18 @@ namespace Dispatch
             // 해당 창고의 팁만 활성화
             GameObject targetTip = location switch
             {
+                // 전투형
                 DispatchLocation.NightmareWarehouse => tipText1,
                 DispatchLocation.FateWarehouse => tipText2,
                 DispatchLocation.LaughterWarehouse => tipText3,
                 DispatchLocation.TruthWarehouse => tipText4,
                 DispatchLocation.UnknownWarehouse => tipText5,
+                // 채집형
+                DispatchLocation.MagicLibraryOrganization => tipText6,
+                DispatchLocation.MagicBarrierInspection => tipText7,
+                DispatchLocation.SpellbookCoverRestoration => tipText8,
+                DispatchLocation.SealStabilityCheck => tipText9,
+                DispatchLocation.MagicResiduePurification => tipText10,
                 _ => null
             };
 
@@ -905,15 +1005,22 @@ namespace Dispatch
                     string fixedText = reward.Is_Fixed ? "[고정]" : $"[{reward.Probability * 100:F1}% 성공]";
                     AddLog($"  ✅ {fixedText} {itemName} x{dropCount}");
 
-                    // 실제 인벤토리에 추가
-                    if (IngredientManager.Instance != null)
+                    // 골드(1601)는 CurrencyManager로, 나머지는 IngredientManager로 추가
+                    if (reward.Item_ID == 1601)
                     {
-                        IngredientManager.Instance.AddIngredient(reward.Item_ID, dropCount);
-                        AddLog($"  💼 인벤토리에 추가됨");
+                        if (CurrencyManager.Instance != null)
+                        {
+                            CurrencyManager.Instance.AddGold(dropCount);
+                            AddLog($"  💰 골드 추가됨");
+                        }
                     }
                     else
                     {
-                        AddLog($"  ⚠️ IngredientManager가 없어서 인벤토리에 추가되지 않았습니다");
+                        if (IngredientManager.Instance != null)
+                        {
+                            IngredientManager.Instance.AddIngredient(reward.Item_ID, dropCount);
+                            AddLog($"  💼 인벤토리에 추가됨");
+                        }
                     }
                 }
                 else
@@ -1094,35 +1201,43 @@ namespace Dispatch
                 startTimeString = dispatchStartTime.ToString("o"), // ISO 8601 형식
                 selectedLocation = (int)currentSelectedLocation,
                 selectedHours = currentSelectedHours,
-                selectedTimeID = currentSelectedTimeID
+                selectedTimeID = currentSelectedTimeID,
+                dispatchType = (int)currentDispatchType // 파견 타입 저장
             };
 
             string json = JsonUtility.ToJson(saveData);
-            PlayerPrefs.SetString(DISPATCH_SAVE_KEY, json);
+            string saveKey = GetSaveKey();
+            PlayerPrefs.SetString(saveKey, json);
             PlayerPrefs.Save();
 
-            AddLog($"💾 파견 상태 저장됨 - 남은 시간: {remainingTime}초");
+            AddLog($"💾 파견 상태 저장됨 ({currentDispatchType}) - 남은 시간: {remainingTime}초");
         }
 
         /// <summary>
-        /// 파견 상태 복원
+        /// 파견 상태 복원 (자신의 패널 타입만 로드)
         /// </summary>
         private void LoadDispatchState()
         {
-            if (!PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+            // 이 패널의 고정된 타입에 해당하는 저장 키만 확인
+            string saveKey = GetSaveKey();
+
+            if (!PlayerPrefs.HasKey(saveKey))
             {
-                AddLog("📂 저장된 파견 상태 없음");
+                AddLog($"📂 저장된 파견 상태 없음 ({panelDispatchType})");
                 return;
             }
 
-            string json = PlayerPrefs.GetString(DISPATCH_SAVE_KEY);
+            string json = PlayerPrefs.GetString(saveKey);
             DispatchSaveData saveData = JsonUtility.FromJson<DispatchSaveData>(json);
 
             if (saveData == null || !saveData.isDispatching)
             {
-                AddLog("📂 파견 중이 아님");
+                AddLog($"📂 파견 중이 아님 ({panelDispatchType})");
                 return;
             }
+
+            // 현재 파견 타입을 패널 타입으로 설정
+            currentDispatchType = panelDispatchType;
 
             // 시작 시간 파싱
             if (!System.DateTime.TryParse(saveData.startTimeString, out dispatchStartTime))
@@ -1138,6 +1253,9 @@ namespace Dispatch
 
             // 남은 시간 계산
             remainingTime = saveData.totalDispatchTime - elapsedSeconds;
+
+            // 파견 타입 복원
+            currentDispatchType = (DispatchType)saveData.dispatchType;
 
             // 이미 파견 완료된 경우
             if (remainingTime <= 0f)
@@ -1188,15 +1306,30 @@ namespace Dispatch
                 if (dispatchStartButton != null)
                     dispatchStartButton.interactable = true;
 
-                // CombatDispatchController에게 파견 완료 알림 (Red Dot 활성화)
-                if (combatDispatchController != null)
+                // 패널 타입에 맞는 DispatchController에게 파견 완료 알림 (Red Dot 활성화)
+                if (panelDispatchType == DispatchType.Combat)
                 {
-                    combatDispatchController.OnDispatchCompleted();
-                    AddLog("✅ 파견 UI 복원 완료 - 획득하기 버튼 활성화 + Red Dot 활성화");
+                    if (combatDispatchController != null)
+                    {
+                        combatDispatchController.OnDispatchCompleted();
+                        AddLog("✅ 파견 UI 복원 완료 - 획득하기 버튼 활성화 + 전투형 Red Dot 활성화");
+                    }
+                    else
+                    {
+                        AddLog("✅ 파견 UI 복원 완료 - 획득하기 버튼 활성화 (전투형 컨트롤러 없음)");
+                    }
                 }
-                else
+                else if (panelDispatchType == DispatchType.Gathering)
                 {
-                    AddLog("✅ 파견 UI 복원 완료 - 획득하기 버튼 활성화");
+                    if (gatheringDispatchController != null)
+                    {
+                        gatheringDispatchController.OnDispatchCompleted();
+                        AddLog("✅ 파견 UI 복원 완료 - 획득하기 버튼 활성화 + 채집형 Red Dot 활성화");
+                    }
+                    else
+                    {
+                        AddLog("✅ 파견 UI 복원 완료 - 획득하기 버튼 활성화 (채집형 컨트롤러 없음)");
+                    }
                 }
             }
             else
@@ -1212,22 +1345,44 @@ namespace Dispatch
         {
             if (buttonScrollRect == null) return;
 
-            // 현재 선택된 창고에 해당하는 인덱스 찾기
-            int warehouseIndex = currentSelectedLocation switch
+            // 패널 타입에 따라 인덱스 및 총 버튼 수 결정
+            int warehouseIndex;
+            int totalButtons;
+
+            if (panelDispatchType == DispatchType.Combat)
             {
-                DispatchLocation.NightmareWarehouse => 0,
-                DispatchLocation.FateWarehouse => 1,
-                DispatchLocation.LaughterWarehouse => 2,
-                DispatchLocation.TruthWarehouse => 3,
-                DispatchLocation.UnknownWarehouse => 4,
-                _ => 0
-            };
+                // 전투형 장소 (0-4)
+                warehouseIndex = currentSelectedLocation switch
+                {
+                    DispatchLocation.NightmareWarehouse => 0,
+                    DispatchLocation.FateWarehouse => 1,
+                    DispatchLocation.LaughterWarehouse => 2,
+                    DispatchLocation.TruthWarehouse => 3,
+                    DispatchLocation.UnknownWarehouse => 4,
+                    _ => 0
+                };
+                totalButtons = totalCombatButtons;
+            }
+            else
+            {
+                // 채집형 장소 (0-4)
+                warehouseIndex = currentSelectedLocation switch
+                {
+                    DispatchLocation.MagicLibraryOrganization => 0,
+                    DispatchLocation.MagicBarrierInspection => 1,
+                    DispatchLocation.SpellbookCoverRestoration => 2,
+                    DispatchLocation.SealStabilityCheck => 3,
+                    DispatchLocation.MagicResiduePurification => 4,
+                    _ => 0
+                };
+                totalButtons = totalGatheringButtons;
+            }
 
             // 버튼 인덱스 업데이트
             currentButtonIndex = warehouseIndex;
 
             // 스크롤 위치 계산 및 이동
-            float scrollPosition = (float)warehouseIndex / (totalCombatButtons - 1);
+            float scrollPosition = (float)warehouseIndex / (totalButtons - 1);
             buttonScrollRect.horizontalNormalizedPosition = scrollPosition;
             targetScrollPosition = scrollPosition;
 
@@ -1239,11 +1394,12 @@ namespace Dispatch
         /// </summary>
         private void ClearDispatchState()
         {
-            if (PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+            string saveKey = GetSaveKey();
+            if (PlayerPrefs.HasKey(saveKey))
             {
-                PlayerPrefs.DeleteKey(DISPATCH_SAVE_KEY);
+                PlayerPrefs.DeleteKey(saveKey);
                 PlayerPrefs.Save();
-                AddLog("🗑️ 파견 상태 삭제됨");
+                AddLog($"🗑️ 파견 상태 삭제됨 ({currentDispatchType})");
             }
         }
 
