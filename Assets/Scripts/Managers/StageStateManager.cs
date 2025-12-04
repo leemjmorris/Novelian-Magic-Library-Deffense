@@ -141,10 +141,11 @@ namespace NovelianMagicLibraryDefense.Managers
                 // JML: StageClearPanel 사용 (로비/다음 스테이지 선택)
                 if (stageClearPanel != null)
                 {
-                    // 진행 시간 및 처치 몬스터 수 전달
+                    // 진행 시간, 처치 몬스터 수, Wall HP 비율 전달
                     float progressTime = stageManager != null ? stageManager.GetProgressTime() : 0f;
                     int killCount = waveManager != null ? waveManager.GetKillCount() : 0;
-                    stageClearPanel.Show(progressTime, killCount);
+                    float wallHpRatio = wall != null ? wall.GetHealth() / wall.GetMaxHealth() : 1f;
+                    stageClearPanel.Show(progressTime, killCount, wallHpRatio);
                 }
                 else
                 {

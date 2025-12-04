@@ -87,7 +87,7 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 int minutes = Mathf.FloorToInt(timeInSeconds / 60f);
                 int seconds = Mathf.FloorToInt(timeInSeconds % 60f);
-                waveTimerDisplay.text = $"웨이브 시간: {minutes:00}:{seconds:00}";
+                waveTimerDisplay.text = $"스테이지 시간: {minutes:00}:{seconds:00}";
             }
         }
 

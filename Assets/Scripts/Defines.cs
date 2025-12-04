@@ -62,6 +62,11 @@ public static class AddressableKey
     public static readonly string IconComedy = "Icon_Comedy";
     public static readonly string Icon_Character = "ChaIcon";
     public static readonly string Icon_Plus = "Plus";
+    public static readonly string Icon_LegendaryBookmark = "LegendaryBookmark";
+    public static readonly string Icon_MythicBookmark = "MythicBookmark";
+    public static readonly string Icon_NormalBookmark = "NormalBookmark";
+    public static readonly string Icon_RareBookmark = "RareBookmark";
+    public static readonly string Icon_UniqueBookmark = "UniqueBookmark";
 
     // 새 스킬 시스템 CSV 테이블
     public static readonly string MainSkillTable = "MainSkillTable";
@@ -121,6 +126,22 @@ public static class AddressableKey
         }
 
         return pathData.Addressable_Key;
+    }
+
+    /// <summary>
+    /// JML: Grade에 따른 책갈피 아이콘 어드레서블 키 반환
+    /// </summary>
+    public static string GetBookmarkIconKey(Grade grade)
+    {
+        return grade switch
+        {
+            Grade.Common => Icon_NormalBookmark,
+            Grade.Rare => Icon_RareBookmark,
+            Grade.Unique => Icon_UniqueBookmark,
+            Grade.Legendary => Icon_LegendaryBookmark,
+            Grade.Mythic => Icon_MythicBookmark,
+            _ => Icon_NormalBookmark
+        };
     }
 }
 

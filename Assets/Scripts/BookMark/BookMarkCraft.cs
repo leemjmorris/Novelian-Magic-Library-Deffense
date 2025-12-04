@@ -324,7 +324,7 @@ public static class BookMarkCraft
             var skillBookmark = new BookMark(
                 bookmarkDataID: bookmarkData.Bookmark_ID,
                 name: bookmarkName,
-                grade: (Grade)bookmarkData.Grade_ID,
+                grade: CSVLoader.Instance.GetData<GradeData>(bookmarkData.Grade_ID)?.Grade_Type ?? Grade.Common,
                 optionType: 0,
                 optionValue: 0,
                 skillID: bookmarkData.Skill_ID
@@ -358,7 +358,7 @@ public static class BookMarkCraft
             var statBookmark = new BookMark(
                 bookmarkDataID: bookmarkData.Bookmark_ID,
                 name: statBookmarkName,
-                grade: (Grade)bookmarkData.Grade_ID,
+                grade: CSVLoader.Instance.GetData<GradeData>(bookmarkData.Grade_ID)?.Grade_Type ?? Grade.Common,
                 optionType: (int)optionData.Option_Type,
                 optionValue: optionData.Option_Value
             );
