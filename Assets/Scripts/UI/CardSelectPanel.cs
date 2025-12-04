@@ -29,6 +29,11 @@ namespace NovelianMagicLibraryDefense.UI
         [SerializeField] private GameObject statCard_Damage;
         [SerializeField] private GameObject statCard_ProjectileSpeed;
         [SerializeField] private GameObject statCard_Range;
+        [SerializeField] private GameObject statCard_CritMultiplier;
+        [SerializeField] private GameObject statCard_CritChance;
+        [SerializeField] private GameObject statCard_TotalDamage;
+        [SerializeField] private GameObject statCard_BonusDamage;
+        [SerializeField] private GameObject statCard_HealthRegen;
 
         [Header("Settings")]
         [SerializeField] private bool pauseOnGameStart = true;
@@ -314,23 +319,22 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// JML: CardTable의 Card_ID를 내부 Ability ID(1~4)로 매핑
-        /// 081001=공격력(2), 081002=치명타배율, 081003=공격속도(1), 081004=치명타확률
-        /// 082005=투사체속도(3), 082006=총공격력, 083007=추가데미지, 083008=체력회복
+        /// JML: CardTable의 Card_ID를 StatType 기반 Ability ID로 매핑
+        /// StatType enum 값과 일치시킴 (Defines.cs 참조)
         /// </summary>
         private int MapCardIdToAbilityId(int cardId)
         {
             return cardId switch
             {
-                081001 => 2, // 공격력 증가
-                081002 => 5, // 치명타 배율 (현재 미지원, fallback)
-                081003 => 1, // 공격속도 증가
-                081004 => 5, // 치명타 확률 (현재 미지원, fallback)
-                082005 => 3, // 투사체 속도 증가
-                082006 => 2, // 총 공격력 → 공격력으로 대체
-                083007 => 2, // 추가 데미지 → 공격력으로 대체
-                083008 => 5, // 체력 회복 (현재 미지원, fallback)
-                _ => 2 // fallback: 공격력
+                081001 => (int)StatType.Damage,           // 공격력 증가
+                081002 => (int)StatType.CritMultiplier,   // 치명타 배율 증가
+                081003 => (int)StatType.AttackSpeed,      // 공격속도 증가
+                081004 => (int)StatType.CritChance,       // 치명타 확률 증가
+                082005 => (int)StatType.ProjectileSpeed,  // 투사체 속도 증가
+                082006 => (int)StatType.TotalDamage,      // 총 공격력 증가
+                083007 => (int)StatType.BonusDamage,      // 추가 데미지
+                083008 => (int)StatType.HealthRegen,      // 체력 회복
+                _ => (int)StatType.Damage // fallback: 공격력
             };
         }
 
@@ -364,7 +368,18 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private CardData[] GetRandomStatCards(int count)
         {
-            int[] abilityPool = { 1, 2, 3, 4 }; // 공격속도, 공격력, 투사체속도, 사거리
+            // StatType enum 값 사용 (모든 스탯 카드 타입 지원)
+            int[] abilityPool = {
+                (int)StatType.Damage,           // 공격력
+                (int)StatType.CritMultiplier,   // 치명타 배율
+                (int)StatType.AttackSpeed,      // 공격 속도
+                (int)StatType.CritChance,       // 치명타 확률
+                (int)StatType.ProjectileSpeed,  // 투사체 속도
+                (int)StatType.TotalDamage,      // 총 공격력
+                (int)StatType.BonusDamage,      // 추가 데미지
+                (int)StatType.HealthRegen,      // 체력 회복
+                (int)StatType.Range             // 사거리
+            };
             CardData[] cards = new CardData[count];
 
             for (int i = 0; i < count; i++)
@@ -381,7 +396,17 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private CardData GetRandomStatCard()
         {
-            int[] abilityPool = { 1, 2, 3, 4 };
+            int[] abilityPool = {
+                (int)StatType.Damage,
+                (int)StatType.CritMultiplier,
+                (int)StatType.AttackSpeed,
+                (int)StatType.CritChance,
+                (int)StatType.ProjectileSpeed,
+                (int)StatType.TotalDamage,
+                (int)StatType.BonusDamage,
+                (int)StatType.HealthRegen,
+                (int)StatType.Range
+            };
             int randomId = abilityPool[UnityEngine.Random.Range(0, abilityPool.Length)];
             return new CardData(CardType.Ability, randomId);
         }
@@ -452,12 +477,18 @@ namespace NovelianMagicLibraryDefense.UI
                 return characterCardPrefab;
             }
 
+            // StatType enum 값에 맞춰 프리팹 반환 (없으면 statCard_Damage로 fallback)
             return cardData.Id switch
             {
-                1 => statCard_AttackSpeed,
-                2 => statCard_Damage,
-                3 => statCard_ProjectileSpeed,
-                4 => statCard_Range,
+                (int)StatType.Damage => statCard_Damage,
+                (int)StatType.CritMultiplier => statCard_CritMultiplier ?? statCard_Damage,
+                (int)StatType.AttackSpeed => statCard_AttackSpeed,
+                (int)StatType.CritChance => statCard_CritChance ?? statCard_Damage,
+                (int)StatType.ProjectileSpeed => statCard_ProjectileSpeed,
+                (int)StatType.TotalDamage => statCard_TotalDamage ?? statCard_Damage,
+                (int)StatType.BonusDamage => statCard_BonusDamage ?? statCard_Damage,
+                (int)StatType.HealthRegen => statCard_HealthRegen ?? statCard_Damage,
+                (int)StatType.Range => statCard_Range,
                 _ => statCard_Damage
             };
         }
@@ -469,12 +500,18 @@ namespace NovelianMagicLibraryDefense.UI
                 return GetCharacterNameFromCSV(cardData.Id);
             }
 
+            // StatType enum 값에 맞춰 이름 반환
             return cardData.Id switch
             {
-                1 => "공격 속도",
-                2 => "공격력",
-                3 => "투사체 속도",
-                4 => "사거리",
+                (int)StatType.Damage => "공격력",
+                (int)StatType.CritMultiplier => "치명타 배율",
+                (int)StatType.AttackSpeed => "공격 속도",
+                (int)StatType.CritChance => "치명타 확률",
+                (int)StatType.ProjectileSpeed => "투사체 속도",
+                (int)StatType.TotalDamage => "총 공격력",
+                (int)StatType.BonusDamage => "추가 데미지",
+                (int)StatType.HealthRegen => "체력 회복",
+                (int)StatType.Range => "사거리",
                 _ => $"Stat_{cardData.Id}"
             };
         }
@@ -541,17 +578,12 @@ namespace NovelianMagicLibraryDefense.UI
         /// <summary>
         /// JML: 스탯 카드 효과 적용 (Issue #349)
         /// CardLevelTable의 value_change 값 사용
+        /// abilityId는 StatType enum 값과 일치
         /// </summary>
         private void ApplyStatCardEffect(int abilityId)
         {
-            StatType statType = abilityId switch
-            {
-                1 => StatType.AttackSpeed,
-                2 => StatType.Damage,
-                3 => StatType.ProjectileSpeed,
-                4 => StatType.Range,
-                _ => StatType.Damage
-            };
+            // abilityId가 StatType enum 값이므로 직접 캐스팅
+            StatType statType = (StatType)abilityId;
 
             // CSV에서 value_change 조회 (CardLevelTable)
             // abilityId를 CardLevelTable ID로 매핑
@@ -571,18 +603,23 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// JML: Ability ID를 CardLevelTable ID로 매핑
+        /// JML: Ability ID(StatType)를 CardLevelTable ID로 매핑
         /// 현재 티어 1 기준 (추후 티어 시스템 구현 시 확장)
         /// </summary>
         private int MapAbilityIdToCardLevelId(int abilityId)
         {
-            // Tier 1 기준 매핑
+            // Tier 1 기준 매핑 (StatType enum 값 사용)
             return abilityId switch
             {
-                1 => 25007, // 공격속도 증가 Tier1
-                2 => 25001, // 공격력 증가 Tier1
-                3 => 25013, // 투사체 속도 증가 Tier1
-                4 => 25085, // 사거리 증가 Tier1
+                (int)StatType.Damage => 25001,           // 공격력 증가 Tier1
+                (int)StatType.CritMultiplier => 25004,   // 치명타 배율 증가 Tier1
+                (int)StatType.AttackSpeed => 25007,      // 공격속도 증가 Tier1
+                (int)StatType.CritChance => 25010,       // 치명타 확률 증가 Tier1
+                (int)StatType.ProjectileSpeed => 25013,  // 투사체 속도 증가 Tier1
+                (int)StatType.TotalDamage => 25016,      // 총 공격력 증가 Tier1
+                (int)StatType.BonusDamage => 25019,      // 추가 데미지 Tier1
+                (int)StatType.HealthRegen => 25022,      // 체력 회복 Tier1
+                (int)StatType.Range => 25085,            // 사거리 증가 Tier1
                 _ => 25001  // fallback: 공격력 증가
             };
         }

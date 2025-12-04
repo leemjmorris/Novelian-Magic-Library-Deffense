@@ -5,6 +5,7 @@ namespace Novelian.Combat
     using UnityEngine;
     using Cysharp.Threading.Tasks;
     using System.Threading;
+    using System.Collections.Generic;
 
     public class Character : MonoBehaviour, IPoolable
     {
@@ -210,6 +211,11 @@ namespace Novelian.Combat
         private bool isManuallyInitialized = false;  // Initialize()로 초기화되었는지 여부
         private bool autoAttackEnabled = true;  // 자동 공격 활성화 여부 (테스트 씬에서 false로 설정)
 
+        // JML: 비주얼 파츠 캐시 (Issue #356)
+        private Dictionary<string, Transform> cachedTransforms = new Dictionary<string, Transform>();
+        private Transform weaponRightSlot;
+        private Transform weaponLeftSlot;
+
         private void Start()
         {
             // Initialize()로 이미 초기화되었으면 스킵
@@ -241,6 +247,9 @@ namespace Novelian.Combat
             isManuallyInitialized = true;
 
             Debug.Log($"[Character] Initialize 시작 (CharacterID: {csvCharacterId})");
+
+            // 0. 비주얼 파츠 적용 (Issue #356)
+            ApplyVisualConfig(csvCharacterId);
 
             // 1. CSV에서 캐릭터 데이터 로드
             var characterData = CSVLoader.Instance?.GetData<CharacterData>(csvCharacterId);
@@ -1500,6 +1509,165 @@ namespace Novelian.Combat
                 default:
                     Debug.LogWarning($"[Character] 알 수 없는 StatType: {statType}");
                     break;
+            }
+        }
+
+        #endregion
+
+        #region 비주얼 파츠 시스템 (Issue #356)
+
+        /// <summary>
+        /// JML: 캐릭터 ID에 따라 비주얼 파츠 활성화/비활성화
+        /// </summary>
+        private void ApplyVisualConfig(int charId)
+        {
+            var visualData = CharacterVisualConfig.GetVisualData(charId);
+            if (visualData == null)
+            {
+                Debug.LogWarning($"[Character] 비주얼 데이터 없음 (CharacterID: {charId})");
+                return;
+            }
+
+            // 캐시 초기화
+            CacheTransforms();
+
+            // 1. 모든 Body 비활성화 후 해당 Body만 활성화
+            for (int i = 0; i < CharacterVisualConfig.AllBodyParts.Length; i++)
+            {
+                string partName = CharacterVisualConfig.AllBodyParts[i];
+                SetPartActive(partName, partName == visualData.bodyPart);
+            }
+
+            // 2. 모든 Hair 비활성화 후 해당 Hair만 활성화
+            for (int i = 0; i < CharacterVisualConfig.AllHairParts.Length; i++)
+            {
+                string partName = CharacterVisualConfig.AllHairParts[i];
+                SetPartActive(partName, partName == visualData.hairPart);
+            }
+
+            // 3. 모든 Cloak 비활성화 후 해당 Cloak만 활성화
+            for (int i = 0; i < CharacterVisualConfig.AllCloakParts.Length; i++)
+            {
+                string partName = CharacterVisualConfig.AllCloakParts[i];
+                bool shouldActivate = !string.IsNullOrEmpty(visualData.cloakPart) && partName == visualData.cloakPart;
+                SetPartActive(partName, shouldActivate);
+            }
+
+            // 4. weapon_r 자식들 비활성화 후 해당 무기만 활성화
+            if (weaponRightSlot != null)
+            {
+                for (int i = 0; i < CharacterVisualConfig.AllWeaponRightParts.Length; i++)
+                {
+                    string partName = CharacterVisualConfig.AllWeaponRightParts[i];
+                    bool shouldActivate = !string.IsNullOrEmpty(visualData.weaponRight) && partName == visualData.weaponRight;
+                    SetWeaponPartActive(weaponRightSlot, partName, shouldActivate);
+                }
+            }
+
+            // 5. weapon_l 자식들 비활성화 후 해당 방패만 활성화
+            if (weaponLeftSlot != null)
+            {
+                for (int i = 0; i < CharacterVisualConfig.AllWeaponLeftParts.Length; i++)
+                {
+                    string partName = CharacterVisualConfig.AllWeaponLeftParts[i];
+                    bool shouldActivate = !string.IsNullOrEmpty(visualData.weaponLeft) && partName == visualData.weaponLeft;
+                    SetWeaponPartActive(weaponLeftSlot, partName, shouldActivate);
+                }
+            }
+
+            Debug.Log($"[Character] 비주얼 적용 완료 - Body: {visualData.bodyPart}, Hair: {visualData.hairPart}, Cloak: {visualData.cloakPart ?? "없음"}, WeaponR: {visualData.weaponRight}, WeaponL: {visualData.weaponLeft ?? "없음"}");
+        }
+
+        /// <summary>
+        /// JML: 자식 Transform 캐싱 (성능 최적화)
+        /// </summary>
+        private void CacheTransforms()
+        {
+            if (cachedTransforms.Count > 0) return; // 이미 캐싱됨
+
+            // 항상 자기 자신(프리팹 루트)부터 캐싱 - characterObj 무시
+            Transform root = transform;
+            Debug.Log($"[Character] CacheTransforms - root: {root.name}, childCount: {root.childCount}");
+            CacheChildrenRecursive(root);
+
+            Debug.Log($"[Character] 캐싱된 Transform 개수: {cachedTransforms.Count}");
+
+            // Body01 있는지 확인
+            if (cachedTransforms.ContainsKey("Body01"))
+            {
+                Debug.Log("[Character] Body01 찾음!");
+            }
+            else
+            {
+                Debug.LogWarning("[Character] Body01 없음! 캐싱된 이름들:");
+                int count = 0;
+                foreach (var kvp in cachedTransforms)
+                {
+                    if (count < 30) Debug.Log($"  - {kvp.Key}");
+                    count++;
+                }
+            }
+
+            // weapon_r, weapon_l 슬롯 찾기
+            if (cachedTransforms.TryGetValue("weapon_r", out var wr))
+            {
+                weaponRightSlot = wr;
+                Debug.Log("[Character] weapon_r 찾음!");
+            }
+            if (cachedTransforms.TryGetValue("weapon_l", out var wl))
+            {
+                weaponLeftSlot = wl;
+                Debug.Log("[Character] weapon_l 찾음!");
+            }
+        }
+
+        /// <summary>
+        /// JML: 재귀적으로 모든 자식 Transform 캐싱
+        /// </summary>
+        private void CacheChildrenRecursive(Transform parent)
+        {
+            int childCount = parent.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                string childName = child.name;
+
+                // 중복 이름은 첫 번째만 저장
+                if (!cachedTransforms.ContainsKey(childName))
+                {
+                    cachedTransforms[childName] = child;
+                }
+
+                // 재귀 호출
+                CacheChildrenRecursive(child);
+            }
+        }
+
+        /// <summary>
+        /// JML: 캐시된 Transform 활성화/비활성화
+        /// </summary>
+        private void SetPartActive(string partName, bool active)
+        {
+            if (cachedTransforms.TryGetValue(partName, out var tr))
+            {
+                tr.gameObject.SetActive(active);
+            }
+        }
+
+        /// <summary>
+        /// JML: 무기 슬롯 자식 활성화/비활성화
+        /// </summary>
+        private void SetWeaponPartActive(Transform weaponSlot, string partName, bool active)
+        {
+            int childCount = weaponSlot.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                Transform child = weaponSlot.GetChild(i);
+                if (child.name == partName)
+                {
+                    child.gameObject.SetActive(active);
+                    return;
+                }
             }
         }
 

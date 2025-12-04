@@ -30,13 +30,6 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private Wall wallComponent;
         [SerializeField] private Collider wallCollider;
 
-        [Header("Settings")]
-        [SerializeField] private float spawnInterval = 2f;
-
-        [Header("Wave Settings")]
-        [SerializeField] private int defaultEnemyCount = 10;
-        [SerializeField] private int defaultBossCount = 0;
-
         private bool isPoolReady = false;
         private System.Threading.CancellationTokenSource spawnCts;
 
@@ -47,7 +40,12 @@ namespace NovelianMagicLibraryDefense.Managers
 
         // JML: 다중 웨이브 지원을 위한 필드
         private List<WaveData> waveDataList = new List<WaveData>();
-        private bool useCSVWaveData = false;
+
+        // JML: 키 기반 몬스터 풀링용 (Monster_ID → Addressable_Key 캐시)
+        private Dictionary<int, string> monsterKeyCache = new Dictionary<int, string>();
+
+        // JML: 최대 동시 활성 몬스터 수 (웜업 제한)
+        private const int MAX_CONCURRENT_MONSTERS = 40;
         #endregion
 
         protected override void OnInitialize()
@@ -114,21 +112,19 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// LMJ: Async pool initialization - separated from OnInitialize to avoid blocking
+        /// JML: 기본 초기화 완료 표시
+        /// 실제 몬스터 풀은 InitializeWithWaveDataAsync에서 CSV 기반으로 생성됨
         /// </summary>
         private async UniTaskVoid InitializePoolsAsync()
         {
-            // LMJ: Create pools for enemies
-            await poolManager.CreatePoolAsync<Monster>(AddressableKey.Monster, defaultCapacity: 20, maxSize: 500);
-            // TODO: Re-enable when BossMonster prefab is created and registered in Addressables
-            // await poolManager.CreatePoolAsync<BossMonster>(AddressableKey.BossMonster, defaultCapacity: 1, maxSize: 1);
+            // JML: 기본 초기화만 수행 (몬스터 풀은 PreloadMonsterPoolsAsync에서 생성)
+            await UniTask.Yield(); // 비동기 메서드 유지
 
-            // LMJ: Warm up pools to avoid runtime spikes
-            poolManager.WarmUp<Monster>(50);
-            // poolManager.WarmUp<BossMonster>(1);
+            // TODO: BossMonster 풀 생성 (별도 처리 필요시)
+            // await poolManager.CreatePoolByKeyAsync<BossMonster>(bossAddressableKey, defaultCapacity: 1, maxSize: 5);
 
-            isPoolReady = true;
-            // Debug.Log("[WaveManager] Pools initialized and ready");
+            // JML: isPoolReady는 PreloadMonsterPoolsAsync에서 설정됨
+            // 여기서는 Wall 캐시 초기화 등 기본 설정만 완료된 상태
         }
 
         protected override void OnReset()
@@ -137,12 +133,10 @@ namespace NovelianMagicLibraryDefense.Managers
             isPoolReady = false;
             enemyCount = 0;
             bossCount = 0;
-            // waveId = 0;
-            // rushProgressPoints.Clear();
 
             // JML: 다중 웨이브 관련 필드 초기화
             waveDataList.Clear();
-            useCSVWaveData = false;
+            monsterKeyCache.Clear();
         }
 
         protected override void OnDispose()
@@ -166,39 +160,44 @@ namespace NovelianMagicLibraryDefense.Managers
         public new void Initialize()
         {
             base.Initialize(); // OnInitialize() 호출하여 풀 초기화
-            Initialize(defaultEnemyCount, defaultBossCount);
         }
 
         /// <summary>
-        /// LMJ: Initialize wave parameters with custom values
+        /// JML: CSV WaveData 리스트 기반 초기화 (다중 웨이브 지원) - 비동기 버전
+        /// 필요한 몬스터 프리팹 풀을 미리 생성
         /// </summary>
-        public void Initialize(int totalEnemies, int bossCount = 0)
+        public async UniTask InitializeWithWaveDataAsync(List<WaveData> waves)
         {
-            useCSVWaveData = false;
-            waveDataList.Clear();
+            waveDataList = waves ?? new List<WaveData>();
+            monsterKeyCache.Clear();
 
-            enemyCount = totalEnemies;
-            initialEnemyCount = totalEnemies;
-            this.bossCount = bossCount;
+            // 전체 몬스터 수 계산 (모든 웨이브의 Monster_Count 합산)
+            enemyCount = waveDataList.Sum(w => w.Monster_Count);
+            initialEnemyCount = enemyCount;
+            bossCount = 0;
 
             if (uiManager != null)
             {
                 uiManager.UpdateMonsterCount(enemyCount);
             }
+
+            // JML: 필요한 몬스터 풀 프리로드
+            await PreloadMonsterPoolsAsync(waveDataList);
+
+            Debug.Log($"[WaveManager] Initialized with {waveDataList.Count} waves, total monsters: {enemyCount}");
         }
 
         /// <summary>
-        /// JML: CSV WaveData 리스트 기반 초기화 (다중 웨이브 지원)
+        /// JML: 동기 버전 (기존 호환용) - 풀 프리로드는 WaveLoop에서 처리
         /// </summary>
         public void InitializeWithWaveData(List<WaveData> waves)
         {
-            useCSVWaveData = true;
             waveDataList = waves ?? new List<WaveData>();
+            monsterKeyCache.Clear();
 
-            // 전체 몬스터 수 계산 (모든 웨이브의 Monster_Count 합산)
             enemyCount = waveDataList.Sum(w => w.Monster_Count);
             initialEnemyCount = enemyCount;
-            bossCount = 0; // TODO: CSV에서 보스 데이터 지원 시 수정
+            bossCount = 0;
 
             if (uiManager != null)
             {
@@ -209,28 +208,106 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// LMJ: Start wave loop - waits for pools to be ready
+        /// JML: WaveData에서 필요한 몬스터 종류를 추출하고 키 기반 풀 생성 + 비동기 웜업
+        /// </summary>
+        private async UniTask PreloadMonsterPoolsAsync(List<WaveData> waves)
+        {
+            // 중복 제거하여 고유 Monster_ID 목록 추출
+            var uniqueMonsterIds = waves.Select(w => w.Monster_ID).Distinct().ToList();
+
+            Debug.Log($"[WaveManager] Preloading {uniqueMonsterIds.Count} monster types...");
+
+            foreach (var monsterId in uniqueMonsterIds)
+            {
+                string addressableKey = GetMonsterAddressableKey(monsterId);
+                if (string.IsNullOrEmpty(addressableKey))
+                {
+                    Debug.LogError($"[WaveManager] Failed to get addressable key for Monster_ID: {monsterId}");
+                    continue;
+                }
+
+                // 캐시에 저장 (스폰 시 빠른 조회)
+                monsterKeyCache[monsterId] = addressableKey;
+
+                // 풀 생성 (이미 있으면 스킵)
+                if (!poolManager.HasPoolByKey(addressableKey))
+                {
+                    bool success = await poolManager.CreatePoolByKeyAsync<Monster>(addressableKey, defaultCapacity: 20, maxSize: 100);
+                    if (success)
+                    {
+                        // JML: 비동기 웜업 - 해당 몬스터 타입의 필요 수량 계산 (최대 40개 제한)
+                        int warmUpCount = waves.Where(w => w.Monster_ID == monsterId).Sum(w => w.Monster_Count);
+                        warmUpCount = Mathf.Min(warmUpCount, MAX_CONCURRENT_MONSTERS);
+                        await poolManager.WarmUpByKeyAsync<Monster>(addressableKey, warmUpCount);
+                    }
+                    else
+                    {
+                        Debug.LogError($"[WaveManager] Failed to create pool for: {addressableKey}");
+                    }
+                }
+            }
+
+            isPoolReady = true;
+            Debug.Log($"[WaveManager] Monster pools preloaded and warmed up: {monsterKeyCache.Count} types");
+        }
+
+        /// <summary>
+        /// JML: Monster_ID → MonsterData.Path_ID → PathData.Addressable_Key 조회
+        /// </summary>
+        private string GetMonsterAddressableKey(int monsterId)
+        {
+            // 캐시에 있으면 바로 반환
+            if (monsterKeyCache.TryGetValue(monsterId, out string cachedKey))
+            {
+                return cachedKey;
+            }
+
+            // MonsterData에서 Path_ID 조회
+            MonsterData monsterData = CSVLoader.Instance.GetTable<MonsterData>().GetId(monsterId);
+            if (monsterData == null)
+            {
+                Debug.LogError($"[WaveManager] MonsterData not found for ID: {monsterId}");
+                return null;
+            }
+
+            // PathData에서 Addressable_Key 조회
+            PathData pathData = CSVLoader.Instance.GetTable<PathData>().GetId(monsterData.Path_ID);
+            if (pathData == null)
+            {
+                Debug.LogError($"[WaveManager] PathData not found for ID: {monsterData.Path_ID}");
+                return null;
+            }
+
+            return pathData.Addressable_Key;
+        }
+
+        /// <summary>
+        /// JML: Start wave loop - CSV 기반 키 풀링만 사용
         /// </summary>
         public async UniTaskVoid WaveLoop()
         {
-            // LMJ: Wait for pools to be ready before spawning
+            // CSV 웨이브 데이터 필수
+            if (waveDataList.Count == 0)
+            {
+                Debug.LogError("[WaveManager] No wave data! Call InitializeWithWaveDataAsync first.");
+                return;
+            }
+
+            // JML: 풀이 아직 프리로드 안됐으면 여기서 프리로드
+            if (monsterKeyCache.Count == 0)
+            {
+                await PreloadMonsterPoolsAsync(waveDataList);
+            }
+
+            // Wait for pools to be ready before spawning
             await UniTask.WaitUntil(() => isPoolReady);
-            // Debug.Log("[WaveManager] Starting wave spawn loop");
 
             // Create new cancellation token for this wave
             spawnCts?.Cancel();
             spawnCts?.Dispose();
             spawnCts = new System.Threading.CancellationTokenSource();
 
-            // JML: CSV 웨이브 데이터 사용 시 다중 웨이브 스폰
-            if (useCSVWaveData && waveDataList.Count > 0)
-            {
-                SpawnMultipleWaves(spawnCts.Token).Forget();
-            }
-            else
-            {
-                SpawnEnemy(spawnCts.Token).Forget();
-            }
+            SpawnMultipleWaves(spawnCts.Token).Forget();
         }
 
         private void HandleMonsterDied(Monster monster)
@@ -316,6 +393,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// JML: 단일 웨이브의 몬스터들 스폰
         /// MonsterLevelData를 가져와서 Monster.Initialize() 호출
+        /// 키 기반 풀링 사용 (SpawnByKey)
         /// </summary>
         private async UniTask SpawnWaveMonsters(WaveData waveData, System.Threading.CancellationToken cancellationToken)
         {
@@ -324,6 +402,14 @@ namespace NovelianMagicLibraryDefense.Managers
             if (levelData == null)
             {
                 Debug.LogWarning($"[WaveManager] MonsterLevelData not found for ID: {waveData.Mon_Level_ID}");
+            }
+
+            // JML: Addressable Key 조회 (캐시 또는 CSV 조회)
+            string addressableKey = GetMonsterAddressableKey(waveData.Monster_ID);
+            if (string.IsNullOrEmpty(addressableKey))
+            {
+                Debug.LogError($"[WaveManager] Cannot spawn wave {waveData.Wave_ID}: addressable key not found for Monster_ID {waveData.Monster_ID}");
+                return;
             }
 
             int spawnedCount = 0;
@@ -335,10 +421,15 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (monsterSpawner == null) break;
 
                 Vector3 spawnPos = monsterSpawner.GetRandomSpawnPosition();
-                var monster = poolManager.Spawn<Monster>(spawnPos);
+
+                // JML: 키 기반 스폰 사용 (Addressable 프리팹)
+                var monster = poolManager.SpawnByKey<Monster>(addressableKey, spawnPos);
 
                 if (monster != null)
                 {
+                    // JML: Addressable 키 설정 (DespawnByKey에서 사용)
+                    monster.SetAddressableKey(addressableKey);
+
                     // JML: CSV 데이터로 몬스터 스탯 초기화
                     if (levelData != null)
                     {
@@ -364,44 +455,6 @@ namespace NovelianMagicLibraryDefense.Managers
             Debug.Log($"[WaveManager] Wave {waveData.Wave_ID} completed: spawned {spawnedCount}/{targetCount} monsters");
         }
 
-        private async UniTaskVoid SpawnEnemy(System.Threading.CancellationToken cancellationToken)
-        {
-            // LMJ: Wait for pools to be ready before spawning
-            while (!isPoolReady)
-            {
-                await UniTask.Yield(cancellationToken);
-            }
-
-            int totalMonsters = enemyCount;
-            int spawnedCount = 0;
-
-            // LCB: Check isPoolReady in loop to stop spawning when reset
-            while (spawnedCount < totalMonsters && isPoolReady)
-            {
-                // Check if spawner still exists (scene not destroyed)
-                if (monsterSpawner == null) break;
-
-                Vector3 spawnPos = monsterSpawner.GetRandomSpawnPosition();
-                var monster = poolManager.Spawn<Monster>(spawnPos);
-
-                // 목적지 설정 (Wall 위치로)
-                if (monster != null && wallTarget != null)
-                {
-                    monster.SetDestination(wallTarget.position);
-                }
-
-                spawnedCount++;
-                await UniTask.Delay((int)(spawnInterval * 1000), cancellationToken: cancellationToken);
-            }
-
-            // LMJ: Spawn boss after all normal enemies
-            // LCB: Only spawn boss if pool is still ready
-            if (bossCount > 0 && isPoolReady)
-            {
-                SpawnBoss();
-            }
-        }
-
         private void SpawnBoss()
         {
             Vector3 bossSpawnPos = bossSpawner != null
@@ -419,7 +472,11 @@ namespace NovelianMagicLibraryDefense.Managers
 
         public void WaveClear()
         {
+            // JML: 타입 기반 풀 정리 (Projectile, FloatingDamageText 등)
             poolManager.ClearAll();
+
+            // JML: 키 기반 풀 정리 (Addressable 몬스터)
+            poolManager.ClearAllKeyBasedPools();
         }
         public bool HasRemainingEnemies()
         {

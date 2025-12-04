@@ -16,10 +16,17 @@ namespace NovelianMagicLibraryDefense.Managers
     /// </summary>
     public class ObjectPoolManager : BaseManager
     {
+        // Type 기반 풀링 (기존 - Projectile, FloatingDamageText 등에서 사용)
         private Dictionary<Type, object> pools = new Dictionary<Type, object>();
         private Dictionary<Type, GameObject> prefabs = new Dictionary<Type, GameObject>();
         private Dictionary<Type, AsyncOperationHandle<GameObject>> handles = new Dictionary<Type, AsyncOperationHandle<GameObject>>();
         private Dictionary<Type, HashSet<Component>> activeObjects = new Dictionary<Type, HashSet<Component>>();
+
+        // JML: 키 기반 풀링 (Monster 등 Addressable 키로 다양한 프리팹 사용)
+        private Dictionary<string, object> keyBasedPools = new Dictionary<string, object>();
+        private Dictionary<string, GameObject> keyBasedPrefabs = new Dictionary<string, GameObject>();
+        private Dictionary<string, AsyncOperationHandle<GameObject>> keyBasedHandles = new Dictionary<string, AsyncOperationHandle<GameObject>>();
+        private Dictionary<string, HashSet<Component>> keyBasedActiveObjects = new Dictionary<string, HashSet<Component>>();
 
         protected override void OnInitialize()
         {
@@ -410,5 +417,282 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             return pools.ContainsKey(typeof(T));
         }
+
+        #region Key-Based Pooling (JML)
+
+        /// <summary>
+        /// JML: 키 기반 풀 생성 (Addressable)
+        /// </summary>
+        public async UniTask<bool> CreatePoolByKeyAsync<T>(string key, int defaultCapacity = 10, int maxSize = 100)
+            where T : Component, IPoolable
+        {
+            if (keyBasedPools.ContainsKey(key))
+            {
+                Debug.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' already exists.");
+                return true;
+            }
+
+            try
+            {
+                AsyncOperationHandle<GameObject> handle = Addressables.LoadAssetAsync<GameObject>(key);
+                await handle.ToUniTask();
+
+                if (handle.Status != AsyncOperationStatus.Succeeded)
+                {
+                    Debug.LogError($"[ObjectPoolManager] Failed to load addressable asset with key '{key}'.");
+                    return false;
+                }
+
+                GameObject prefab = handle.Result;
+
+                if (prefab.GetComponent<T>() == null)
+                {
+                    Debug.LogError($"[ObjectPoolManager] Prefab '{key}' does not have component of type {typeof(T).Name}");
+                    Addressables.Release(handle);
+                    return false;
+                }
+
+                keyBasedPrefabs[key] = prefab;
+                keyBasedHandles[key] = handle;
+                keyBasedActiveObjects[key] = new HashSet<Component>();
+
+                var pool = new ObjectPool<T>(
+                    createFunc: () => CreateKeyBasedPooledObject<T>(key),
+                    actionOnGet: obj => OnGetFromKeyBasedPool(key, obj),
+                    actionOnRelease: obj => OnReleaseToKeyBasedPool(key, obj),
+                    actionOnDestroy: obj => OnDestroyKeyBasedPoolObject(key, obj),
+                    collectionCheck: true,
+                    defaultCapacity: defaultCapacity,
+                    maxSize: maxSize
+                );
+
+                keyBasedPools[key] = pool;
+                Debug.Log($"[ObjectPoolManager] Key-based pool created: {key}");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[ObjectPoolManager] Failed to create key-based pool '{key}': {e.Message}");
+                return false;
+            }
+        }
+
+        private T CreateKeyBasedPooledObject<T>(string key) where T : Component, IPoolable
+        {
+            GameObject obj = UnityEngine.Object.Instantiate(keyBasedPrefabs[key]);
+            obj.name = keyBasedPrefabs[key].name;
+            obj.SetActive(false);
+            return obj.GetComponent<T>();
+        }
+
+        private void OnGetFromKeyBasedPool<T>(string key, T component) where T : Component, IPoolable
+        {
+            if (keyBasedActiveObjects.ContainsKey(key))
+            {
+                keyBasedActiveObjects[key].Add(component);
+            }
+        }
+
+        private void OnReleaseToKeyBasedPool<T>(string key, T component) where T : Component, IPoolable
+        {
+            component.OnDespawn();
+            component.gameObject.SetActive(false);
+
+            if (keyBasedActiveObjects.ContainsKey(key))
+            {
+                keyBasedActiveObjects[key].Remove(component);
+            }
+        }
+
+        private void OnDestroyKeyBasedPoolObject<T>(string key, T component) where T : Component, IPoolable
+        {
+            if (keyBasedActiveObjects.ContainsKey(key))
+            {
+                keyBasedActiveObjects[key].Remove(component);
+            }
+
+            if (component != null && component.gameObject != null)
+            {
+                UnityEngine.Object.Destroy(component.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// JML: 키 기반 스폰
+        /// </summary>
+        public T SpawnByKey<T>(string key, Vector3 position, Quaternion rotation) where T : Component, IPoolable
+        {
+            if (!keyBasedPools.ContainsKey(key))
+            {
+                Debug.LogError($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
+                return null;
+            }
+
+            ObjectPool<T> pool = keyBasedPools[key] as ObjectPool<T>;
+
+            // JML: 웜업 초과 감지용 - Get() 전 풀 상태 확인
+            int countBeforeGet = pool.CountInactive;
+
+            T component = pool.Get();
+
+            // JML: 풀에서 가져온 게 아니라 새로 생성된 경우 (CountInactive가 0이었던 경우)
+            if (countBeforeGet == 0)
+            {
+                Debug.LogWarning($"[ObjectPoolManager] 웜업 초과! '{key}' 새 인스턴스 생성됨. Active: {pool.CountActive}, Inactive: {pool.CountInactive}");
+            }
+
+            // JML: activeObjects에 추가 확인
+            bool isInActiveObjects = keyBasedActiveObjects.ContainsKey(key) && keyBasedActiveObjects[key].Contains(component);
+            Debug.Log($"[ObjectPoolManager] SpawnByKey '{key}' - activeObjects 등록: {isInActiveObjects}, ID: {component.GetInstanceID()}");
+
+            component.transform.position = position;
+            component.transform.rotation = rotation;
+            component.gameObject.SetActive(true);
+            component.OnSpawn();
+
+            return component;
+        }
+
+        public T SpawnByKey<T>(string key, Vector3 position) where T : Component, IPoolable
+        {
+            return SpawnByKey<T>(key, position, Quaternion.identity);
+        }
+
+        /// <summary>
+        /// JML: 키 기반 디스폰
+        /// </summary>
+        public void DespawnByKey<T>(string key, T component) where T : Component, IPoolable
+        {
+            if (component == null || component.gameObject == null)
+            {
+                Debug.LogWarning($"[ObjectPoolManager] DespawnByKey '{key}' - component or gameObject is null");
+                return;
+            }
+
+            if (!component.gameObject.activeSelf)
+            {
+                Debug.LogWarning($"[ObjectPoolManager] DespawnByKey '{key}' - gameObject already inactive");
+                return;
+            }
+
+            if (!keyBasedPools.ContainsKey(key))
+            {
+                Debug.LogError($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
+                return;
+            }
+
+            if (!keyBasedActiveObjects.ContainsKey(key))
+            {
+                Debug.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - activeObjects key 없음! 풀로 반환 불가");
+                component.gameObject.SetActive(false);
+                return;
+            }
+
+            if (!keyBasedActiveObjects[key].Contains(component))
+            {
+                Debug.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - component가 activeObjects에 없음! Count: {keyBasedActiveObjects[key].Count}");
+                component.gameObject.SetActive(false);
+                return;
+            }
+
+            ObjectPool<T> pool = keyBasedPools[key] as ObjectPool<T>;
+            if (pool == null)
+            {
+                Debug.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - pool cast 실패!");
+                return;
+            }
+
+            pool.Release(component);
+            Debug.Log($"[ObjectPoolManager] DespawnByKey '{key}' 성공! Active: {pool.CountActive}, Inactive: {pool.CountInactive}");
+        }
+
+        /// <summary>
+        /// JML: 키 기반 풀 존재 확인
+        /// </summary>
+        public bool HasPoolByKey(string key)
+        {
+            return keyBasedPools.ContainsKey(key);
+        }
+
+        /// <summary>
+        /// JML: 비동기 키 기반 웜업 (프레임 분산)
+        /// </summary>
+        public async UniTask WarmUpByKeyAsync<T>(string key, int count, int perFrame = 3)
+            where T : Component, IPoolable
+        {
+            if (!keyBasedPools.ContainsKey(key))
+            {
+                Debug.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
+                return;
+            }
+
+            List<T> temp = new List<T>();
+            ObjectPool<T> pool = keyBasedPools[key] as ObjectPool<T>;
+
+            for (int i = 0; i < count; i++)
+            {
+                T obj = pool.Get();
+                obj.gameObject.SetActive(false);
+                temp.Add(obj);
+
+                if ((i + 1) % perFrame == 0)
+                {
+                    await UniTask.Yield();
+                }
+            }
+
+            foreach (var obj in temp)
+            {
+                pool.Release(obj);
+            }
+
+            Debug.Log($"[ObjectPoolManager] Async warmed up {count} objects for key: {key}");
+        }
+
+        /// <summary>
+        /// JML: 모든 키 기반 풀 클리어
+        /// </summary>
+        public void ClearAllKeyBasedPools()
+        {
+            foreach (var key in keyBasedActiveObjects.Keys.ToList())
+            {
+                foreach (var obj in keyBasedActiveObjects[key].ToList())
+                {
+                    if (obj != null && obj.gameObject != null)
+                    {
+                        obj.gameObject.SetActive(false);
+                    }
+                }
+            }
+
+            foreach (var pool in keyBasedPools.Values)
+            {
+                try
+                {
+                    (pool as IDisposable)?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[ObjectPoolManager] Error disposing key-based pool: {e.Message}");
+                }
+            }
+
+            foreach (var handle in keyBasedHandles.Values)
+            {
+                if (handle.IsValid())
+                {
+                    Addressables.Release(handle);
+                }
+            }
+
+            keyBasedPools.Clear();
+            keyBasedPrefabs.Clear();
+            keyBasedHandles.Clear();
+            keyBasedActiveObjects.Clear();
+
+            Debug.Log("[ObjectPoolManager] All key-based pools cleared");
+        }
+
+        #endregion
     }
 }
