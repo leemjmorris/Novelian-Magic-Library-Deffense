@@ -97,8 +97,41 @@ namespace Novelian.Combat
             elapsedTime = 0f;
             isInitialized = true;
 
+            // Rigidbody 자동 추가 (없으면 Physics 충돌이 작동하지 않음)
+            if (rb == null)
+            {
+                rb = GetComponent<Rigidbody>();
+                if (rb == null)
+                {
+                    rb = gameObject.AddComponent<Rigidbody>();
+                    rb.useGravity = false;
+                    rb.isKinematic = false;
+                    rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                    Debug.Log("[Projectile] Rigidbody auto-added for physics movement");
+                }
+            }
+
+            // Collider 자동 추가 (없으면 충돌 감지가 작동하지 않음)
+            Collider col = GetComponent<Collider>();
+            if (col == null)
+            {
+                SphereCollider sphereCol = gameObject.AddComponent<SphereCollider>();
+                sphereCol.isTrigger = true;
+                sphereCol.radius = 0.5f;
+                Debug.Log("[Projectile] SphereCollider auto-added for collision detection");
+            }
+
+            // 레이어 설정 (Projectile 레이어)
+            int projectileLayer = LayerMask.NameToLayer("Projectile");
+            if (projectileLayer >= 0)
+            {
+                gameObject.layer = projectileLayer;
+            }
+
             // Load skill data from CSV and PrefabDatabase
             LoadSkillData(mainSkillId, supportId);
+
+            Debug.Log($"[Projectile] Launch complete: pos={spawnPos}, target={targetPos}, dir={fixedDirection}, speed={speed}, rb={(rb != null ? "OK" : "NULL")}, layer={gameObject.layer}, isInit={isInitialized}");
 
             // Spawn effect prefab as child if skillData is provided
             if (skillPrefabs != null && skillPrefabs.projectilePrefab != null)
@@ -243,7 +276,11 @@ namespace Novelian.Combat
         private void FixedUpdate()
         {
             if (mode != ProjectileMode.Physics) return;
-            if (!isInitialized) return;
+            if (!isInitialized)
+            {
+                // Debug.Log($"[Projectile] FixedUpdate skipped: isInitialized={isInitialized}");
+                return;
+            }
 
             if (Time.timeScale == 0f)
             {
@@ -251,12 +288,25 @@ namespace Novelian.Combat
                 return;
             }
 
-            if (rb != null) rb.linearVelocity = fixedDirection * speed;
+            // Rigidbody가 있으면 velocity로 이동, 없으면 transform 직접 이동
+            if (rb != null)
+            {
+                rb.linearVelocity = fixedDirection * speed;
+            }
+            else
+            {
+                // Fallback: Rigidbody 없이 직접 이동
+                transform.position += fixedDirection * speed * Time.fixedDeltaTime;
+            }
 
             if (fixedDirection != Vector3.zero)
             {
                 transform.rotation = Quaternion.LookRotation(fixedDirection);
             }
+
+            // 이동 거리 체크용 디버그 (매 프레임마다 출력하면 로그가 많아지므로 주석 처리)
+            // float distance = Vector3.Distance(startPosition, transform.position);
+            // Debug.Log($"[Projectile] Moving: pos={transform.position}, dir={fixedDirection}, speed={speed}, distance={distance:F1}");
 
             if (Vector3.Distance(startPosition, transform.position) > OUT_OF_BOUNDS_DISTANCE)
             {
@@ -327,6 +377,8 @@ namespace Novelian.Combat
         //LMJ : Handle collision with monsters and obstacles (both Physics and Effect modes)
         private void OnTriggerEnter(Collider other)
         {
+            Debug.Log($"[Projectile] OnTriggerEnter: other={other.name}, tag={other.tag}, isInit={isInitialized}");
+
             if (!isInitialized) return;
 
             // Obstacle collision
@@ -372,6 +424,17 @@ namespace Novelian.Combat
 
                     // Apply damage (새 데미지 공식 적용)
                     float damageToApply = CalculateDamageToApply();
+
+                    // Issue #362 - 저체력 보너스 데미지 적용 (처형 서포트 등)
+                    if (supportSkillData != null && supportSkillData.IsLowHpBonusSupport)
+                    {
+                        damageToApply = DamageCalculator.CalculateLowHpBonusDamage(
+                            damageToApply,
+                            monster.GetHealth(),
+                            monster.GetMaxHealth(),
+                            supportSkillData.low_hp_bonus_damage_mult);
+                    }
+
                     monster.TakeDamage(damageToApply);
 
                     // Spawn hit effect
@@ -427,10 +490,12 @@ namespace Novelian.Combat
 
                     // Process Fragmentation (파편화 40002: 명중 시 분열)
                     // 원본 + add_projectiles = 총 발사체 수 (부채꼴로 퍼짐)
+                    Debug.Log($"[Projectile] Hit - Fragmentation check: supportSkillId={supportSkillId}, supportSkillData={(supportSkillData != null ? "OK" : "NULL")}, add_projectiles={(supportSkillData?.add_projectiles ?? -1)}");
                     if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
                     {
-                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 3발
-                        SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection);
+                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 5발
+                        Debug.Log($"[Projectile] Fragmentation triggered! Spawning {totalFragments} fragments at {other.transform.position}");
+                        SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection, other);
                     }
                 }
 
@@ -459,6 +524,17 @@ namespace Novelian.Combat
 
                     // Apply damage (새 데미지 공식 적용)
                     float damageToApply = CalculateDamageToApply();
+
+                    // Issue #362 - 저체력 보너스 데미지 적용 (처형 서포트 등)
+                    if (supportSkillData != null && supportSkillData.IsLowHpBonusSupport)
+                    {
+                        damageToApply = DamageCalculator.CalculateLowHpBonusDamage(
+                            damageToApply,
+                            boss.GetHealth(),
+                            boss.GetMaxHealth(),
+                            supportSkillData.low_hp_bonus_damage_mult);
+                    }
+
                     boss.TakeDamage(damageToApply);
 
                     // Spawn hit effect
@@ -512,10 +588,12 @@ namespace Novelian.Combat
 
                     // Process Fragmentation (파편화 40002: 명중 시 분열)
                     // 원본 + add_projectiles = 총 발사체 수 (부채꼴로 퍼짐)
+                    Debug.Log($"[Projectile] Hit - Fragmentation check: supportSkillId={supportSkillId}, supportSkillData={(supportSkillData != null ? "OK" : "NULL")}, add_projectiles={(supportSkillData?.add_projectiles ?? -1)}");
                     if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
                     {
-                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 3발
-                        SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection);
+                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 5발
+                        Debug.Log($"[Projectile] Fragmentation triggered! Spawning {totalFragments} fragments at {other.transform.position}");
+                        SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection, other);
                     }
                 }
 
@@ -557,61 +635,113 @@ namespace Novelian.Combat
             return damage;
         }
 
-        //LMJ : Apply status effect to monster
+        //LMJ : Apply status effect to monster (MainSkillData + SupportSkillData)
         private void ApplyStatusEffect(Monster monster)
         {
-            if (supportSkillData == null || monster == null) return;
+            if (monster == null) return;
 
             // Get effect prefabs from database
-            GameObject ccEffectPrefab = supportPrefabs?.ccEffectPrefab;
-            GameObject dotEffectPrefab = supportPrefabs?.dotEffectPrefab;
-            GameObject markEffectPrefab = supportPrefabs?.markEffectPrefab;
+            GameObject ccEffectPrefab = supportPrefabs?.ccEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
+            GameObject dotEffectPrefab = supportPrefabs?.dotEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
+            GameObject markEffectPrefab = supportPrefabs?.markEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
 
-            switch (supportSkillData.GetStatusEffectType())
+            // 1. MainSkillData 자체 효과 적용 (스킬 테이블에 정의된 CC/DOT/표식)
+            if (skillData != null)
             {
-                case StatusEffectType.CC:
-                    monster.ApplyCC(supportSkillData.GetCCType(), supportSkillData.cc_duration, supportSkillData.cc_slow_amount, ccEffectPrefab);
-                    break;
+                // CC 효과 (stun_use=true 또는 cc_duration > 0)
+                if (skillData.HasCCEffect)
+                {
+                    monster.ApplyCC(skillData.GetCCType(), skillData.cc_duration, skillData.cc_slow_amount, ccEffectPrefab);
+                }
 
-                case StatusEffectType.DOT:
-                    monster.ApplyDOT(supportSkillData.GetDOTType(), supportSkillData.dot_damage_per_tick, supportSkillData.dot_tick_interval, supportSkillData.dot_duration, dotEffectPrefab);
-                    break;
+                // DOT 효과 (dot_duration > 0)
+                if (skillData.HasDOTEffect)
+                {
+                    monster.ApplyDOT(DOTType.Burn, skillData.dot_damage_per_tick, skillData.dot_tick_interval, skillData.dot_duration, dotEffectPrefab);
+                }
 
-                case StatusEffectType.Mark:
-                    monster.ApplyMark(supportSkillData.GetMarkType(), supportSkillData.mark_duration, supportSkillData.mark_damage_mult, markEffectPrefab);
-                    break;
+                // 표식 효과 (mark_duration > 0)
+                if (skillData.HasMarkEffect)
+                {
+                    monster.ApplyMark(skillData.GetElementBasedMarkType(), skillData.mark_duration, skillData.mark_damage_mult / 100f, markEffectPrefab);
+                }
+            }
 
-                case StatusEffectType.Chain:
-                    // Chain is handled separately
-                    break;
+            // 2. SupportSkillData 추가 효과 적용
+            if (supportSkillData != null)
+            {
+                switch (supportSkillData.GetStatusEffectType())
+                {
+                    case StatusEffectType.CC:
+                        monster.ApplyCC(supportSkillData.GetCCType(), supportSkillData.cc_duration, supportSkillData.cc_slow_amount, ccEffectPrefab);
+                        break;
+
+                    case StatusEffectType.DOT:
+                        monster.ApplyDOT(supportSkillData.GetDOTType(), supportSkillData.dot_damage_per_tick, supportSkillData.dot_tick_interval, supportSkillData.dot_duration, dotEffectPrefab);
+                        break;
+
+                    case StatusEffectType.Mark:
+                        monster.ApplyMark(supportSkillData.GetMarkType(), supportSkillData.mark_duration, supportSkillData.mark_damage_mult, markEffectPrefab);
+                        break;
+
+                    case StatusEffectType.Chain:
+                        // Chain is handled separately
+                        break;
+                }
             }
         }
 
-        //LMJ : Apply status effect to boss monster
+        //LMJ : Apply status effect to boss monster (MainSkillData + SupportSkillData)
         private void ApplyStatusEffectToBoss(BossMonster boss)
         {
-            if (supportSkillData == null || boss == null) return;
+            if (boss == null) return;
 
-            GameObject ccEffectPrefab = supportPrefabs?.ccEffectPrefab;
-            GameObject dotEffectPrefab = supportPrefabs?.dotEffectPrefab;
-            GameObject markEffectPrefab = supportPrefabs?.markEffectPrefab;
+            GameObject ccEffectPrefab = supportPrefabs?.ccEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
+            GameObject dotEffectPrefab = supportPrefabs?.dotEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
+            GameObject markEffectPrefab = supportPrefabs?.markEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
 
-            switch (supportSkillData.GetStatusEffectType())
+            // 1. MainSkillData 자체 효과 적용 (스킬 테이블에 정의된 CC/DOT/표식)
+            if (skillData != null)
             {
-                case StatusEffectType.CC:
-                    boss.ApplyCC(supportSkillData.GetCCType(), supportSkillData.cc_duration, supportSkillData.cc_slow_amount, ccEffectPrefab);
-                    break;
+                // CC 효과 (stun_use=true 또는 cc_duration > 0)
+                if (skillData.HasCCEffect)
+                {
+                    boss.ApplyCC(skillData.GetCCType(), skillData.cc_duration, skillData.cc_slow_amount, ccEffectPrefab);
+                }
 
-                case StatusEffectType.DOT:
-                    boss.ApplyDOT(supportSkillData.GetDOTType(), supportSkillData.dot_damage_per_tick, supportSkillData.dot_tick_interval, supportSkillData.dot_duration, dotEffectPrefab);
-                    break;
+                // DOT 효과 (dot_duration > 0)
+                if (skillData.HasDOTEffect)
+                {
+                    boss.ApplyDOT(DOTType.Burn, skillData.dot_damage_per_tick, skillData.dot_tick_interval, skillData.dot_duration, dotEffectPrefab);
+                }
 
-                case StatusEffectType.Mark:
-                    boss.ApplyMark(supportSkillData.GetMarkType(), supportSkillData.mark_duration, supportSkillData.mark_damage_mult, markEffectPrefab);
-                    break;
+                // 표식 효과 (mark_duration > 0)
+                if (skillData.HasMarkEffect)
+                {
+                    boss.ApplyMark(skillData.GetElementBasedMarkType(), skillData.mark_duration, skillData.mark_damage_mult / 100f, markEffectPrefab);
+                }
+            }
 
-                case StatusEffectType.Chain:
-                    break;
+            // 2. SupportSkillData 추가 효과 적용
+            if (supportSkillData != null)
+            {
+                switch (supportSkillData.GetStatusEffectType())
+                {
+                    case StatusEffectType.CC:
+                        boss.ApplyCC(supportSkillData.GetCCType(), supportSkillData.cc_duration, supportSkillData.cc_slow_amount, ccEffectPrefab);
+                        break;
+
+                    case StatusEffectType.DOT:
+                        boss.ApplyDOT(supportSkillData.GetDOTType(), supportSkillData.dot_damage_per_tick, supportSkillData.dot_tick_interval, supportSkillData.dot_duration, dotEffectPrefab);
+                        break;
+
+                    case StatusEffectType.Mark:
+                        boss.ApplyMark(supportSkillData.GetMarkType(), supportSkillData.mark_duration, supportSkillData.mark_damage_mult, markEffectPrefab);
+                        break;
+
+                    case StatusEffectType.Chain:
+                        break;
+                }
             }
         }
 
@@ -678,18 +808,35 @@ namespace Novelian.Combat
 
         //LMJ : Spawn fragment projectiles in fan pattern on hit (파편화 40002)
         // 원본 진행 방향을 기준으로 부채꼴 형태로 발사
-        private void SpawnFragmentProjectilesFan(Vector3 hitPosition, int totalCount, Vector3 originalDirection)
+        // 몬스터 콜라이더 크기에 따라 동적으로 스폰 위치 계산
+        private void SpawnFragmentProjectilesFan(Vector3 hitPosition, int totalCount, Vector3 originalDirection, Collider hitCollider)
         {
             if (totalCount <= 0) return;
 
             var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
-            float spawnOffset = 0.5f;
             float spreadAngle = 30f; // 부채꼴 총 각도 (좌우 각각 15도씩)
+
+            // 원본 발사체의 이펙트 프리팹 참조 저장
+            GameObject effectPrefab = skillPrefabs?.projectilePrefab;
+
+            // 원본 발사체의 시작 높이 사용 (바닥에서 생성되지 않도록)
+            float projectileHeight = startPosition.y;
+
+            // 몬스터 콜라이더 크기에 따라 동적으로 통과 오프셋 계산
+            // 콜라이더 바운드의 magnitude + 여유 공간으로 몬스터 뒤쪽에서 생성
+            float passOffset = 2.5f; // 기본값 (fallback)
+            if (hitCollider != null)
+            {
+                passOffset = hitCollider.bounds.extents.magnitude + 1.0f;
+            }
+            float spreadOffset = 0.5f; // 부채꼴 방향으로의 추가 오프셋
+
+            Debug.Log($"[Projectile] Fragment spawn: collider={hitCollider?.name}, boundsExtents={hitCollider?.bounds.extents}, passOffset={passOffset:F2}");
 
             for (int i = 0; i < totalCount; i++)
             {
                 // 부채꼴 각도 계산: 중앙을 0도로 하여 좌우로 퍼짐
-                // 예: 3발이면 -30도, 0도, +30도
+                // 예: 5발이면 -60도, -30도, 0도, +30도, +60도
                 float angleOffset = 0f;
                 if (totalCount > 1)
                 {
@@ -698,17 +845,40 @@ namespace Novelian.Combat
 
                 // Y축 회전을 적용하여 부채꼴 방향 계산
                 Vector3 fragmentDirection = Quaternion.Euler(0, angleOffset, 0) * originalDirection;
-                Vector3 spawnPos = hitPosition + fragmentDirection * spawnOffset;
+
+                // 히트 위치의 XZ + 원본 발사체의 Y 높이 사용
+                Vector3 adjustedHitPos = new Vector3(hitPosition.x, projectileHeight, hitPosition.z);
+
+                // 몬스터 뒤쪽(원본 방향으로 통과한 지점)에서 생성
+                Vector3 behindMonster = adjustedHitPos + originalDirection * passOffset;
+                Vector3 spawnPos = behindMonster + fragmentDirection * spreadOffset;
                 Vector3 targetPos = spawnPos + fragmentDirection * 50f;
 
                 Projectile fragment = pool.Spawn<Projectile>(spawnPos);
                 // 분열 발사체는 supportSkillId = 0으로 설정하여 재분열 방지
                 fragment.Launch(spawnPos, targetPos, speed, lifetime, damage, skillId, 0);
 
-                Debug.Log($"[Projectile] Fragment {i + 1}/{totalCount}: Fired at angle {angleOffset:F0}°");
+                // 파편에 원본 이펙트 복사
+                if (effectPrefab != null)
+                {
+                    // 기존 자식 이펙트 제거
+                    foreach (Transform child in fragment.transform)
+                    {
+                        if (child.gameObject != null)
+                        {
+                            Object.Destroy(child.gameObject);
+                        }
+                    }
+                    // 새 이펙트 생성
+                    GameObject fragmentEffect = Object.Instantiate(effectPrefab, fragment.transform);
+                    fragmentEffect.transform.localPosition = Vector3.zero;
+                    fragmentEffect.transform.localRotation = Quaternion.LookRotation(fragmentDirection);
+                }
+
+                Debug.Log($"[Projectile] Fragment {i + 1}/{totalCount}: Fired at angle {angleOffset:F0}°, spawnPos={spawnPos}, hasEffect={effectPrefab != null}");
             }
 
-            Debug.Log($"[Projectile] Fragmentation complete: {totalCount} fragments spawned in fan pattern");
+            Debug.Log($"[Projectile] Fragmentation complete: {totalCount} fragments spawned in fan pattern (passOffset={passOffset:F2})");
         }
 
         //LMJ : Return projectile to pool

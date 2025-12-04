@@ -67,6 +67,62 @@ public static class DamageCalculator
     }
 
     /// <summary>
+    /// 저체력 보너스 데미지 계산 (처형 서포트 등)
+    /// Issue #362 - 새 서포트 시스템
+    /// 공식: 대상 체력이 threshold% 이하일 때 damage × bonusMult
+    /// </summary>
+    /// <param name="baseDamage">기본 데미지</param>
+    /// <param name="targetCurrentHp">대상 현재 체력</param>
+    /// <param name="targetMaxHp">대상 최대 체력</param>
+    /// <param name="bonusMult">보너스 배율 (예: 1.8 = 80% 추가 데미지)</param>
+    /// <param name="hpThreshold">체력 임계치 (기본 0.3 = 30%)</param>
+    /// <returns>최종 데미지</returns>
+    public static float CalculateLowHpBonusDamage(
+        float baseDamage,
+        float targetCurrentHp,
+        float targetMaxHp,
+        float bonusMult,
+        float hpThreshold = 0.3f)
+    {
+        if (targetMaxHp <= 0) return baseDamage;
+
+        float hpRatio = targetCurrentHp / targetMaxHp;
+
+        // 체력이 임계치 이하면 보너스 데미지 적용
+        if (hpRatio <= hpThreshold)
+        {
+            return baseDamage * bonusMult;
+        }
+
+        return baseDamage;
+    }
+
+    /// <summary>
+    /// 버프/디버프 효과량 계산
+    /// Issue #362 - 새 서포트 시스템
+    /// 공식: baseValue × buffValueMult (또는 debuffValueMult)
+    /// </summary>
+    /// <param name="baseValue">기본 효과량</param>
+    /// <param name="valueMult">효과량 배율</param>
+    /// <returns>최종 효과량</returns>
+    public static float CalculateBuffDebuffValue(float baseValue, float valueMult)
+    {
+        return baseValue * valueMult;
+    }
+
+    /// <summary>
+    /// 채널링 지속시간 계산
+    /// Issue #362 - 새 서포트 시스템
+    /// </summary>
+    /// <param name="baseDuration">기본 채널링 지속시간</param>
+    /// <param name="channelDurationMult">채널링 지속시간 배율</param>
+    /// <returns>최종 채널링 지속시간</returns>
+    public static float CalculateChannelDuration(float baseDuration, float channelDurationMult)
+    {
+        return baseDuration * channelDurationMult;
+    }
+
+    /// <summary>
     /// 전체 데미지 계산 (모든 요소 종합)
     /// </summary>
     /// <param name="skillData">메인 스킬 데이터</param>

@@ -44,9 +44,6 @@ public class SupportSkillData
     [Name("status_effect")]
     public int status_effect { get; set; }
 
-    [Name("cc_type")]
-    public int cc_type { get; set; }
-
     [Name("cc_duration")]
     public float cc_duration { get; set; }
 
@@ -77,6 +74,19 @@ public class SupportSkillData
     [Name("chain_damage_reduction")]
     public float chain_damage_reduction { get; set; }
 
+    // 새 컬럼 추가 (Issue #362 - 보조스킬 밸런스 개편)
+    [Name("buff_value_mult")]
+    public float buff_value_mult { get; set; } = 1f;
+
+    [Name("debuff_value_mult")]
+    public float debuff_value_mult { get; set; } = 1f;
+
+    [Name("channel_duration_mult")]
+    public float channel_duration_mult { get; set; } = 1f;
+
+    [Name("low_hp_bonus_damage_mult")]
+    public float low_hp_bonus_damage_mult { get; set; } = 1f;
+
     // CSV의 //로 시작하는 주석 컬럼 (선택적)
     [Name("//support_name")]
     [Optional]
@@ -90,55 +100,78 @@ public class SupportSkillData
 
     /// <summary>
     /// support_category를 SupportCategory로 변환
-    /// 3703801=Projectile, 3703902=AOE, 3704003=StatusEffect, etc.
+    /// Issue #362 - 새 SupportCategory 체계 적용
     /// </summary>
     public SupportCategory GetSupportCategory()
     {
         return support_category switch
         {
-            3703801 => SupportCategory.Projectile,
-            3703902 => SupportCategory.AOE,
-            3704003 => SupportCategory.StatusEffect,
-            3704104 => SupportCategory.Chain,
-            3704205 => SupportCategory.SkillDamageUp,
-            3704306 => SupportCategory.ShootingTypeChange,
+            3503801 => SupportCategory.Projectile,
+            3503902 => SupportCategory.AOE,
+            3504003 => SupportCategory.StatusEffect,
+            3504104 => SupportCategory.Chain,
+            3504205 => SupportCategory.SkillDamageUp,
+            3504306 => SupportCategory.ShootingTypeChange,
+            3504407 => SupportCategory.Universal,
+            3504508 => SupportCategory.BuffEnhance,
+            3504609 => SupportCategory.DOTEnhance,
+            3504710 => SupportCategory.TrapMineEnhance,
+            3504811 => SupportCategory.InstantEnhance,
+            3504912 => SupportCategory.ChannelingEnhance,
+            3505013 => SupportCategory.DebuffEnhance,
             _ => SupportCategory.Projectile
         };
     }
 
     /// <summary>
     /// status_effect를 StatusEffectType으로 변환
-    /// 3301600=None, 3301701=CC, 3301802=DOT, 3301903=Mark, 3302004=Chain
+    /// Issue #362 - 새 ID 체계 적용
+    /// 3201600=None, 3201701=CC, 3201802=DOT, 3201903=Mark, 3202004=Chain
     /// </summary>
     public StatusEffectType GetStatusEffectType()
     {
         return status_effect switch
         {
-            3301600 => StatusEffectType.None,
-            3301701 => StatusEffectType.CC,
-            3301802 => StatusEffectType.DOT,
-            3301903 => StatusEffectType.Mark,
-            3302004 => StatusEffectType.Chain,
+            3201600 => StatusEffectType.None,
+            3201701 => StatusEffectType.CC,
+            3201802 => StatusEffectType.DOT,
+            3201903 => StatusEffectType.Mark,
+            3202004 => StatusEffectType.Chain,
             _ => StatusEffectType.None
         };
     }
 
     /// <summary>
-    /// cc_type을 CCType으로 변환
-    /// 3402100=None, 3402201=Stun, 3402302=Slow, etc.
+    /// CC 타입 반환
+    /// Issue #362 - 새 CSV에서는 cc_type 컬럼이 제거됨
+    /// cc_slow_amount > 0 이면 Slow, cc_duration > 0 이면 Stun
     /// </summary>
     public CCType GetCCType()
     {
-        return cc_type switch
-        {
-            3402100 => CCType.None,
-            3402201 => CCType.Stun,
-            3402302 => CCType.Slow,
-            3402403 => CCType.Root,
-            3402505 => CCType.Knockback,
-            _ => CCType.None
-        };
+        if (cc_slow_amount > 0) return CCType.Slow;
+        if (cc_duration > 0) return CCType.Stun;
+        return CCType.None;
     }
+
+    /// <summary>
+    /// 저체력 보너스 데미지 서포트인지 확인 (처형 등)
+    /// </summary>
+    public bool IsLowHpBonusSupport => low_hp_bonus_damage_mult > 1f;
+
+    /// <summary>
+    /// 버프 강화 서포트인지 확인
+    /// </summary>
+    public bool IsBuffEnhanceSupport => buff_value_mult > 1f;
+
+    /// <summary>
+    /// 디버프 강화 서포트인지 확인
+    /// </summary>
+    public bool IsDebuffEnhanceSupport => debuff_value_mult > 1f;
+
+    /// <summary>
+    /// 채널링 강화 서포트인지 확인
+    /// </summary>
+    public bool IsChannelEnhanceSupport => channel_duration_mult > 1f;
 
     /// <summary>
     /// 체이닝 지원 스킬인지 확인
@@ -179,14 +212,21 @@ public class SupportSkillData
 }
 
 /// <summary>
-/// 서포트 스킬 카테고리 (새 ID 체계)
+/// 서포트 스킬 카테고리 (Issue #362 - 새 ID 체계)
 /// </summary>
 public enum SupportCategory
 {
-    Projectile = 1,        // 발사체 변형 (3703801)
-    AOE = 2,               // 범위 변형 (3703902)
-    StatusEffect = 3,      // 상태이상 부여 (3704003)
-    Chain = 4,             // 연쇄 효과 (3704104)
-    SkillDamageUp = 5,     // 스킬 데미지 증가 (3704205)
-    ShootingTypeChange = 6 // 발사 형식 변경 (3704306)
+    Projectile = 1,         // 발사체 변형 (3503801)
+    AOE = 2,                // 범위 변형 (3503902)
+    StatusEffect = 3,       // 상태이상 부여 (3504003)
+    Chain = 4,              // 연쇄 효과 (3504104)
+    SkillDamageUp = 5,      // 스킬 데미지 증가 (3504205)
+    ShootingTypeChange = 6, // 발사 형식 변경 (3504306)
+    Universal = 7,          // 범용 강화 (3504407)
+    BuffEnhance = 8,        // 버프 강화 (3504508)
+    DOTEnhance = 9,         // DOT 강화 (3504609)
+    TrapMineEnhance = 10,   // 함정/지뢰 강화 (3504710)
+    InstantEnhance = 11,    // 즉발 강화 (3504811)
+    ChannelingEnhance = 12, // 채널링 강화 (3504912)
+    DebuffEnhance = 13      // 디버프 강화 (3505013)
 }

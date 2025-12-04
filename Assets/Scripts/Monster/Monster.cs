@@ -197,13 +197,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         if (isDead) return;
 
-        // 무적 모드일 때 데미지 무시 (테스트용)
-        if (isInvincible)
-        {
-            Debug.Log("[Monster] 무적 모드로 데미지 무시");
-            return;
-        }
-
         // Apply Mark damage multiplier if active
         float finalDamage = damage;
         bool isCritical = false;
@@ -214,11 +207,18 @@ public class Monster : BaseEntity, ITargetable, IMovable
             Debug.Log($"[Monster] Mark amplified damage: {damage:F1} -> {finalDamage:F1} (+{markDamageMultiplier}%)");
         }
 
-        // LMJ: Show floating damage text
+        // LMJ: Show floating damage text (무적 상태에서도 표시)
         if (NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance != null)
         {
             Vector3 textPosition = collider3D != null ? collider3D.bounds.center : transform.position;
             NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance.ShowDamage(textPosition, finalDamage, isCritical);
+        }
+
+        // 무적 모드일 때는 데미지 텍스트만 표시하고 실제 체력 감소는 스킵 (테스트용)
+        if (isInvincible)
+        {
+            Debug.Log($"[Monster] 무적 모드 - 데미지 표시만: {finalDamage:F1}");
+            return;
         }
 
         base.TakeDamage(finalDamage);
@@ -538,6 +538,103 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 currentMarkType = MarkType.None;
                 markDamageMultiplier = 0f;
                 Debug.Log($"[Monster] Mark ended");
+            }
+        }
+        catch (System.OperationCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
+    // Debuff state tracking
+    private DeBuffType currentDebuffType = DeBuffType.None;
+    private float debuffValue = 0f;
+    private float originalDamage;
+    private float originalMoveSpeed;
+    private System.Threading.CancellationTokenSource debuffCts;
+
+    /// <summary>
+    /// 디버프 효과 적용
+    /// ATK_Damage_Down: 공격력 감소
+    /// ATK_Speed_Down: 이동속도/공격속도 감소
+    /// Take_Damage_UP: 받는 피해 증가 (mark처럼 작동)
+    /// </summary>
+    public void ApplyDebuff(DeBuffType debuffType, float value, float duration, GameObject debuffEffectPrefab = null)
+    {
+        if (isDead) return;
+
+        Debug.Log($"[Monster] {debuffType} Debuff applied: {value}% for {duration}s");
+
+        // Cancel previous debuff if exists
+        debuffCts?.Cancel();
+        debuffCts?.Dispose();
+        debuffCts = new System.Threading.CancellationTokenSource();
+
+        // Store original values on first debuff
+        if (currentDebuffType == DeBuffType.None)
+        {
+            originalDamage = damage;
+            originalMoveSpeed = moveSpeed;
+        }
+
+        currentDebuffType = debuffType;
+        debuffValue = value;
+
+        // Apply debuff effect based on type
+        switch (debuffType)
+        {
+            case DeBuffType.ATK_Damage_Down:
+                damage = originalDamage * (1f - value / 100f);
+                break;
+
+            case DeBuffType.ATK_Speed_Down:
+                moveSpeed = originalMoveSpeed * (1f - value / 100f);
+                break;
+
+            case DeBuffType.Take_Damage_UP:
+                // 받는 피해 증가는 별도로 TakeDamage에서 처리 (markDamageMultiplier와 유사하게)
+                markDamageMultiplier += value / 100f;
+                break;
+        }
+
+        // Spawn debuff effect
+        if (debuffEffectPrefab != null)
+        {
+            GameObject debuffEffect = Instantiate(debuffEffectPrefab, transform.position + Vector3.up, Quaternion.identity, transform);
+            Destroy(debuffEffect, duration);
+        }
+
+        // Start debuff duration
+        StartDebuff(duration, debuffCts.Token).Forget();
+    }
+
+    private async Cysharp.Threading.Tasks.UniTaskVoid StartDebuff(float duration, System.Threading.CancellationToken ct)
+    {
+        try
+        {
+            await Cysharp.Threading.Tasks.UniTask.Delay((int)(duration * 1000), cancellationToken: ct);
+
+            if (!ct.IsCancellationRequested)
+            {
+                // Restore original values
+                switch (currentDebuffType)
+                {
+                    case DeBuffType.ATK_Damage_Down:
+                        damage = originalDamage;
+                        break;
+
+                    case DeBuffType.ATK_Speed_Down:
+                        moveSpeed = originalMoveSpeed;
+                        break;
+
+                    case DeBuffType.Take_Damage_UP:
+                        markDamageMultiplier -= debuffValue / 100f;
+                        break;
+                }
+
+                currentDebuffType = DeBuffType.None;
+                debuffValue = 0f;
+                Debug.Log($"[Monster] Debuff ended");
             }
         }
         catch (System.OperationCanceledException)

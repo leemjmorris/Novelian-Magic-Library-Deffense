@@ -1,46 +1,55 @@
 //열거형타입,ID,값,이름,//설명
 //enum_type,ID,value,name,//description
 //string,int,int,string,//string
-SkillType,3000100,00,Projectile,투사체 스킬
-SkillType,3000201,01,Instant Single,인스턴트 단일
-SkillType,3000302,02,AOE,범위 공격 스킬
-SkillType,3000403,03,DOT,지속 데미지 스킬
-SkillType,3000504,04,Buff,버프 스킬
-SkillType,3000605,05,Debuff,디버프 스킬
-SkillType,3000706,06,Channeling,채널링 스킬
-SkillType,3000807,07,Trap,함정 스킬
-SkillType,3000908,08,Mine,지뢰 스킬
+SkillType,3000100,00,Projectile,투사체스킬
+SkillType,3000201,01,InstantSingle,인스턴트단일
+SkillType,3000302,02,AOE,범위공격스킬
+SkillType,3000403,03,DOT,지속데미지스킬
+SkillType,3000504,04,Buff,버프스킬
+SkillType,3000605,05,Debuff,디버프스킬
+SkillType,3000706,06,Channeling,채널링스킬
+SkillType,3000807,07,Trap,함정스킬
+SkillType,3000908,08,Mine,지뢰스킬
 ElementType,3101000,00,None,무속성
 ElementType,3101101,01,Romance,로맨스
 ElementType,3101202,02,Comedy,코미디
 ElementType,3101303,03,Adventure,모험
 ElementType,3101404,04,Mystery,추리
 ElementType,3101505,05,Fear,공포
-StatusEffectType,3301600,00,None,효과 없음
-StatusEffectType,3301701,01,CC,군중 제어
-StatusEffectType,3301802,02,DOT,지속 데미지
-StatusEffectType,3301903,03,Mark,표식
-StatusEffectType,3302004,04,Chain,연쇄 공격
-CCType,3402100,00,None,없음
-CCType,3402201,01,Stun,스턴
-CCType,3402302,02,Slow,슬로우
-CCType,3402403,03,Root,속박
-CCType,3402505,05,Knockback,넉백
-DOTType,3502600,00,None,없음
-DOTType,3502701,01,Burn,화상
-DOTType,3502802,02,Poison,중독
-DOTType,3502903,03,Bleed,출혈
-DOTType,3503004,04,Corrosion,부식
-DOTType,3503105,05,Curse,저주
-MarkType,3603200,00,None,없음
-MarkType,3603301,01,Romance,로맨스 표식
-MarkType,3603402,02,Comedy,코미디 표식
-MarkType,3603503,03,Adventure,모험 표식
-MarkType,3603604,04,Mystery,추리 표식
-MarkType,3603705,05,Fear,공포 표식
-SupportCategory,3703801,01,Projectile,발사체 변형
-SupportCategory,3703902,02,AOE,범위 변형
-SupportCategory,3704003,03,StatusEffect,상태이상 부여
-SupportCategory,3704104,04,Chain,연쇄 효과
-SupportCategory,3704205,05,Skill Damage UP,스킬 데미지 증가
-SupportCategory,3704306,06,Shooting Type Change,발사 형식 변경
+StatusEffectType,3201600,00,None,효과없음
+StatusEffectType,3201701,01,CC,군중제어
+StatusEffectType,3201802,02,DOT,지속데미지
+StatusEffectType,3201903,03,Mark,표식
+StatusEffectType,3202004,04,Chain,연쇄공격
+CCType,3302100,00,None,없음
+CCType,3302201,01,Stun,스턴
+CCType,3302302,02,Slow,슬로우
+MarkType,3403200,00,None,없음
+MarkType,3403301,01,Romance,로맨스표식
+MarkType,3403402,02,Comedy,코미디표식
+MarkType,3403503,03,Adventure,모험표식
+MarkType,3403604,04,Mystery,추리표식
+MarkType,3403705,05,Fear,공포표식
+SupportCategory,3503801,01,Projectile,발사체변형
+SupportCategory,3503902,02,AOE,범위변형
+SupportCategory,3504003,03,StatusEffect,상태이상부여
+SupportCategory,3504104,04,Chain,연쇄효과
+SupportCategory,3504205,05,SkillDamageUP,스킬데미지증가
+SupportCategory,3504306,06,ShootingTypeChange,발사형식변경
+SupportCategory,3504407,07,Universal,범용강화
+SupportCategory,3504508,08,BuffEnhance,버프강화
+SupportCategory,3504609,09,DOTEnhance,DOT강화
+SupportCategory,3504710,10,TrapMineEnhance,함정지뢰강화
+SupportCategory,3504811,11,InstantEnhance,즉발강화
+SupportCategory,3504912,12,ChannelingEnhance,채널링강화
+SupportCategory,3505013,13,DebuffEnhance,디버프강화
+BuffType,3604400,00,None,없음
+BuffType,3604501,01,ATK_Damage_UP,공격력 증가
+BuffType,3604602,02,ATK_Speed_UP,공격 속도 증가
+BuffType,3604703,03,ATK_Range_UP,공격 사거리 증가
+BuffType,3604804,04,Critical_Damage_UP,치명타 데미지 증가
+BuffType,3604905,05,Battle_Exp_UP,전투 내 획득 경험치 증가
+DeBuffType,3605000,00,None,없음
+DeBuffType,3605101,01,ATK_Damage_Down,공격력 감소
+DeBuffType,3605202,02,ATK_Speed_Down,공격 속도 감소
+DeBuffType,3605303,03,Take_Damage_UP,받는 피해량 증가

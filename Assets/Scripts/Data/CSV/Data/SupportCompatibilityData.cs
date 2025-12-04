@@ -8,41 +8,41 @@ using CsvHelper.Configuration.Attributes;
 [Serializable]
 public class SupportCompatibilityData
 {
-    [Name("support_id")]
+    [Name("Support_ID")]
     public int support_id { get; set; }
 
-    [Name("//support_name")]
+    [Name("//Support_name")]
     [Optional]
     public string support_name { get; set; }
 
-    [Name("projectile")]
+    [Name("Projectile")]
     public int projectile { get; set; }
 
-    [Name("instant_single")]
+    [Name("Instant_Single")]
     public int instant_single { get; set; }
 
-    [Name("aoe")]
+    [Name("AoE")]
     public int aoe { get; set; }
 
-    [Name("dot")]
+    [Name("DOT")]
     public int dot { get; set; }
 
-    [Name("buff")]
+    [Name("Buff")]
     public int buff { get; set; }
 
-    [Name("debuff")]
+    [Name("Debuff")]
     public int debuff { get; set; }
 
-    [Name("channeling")]
+    [Name("Channeling")]
     public int channeling { get; set; }
 
-    [Name("trap")]
+    [Name("Trap")]
     public int trap { get; set; }
 
-    [Name("mine")]
+    [Name("Mine")]
     public int mine { get; set; }
 
-    [Name("//description")]
+    [Name("//Description")]
     [Optional]
     public string description { get; set; }
 

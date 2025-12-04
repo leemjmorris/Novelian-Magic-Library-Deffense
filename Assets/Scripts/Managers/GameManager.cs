@@ -43,6 +43,11 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             instance = this;
+
+            // Frame rate limit (120fps for most mobile devices)
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = 120;
+
             InitializeManagers();
         }
 

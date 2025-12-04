@@ -20,6 +20,46 @@ public class MainSkillData
     [Name("base_damage")]
     public float base_damage { get; set; }
 
+    // Issue #362 - 버프/디버프/CC/DOT/표식 컬럼 추가
+    [Name("buff_type")]
+    public int buff_type { get; set; }
+
+    [Name("base_buff_value")]
+    public float base_buff_value { get; set; }
+
+    [Name("debuff_type")]
+    public int debuff_type { get; set; }
+
+    [Name("base_debuff_value")]
+    public float base_debuff_value { get; set; }
+
+    [Name("cc_type")]
+    public int cc_type { get; set; }
+
+    [Name("cc_duration")]
+    public float cc_duration { get; set; }
+
+    [Name("stun_use")]
+    public bool stun_use { get; set; }
+
+    [Name("cc_slow_amount")]
+    public float cc_slow_amount { get; set; }
+
+    [Name("dot_duration")]
+    public float dot_duration { get; set; }
+
+    [Name("dot_tick_interval")]
+    public float dot_tick_interval { get; set; }
+
+    [Name("dot_damage_per_tick")]
+    public float dot_damage_per_tick { get; set; }
+
+    [Name("mark_duration")]
+    public float mark_duration { get; set; }
+
+    [Name("mark_damage_mult")]
+    public float mark_damage_mult { get; set; }
+
     [Name("cooldown")]
     public float cooldown { get; set; }
 
@@ -133,6 +173,104 @@ public class MainSkillData
     /// 함정/지뢰 스킬인지 확인
     /// </summary>
     public bool IsTrapSkill => skill_type_ID == 3000807 || skill_type_ID == 3000908;
+
+    /// <summary>
+    /// 버프 스킬인지 확인
+    /// </summary>
+    public bool IsBuffSkill => skill_type_ID == 3000504;
+
+    /// <summary>
+    /// 디버프 스킬인지 확인
+    /// </summary>
+    public bool IsDebuffSkill => skill_type_ID == 3000605;
+
+    /// <summary>
+    /// CC 타입 반환 (3302100=None, 3302201=Stun, 3302302=Slow)
+    /// </summary>
+    public CCType GetCCType()
+    {
+        return cc_type switch
+        {
+            3302100 => CCType.None,
+            3302201 => CCType.Stun,
+            3302302 => CCType.Slow,
+            _ => CCType.None
+        };
+    }
+
+    /// <summary>
+    /// 버프 타입 반환
+    /// </summary>
+    public BuffType GetBuffType()
+    {
+        return buff_type switch
+        {
+            3604400 => BuffType.None,
+            3604501 => BuffType.ATK_Damage_UP,
+            3604602 => BuffType.ATK_Speed_UP,
+            3604703 => BuffType.ATK_Range_UP,
+            3604804 => BuffType.Critical_Damage_UP,
+            3604905 => BuffType.Battle_Exp_UP,
+            _ => BuffType.None
+        };
+    }
+
+    /// <summary>
+    /// 디버프 타입 반환
+    /// </summary>
+    public DeBuffType GetDeBuffType()
+    {
+        return debuff_type switch
+        {
+            3605000 => DeBuffType.None,
+            3605101 => DeBuffType.ATK_Damage_Down,
+            3605202 => DeBuffType.ATK_Speed_Down,
+            3605303 => DeBuffType.Take_Damage_UP,
+            _ => DeBuffType.None
+        };
+    }
+
+    /// <summary>
+    /// CC 효과가 있는 스킬인지 확인
+    /// stun_use=true 이거나 cc_duration > 0 이면 CC 효과 있음
+    /// </summary>
+    public bool HasCCEffect => stun_use || (cc_type != 3302100 && cc_duration > 0);
+
+    /// <summary>
+    /// DOT 효과가 있는 스킬인지 확인
+    /// </summary>
+    public bool HasDOTEffect => dot_duration > 0 && dot_damage_per_tick > 0;
+
+    /// <summary>
+    /// 표식 효과가 있는 스킬인지 확인
+    /// </summary>
+    public bool HasMarkEffect => mark_duration > 0 && mark_damage_mult > 0;
+
+    /// <summary>
+    /// 버프 효과가 있는 스킬인지 확인
+    /// </summary>
+    public bool HasBuffEffect => buff_type != 3604400 && base_buff_value > 0;
+
+    /// <summary>
+    /// 디버프 효과가 있는 스킬인지 확인
+    /// </summary>
+    public bool HasDebuffEffect => debuff_type != 3605000 && base_debuff_value > 0;
+
+    /// <summary>
+    /// 속성 타입 기반 표식 타입 반환
+    /// </summary>
+    public MarkType GetElementBasedMarkType()
+    {
+        return element_type_ID switch
+        {
+            3101101 => MarkType.Romance,    // 로맨스
+            3101202 => MarkType.Comedy,     // 코미디
+            3101303 => MarkType.Adventure,  // 모험
+            3101404 => MarkType.Mystery,    // 추리
+            3101505 => MarkType.Fear,       // 공포
+            _ => MarkType.None
+        };
+    }
 
     #endregion
 }

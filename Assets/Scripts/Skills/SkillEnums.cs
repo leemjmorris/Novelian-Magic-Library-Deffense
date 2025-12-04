@@ -132,6 +132,32 @@ public enum MarkType
 }
 
 /// <summary>
+/// 버프 타입 (MainSkillTable의 buff_type)
+/// 3604400=None, 3604501=ATK_Damage_UP, 3604602=ATK_Speed_UP, etc.
+/// </summary>
+public enum BuffType
+{
+    None,               // 없음 (3604400)
+    ATK_Damage_UP,      // 공격력 증가 (3604501)
+    ATK_Speed_UP,       // 공격속도 증가 (3604602)
+    ATK_Range_UP,       // 사거리 증가 (3604703)
+    Critical_Damage_UP, // 치명타 데미지 증가 (3604804)
+    Battle_Exp_UP,      // 전투 경험치 증가 (3604905)
+}
+
+/// <summary>
+/// 디버프 타입 (MainSkillTable의 debuff_type)
+/// 3605000=None, 3605101=ATK_Damage_Down, 3605202=ATK_Speed_Down, etc.
+/// </summary>
+public enum DeBuffType
+{
+    None,               // 없음 (3605000)
+    ATK_Damage_Down,    // 공격력 감소 (3605101)
+    ATK_Speed_Down,     // 공격속도 감소 (3605202)
+    Take_Damage_UP,     // 받는 피해 증가 (3605303)
+}
+
+/// <summary>
 /// 스킬 카테고리
 /// </summary>
 public enum SkillCategory

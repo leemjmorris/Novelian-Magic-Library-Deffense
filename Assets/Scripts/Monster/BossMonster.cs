@@ -217,6 +217,101 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         }
     }
 
+    // Debuff state tracking
+    private DeBuffType currentDebuffType = DeBuffType.None;
+    private float debuffValue = 0f;
+    private float originalDamage;
+    private float originalMoveSpeed;
+    private System.Threading.CancellationTokenSource debuffCts;
+
+    /// <summary>
+    /// 디버프 효과 적용
+    /// ATK_Damage_Down: 공격력 감소
+    /// ATK_Speed_Down: 이동속도/공격속도 감소
+    /// Take_Damage_UP: 받는 피해 증가 (mark처럼 작동)
+    /// </summary>
+    public void ApplyDebuff(DeBuffType debuffType, float value, float duration, GameObject debuffEffectPrefab = null)
+    {
+        Debug.Log($"[BossMonster] {debuffType} Debuff applied: {value}% for {duration}s");
+
+        // Cancel previous debuff if exists
+        debuffCts?.Cancel();
+        debuffCts?.Dispose();
+        debuffCts = new System.Threading.CancellationTokenSource();
+
+        // Store original values on first debuff
+        if (currentDebuffType == DeBuffType.None)
+        {
+            originalDamage = damage;
+            originalMoveSpeed = moveSpeed;
+        }
+
+        currentDebuffType = debuffType;
+        debuffValue = value;
+
+        // Apply debuff effect based on type
+        switch (debuffType)
+        {
+            case DeBuffType.ATK_Damage_Down:
+                damage = originalDamage * (1f - value / 100f);
+                break;
+
+            case DeBuffType.ATK_Speed_Down:
+                moveSpeed = originalMoveSpeed * (1f - value / 100f);
+                break;
+
+            case DeBuffType.Take_Damage_UP:
+                // 받는 피해 증가는 markDamageMultiplier 사용
+                markDamageMultiplier += value / 100f;
+                break;
+        }
+
+        // Spawn debuff effect
+        if (debuffEffectPrefab != null)
+        {
+            GameObject debuffEffect = Instantiate(debuffEffectPrefab, transform.position + Vector3.up * 2f, Quaternion.identity, transform);
+            Destroy(debuffEffect, duration);
+        }
+
+        // Start debuff duration
+        StartDebuff(duration, debuffCts.Token).Forget();
+    }
+
+    private async Cysharp.Threading.Tasks.UniTaskVoid StartDebuff(float duration, System.Threading.CancellationToken ct)
+    {
+        try
+        {
+            await Cysharp.Threading.Tasks.UniTask.Delay((int)(duration * 1000), cancellationToken: ct);
+
+            if (!ct.IsCancellationRequested)
+            {
+                // Restore original values
+                switch (currentDebuffType)
+                {
+                    case DeBuffType.ATK_Damage_Down:
+                        damage = originalDamage;
+                        break;
+
+                    case DeBuffType.ATK_Speed_Down:
+                        moveSpeed = originalMoveSpeed;
+                        break;
+
+                    case DeBuffType.Take_Damage_UP:
+                        markDamageMultiplier -= debuffValue / 100f;
+                        break;
+                }
+
+                currentDebuffType = DeBuffType.None;
+                debuffValue = 0f;
+                Debug.Log($"[BossMonster] Debuff ended");
+            }
+        }
+        catch (System.OperationCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
     /// <summary>
     /// Check if this boss has a Focus Mark (for focus targeting)
     /// </summary>
