@@ -40,8 +40,16 @@ public class InventoryItemInfo
         ItemType = ingredientData.Use_Type;
 
         // GradeTable에서 등급 정보 가져오기
-        var gradeData = CSVLoader.Instance.GetData<GradeData>(ingredientData.Grade_ID);
-        ItemGrade = gradeData?.Grade_Type ?? Grade.Common;
+        if (ingredientData.Grade_ID > 0)
+        {
+            var gradeData = CSVLoader.Instance.GetData<GradeData>(ingredientData.Grade_ID);
+            ItemGrade = gradeData?.Grade_Type ?? Grade.Common;
+        }
+        else
+        {
+            // Grade_ID가 0이면 기본값 사용 (에러 방지)
+            ItemGrade = Grade.Common;
+        }
 
         MaxStackCount = Mathf.Max(1, ingredientData.Max_Stack); // 한 슬롯당 최대 스택 개수
         MaxTotalCount = Mathf.Max(MaxStackCount, ingredientData.Max_Count); // 전체 최대 보유 가능 개수

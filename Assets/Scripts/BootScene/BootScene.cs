@@ -35,6 +35,9 @@ public class BootScene : MonoBehaviour
     {
         Log("=== Boot Scene Started ===");
 
+        // 파견 상태 초기화 (새 게임 시작 시)
+        ClearDispatchState();
+
         // LCB: 페이드 패널을 검은 화면으로 미리 설정 (튕김 방지)
         if (FadeController.Instance != null)
         {
@@ -441,6 +444,20 @@ public class BootScene : MonoBehaviour
         FadeController.Instance.fadePanel.SetActive(false);
 
         Log("=== Scene Transition Complete ===");
+    }
+
+    /// <summary>
+    /// 파견 상태 초기화 (새 게임 시작 시)
+    /// </summary>
+    private void ClearDispatchState()
+    {
+        const string DISPATCH_SAVE_KEY = "DispatchTestPanel_SaveData";
+        if (PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+        {
+            PlayerPrefs.DeleteKey(DISPATCH_SAVE_KEY);
+            PlayerPrefs.Save();
+            Log("파견 상태 초기화됨");
+        }
     }
 
     /// <summary>

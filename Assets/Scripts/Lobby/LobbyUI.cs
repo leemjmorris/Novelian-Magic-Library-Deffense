@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using Dispatch;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
 using TMPro;
@@ -12,6 +13,12 @@ public class LobbyUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI premiumText;
     private int maxAP = 30;
 
+    [Header("Dispatch Red Dot")]
+    [SerializeField] private GameObject dispatchRedDot; // 파견 버튼 Red Dot
+    [SerializeField] private float dispatchCheckInterval = 1f; // 파견 상태 확인 주기 (초)
+
+    private bool isDispatchCompleted = false; // 파견 완료 상태 캐싱
+
     private void OnEnable()
     {
         InitializeAP();
@@ -20,6 +27,12 @@ public class LobbyUI : MonoBehaviour
         {
             CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
         }
+
+        // 파견 완료 플래그 초기화
+        isDispatchCompleted = false;
+
+        // 파견 완료 상태 주기적 확인 시작
+        InvokeRepeating(nameof(CheckDispatchState), 0f, dispatchCheckInterval);
     }
 
     private void OnDisable()
@@ -28,6 +41,9 @@ public class LobbyUI : MonoBehaviour
         {
             CurrencyManager.Instance.OnCurrencyChanged -= OnCurrencyChanged;
         }
+
+        // 주기적 확인 중지
+        CancelInvoke(nameof(CheckDispatchState));
     }
 
     private void InitializeAP()
@@ -159,6 +175,45 @@ public class LobbyUI : MonoBehaviour
     public void OnDispatchButton()
     {
         LoadSceneWithFadeOnly(SceneName.DispatchSystemScene).Forget();
+    }
+
+    /// <summary>
+    /// 파견 완료 상태 확인 및 Red Dot 표시 (최적화: 완료되면 더 이상 체크 안 함)
+    /// DispatchStateHelper 유틸리티 클래스 사용
+    /// </summary>
+    private void CheckDispatchState()
+    {
+        // Red Dot이 할당되지 않았으면 무시
+        if (dispatchRedDot == null)
+        {
+            return;
+        }
+
+        // 이미 파견 완료 상태라면 더 이상 체크하지 않음 (최적화)
+        if (isDispatchCompleted)
+        {
+            return;
+        }
+
+        // DispatchStateHelper를 사용한 간단한 파견 완료 체크
+        bool isCompleted = DispatchStateHelper.IsDispatchCompleted();
+
+        if (isCompleted)
+        {
+            // 파견 완료 상태라면 Red Dot 활성화 후 체크 중지
+            dispatchRedDot.SetActive(true);
+            isDispatchCompleted = true; // 플래그 설정으로 더 이상 체크 안 함
+            CancelInvoke(nameof(CheckDispatchState)); // 주기적 확인 중지
+            Debug.Log("[LobbyUI] ✅ 파견 완료 - 로비에 Red Dot 표시 (체크 중지)");
+        }
+        else
+        {
+            // 파견 중이거나 저장된 상태가 없으면 Red Dot 비활성화
+            if (dispatchRedDot.activeSelf)
+            {
+                dispatchRedDot.SetActive(false);
+            }
+        }
     }
 
     public void OnCraftButton()
