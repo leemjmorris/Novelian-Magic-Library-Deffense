@@ -20,6 +20,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
     [Header("Panel References")]
     [SerializeField] private CharacterInfoPanel characterInfoPanel;
     [SerializeField] private BookmarkEquipPanel bookmarkEquipPanel;
+    [SerializeField] private GameObject raycastPanel;
 
     // 현재 선택된 책갈피
     private BookMark currentBookmark;
@@ -64,6 +65,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
         // 버튼 상태 설정 (장착 여부에 따라)
         UpdateButtonStates();
 
+        raycastPanel?.SetActive(true);
         gameObject.SetActive(true);
     }
 
@@ -323,5 +325,6 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
     {
         currentBookmark = null;
         gameObject.SetActive(false);
+        raycastPanel?.SetActive(false);
     }
 }

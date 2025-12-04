@@ -5,6 +5,7 @@ using UnityEngine.UI;
 public class CharacterInfoPanel : MonoBehaviour
 {
     [SerializeField] private GameObject panel;
+    [SerializeField] private GameObject raycastPanel;
 
     [SerializeField] private GameObject bookmarkEquipPanel;
     [SerializeField] private GameObject enhancementPanelObject;
@@ -179,6 +180,7 @@ public class CharacterInfoPanel : MonoBehaviour
 
     public void ShowPanel()
     {
+        raycastPanel?.SetActive(true);
         panel.SetActive(true);
     }
 
@@ -186,5 +188,6 @@ public class CharacterInfoPanel : MonoBehaviour
     {
         currentSlot?.RefreshCharacterLevel();
         panel.SetActive(false);
+        raycastPanel?.SetActive(false);
     }
 }
