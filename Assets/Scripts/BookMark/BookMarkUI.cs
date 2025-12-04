@@ -173,13 +173,8 @@ public class BookMarkUI : MonoBehaviour
 
     private void OnSelectionStatButtonClicked()
     {
-        choicePanel.SetActive(false);
-
-        recipePanel.SetActive(true);
-        statRecipeLayout.SetActive(true);
-        skillRecipeLayout.SetActive(false);
-        recipePanelTitleText.text = "스탯 책갈피 제작";
-        SelectedBookmarkType = BookmarkType.Stat;
+        // JML: 스탯 책갈피 제작은 준비 중
+        NovelianMagicLibraryDefense.Managers.WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     private void OnSelectionSkillButtonClicked()

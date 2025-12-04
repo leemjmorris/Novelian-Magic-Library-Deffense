@@ -37,11 +37,11 @@ public class BookmarkOptionData
     public int Option_Name_ID { get; set; }
     public int Grade { get; set; }
     public OptionType Option_Type { get; set; }
-    public int Option_Value { get; set; }
+    public float Option_Value { get; set; }
 }
 
 [Serializable]
-public class BookmarkListData
+public class BookmarkStatListData
 {
     public int List_ID { get; set; }
     public int List_Name_ID { get; set; }
@@ -49,4 +49,12 @@ public class BookmarkListData
     public int Option_2_ID { get; set; }
     public int Option_3_ID { get; set; }
     public int Option_4_ID { get; set; }
+}
+
+[Serializable]
+public class BookmarkSkillListData
+{
+    public int List_2_ID { get; set; }
+    public int List_2_Name_ID { get; set; }
+    public int Bookmark_ID { get; set; }
 }

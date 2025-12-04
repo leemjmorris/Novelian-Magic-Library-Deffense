@@ -227,21 +227,41 @@ public static class BookMarkCraft
     /// JML: Create Bookmark from Result_ID
     /// Result_ID로부터 BookMark 생성
     /// </summary>
-    /// <param name="resultID">BookmarkListData의 List_ID</param>
+    /// <param name="resultID">스탯: BookmarkStatListData의 List_ID / 스킬: Grade_ID</param>
     /// <param name="bookmarkType">제작할 책갈피 타입 (Stat 또는 Skill)</param>
     private static BookMark CreateBookmarkFromResult(int resultID, BookmarkType bookmarkType)
     {
-        // JML: Load BookmarkListData
-        // BookmarkListData 로드
-        var listData = CSVLoader.Instance.GetData<BookmarkListData>(resultID);
+        if (bookmarkType == BookmarkType.Stat)
+        {
+            return CreateStatBookmark(resultID);
+        }
+        else if (bookmarkType == BookmarkType.Skill)
+        {
+            return CreateSkillBookmark(resultID);
+        }
+        else
+        {
+            Debug.LogError($"[BookMarkCraft] 유효하지 않은 BookmarkType: {bookmarkType}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// JML: Create Stat Bookmark from BookmarkStatListTable
+    /// 스탯 책갈피 생성 (BookmarkStatListTable 사용)
+    /// </summary>
+    /// <param name="listID">BookmarkStatListData의 List_ID</param>
+    private static BookMark CreateStatBookmark(int listID)
+    {
+        // JML: Load BookmarkStatListData
+        var listData = CSVLoader.Instance.GetData<BookmarkStatListData>(listID);
         if (listData == null)
         {
-            Debug.LogError($"[BookMarkCraft] BookmarkListData를 찾을 수 없음: {resultID}");
+            Debug.LogError($"[BookMarkCraft] BookmarkStatListData를 찾을 수 없음: {listID}");
             return null;
         }
 
         // JML: Collect Option_1~4 (without LINQ)
-        // Option_1~4 수집 (LINQ 없이)
         int[] optionIDs = new int[]
         {
             listData.Option_1_ID,
@@ -251,7 +271,6 @@ public static class BookMarkCraft
         };
 
         // JML: Filter valid options (exclude 0)
-        // 유효한 옵션만 필터링 (0 제외)
         int[] validOptions = new int[4];
         int validCount = 0;
 
@@ -266,111 +285,112 @@ public static class BookMarkCraft
 
         if (validCount == 0)
         {
-            Debug.LogError($"[BookMarkCraft] BookmarkListData {resultID}에 유효한 옵션이 없습니다!");
+            Debug.LogError($"[BookMarkCraft] BookmarkStatListData {listID}에 유효한 옵션이 없습니다!");
             return null;
         }
 
         // JML: Random selection
-        // 랜덤으로 하나 선택
-        int selectedID = validOptions[Random.Range(0, validCount)];
-        Debug.Log($"[BookMarkCraft] 랜덤 선택: {selectedID} (총 {validCount}개 중)");
+        int selectedOptionID = validOptions[Random.Range(0, validCount)];
+        Debug.Log($"[BookMarkCraft] 스탯 옵션 랜덤 선택: {selectedOptionID} (총 {validCount}개 중)");
 
-        // JML: Load BookmarkData
-        // 스탯 책갈피: selectedID는 Option_ID → BookmarkTable에서 Option_ID로 찾기
-        // 스킬 책갈피: selectedID는 Bookmark_ID → BookmarkTable에서 Bookmark_ID로 찾기
-        BookmarkData bookmarkData = null;
-
-        if (bookmarkType == BookmarkType.Stat)
+        // JML: Find BookmarkData by Option_ID
+        var allBookmarks = CSVLoader.Instance.GetTable<BookmarkData>().GetAll();
+        BookmarkData bookmarkData = allBookmarks.Find(b => b.Option_ID == selectedOptionID);
+        if (bookmarkData == null)
         {
-            // 스탯 책갈피: Option_ID로 검색
-            var allBookmarks = CSVLoader.Instance.GetTable<BookmarkData>().GetAll();
-            bookmarkData = allBookmarks.Find(b => b.Option_ID == selectedID);
-            if (bookmarkData == null)
-            {
-                Debug.LogError($"[BookMarkCraft] Option_ID {selectedID}에 해당하는 BookmarkData를 찾을 수 없음");
-                return null;
-            }
-        }
-        else if (bookmarkType == BookmarkType.Skill)
-        {
-            // 스킬 책갈피: Bookmark_ID로 검색
-            bookmarkData = CSVLoader.Instance.GetData<BookmarkData>(selectedID);
-            if (bookmarkData == null)
-            {
-                Debug.LogError($"[BookMarkCraft] Bookmark_ID {selectedID}에 해당하는 BookmarkData를 찾을 수 없음");
-                return null;
-            }
-        }
-        else
-        {
-            Debug.LogError($"[BookMarkCraft] 유효하지 않은 BookmarkType: {bookmarkType}");
+            Debug.LogError($"[BookMarkCraft] Option_ID {selectedOptionID}에 해당하는 BookmarkData를 찾을 수 없음");
             return null;
         }
 
-        // JML: Create bookmark based on Recipe_Type
-        // Recipe_Type에 따라 책갈피 생성
-        if (bookmarkType == BookmarkType.Skill)
+        // JML: Load BookmarkOptionData
+        var optionData = CSVLoader.Instance.GetData<BookmarkOptionData>(bookmarkData.Option_ID);
+        if (optionData == null)
         {
-            // JML: Skill Bookmark
-            // 스킬 북마크
-            if (bookmarkData.Skill_ID <= 0)
-            {
-                Debug.LogError($"[BookMarkCraft] BookmarkData {bookmarkData.Bookmark_ID}에 유효한 Skill_ID가 없습니다!");
-                return null;
-            }
-
-            string bookmarkName = CSVLoader.Instance.GetData<StringTable>(bookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
-            Debug.Log($"[BookMarkCraft] 스킬 북마크 생성: {bookmarkName}, Skill_ID: {bookmarkData.Skill_ID}");
-            var skillBookmark = new BookMark(
-                bookmarkDataID: bookmarkData.Bookmark_ID,
-                name: bookmarkName,
-                grade: CSVLoader.Instance.GetData<GradeData>(bookmarkData.Grade_ID)?.Grade_Type ?? Grade.Common,
-                optionType: 0,
-                optionValue: 0,
-                skillID: bookmarkData.Skill_ID
-            );
-            return skillBookmark;
-        }
-        else if (bookmarkType == BookmarkType.Stat)
-        {
-            // JML: Stat Bookmark
-            // 스탯 북마크
-            if (bookmarkData.Option_ID <= 0)
-            {
-                Debug.LogError($"[BookMarkCraft] BookmarkData {bookmarkData.Bookmark_ID}에 유효한 Option_ID가 없습니다!");
-                return null;
-            }
-
-            // JML: Load BookmarkOptionData (Stat Bookmark)
-            // BookmarkOptionData 로드 (스탯 북마크)
-            var optionData = CSVLoader.Instance.GetData<BookmarkOptionData>(bookmarkData.Option_ID);
-
-            if (optionData == null)
-            {
-                Debug.LogError($"[BookMarkCraft] BookmarkOptionData를 찾을 수 없음: {bookmarkData.Option_ID}");
-                return null;
-            }
-
-            // JML: Create Stat Bookmark
-            // 스탯 북마크 생성
-            string statBookmarkName = CSVLoader.Instance.GetData<StringTable>(bookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
-            Debug.Log($"[BookMarkCraft] 스탯 북마크 생성: {statBookmarkName}");
-            var statBookmark = new BookMark(
-                bookmarkDataID: bookmarkData.Bookmark_ID,
-                name: statBookmarkName,
-                grade: CSVLoader.Instance.GetData<GradeData>(bookmarkData.Grade_ID)?.Grade_Type ?? Grade.Common,
-                optionType: (int)optionData.Option_Type,
-                optionValue: optionData.Option_Value
-            );
-            return statBookmark;
-        }
-        else
-        {
-            // JML: Error if invalid type
-            // 유효하지 않은 타입이면 에러
-            Debug.LogError($"[BookMarkCraft] 유효하지 않은 BookmarkType: {bookmarkType}");
+            Debug.LogError($"[BookMarkCraft] BookmarkOptionData를 찾을 수 없음: {bookmarkData.Option_ID}");
             return null;
         }
+
+        // JML: Create Stat Bookmark
+        string statBookmarkName = CSVLoader.Instance.GetData<StringTable>(bookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
+        Debug.Log($"[BookMarkCraft] 스탯 북마크 생성: {statBookmarkName}");
+        var statBookmark = new BookMark(
+            bookmarkDataID: bookmarkData.Bookmark_ID,
+            name: statBookmarkName,
+            grade: CSVLoader.Instance.GetData<GradeData>(bookmarkData.Grade_ID)?.Grade_Type ?? Grade.Common,
+            optionType: (int)optionData.Option_Type,
+            optionValue: optionData.Option_Value
+        );
+        return statBookmark;
+    }
+
+    /// <summary>
+    /// JML: Create Skill Bookmark by Grade_ID
+    /// 스킬 책갈피 생성 (등급별 필터링)
+    /// </summary>
+    /// <param name="gradeID">Grade_ID (1501~1505)</param>
+    private static BookMark CreateSkillBookmark(int gradeID)
+    {
+        // JML: Load all BookmarkSkillListData
+        var skillListTable = CSVLoader.Instance.GetTable<BookmarkSkillListData>();
+        if (skillListTable == null)
+        {
+            Debug.LogError("[BookMarkCraft] BookmarkSkillListData 테이블을 찾을 수 없음");
+            return null;
+        }
+
+        var allSkillList = skillListTable.GetAll();
+        if (allSkillList == null || allSkillList.Count == 0)
+        {
+            Debug.LogError("[BookMarkCraft] BookmarkSkillListData가 비어있음");
+            return null;
+        }
+
+        // JML: Filter by Grade_ID
+        // 각 Bookmark_ID로 BookmarkTable 조회해서 Grade_ID 확인
+        var matchingBookmarkIDs = new System.Collections.Generic.List<int>();
+
+        for (int i = 0; i < allSkillList.Count; i++)
+        {
+            int bookmarkID = allSkillList[i].Bookmark_ID;
+            var bookmarkData = CSVLoader.Instance.GetData<BookmarkData>(bookmarkID);
+
+            if (bookmarkData != null && bookmarkData.Grade_ID == gradeID && bookmarkData.Skill_ID > 0)
+            {
+                matchingBookmarkIDs.Add(bookmarkID);
+            }
+        }
+
+        if (matchingBookmarkIDs.Count == 0)
+        {
+            Debug.LogError($"[BookMarkCraft] Grade_ID {gradeID}에 해당하는 스킬 책갈피가 없습니다!");
+            return null;
+        }
+
+        // JML: Random selection
+        int selectedBookmarkID = matchingBookmarkIDs[Random.Range(0, matchingBookmarkIDs.Count)];
+        Debug.Log($"[BookMarkCraft] 스킬 책갈피 랜덤 선택: {selectedBookmarkID} (등급 {gradeID}, 총 {matchingBookmarkIDs.Count}개 중)");
+
+        // JML: Get BookmarkData
+        var selectedBookmarkData = CSVLoader.Instance.GetData<BookmarkData>(selectedBookmarkID);
+        if (selectedBookmarkData == null)
+        {
+            Debug.LogError($"[BookMarkCraft] Bookmark_ID {selectedBookmarkID}에 해당하는 BookmarkData를 찾을 수 없음");
+            return null;
+        }
+
+        // JML: Create Skill Bookmark
+        string bookmarkName = CSVLoader.Instance.GetData<StringTable>(selectedBookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
+        Debug.Log($"[BookMarkCraft] 스킬 북마크 생성: {bookmarkName}, Skill_ID: {selectedBookmarkData.Skill_ID}");
+
+        var skillBookmark = new BookMark(
+            bookmarkDataID: selectedBookmarkData.Bookmark_ID,
+            name: bookmarkName,
+            grade: CSVLoader.Instance.GetData<GradeData>(selectedBookmarkData.Grade_ID)?.Grade_Type ?? Grade.Common,
+            optionType: 0,
+            optionValue: 0,
+            skillID: selectedBookmarkData.Skill_ID
+        );
+        return skillBookmark;
     }
 
     #endregion

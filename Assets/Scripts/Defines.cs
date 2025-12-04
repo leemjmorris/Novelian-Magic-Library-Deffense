@@ -32,7 +32,8 @@ public static class AddressableKey
     public static readonly string BookmarkTable = "BookmarkTable";
     public static readonly string BookmarkCraftTable = "BookMarkCraftTable";
     public static readonly string BookmarkOptionTable = "BookmarkOptionTable";
-    public static readonly string BookmarkListTable = "BookmarkListTable";
+    public static readonly string BookmarkStatListTable = "BookmarkStatListTable";
+    public static readonly string BookmarkSkillListTable = "BookmarkSkillListTable";
     public static readonly string BookmarkSkillTable = "BookmarkSkillTable";
     public static readonly string CurrencyTable = "CurrencyTable";
     public static readonly string GradeTable = "GradeTable";

@@ -12,21 +12,23 @@ public class CSVTestObj : MonoBehaviour
         var bookmarkTable = CSVLoader.Instance.GetTable<BookmarkData>();
         var bookmarkCraftTable = CSVLoader.Instance.GetTable<BookmarkCraftData>();
         var bookmarkOptionTable = CSVLoader.Instance.GetTable<BookmarkOptionData>();
-        var bookmarkListTable = CSVLoader.Instance.GetTable<BookmarkListData>();
+        var bookmarkStatListTable = CSVLoader.Instance.GetTable<BookmarkStatListData>();
+        var bookmarkSkillListTable = CSVLoader.Instance.GetTable<BookmarkSkillListData>();
 
 
         var currencyTable = CSVLoader.Instance.GetTable<CurrencyData>();
         var ingredientTable = CSVLoader.Instance.GetTable<IngredientData>();
         var gradeTable = CSVLoader.Instance.GetTable<GradeData>();
 
-    
+
         Debug.Log("=== CSV Load Test ===");
 
         Debug.Log("=== BookMark Table===");
-        Debug.Log($"Bookmark Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkTable.GetId(111).Bookmark_Name_ID)?.Text ?? "Unknown"}");
-        Debug.Log($"Bookmark Craft Bookmark_Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkCraftTable.GetId(121).Recipe_Name_ID)?.Text ?? "Unknown"}");
-        Debug.Log($"Bookmark Option Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkOptionTable.GetId(1311).Option_Name_ID)?.Text ?? "Unknown"}");
-        Debug.Log($"Bookmark List Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkListTable.GetId(141).List_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Bookmark Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkTable.GetId(11001).Bookmark_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Bookmark Craft Bookmark_Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkCraftTable.GetId(1201).Recipe_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Bookmark Option Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkOptionTable.GetId(13101).Option_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Bookmark StatList Name: {CSVLoader.Instance.GetData<StringTable>(bookmarkStatListTable.GetId(14001).List_Name_ID)?.Text ?? "Unknown"}");
+        Debug.Log($"Bookmark SkillList Bookmark_ID: {bookmarkSkillListTable.GetId(27001).Bookmark_ID}");
 
         Debug.Log("=== Currency & Ingredient Table ===");
         Debug.Log($"Ingredient Name: {CSVLoader.Instance.GetData<StringTable>(ingredientTable.GetId(1011).Ingredient_Name_ID)?.Text ?? "Unknown"}");
