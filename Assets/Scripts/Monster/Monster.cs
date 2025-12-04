@@ -204,7 +204,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             finalDamage = damage * (1f + markDamageMultiplier / 100f);
             isCritical = true; // Mark amplified damage shows as critical
-            Debug.Log($"[Monster] Mark amplified damage: {damage:F1} -> {finalDamage:F1} (+{markDamageMultiplier}%)");
+            // JML: Mark damage 로그 제거
         }
 
         // LMJ: Show floating damage text (무적 상태에서도 표시)
@@ -268,7 +268,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         isSlowed = true;
         slowMultiplier = 1f - (slowPercent / 100f); // 50% slow = 0.5 multiplier
-        Debug.Log($"[Monster] Slow applied: {slowPercent}% for {duration}s (speed multiplier: {slowMultiplier})");
 
         // Start slow duration
         SlowDurationAsync(duration, slowCts.Token).Forget();
@@ -284,7 +283,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
             {
                 isSlowed = false;
                 slowMultiplier = 1f;
-                Debug.Log("[Monster] Slow ended");
             }
         }
         catch (System.OperationCanceledException)
@@ -313,8 +311,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
             monsterMove.SetEnabled(false);
         }
 
-        Debug.Log($"[Monster] Root applied for {duration}s");
-
         // Start root duration
         RootDurationAsync(duration, rootCts.Token).Forget();
     }
@@ -334,8 +330,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 {
                     monsterMove.SetEnabled(true);
                 }
-
-                Debug.Log("[Monster] Root ended");
             }
         }
         catch (System.OperationCanceledException)
@@ -366,7 +360,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             rb.isKinematic = false;
             rb.AddForce(knockbackDirection * force, ForceMode.Impulse);
-            Debug.Log($"[Monster] Knockback applied: direction={knockbackDirection}, force={force}");
         }
 
         // Re-enable NavMeshAgent after short delay
@@ -392,8 +385,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
             {
                 monsterMove.SetEnabled(true);
             }
-
-            Debug.Log("[Monster] Knockback recovery complete");
         }
     }
 
@@ -402,27 +393,19 @@ public class Monster : BaseEntity, ITargetable, IMovable
     /// </summary>
     public void ApplyCC(CCType ccType, float duration, float slowAmount, GameObject ccEffectPrefab = null)
     {
-        if (isDead)
-        {
-            Debug.Log("[Monster] ApplyCC called but monster is dead");
-            return;
-        }
-
-        Debug.Log($"[Monster] ApplyCC called: Type={ccType}, Duration={duration}s");
+        if (isDead) return;
 
         // CC 이펙트 생성 (몬스터를 따라다니면서 재생)
         if (ccEffectPrefab != null)
         {
             GameObject ccEffect = Instantiate(ccEffectPrefab, transform.position, Quaternion.identity, transform);
             Destroy(ccEffect, duration);
-            Debug.Log($"[Monster] CC effect spawned: {ccEffectPrefab.name}");
         }
 
         switch (ccType)
         {
             case CCType.Stun:
             case CCType.Freeze:
-                Debug.Log($"[Monster] Applying {ccType} → ApplyDizzy({duration})");
                 ApplyDizzy(duration);
                 break;
 
@@ -435,17 +418,14 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 break;
 
             case CCType.Knockback:
-                // Knockback needs attacker position - use default backward direction
                 ApplyKnockback(transform.position + transform.forward, 5f);
                 break;
 
             case CCType.Silence:
                 // TODO: Silence 효과 구현 (스킬 사용 불가)
-                Debug.Log($"[Monster] Silence applied for {duration}s");
                 break;
 
             case CCType.None:
-                Debug.Log("[Monster] CCType is None");
                 break;
         }
     }
@@ -462,7 +442,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             GameObject dotEffect = Instantiate(dotEffectPrefab, transform.position, Quaternion.identity, transform);
             Destroy(dotEffect, duration);
-            Debug.Log($"[Monster] DOT effect spawned: {dotEffectPrefab.name}");
         }
 
         // Start DOT coroutine
@@ -472,7 +451,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private async Cysharp.Threading.Tasks.UniTaskVoid StartDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration)
     {
         float elapsed = 0f;
-        Debug.Log($"[Monster] {dotType} DOT started: {damagePerTick} dmg every {tickInterval}s for {duration}s");
 
         while (elapsed < duration && !isDead)
         {
@@ -481,10 +459,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
             elapsed += tickInterval;
             TakeDamage(damagePerTick);
-            Debug.Log($"[Monster] {dotType} tick: {damagePerTick} damage");
         }
-
-        Debug.Log($"[Monster] {dotType} DOT ended");
     }
 
     /// <summary>
@@ -493,8 +468,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public void ApplyMark(MarkType markType, float duration, float damageMultiplier, GameObject markEffectPrefab)
     {
         if (isDead) return;
-
-        Debug.Log($"[Monster] {markType} Mark applied: +{damageMultiplier}% damage for {duration}s");
 
         // Cancel previous mark if exists
         markCts?.Cancel();
@@ -510,16 +483,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (markEffectPrefab != null)
         {
             // Calculate position above monster's head
-            float monsterHeight = collider3D != null ? collider3D.bounds.extents.y * 2f : 2f; // Use collider height or default 2m
-            Vector3 markOffset = Vector3.up * (monsterHeight + 0.5f); // 0.5m above head
+            float monsterHeight = collider3D != null ? collider3D.bounds.extents.y * 2f : 2f;
+            Vector3 markOffset = Vector3.up * (monsterHeight + 0.5f);
 
             GameObject markEffect = Instantiate(markEffectPrefab, transform.position + markOffset, Quaternion.identity, transform);
-
-            // Set local position to ensure it follows monster correctly
             markEffect.transform.localPosition = Vector3.up * (monsterHeight + 0.5f);
 
             Destroy(markEffect, duration);
-            Debug.Log($"[Monster] Mark effect spawned above head: {markEffectPrefab.name}, height offset: {monsterHeight + 0.5f}m");
         }
 
         // Start mark duration
@@ -537,7 +507,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 // Clear mark state
                 currentMarkType = MarkType.None;
                 markDamageMultiplier = 0f;
-                Debug.Log($"[Monster] Mark ended");
             }
         }
         catch (System.OperationCanceledException)
@@ -562,8 +531,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public void ApplyDebuff(DeBuffType debuffType, float value, float duration, GameObject debuffEffectPrefab = null)
     {
         if (isDead) return;
-
-        Debug.Log($"[Monster] {debuffType} Debuff applied: {value}% for {duration}s");
 
         // Cancel previous debuff if exists
         debuffCts?.Cancel();
@@ -634,7 +601,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
                 currentDebuffType = DeBuffType.None;
                 debuffValue = 0f;
-                Debug.Log($"[Monster] Debuff ended");
             }
         }
         catch (System.OperationCanceledException)
@@ -830,7 +796,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
             {
                 monsterMove.SetEnabled(false);
             }
-            Debug.Log($"[Monster] Entered attack range! Distance: {distanceToWall:F2}");
         }
         // 공격 범위 이탈 시 NavMeshAgent 재활성화 (Dizzy나 Dead가 아닐 때)
         else if (!isInAttackRange && wasInRange && !isDizzy && !isDead)
@@ -939,12 +904,10 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // JML: 키 기반 풀링 사용 시 DespawnByKey 호출
         if (!string.IsNullOrEmpty(spawnedAddressableKey))
         {
-            Debug.Log($"[Monster] DespawnMonster 호출 - Key: '{spawnedAddressableKey}', ID: {GetInstanceID()}, Active: {gameObject.activeSelf}");
             NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.DespawnByKey(spawnedAddressableKey, this);
         }
         else
         {
-            Debug.LogWarning($"[Monster] DespawnMonster - spawnedAddressableKey가 비어있음! ID: {GetInstanceID()}");
             // 기존 타입 기반 풀링 (하위 호환)
             NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
         }

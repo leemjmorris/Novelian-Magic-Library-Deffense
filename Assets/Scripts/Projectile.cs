@@ -131,7 +131,7 @@ namespace Novelian.Combat
             // Load skill data from CSV and PrefabDatabase
             LoadSkillData(mainSkillId, supportId);
 
-            Debug.Log($"[Projectile] Launch complete: pos={spawnPos}, target={targetPos}, dir={fixedDirection}, speed={speed}, rb={(rb != null ? "OK" : "NULL")}, layer={gameObject.layer}, isInit={isInitialized}");
+            // JML: Launch 로그 제거
 
             // Spawn effect prefab as child if skillData is provided
             if (skillPrefabs != null && skillPrefabs.projectilePrefab != null)
@@ -157,7 +157,7 @@ namespace Novelian.Combat
                 maxChainCount = supportSkillData.chain_count;
                 chainHitTargets = new System.Collections.Generic.HashSet<ITargetable>();
                 currentChainDamage = damageAmount;
-                Debug.Log($"[Projectile] Chain initialized: maxChainCount={maxChainCount}, initialDamage={currentChainDamage:F1}");
+                // JML: Chain init 로그 제거
             }
 
             // Initialize Pierce state (관통 시스템 - 메인 스킬 또는 서포트 스킬에서 관통 가능)
@@ -170,7 +170,7 @@ namespace Novelian.Combat
                 {
                     maxPierceCount = basePierce + supportPierce;
                     baseDamageForPierce = damageAmount;
-                    Debug.Log($"[Projectile] Pierce initialized: maxPierceCount={maxPierceCount} (base={basePierce}, support={supportPierce}), baseDamage={baseDamageForPierce:F1}");
+                    // JML: Pierce init 로그 제거
                 }
             }
 
@@ -377,7 +377,7 @@ namespace Novelian.Combat
         //LMJ : Handle collision with monsters and obstacles (both Physics and Effect modes)
         private void OnTriggerEnter(Collider other)
         {
-            Debug.Log($"[Projectile] OnTriggerEnter: other={other.name}, tag={other.tag}, isInit={isInitialized}");
+            // JML: OnTriggerEnter 로그 제거
 
             if (!isInitialized) return;
 
@@ -469,7 +469,8 @@ namespace Novelian.Combat
                             float reductionRate = supportSkillData.chain_damage_reduction / 100f;
                             currentChainDamage = DamageCalculator.CalculatePierceChainDamage(baseDamageForPierce > 0 ? baseDamageForPierce : damage, reductionRate, currentChainCount);
 
-                            Debug.Log($"[Projectile] Chain {currentChainCount}/{maxChainCount}: Bouncing to {nextTarget.GetTransform().name}, Damage={currentChainDamage:F1}");
+                            // JML: Chain 로그 압축
+                            Debug.Log($"[Proj] Chain {currentChainCount}/{maxChainCount}");
 
                             Vector3 directionToNext = (nextTarget.GetPosition() - other.transform.position).normalized;
                             float spawnOffset = 1.0f;
@@ -484,17 +485,14 @@ namespace Novelian.Combat
                     if (maxPierceCount > 0 && currentPierceCount < maxPierceCount)
                     {
                         currentPierceCount++;
-                        Debug.Log($"[Projectile] Pierce {currentPierceCount}/{maxPierceCount}: Continuing through {monster.name}");
+                        // JML: Pierce 로그 제거
                         return; // 관통하여 계속 진행 (풀로 돌아가지 않음)
                     }
 
                     // Process Fragmentation (파편화 40002: 명중 시 분열)
-                    // 원본 + add_projectiles = 총 발사체 수 (부채꼴로 퍼짐)
-                    Debug.Log($"[Projectile] Hit - Fragmentation check: supportSkillId={supportSkillId}, supportSkillData={(supportSkillData != null ? "OK" : "NULL")}, add_projectiles={(supportSkillData?.add_projectiles ?? -1)}");
                     if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
                     {
-                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 5발
-                        Debug.Log($"[Projectile] Fragmentation triggered! Spawning {totalFragments} fragments at {other.transform.position}");
+                        int totalFragments = 1 + supportSkillData.add_projectiles;
                         SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection, other);
                     }
                 }
@@ -567,7 +565,8 @@ namespace Novelian.Combat
                             float reductionRate = supportSkillData.chain_damage_reduction / 100f;
                             currentChainDamage = DamageCalculator.CalculatePierceChainDamage(baseDamageForPierce > 0 ? baseDamageForPierce : damage, reductionRate, currentChainCount);
 
-                            Debug.Log($"[Projectile] Chain {currentChainCount}/{maxChainCount}: Bouncing to {nextTarget.GetTransform().name}, Damage={currentChainDamage:F1}");
+                            // JML: Chain 로그 압축
+                            Debug.Log($"[Proj] Chain {currentChainCount}/{maxChainCount}");
 
                             Vector3 directionToNext = (nextTarget.GetPosition() - other.transform.position).normalized;
                             float spawnOffset = 1.0f;
@@ -582,17 +581,14 @@ namespace Novelian.Combat
                     if (maxPierceCount > 0 && currentPierceCount < maxPierceCount)
                     {
                         currentPierceCount++;
-                        Debug.Log($"[Projectile] Pierce {currentPierceCount}/{maxPierceCount}: Continuing through {boss.name}");
+                        // JML: Pierce 로그 제거
                         return; // 관통하여 계속 진행 (풀로 돌아가지 않음)
                     }
 
                     // Process Fragmentation (파편화 40002: 명중 시 분열)
-                    // 원본 + add_projectiles = 총 발사체 수 (부채꼴로 퍼짐)
-                    Debug.Log($"[Projectile] Hit - Fragmentation check: supportSkillId={supportSkillId}, supportSkillData={(supportSkillData != null ? "OK" : "NULL")}, add_projectiles={(supportSkillData?.add_projectiles ?? -1)}");
                     if (supportSkillId == 40002 && supportSkillData != null && supportSkillData.add_projectiles > 0)
                     {
-                        int totalFragments = 1 + supportSkillData.add_projectiles; // 원본 포함 총 5발
-                        Debug.Log($"[Projectile] Fragmentation triggered! Spawning {totalFragments} fragments at {other.transform.position}");
+                        int totalFragments = 1 + supportSkillData.add_projectiles;
                         SpawnFragmentProjectilesFan(other.transform.position, totalFragments, fixedDirection, other);
                     }
                 }
@@ -627,7 +623,7 @@ namespace Novelian.Combat
                 // 관통 감소율: 서포트 스킬의 chain_damage_reduction 또는 기본값 30%
                 float reductionRate = supportSkillData?.chain_damage_reduction / 100f ?? 0.3f;
                 float pierceDamage = DamageCalculator.CalculatePierceChainDamage(baseDamageForPierce, reductionRate, currentPierceCount);
-                Debug.Log($"[Projectile] Pierce damage: {pierceDamage:F1} (hit #{currentPierceCount + 1}, reduction={reductionRate * 100}%)");
+                // JML: Pierce damage 로그 제거
                 return pierceDamage;
             }
 
@@ -831,7 +827,7 @@ namespace Novelian.Combat
             }
             float spreadOffset = 0.5f; // 부채꼴 방향으로의 추가 오프셋
 
-            Debug.Log($"[Projectile] Fragment spawn: collider={hitCollider?.name}, boundsExtents={hitCollider?.bounds.extents}, passOffset={passOffset:F2}");
+            // JML: Fragment spawn 로그 제거
 
             for (int i = 0; i < totalCount; i++)
             {
@@ -875,10 +871,10 @@ namespace Novelian.Combat
                     fragmentEffect.transform.localRotation = Quaternion.LookRotation(fragmentDirection);
                 }
 
-                Debug.Log($"[Projectile] Fragment {i + 1}/{totalCount}: Fired at angle {angleOffset:F0}°, spawnPos={spawnPos}, hasEffect={effectPrefab != null}");
+                // JML: Fragment 개별 로그 제거
             }
 
-            Debug.Log($"[Projectile] Fragmentation complete: {totalCount} fragments spawned in fan pattern (passOffset={passOffset:F2})");
+            Debug.Log($"[Proj] Frag {totalCount}발");
         }
 
         //LMJ : Return projectile to pool

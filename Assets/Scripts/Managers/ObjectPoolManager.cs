@@ -541,10 +541,6 @@ namespace NovelianMagicLibraryDefense.Managers
                 Debug.LogWarning($"[ObjectPoolManager] 웜업 초과! '{key}' 새 인스턴스 생성됨. Active: {pool.CountActive}, Inactive: {pool.CountInactive}");
             }
 
-            // JML: activeObjects에 추가 확인
-            bool isInActiveObjects = keyBasedActiveObjects.ContainsKey(key) && keyBasedActiveObjects[key].Contains(component);
-            Debug.Log($"[ObjectPoolManager] SpawnByKey '{key}' - activeObjects 등록: {isInActiveObjects}, ID: {component.GetInstanceID()}");
-
             component.transform.position = position;
             component.transform.rotation = rotation;
             component.gameObject.SetActive(true);
@@ -603,7 +599,6 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             pool.Release(component);
-            Debug.Log($"[ObjectPoolManager] DespawnByKey '{key}' 성공! Active: {pool.CountActive}, Inactive: {pool.CountInactive}");
         }
 
         /// <summary>

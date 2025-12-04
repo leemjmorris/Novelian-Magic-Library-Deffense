@@ -38,6 +38,56 @@ namespace Dispatch
         // 타입별 로그 태그
         private string LogTag => $"[{dispatchType}DispatchController]";
 
+        // JML: 파견 선택 스위칭용 static 이벤트
+        private static event System.Action<CombatDispatchController> OnDispatchSelected;
+
+        private void OnEnable()
+        {
+            OnDispatchSelected += HandleOtherSelected;
+        }
+
+        private void OnDisable()
+        {
+            OnDispatchSelected -= HandleOtherSelected;
+        }
+
+        /// <summary>
+        /// 다른 파견이 선택됐을 때 호출 - 자신은 선택 해제
+        /// </summary>
+        private void HandleOtherSelected(CombatDispatchController selected)
+        {
+            if (selected != this)
+            {
+                Deselect();
+            }
+        }
+
+        /// <summary>
+        /// 선택 해제 - SelectImage 비활성화 및 버튼 비활성화
+        /// </summary>
+        private void Deselect()
+        {
+            // SelectImage 비활성화
+            if (selectImageM != null)
+            {
+                selectImageM.gameObject.SetActive(false);
+            }
+
+            // 선택하기 버튼 비활성화
+            if (selectButton != null)
+            {
+                selectButton.interactable = false;
+            }
+
+            // 애니메이션 플래그 리셋
+            isAnimationComplete = false;
+
+            // 애니메이션 진행 중이면 취소
+            cancellationTokenSource?.Cancel();
+
+            Debug.Log($"{LogTag} 선택 해제됨 (다른 파견 선택)");
+        }
+
         private void Start()
         {
             // UI 초기화
@@ -161,9 +211,11 @@ namespace Dispatch
         {
             Debug.Log($"{LogTag} OnExclamationButtonClickedAsync 호출됨");
 
+            // JML: 다른 파견 선택 해제 (스위칭)
+            OnDispatchSelected?.Invoke(this);
+
             if (isAnimationComplete)
             {
-                Debug.Log($"{LogTag} 애니메이션이 이미 완료되었습니다.");
                 return;
             }
 
@@ -189,8 +241,6 @@ namespace Dispatch
             // 초기 크기를 350으로 설정
             selectImageM.sizeDelta = new Vector2(startWidth, currentHeight);
 
-            Debug.Log($"{LogTag} 축소 애니메이션 시작 - 시작 Width: {startWidth}, 목표 Width: {targetWidth}, 지속시간: {animationDuration}초");
-
             // UniTask를 사용한 부드러운 Width 축소 애니메이션
             float elapsedTime = 0f;
             int frameCount = 0;
@@ -199,7 +249,6 @@ namespace Dispatch
             {
                 if (cancellationTokenSource.Token.IsCancellationRequested)
                 {
-                    Debug.LogWarning($"{LogTag} 애니메이션이 취소되었습니다.");
                     return;
                 }
 
@@ -214,18 +263,11 @@ namespace Dispatch
                 selectImageM.sizeDelta = new Vector2(newWidth, currentHeight);
 
                 frameCount++;
-                if (frameCount % 10 == 0) // 10프레임마다 로그 출력
-                {
-                    Debug.Log($"{LogTag} 애니메이션 진행중 - t: {t:F2}, easedT: {easedT:F2}, 현재 Width: {newWidth:F1}");
-                }
-
                 await UniTask.Yield(PlayerLoopTiming.Update, cancellationTokenSource.Token);
             }
 
             // 최종 Width 확정
             selectImageM.sizeDelta = new Vector2(targetWidth, currentHeight);
-
-            Debug.Log($"{LogTag} ✅ 축소 애니메이션 완료 - 최종 Width: {targetWidth}, 총 프레임: {frameCount}");
 
             // 애니메이션 완료 플래그 설정
             isAnimationComplete = true;

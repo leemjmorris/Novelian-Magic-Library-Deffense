@@ -136,7 +136,7 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
         if (bookMark.Type == BookmarkType.Stat)
         {
             string optionName = GetOptionTypeName(bookMark.OptionType);
-            return $"등급: {gradeName}\n{optionName} +{bookMark.OptionValue}";
+            return $"등급: {gradeName}\n{optionName} +{bookMark.OptionValue}%";
         }
         else // Skill
         {
