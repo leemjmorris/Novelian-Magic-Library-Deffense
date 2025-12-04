@@ -113,16 +113,11 @@ public class BookmarkEquipPanel : MonoBehaviour
     }
 
     /// <summary>
-    /// 책갈피 아이콘 키 반환 (BookMarkUI.cs에서 복사)
+    /// 책갈피 아이콘 키 반환 (등급별 아이콘)
     /// </summary>
     private string GetBookmarkIconKey(BookMark bookMark)
     {
-        return bookMark.Type switch
-        {
-            BookmarkType.Stat => "PictoIcon_Attack",
-            BookmarkType.Skill => "PictoIcon_Attack",
-            _ => "PictoIcon_Attack"
-        };
+        return AddressableKey.GetBookmarkIconKey(bookMark.Grade);
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace NovelianMagicLibraryDefense.Spawners
 {
@@ -17,7 +18,7 @@ namespace NovelianMagicLibraryDefense.Spawners
         [SerializeField] private Color wireColor = Color.yellow;
 
         /// <summary>
-        /// 스폰 영역 내 랜덤 위치 반환
+        /// 스폰 영역 내 랜덤 위치 반환 (NavMesh 표면으로 보정)
         /// </summary>
         public Vector3 GetRandomSpawnPosition()
         {
@@ -28,7 +29,17 @@ namespace NovelianMagicLibraryDefense.Spawners
             float randomY = Random.Range(center.y - halfSize.y, center.y + halfSize.y);
             float randomZ = Random.Range(center.z - halfSize.z, center.z + halfSize.z);
 
-            return new Vector3(randomX, randomY, randomZ);
+            Vector3 randomPos = new Vector3(randomX, randomY, randomZ);
+
+            // NavMesh 표면으로 보정
+            if (NavMesh.SamplePosition(randomPos, out NavMeshHit hit, 10f, NavMesh.AllAreas))
+            {
+                return hit.position;
+            }
+
+            // NavMesh를 못 찾으면 원래 위치 반환 (fallback)
+            Debug.LogWarning($"[MonsterSpawner] NavMesh를 찾을 수 없음: {randomPos}");
+            return randomPos;
         }
 
         /// <summary>

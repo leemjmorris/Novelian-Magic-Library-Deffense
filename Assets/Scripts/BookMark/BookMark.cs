@@ -116,8 +116,8 @@ public class BookMark
     /// </summary>
     public string GetGradeName(Grade grade)
     {
-        // JML: Grade enum value is already Grade_ID (151~155), use it directly
-        int gradeID = (int)grade;
+        // JML: Convert Grade enum to Grade_ID for CSV lookup (Grade.Common=1 → 1501)
+        int gradeID = (int)grade + 1500;
         var gradeData = CSVLoader.Instance.GetData<GradeData>(gradeID);
         if (gradeData == null) return grade.ToString();
         return CSVLoader.Instance.GetData<StringTable>(gradeData.Grade_Name_ID)?.Text ?? grade.ToString();

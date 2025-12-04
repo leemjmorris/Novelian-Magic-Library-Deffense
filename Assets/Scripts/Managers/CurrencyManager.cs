@@ -51,7 +51,7 @@ public class CurrencyManager : MonoBehaviour
     {
         // 모든 재화 초기화 (CurrencyTable 기준: 1601~1606)
         // TODO: 세이브/로드 시스템 구현 시 저장된 값으로 덮어쓰기
-        currencies[GOLD_ID] = 1000;         // 테스트용 초기 골드
+        currencies[GOLD_ID] = 0;         // 테스트용 초기 골드
         currencies[EXP_ID] = 0;             // 경험치
         currencies[APPLICATION_ID] = 0;     // 지원서
         currencies[RECOMMENDATION_ID] = 0;  // 추천서

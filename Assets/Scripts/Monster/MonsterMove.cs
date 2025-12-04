@@ -129,6 +129,21 @@ public class MonsterMove : MonoBehaviour
     }
 
     /// <summary>
+    /// NavMesh 위로 Warp (스폰 시 호출)
+    /// </summary>
+    public void WarpToPosition(Vector3 position)
+    {
+        if (navAgent != null && navAgent.enabled)
+        {
+            navAgent.Warp(position);
+
+            // Avoidance Priority 랜덤화 (0~99)
+            // 같은 priority면 서로 비키다가 멈춤 → 랜덤으로 우선순위 분배
+            navAgent.avoidancePriority = Random.Range(0, 100);
+        }
+    }
+
+    /// <summary>
     /// Check if agent has reached destination
     /// </summary>
     public bool HasReachedDestination()

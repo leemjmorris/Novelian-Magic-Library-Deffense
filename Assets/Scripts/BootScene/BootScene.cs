@@ -474,15 +474,32 @@ public class BootScene : MonoBehaviour
 
     /// <summary>
     /// 파견 상태 초기화 (새 게임 시작 시)
+    /// 전투형, 채집형 파견 상태 모두 초기화
     /// </summary>
     private void ClearDispatchState()
     {
-        const string DISPATCH_SAVE_KEY = "DispatchTestPanel_SaveData";
-        if (PlayerPrefs.HasKey(DISPATCH_SAVE_KEY))
+        bool cleared = false;
+
+        // 전투형 파견 상태 초기화
+        const string COMBAT_DISPATCH_KEY = "CombatDispatch_SaveData";
+        if (PlayerPrefs.HasKey(COMBAT_DISPATCH_KEY))
         {
-            PlayerPrefs.DeleteKey(DISPATCH_SAVE_KEY);
+            PlayerPrefs.DeleteKey(COMBAT_DISPATCH_KEY);
+            cleared = true;
+        }
+
+        // 채집형 파견 상태 초기화
+        const string GATHERING_DISPATCH_KEY = "GatheringDispatch_SaveData";
+        if (PlayerPrefs.HasKey(GATHERING_DISPATCH_KEY))
+        {
+            PlayerPrefs.DeleteKey(GATHERING_DISPATCH_KEY);
+            cleared = true;
+        }
+
+        if (cleared)
+        {
             PlayerPrefs.Save();
-            Log("파견 상태 초기화됨");
+            Log("파견 상태 초기화됨 (전투형/채집형)");
         }
     }
 
