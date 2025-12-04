@@ -479,6 +479,17 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <param name="value">증가 값 (% 단위, 예: 0.1 = 10%)</param>
         public void ApplyGlobalStatBuff(StatType statType, float value)
         {
+            // HealthRegen은 Wall에 즉시 체력 회복 적용
+            if (statType == StatType.HealthRegen)
+            {
+                if (wallComponent != null)
+                {
+                    wallComponent.HealByPercent(value);
+                    Debug.Log($"[StageManager] Wall 체력 회복: +{value * 100f}%");
+                }
+                return;
+            }
+
             // 1. 전역 버프 저장소에 누적
             if (globalStatBuffs.ContainsKey(statType))
             {
