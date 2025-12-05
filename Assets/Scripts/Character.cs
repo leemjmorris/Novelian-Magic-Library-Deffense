@@ -2766,22 +2766,6 @@ namespace Novelian.Combat
             if (characterAnimator != null)
             {
                 characterAnimator.SetTrigger(ANIM_ATTACK);
-        #region 이펙트 레이어/콜라이더 유틸리티 (Channeling Wall 통과용)
-
-        /// <summary>
-        /// LMJ: GameObject와 모든 자식의 레이어를 재귀적으로 설정
-        /// Channeling 빔 이펙트가 Wall을 통과하도록 Projectile 레이어로 설정
-        /// </summary>
-        private void SetLayerRecursively(GameObject obj, int layer)
-        {
-            if (obj == null) return;
-
-            obj.layer = layer;
-
-            int childCount = obj.transform.childCount;
-            for (int i = 0; i < childCount; i++)
-            {
-                SetLayerRecursively(obj.transform.GetChild(i).gameObject, layer);
             }
         }
 
@@ -2804,6 +2788,31 @@ namespace Novelian.Combat
             if (characterAnimator != null)
             {
                 characterAnimator.SetTrigger(ANIM_VICTORY);
+            }
+        }
+
+        #endregion
+
+        #region 이펙트 레이어/콜라이더 유틸리티 (Channeling Wall 통과용)
+
+        /// <summary>
+        /// LMJ: GameObject와 모든 자식의 레이어를 재귀적으로 설정
+        /// Channeling 빔 이펙트가 Wall을 통과하도록 Projectile 레이어로 설정
+        /// </summary>
+        private void SetLayerRecursively(GameObject obj, int layer)
+        {
+            if (obj == null) return;
+
+            obj.layer = layer;
+
+            int childCount = obj.transform.childCount;
+            for (int i = 0; i < childCount; i++)
+            {
+                SetLayerRecursively(obj.transform.GetChild(i).gameObject, layer);
+            }
+        }
+
+        /// <summary>
         /// LMJ: GameObject와 모든 자식의 Collider를 재귀적으로 비활성화
         /// Channeling 빔은 시각적 효과만 필요하므로 물리 충돌 제거
         /// </summary>

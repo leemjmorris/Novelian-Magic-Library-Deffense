@@ -960,6 +960,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (monsterEvents != null)
         {
             monsterEvents.RaiseMonsterDied(this);
+            Debug.Log($"[Monster] Die() - RaiseMonsterDied called for {gameObject.name}");
+        }
+        else
+        {
+            Debug.LogWarning($"[Monster] Die() - monsterEvents is NULL! 경험치 이벤트 발생 불가! Monster: {gameObject.name}");
         }
         Invoke(nameof(DespawnMonster), 1.5f); // Die 애니메이션이 끝날 때까지 대기
     }

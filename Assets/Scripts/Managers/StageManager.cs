@@ -114,6 +114,11 @@ namespace NovelianMagicLibraryDefense.Managers
             if (monsterEvents != null)
             {
                 monsterEvents.AddMonsterDiedListener(AddExp);
+                Debug.Log("[StageManager] monsterEvents 구독 완료 (AddExp)");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] monsterEvents가 NULL! 인스펙터에서 MonsterEvents 할당 필요!");
             }
 
             // LMJ: Start stage timer using UniTask (no MonoBehaviour required!)
@@ -345,15 +350,18 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void AddExp(Monster monster)
         {
+            Debug.Log($"[StageManager] AddExp called! Monster: {monster?.name}, Exp: {monster?.Exp}");
+
             // 최대 레벨이면 경험치 획득 무시
             if (IsMaxLevel())
             {
+                Debug.Log("[StageManager] AddExp - 최대 레벨 도달, 경험치 무시");
                 return;
             }
 
             int maxExp = GetRequiredExpForNextLevel();
             currentExp += monster.Exp;
-            // Debug.Log($"[StageManager] Exp +{monster.Exp} -> {currentExp}/{maxExp}"); // LCB: Debug exp gain
+            Debug.Log($"[StageManager] Exp +{monster.Exp} -> {currentExp}/{maxExp}");
             GameManager.Instance?.UI?.UpdateExperience(currentExp, maxExp);
             if (currentExp >= maxExp)
             {

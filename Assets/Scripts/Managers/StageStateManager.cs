@@ -190,12 +190,13 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void PlayAllCharactersVictoryAnimation()
         {
-            Character[] characters = FindObjectsOfType<Character>();
-            foreach (var character in characters)
+            Character[] characters = FindObjectsByType<Character>(FindObjectsSortMode.None);
+            int count = characters.Length;
+            for (int i = 0; i < count; i++)
             {
-                character.PlayVictoryAnimation();
+                characters[i].PlayVictoryAnimation();
             }
-            Debug.Log($"[StageStateManager] {characters.Length}명의 캐릭터 승리 애니메이션 재생");
+            Debug.Log($"[StageStateManager] {count}명의 캐릭터 승리 애니메이션 재생");
         }
 
         /// <summary>
@@ -203,12 +204,13 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void PlayAllCharactersDieAnimation()
         {
-            Character[] characters = FindObjectsOfType<Character>();
-            foreach (var character in characters)
+            Character[] characters = FindObjectsByType<Character>(FindObjectsSortMode.None);
+            int count = characters.Length;
+            for (int i = 0; i < count; i++)
             {
-                character.PlayDieAnimation();
+                characters[i].PlayDieAnimation();
             }
-            Debug.Log($"[StageStateManager] {characters.Length}명의 캐릭터 사망 애니메이션 재생");
+            Debug.Log($"[StageStateManager] {count}명의 캐릭터 사망 애니메이션 재생");
         }
 
         #endregion
