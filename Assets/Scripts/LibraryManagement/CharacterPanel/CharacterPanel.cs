@@ -15,17 +15,23 @@ public class CharacterPanel : MonoBehaviour
 
     private async UniTaskVoid Start()
     {
+        Debug.Log("[CharacterPanel] Start() called - Waiting for CSVLoader...");
+
         // CSV 로딩 완료될 때까지 대기
         await UniTask.WaitUntil(() => CSVLoader.Instance != null && CSVLoader.Instance.IsInit);
+
+        Debug.Log("[CharacterPanel] CSVLoader ready - Getting CharacterTable...");
 
         CsvTable<CharacterData> characterTable = CSVLoader.Instance.GetTable<CharacterData>();
 
         // null 체크도 추가
         if (characterTable == null)
         {
-            Debug.LogError("CharacterTable is null after loading!");
+            Debug.LogError("[CharacterPanel] CharacterTable is null after loading! CSV data may have failed to load.");
             return;
         }
+
+        Debug.Log($"[CharacterPanel] CharacterTable loaded with {characterTable.Count} entries");
 
         // 보유 캐릭터가 앞에 오도록 정렬
         var sortedCharacters = characterTable.GetAll()
@@ -50,6 +56,8 @@ public class CharacterPanel : MonoBehaviour
             characterSlots.Add(characterSlot);
             slotIndex++;
         }
+
+        Debug.Log($"[CharacterPanel] Created {slotIndex} character slots");
         characterInfoPanel.SetActive(false);
     }
 

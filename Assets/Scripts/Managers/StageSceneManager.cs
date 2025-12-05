@@ -2,7 +2,6 @@ using UnityEngine;
 using NovelianMagicLibraryDefense.Core;
 using Cysharp.Threading.Tasks;
 using TMPro;
-using UnityEditor.SearchService;
 
 namespace NovelianMagicLibraryDefense.Managers
 {

@@ -523,7 +523,7 @@ namespace Novelian.Combat
             // 버프 스킬은 타겟이 필요 없음 (자기/아군 대상)
             if (skillType == SkillAssetType.Buff)
             {
-                UseBuffSkillAsync().Forget();
+                UseBuffSkillAsync(basicAttackData, basicAttackPrefabs).Forget();
                 return;
             }
 
@@ -562,7 +562,7 @@ namespace Novelian.Combat
                     }
                     else
                     {
-                        UseBasicAttackAOEAsync(target).Forget();
+                        UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
                     }
                     break;
 
@@ -580,33 +580,33 @@ namespace Novelian.Combat
                     }
                     else
                     {
-                        UseBasicAttackAOEAsync(target).Forget();
+                        UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
                     }
                     break;
 
                 // DOT 스킬 - 범위 내 적에게 지속 데미지 (AOE 방식)
                 case SkillAssetType.DOT:
-                    UseBasicAttackAOEAsync(target).Forget();
+                    UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
                     break;
 
                 // 디버프 스킬 - 범위 내 적에게 디버프 적용 (AOE 방식)
                 case SkillAssetType.Debuff:
-                    UseBasicAttackAOEAsync(target).Forget();
+                    UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
                     break;
 
                 // 채널링 스킬 - 지속 시전
                 case SkillAssetType.Channeling:
-                    UseChannelingSkillAsync(target).Forget();
+                    UseChannelingSkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage).Forget();
                     break;
 
                 // 트랩 스킬 - 필드에 트랩 오브젝트 설치
                 case SkillAssetType.Trap:
-                    PlaceTrapObject(target);
+                    PlaceTrapObject(target, basicAttackData, basicAttackPrefabs, FinalDamage);
                     break;
 
                 // 지뢰 스킬 - 필드에 지뢰 오브젝트 설치
                 case SkillAssetType.Mine:
-                    PlaceMineObject(target);
+                    PlaceMineObject(target, basicAttackData, basicAttackPrefabs, FinalDamage);
                     break;
 
                 default:
@@ -615,6 +615,8 @@ namespace Novelian.Combat
                     break;
             }
         }
+
+        //LMJ : TryAttack ends here
 
         //LMJ : Launch projectile(s) - extracted from old TryAttack for reuse
         private void LaunchProjectile(ITargetable target)
@@ -719,7 +721,7 @@ namespace Novelian.Combat
             else
             {
                 Debug.LogWarning("[Character] LaunchDynamiteProjectile: No projectile prefab found, falling back to instant AOE");
-                UseBasicAttackAOEAsync(target).Forget();
+                UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
             }
         }
 
@@ -756,7 +758,7 @@ namespace Novelian.Combat
             else
             {
                 Debug.LogWarning("[Character] LaunchLegendaryStaffProjectile: No projectile prefab found, falling back to instant AOE");
-                UseBasicAttackAOEAsync(target).Forget();
+                UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
             }
         }
 
@@ -768,93 +770,196 @@ namespace Novelian.Combat
             // Skip if already channeling
             if (isChanneling) return;
 
+            // Check skill type
+            var skillType = activeSkillData.GetSkillType();
+
+            // 버프 스킬은 타겟이 필요 없음 (자기/아군 대상)
+            if (skillType == SkillAssetType.Buff)
+            {
+                UseBuffSkillAsync(activeSkillData, activeSkillPrefabs).Forget();
+                return;
+            }
+
+            // 타겟 탐색 범위 결정: range가 0이면 aoe_radius 사용
+            float searchRange = FinalActiveRange;
+            if (searchRange <= 0 && activeSkillData.aoe_radius > 0)
+            {
+                searchRange = activeSkillData.aoe_radius;
+            }
+            if (searchRange <= 0) searchRange = 100f;
+
             // Find target with mark priority, then use weight/distance strategy
-            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, FinalActiveRange, useWeightTargeting);
+            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, searchRange, useWeightTargeting);
 
             if (target == null) return;
 
-            // Check if skill is Channeling type
-            if (activeSkillData.GetSkillType() == SkillAssetType.Channeling)
+            // 스킬 타입별 분기 처리 (TryAttack과 동일한 구조)
+            switch (skillType)
             {
-                UseChannelingSkillAsync(target).Forget();
-                return;
-            }
+                // 투사체 스킬 - 투사체 발사
+                case SkillAssetType.Projectile:
+                    // 다이너마이트: 투사체를 던져서 N초 후 폭발
+                    if (activeSkillData.IsDynamiteSkill)
+                    {
+                        LaunchActiveProjectile(target, isDynamite: true);
+                    }
+                    // 전설의 지팡이: 일직선 AOE
+                    else if (activeSkillData.IsLegendaryStaffSkill)
+                    {
+                        LaunchActiveProjectile(target, isLegendaryStaff: true);
+                    }
+                    // 의문의 예고장: 시한폭탄
+                    else if (activeSkillData.IsTimeBombSkill)
+                    {
+                        LaunchActiveProjectile(target, isTimeBomb: true);
+                    }
+                    // 부메랑
+                    else if (activeSkillData.IsBoomerangSkill)
+                    {
+                        LaunchActiveProjectile(target, isBoomerang: true);
+                    }
+                    else
+                    {
+                        LaunchActiveProjectile(target);
+                    }
+                    break;
 
-            // Check if skill is AOE type (Meteor, etc.)
-            if (activeSkillData.GetSkillType() == SkillAssetType.AOE)
-            {
-                UseAOESkillAsync(target).Forget();
-                return;
-            }
+                // 단일 즉발 스킬 - 타겟에게 즉시 데미지/효과
+                case SkillAssetType.InstantSingle:
+                    // 심장마비: 체력 10% 이하 적 즉사 (보스 제외)
+                    if (activeSkillData.IsInstantKillSkill)
+                    {
+                        UseActiveInstantKillSkill(target);
+                    }
+                    else
+                    {
+                        UseAOESkillAsync(target, activeSkillData, activeSkillPrefabs, FinalActiveDamage, FinalActiveRange, FinalActiveProjectileSpeed).Forget();
+                    }
+                    break;
 
-            // Calculate spawn position (character position + offset)
+                // 범위 스킬 - 타겟 위치에 AOE 효과
+                case SkillAssetType.AOE:
+                    if (activeSkillData.IsDynamiteSkill)
+                    {
+                        LaunchActiveProjectile(target, isDynamite: true);
+                    }
+                    else if (activeSkillData.IsLegendaryStaffSkill)
+                    {
+                        LaunchActiveProjectile(target, isLegendaryStaff: true);
+                    }
+                    else
+                    {
+                        UseAOESkillAsync(target, activeSkillData, activeSkillPrefabs, FinalActiveDamage, FinalActiveRange, FinalActiveProjectileSpeed).Forget();
+                    }
+                    break;
+
+                // DOT 스킬 - 범위 내 적에게 지속 데미지
+                case SkillAssetType.DOT:
+                    UseAOESkillAsync(target, activeSkillData, activeSkillPrefabs, FinalActiveDamage, FinalActiveRange, FinalActiveProjectileSpeed).Forget();
+                    break;
+
+                // 디버프 스킬 - 범위 내 적에게 디버프 적용
+                case SkillAssetType.Debuff:
+                    UseAOESkillAsync(target, activeSkillData, activeSkillPrefabs, FinalActiveDamage, FinalActiveRange, FinalActiveProjectileSpeed).Forget();
+                    break;
+
+                // 채널링 스킬 - 지속 시전
+                case SkillAssetType.Channeling:
+                    UseChannelingSkillAsync(target, activeSkillData, activeSkillPrefabs, FinalActiveDamage).Forget();
+                    break;
+
+                // 트랩 스킬 - 필드에 트랩 오브젝트 설치
+                case SkillAssetType.Trap:
+                    PlaceTrapObject(target, activeSkillData, activeSkillPrefabs, FinalActiveDamage);
+                    break;
+
+                // 지뢰 스킬 - 필드에 지뢰 오브젝트 설치
+                case SkillAssetType.Mine:
+                    PlaceMineObject(target, activeSkillData, activeSkillPrefabs, FinalActiveDamage);
+                    break;
+
+                default:
+                    Debug.LogWarning($"[Character] Unknown active skill type: {skillType}, falling back to projectile");
+                    LaunchActiveProjectile(target);
+                    break;
+            }
+        }
+
+        //LMJ : Launch active skill projectile(s)
+        private void LaunchActiveProjectile(ITargetable target, bool isDynamite = false, bool isLegendaryStaff = false, bool isTimeBomb = false, bool isBoomerang = false)
+        {
+            if (target == null || activeSkillData == null) return;
+
             Vector3 spawnPos = transform.position + spawnOffset;
             Vector3 targetPos = target.GetPosition();
 
-            // Get prefabs from database
-            GameObject projectilePrefab = activeSkillPrefabs?.projectilePrefab;
+            var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
+            int projectileCount = FinalActiveProjectileCount;
+            float spreadAngle = 15f;
 
-            // Launch projectiles (fan pattern)
-            if (projectilePrefab != null || projectileTemplate != null)
+            for (int i = 0; i < projectileCount; i++)
             {
-                var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
-                int projectileCount = FinalActiveProjectileCount;
-                float spreadAngle = 15f; // 각 발사체 간 각도 (도 단위)
+                float angleOffset = (i - (projectileCount - 1) / 2f) * spreadAngle;
+                Vector3 direction = (targetPos - spawnPos).normalized;
+                Quaternion rotation = Quaternion.Euler(0, angleOffset, 0);
+                Vector3 spreadDirection = rotation * direction;
+                Vector3 spreadTargetPos = spawnPos + spreadDirection * 1000f;
 
-                for (int i = 0; i < projectileCount; i++)
-                {
-                    // 부채꼴 각도 계산: 중앙을 0도로 하여 좌우로 퍼짐
-                    float angleOffset = (i - (projectileCount - 1) / 2f) * spreadAngle;
-
-                    // 타겟 방향 벡터 계산
-                    Vector3 direction = (targetPos - spawnPos).normalized;
-
-                    // Y축 회전을 적용하여 부채꼴 방향 계산
-                    Quaternion rotation = Quaternion.Euler(0, angleOffset, 0);
-                    Vector3 spreadDirection = rotation * direction;
-
-                    // 새로운 타겟 위치 계산 (멀리 떨어진 지점)
-                    Vector3 spreadTargetPos = spawnPos + spreadDirection * 1000f;
-
-                    // 발사체 생성 및 발사 (Support 스킬 ID 전달)
-                    Projectile projectile = pool.Spawn<Projectile>(spawnPos);
-                    projectile.Launch(spawnPos, spreadTargetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, FinalActiveDamage, activeSkillId, supportSkillId);
-                }
-
-                Debug.Log($"[Character] Used Active Skill (projectile x{projectileCount}): {activeSkillData.skill_name} at {target.GetTransform().name} (Damage: {FinalActiveDamage:F1})");
+                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                projectile.Launch(spawnPos, spreadTargetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, FinalActiveDamage, activeSkillId, supportSkillId);
             }
-            // Instant attack
-            else
+
+            Debug.Log($"[Character] Active Projectile: {activeSkillData.skill_name} x{projectileCount} (Damage: {FinalActiveDamage:F1})");
+        }
+
+        //LMJ : Use active instant kill skill (심장마비)
+        private void UseActiveInstantKillSkill(ITargetable target)
+        {
+            if (activeSkillData == null || target == null) return;
+
+            Debug.Log($"[Character] Active InstantKill: {activeSkillData.skill_name}");
+
+            // 범위 내 체력 10% 이하인 적 즉사 (보스 제외)
+            float aoeRadius = activeSkillData.aoe_radius > 0 ? activeSkillData.aoe_radius : 100f;
+            Collider[] hits = Physics.OverlapSphere(target.GetPosition(), aoeRadius);
+
+            for (int i = 0; i < hits.Length; i++)
             {
-                GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
-
-                // Hit effect
-                if (hitEffectPrefab != null)
+                if (hits[i].CompareTag(Tag.Monster))
                 {
-                    GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, targetPos, Quaternion.identity);
-                    UnityEngine.Object.Destroy(hitEffect, 2f);
+                    Monster monster = hits[i].GetComponent<Monster>();
+                    if (monster != null && monster.IsAlive())
+                    {
+                        float hpPercent = monster.GetHealth() / monster.GetMaxHealth();
+                        if (hpPercent <= 0.1f)
+                        {
+                            Debug.Log($"[Character] InstantKill 즉사: {monster.name} (HP: {hpPercent * 100:F1}%)");
+                            monster.Die();
+                        }
+                        else
+                        {
+                            // 10% 초과면 일반 데미지
+                            monster.TakeDamage(FinalActiveDamage);
+                        }
+                    }
                 }
-
-                // Apply damage
-                if (target.GetTransform().CompareTag(Tag.Monster))
+                // 보스는 즉사 불가, 일반 데미지만
+                else if (hits[i].CompareTag(Tag.BossMonster))
                 {
-                    Monster monster = target.GetTransform().GetComponent<Monster>();
-                    if (monster != null) monster.TakeDamage(FinalActiveDamage);
+                    BossMonster boss = hits[i].GetComponent<BossMonster>();
+                    if (boss != null && boss.IsAlive())
+                    {
+                        boss.TakeDamage(FinalActiveDamage);
+                    }
                 }
-                else if (target.GetTransform().CompareTag(Tag.BossMonster))
-                {
-                    BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
-                    if (boss != null) boss.TakeDamage(FinalActiveDamage);
-                }
-
-                Debug.Log($"[Character] Active instant attack {activeSkillData.skill_name} at {target.GetTransform().name} (Instant Damage: {FinalActiveDamage:F1})");
             }
         }
 
         //LMJ : Use channeling skill (laser/beam style)
-        private async UniTaskVoid UseChannelingSkillAsync(ITargetable target)
+        //LMJ : 통합된 채널링 스킬 메서드 - 기본공격/액티브 모두 사용
+        private async UniTaskVoid UseChannelingSkillAsync(ITargetable target, MainSkillData skillData, MainSkillPrefabEntry prefabs, float damage)
         {
-            if (activeSkillData == null || activeSkillData.GetSkillType() != SkillAssetType.Channeling) return;
+            if (skillData == null || skillData.GetSkillType() != SkillAssetType.Channeling) return;
 
             isChanneling = true;
             channelingCts?.Cancel();
@@ -869,16 +974,16 @@ namespace Novelian.Combat
 
             try
             {
-                Debug.Log($"[Character] Starting channeling skill: {activeSkillData.skill_name}");
+                Debug.Log($"[Character] Starting channeling skill: {skillData.skill_name}");
 
                 // Get prefabs
-                GameObject castEffectPrefab = activeSkillPrefabs?.castEffectPrefab;
-                GameObject projectileEffectPrefab = activeSkillPrefabs?.projectilePrefab;
-                GameObject areaEffectPrefab = activeSkillPrefabs?.areaEffectPrefab;
-                GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
+                GameObject castEffectPrefab = prefabs?.castEffectPrefab;
+                GameObject projectileEffectPrefab = prefabs?.projectilePrefab;
+                GameObject areaEffectPrefab = prefabs?.areaEffectPrefab;
+                GameObject hitEffectPrefab = prefabs?.hitEffectPrefab;
 
                 // 1. Cast Effect (시전 준비) - cast_time_mult 적용
-                float castTime = activeSkillData.cast_time;
+                float castTime = skillData.cast_time;
                 if (supportData != null) castTime *= supportData.cast_time_mult;
 
                 if (castTime > 0f && castEffectPrefab != null)
@@ -941,11 +1046,11 @@ namespace Novelian.Combat
                 bool firstTick = true;
 
                 // Issue #362 - 채널링 지속시간 배율 적용
-                float finalChannelDuration = activeSkillData.channel_duration;
+                float finalChannelDuration = skillData.channel_duration;
                 if (supportData != null && supportData.channel_duration_mult > 0)
                 {
                     finalChannelDuration = DamageCalculator.CalculateChannelDuration(
-                        activeSkillData.channel_duration, supportData.channel_duration_mult);
+                        skillData.channel_duration, supportData.channel_duration_mult);
                 }
 
                 while (elapsed < finalChannelDuration)
@@ -974,7 +1079,7 @@ namespace Novelian.Combat
                     // Apply damage at tick intervals
                     if (elapsed >= nextTickTime)
                     {
-                        float currentDamage = FinalActiveDamage;
+                        float currentDamage = damage;
 
                         for (int i = 0; i < chainTargets.Count; i++)
                         {
@@ -1005,7 +1110,7 @@ namespace Novelian.Combat
                         }
 
                         tickCount++;
-                        nextTickTime += activeSkillData.channel_tick_interval;
+                        nextTickTime += skillData.channel_tick_interval;
                         firstTick = false;
                     }
 
@@ -1036,18 +1141,20 @@ namespace Novelian.Combat
             }
         }
 
-        //LMJ : Use AOE skill (Meteor style) - also handles DOT, Debuff, Trap, Mine skills with aoe_radius
-        private async UniTaskVoid UseAOESkillAsync(ITargetable target)
+        //LMJ : 통합된 AOE 스킬 메서드 - 기본공격/액티브 모두 사용
+        //      AOE, DOT, Debuff, Trap, Mine, InstantSingle 스킬 처리
+        private async UniTaskVoid UseAOESkillAsync(ITargetable target, MainSkillData skillData, MainSkillPrefabEntry prefabs, float damage, float range, float projectileSpeed)
         {
-            if (activeSkillData == null) return;
+            if (skillData == null) return;
 
             // Allow skill types that use AOE-style effects (범위 이펙트가 필요한 스킬 타입들)
-            var skillType = activeSkillData.GetSkillType();
+            var skillType = skillData.GetSkillType();
             bool isValidType = skillType == SkillAssetType.AOE
                             || skillType == SkillAssetType.DOT
                             || skillType == SkillAssetType.Debuff
                             || skillType == SkillAssetType.Trap
-                            || skillType == SkillAssetType.Mine;
+                            || skillType == SkillAssetType.Mine
+                            || skillType == SkillAssetType.InstantSingle;
             if (!isValidType) return;
 
             GameObject castEffect = null;
@@ -1056,15 +1163,15 @@ namespace Novelian.Combat
 
             try
             {
-                Debug.Log($"[Character] Starting AOE skill: {activeSkillData.skill_name}");
+                Debug.Log($"[Character] Starting AOE skill: {skillData.skill_name}");
 
                 // Get prefabs
-                GameObject castEffectPrefab = activeSkillPrefabs?.castEffectPrefab;
-                GameObject projectileEffectPrefab = activeSkillPrefabs?.projectilePrefab;
-                GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
+                GameObject castEffectPrefab = prefabs?.castEffectPrefab;
+                GameObject projectileEffectPrefab = prefabs?.projectilePrefab;
+                GameObject hitEffectPrefab = prefabs?.hitEffectPrefab;
 
                 // 1. Cast Effect - cast_time_mult 적용
-                float castTime = activeSkillData.cast_time;
+                float castTime = skillData.cast_time;
                 if (supportData != null) castTime *= supportData.cast_time_mult;
 
                 if (castTime > 0f && castEffectPrefab != null)
@@ -1079,10 +1186,10 @@ namespace Novelian.Combat
 
                 // 2. Get target position - 밀집 지역 기반 타겟팅
                 // AOE 스킬은 몬스터 origin이 아닌 가장 밀집된 Area를 타겟으로 함
-                float aoeRadius = activeSkillData.aoe_radius > 0 ? activeSkillData.aoe_radius : 3f;
+                float aoeRadius = skillData.aoe_radius > 0 ? skillData.aoe_radius : 3f;
                 if (supportData != null) aoeRadius *= supportData.aoe_mult;
 
-                Vector3 targetPos = FindBestAOETargetPosition(FinalActiveRange, aoeRadius);
+                Vector3 targetPos = FindBestAOETargetPosition(range, aoeRadius);
                 if (targetPos == Vector3.zero)
                 {
                     Debug.Log("[Character] AOE cancelled: No valid targets in range");
@@ -1102,12 +1209,12 @@ namespace Novelian.Combat
                 }
 
                 // 4. Meteor Effect (only if projectile_speed > 0, otherwise instant AOE)
-                if (activeSkillData.projectile_speed > 0 && projectileEffectPrefab != null)
+                if (skillData.projectile_speed > 0 && projectileEffectPrefab != null)
                 {
                     Vector3 meteorStartPos = impactPos + Vector3.up * 20f;
                     meteorEffect = UnityEngine.Object.Instantiate(projectileEffectPrefab, meteorStartPos, Quaternion.identity);
 
-                    float meteorSpeed = FinalActiveProjectileSpeed > 0 ? FinalActiveProjectileSpeed : 10f;
+                    float meteorSpeed = projectileSpeed > 0 ? projectileSpeed : 10f;
                     float distance = Vector3.Distance(meteorStartPos, impactPos);
                     float travelTime = distance / meteorSpeed;
 
@@ -1135,23 +1242,25 @@ namespace Novelian.Combat
 
                 // 5. Hit Effect - AOE 범위에 맞춰 스케일 조절
                 // (표식/CC 스킬은 각 타겟에 개별 적용하므로 중앙 이펙트 생략)
-                bool skipCentralEffect = activeSkillData.HasMarkEffect || activeSkillData.HasCCEffect;
+                bool skipCentralEffect = skillData.HasMarkEffect || skillData.HasCCEffect;
                 if (hitEffectPrefab != null && !skipCentralEffect)
                 {
                     hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, impactPos, Quaternion.identity);
 
-                    // 기본 이펙트 크기를 100 단위로 가정하고 aoeRadius에 비례하여 스케일 조절
-                    float baseEffectSize = 100f;
+                    // 기본 이펙트 크기를 25 단위로 가정하고 aoeRadius에 비례하여 스케일 조절
+                    // aoe_radius 150 → 스케일 6, aoe_radius 400 → 스케일 16
+                    float baseEffectSize = 25f;
                     float scaleFactor = aoeRadius / baseEffectSize;
                     hitEffect.transform.localScale = Vector3.one * scaleFactor;
                 }
 
                 // 6. AOE damage - aoeRadius는 위에서 이미 계산됨
                 Collider[] hits = Physics.OverlapSphere(impactPos, aoeRadius);
-                float damageToApply = FinalActiveDamage;
+                float damageToApply = damage;
 
-                foreach (var hit in hits)
+                for (int i = 0; i < hits.Length; i++)
                 {
+                    Collider hit = hits[i];
                     if (!hit.CompareTag(Tag.Monster) && !hit.CompareTag(Tag.BossMonster))
                         continue;
 
@@ -1174,7 +1283,7 @@ namespace Novelian.Combat
                     }
 
                     // MainSkillData 자체 효과 적용 (CC/DOT/표식/디버프)
-                    ApplyMainSkillEffectsToTarget(hitTarget, activeSkillData);
+                    ApplyMainSkillEffectsToTarget(hitTarget, skillData);
 
                     // Support 효과 적용
                     if (supportData != null && supportData.GetStatusEffectType() != StatusEffectType.None)
@@ -1203,132 +1312,27 @@ namespace Novelian.Combat
             }
         }
 
-        //LMJ : Use Instant Single skill - immediate damage to single target
-        private async UniTaskVoid UseInstantSkillAsync(ITargetable target)
-        {
-            if (activeSkillData == null) return;
-
-            var skillType = activeSkillData.GetSkillType();
-            if (skillType != SkillAssetType.InstantSingle) return;
-
-            GameObject castEffect = null;
-            GameObject hitEffect = null;
-
-            try
-            {
-                Debug.Log($"[Character] Starting Instant skill: {activeSkillData.skill_name}");
-
-                // Get prefabs
-                GameObject castEffectPrefab = activeSkillPrefabs?.castEffectPrefab;
-                GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
-
-                // 1. Cast Effect
-                float castTime = activeSkillData.cast_time;
-                if (supportData != null) castTime *= supportData.cast_time_mult;
-
-                if (castTime > 0f && castEffectPrefab != null)
-                {
-                    Vector3 spawnPos = transform.position + spawnOffset;
-                    castEffect = UnityEngine.Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
-                    await UniTask.Delay((int)(castTime * 1000));
-                    if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
-                }
-
-                // 2. Get target position
-                Vector3 targetPos;
-                if (target != null && target.IsAlive())
-                {
-                    targetPos = target.GetPosition();
-                }
-                else
-                {
-                    ITargetable newTarget = TargetRegistry.Instance.FindTarget(transform.position, FinalActiveRange, useWeightTargeting);
-                    if (newTarget != null)
-                    {
-                        target = newTarget;
-                        targetPos = newTarget.GetPosition();
-                    }
-                    else
-                    {
-                        Debug.Log("[Character] Instant skill cancelled: No valid targets");
-                        return;
-                    }
-                }
-
-                // 3. Hit Effect at target position
-                if (hitEffectPrefab != null)
-                {
-                    hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, targetPos, Quaternion.identity);
-                }
-
-                // 4. Apply damage - aoe_radius가 있으면 범위 데미지, 없으면 단일 데미지
-                float damageToApply = FinalActiveDamage;
-                if (supportData != null) damageToApply *= supportData.damage_mult;
-
-                if (activeSkillData.aoe_radius > 0)
-                {
-                    // 범위 내 모든 적에게 데미지
-                    float finalRadius = activeSkillData.aoe_radius;
-                    if (supportData != null) finalRadius *= supportData.aoe_mult;
-
-                    Collider[] hits = Physics.OverlapSphere(targetPos, finalRadius);
-                    foreach (var hit in hits)
-                    {
-                        if (!hit.CompareTag(Tag.Monster) && !hit.CompareTag(Tag.BossMonster))
-                            continue;
-
-                        ITargetable hitTarget = hit.GetComponent<ITargetable>();
-                        if (hitTarget != null && hitTarget.IsAlive())
-                        {
-                            hitTarget.TakeDamage(damageToApply);
-                        }
-                    }
-                }
-                else
-                {
-                    // 단일 타겟에게 데미지
-                    if (target != null && target.IsAlive())
-                    {
-                        target.TakeDamage(damageToApply);
-                    }
-                }
-
-                // Cleanup
-                if (hitEffect != null)
-                {
-                    UnityEngine.Object.Destroy(hitEffect, 2f);
-                }
-            }
-            catch (System.OperationCanceledException)
-            {
-                Debug.Log("[Character] Instant skill cancelled");
-            }
-            finally
-            {
-                if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
-            }
-        }
-
         //LMJ : Use Buff skill - apply buff to self or allies
-        private async UniTaskVoid UseBuffSkillAsync()
+        //LMJ : 통합된 버프 스킬 메서드 - 기본공격/액티브 모두 사용
+        private async UniTaskVoid UseBuffSkillAsync(MainSkillData skillData, MainSkillPrefabEntry prefabs)
         {
-            if (activeSkillData == null) return;
+            if (skillData == null) return;
 
-            var skillType = activeSkillData.GetSkillType();
+            var skillType = skillData.GetSkillType();
             if (skillType != SkillAssetType.Buff) return;
 
             GameObject castEffect = null;
 
             try
             {
-                Debug.Log($"[Character] Starting Buff skill: {activeSkillData.skill_name}");
+                Debug.Log($"[Character] Starting Buff skill: {skillData.skill_name}");
 
                 // Get prefabs
-                GameObject castEffectPrefab = activeSkillPrefabs?.castEffectPrefab;
-                GameObject hitEffectPrefab = activeSkillPrefabs?.hitEffectPrefab;
+                GameObject castEffectPrefab = prefabs?.castEffectPrefab;
+                GameObject hitEffectPrefab = prefabs?.hitEffectPrefab;
 
                 // 1. Cast Effect
-                float castTime = activeSkillData.cast_time;
+                float castTime = skillData.cast_time;
                 if (supportData != null) castTime *= supportData.cast_time_mult;
 
                 if (castTime > 0f && castEffectPrefab != null)
@@ -1340,19 +1344,19 @@ namespace Novelian.Combat
                 }
 
                 // 2. Apply buff effect to allies in range
-                float buffValue = activeSkillData.base_buff_value;
+                float buffValue = skillData.base_buff_value;
                 if (supportData != null) buffValue *= supportData.buff_value_mult;
 
-                float buffDuration = activeSkillData.skill_lifetime;
+                float buffDuration = skillData.skill_lifetime;
                 if (supportData != null) buffDuration *= supportData.buff_value_mult; // 지속시간도 배율 적용
 
-                BuffType buffType = activeSkillData.GetBuffType();
-                float buffRadius = activeSkillData.aoe_radius > 0 ? activeSkillData.aoe_radius : 400f; // 기본 범위
+                BuffType buffType = skillData.GetBuffType();
+                float buffRadius = skillData.aoe_radius > 0 ? skillData.aoe_radius : 400f; // 기본 범위
 
                 // 범위 내 아군 캐릭터에게 버프 적용
                 ApplyBuffToAlliesInRange(buffType, buffValue, buffDuration, buffRadius);
 
-                Debug.Log($"[Character] Buff skill applied: {activeSkillData.skill_name} (Type: {buffType}, Value: {buffValue}%, Duration: {buffDuration}s, Radius: {buffRadius})");
+                Debug.Log($"[Character] Buff skill applied: {skillData.skill_name} (Type: {buffType}, Value: {buffValue}%, Duration: {buffDuration}s, Radius: {buffRadius})");
 
                 // 3. 버프 지속시간 동안 이펙트 반복 재생
                 if (hitEffectPrefab != null && buffDuration > 0)
@@ -1771,258 +1775,7 @@ namespace Novelian.Combat
             Debug.Log($"[Character] Burst fire complete: {projectileCount} projectiles fired (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1})");
         }
 
-        /// <summary>
-        /// ForceAttack용 AOE 스킬 처리 (basicAttackData 사용)
-        /// DevScene 테스트에서 기본 공격 슬롯에 AOE/Debuff 등을 설정했을 때 사용
-        /// </summary>
-        private async UniTaskVoid UseBasicAttackAOEAsync(ITargetable target)
-        {
-            if (basicAttackData == null) return;
-
-            var skillType = basicAttackData.GetSkillType();
-            Debug.Log($"[Character] UseBasicAttackAOEAsync: {basicAttackData.skill_name} (Type: {skillType})");
-
-            GameObject castEffect = null;
-            GameObject hitEffect = null;
-
-            try
-            {
-                // Get prefabs from basicAttackPrefabs
-                GameObject castEffectPrefab = basicAttackPrefabs?.castEffectPrefab;
-                GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab;
-
-                // 1. Cast Effect
-                float castTime = basicAttackData.cast_time;
-                if (supportData != null) castTime *= supportData.cast_time_mult;
-
-                if (castTime > 0f && castEffectPrefab != null)
-                {
-                    Vector3 spawnPos = transform.position + spawnOffset;
-                    castEffect = UnityEngine.Object.Instantiate(castEffectPrefab, spawnPos, Quaternion.identity);
-                    await UniTask.Delay((int)(castTime * 1000));
-                    if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
-                }
-
-                // 2. Get target position - 밀집 지역 기반 또는 aoe_radius 기반
-                float aoeRadius = basicAttackData.aoe_radius > 0 ? basicAttackData.aoe_radius : 3f;
-                if (supportData != null) aoeRadius *= supportData.aoe_mult;
-
-                // range가 0이면 aoe_radius를 탐색 범위로 사용
-                float searchRange = FinalRange > 0 ? FinalRange : aoeRadius;
-                Vector3 targetPos = FindBestAOETargetPosition(searchRange, aoeRadius);
-                if (targetPos == Vector3.zero)
-                {
-                    // 밀집 지역을 못 찾으면 타겟 위치 사용
-                    targetPos = target.GetPosition();
-                }
-
-                // 3. Ground impact position
-                Vector3 impactPos = targetPos;
-                Ray groundRay = new Ray(targetPos + Vector3.up * 10f, Vector3.down);
-                if (Physics.Raycast(groundRay, out RaycastHit groundHit, 20f, LayerMask.GetMask("Ground")))
-                {
-                    impactPos = groundHit.point;
-                }
-                else
-                {
-                    impactPos = new Vector3(targetPos.x, 0f, targetPos.z);
-                }
-
-                // 5. Apply damage/debuff to all enemies in AOE radius
-                float damageToApply = FinalDamage;
-                int hitCount = 0;
-
-                // 맵 전역 스킬 (aoe_radius >= 500) - 모든 몬스터를 태그로 찾음
-                // 전역 스킬은 각 몬스터 위치에 개별 이펙트 생성
-                if (aoeRadius >= 500f)
-                {
-                    // Monster 태그로 모든 몬스터 찾기
-                    GameObject[] monsters = GameObject.FindGameObjectsWithTag(Tag.Monster);
-                    GameObject[] bossMonsters = GameObject.FindGameObjectsWithTag(Tag.BossMonster);
-
-                    // 표식/CC 스킬은 ApplySkillEffects에서 이펙트 처리
-                    bool skipEffect = basicAttackData.HasMarkEffect || basicAttackData.HasCCEffect;
-
-                    // 일반 몬스터 처리
-                    for (int i = 0; i < monsters.Length; i++)
-                    {
-                        ITargetable hitTarget = monsters[i].GetComponent<ITargetable>();
-                        if (hitTarget != null && hitTarget.IsAlive())
-                        {
-                            if (damageToApply > 0) hitTarget.TakeDamage(damageToApply);
-                            ApplySkillEffects(hitTarget, basicAttackData);
-                            hitCount++;
-
-                            // 각 몬스터에게 hit 이펙트 생성 (표식/CC 스킬은 ApplySkillEffects에서 처리)
-                            // 몬스터 콜라이더 중심점에 이펙트 생성
-                            if (hitEffectPrefab != null && !skipEffect)
-                            {
-                                Collider monsterCol = monsters[i].GetComponent<Collider>();
-                                Vector3 hitPos = monsterCol != null ? monsterCol.bounds.center : hitTarget.GetPosition();
-                                GameObject monsterHitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
-                                UnityEngine.Object.Destroy(monsterHitEffect, 2f);
-                            }
-                        }
-                    }
-
-                    // 보스 몬스터 처리
-                    for (int i = 0; i < bossMonsters.Length; i++)
-                    {
-                        ITargetable hitTarget = bossMonsters[i].GetComponent<ITargetable>();
-                        if (hitTarget != null && hitTarget.IsAlive())
-                        {
-                            if (damageToApply > 0) hitTarget.TakeDamage(damageToApply);
-                            ApplySkillEffects(hitTarget, basicAttackData);
-                            hitCount++;
-
-                            // 각 보스 몬스터에게 hit 이펙트 생성 (표식/CC 스킬은 ApplySkillEffects에서 처리)
-                            // 보스 콜라이더 중심점에 이펙트 생성
-                            if (hitEffectPrefab != null && !skipEffect)
-                            {
-                                Collider bossCol = bossMonsters[i].GetComponent<Collider>();
-                                Vector3 hitPos = bossCol != null ? bossCol.bounds.center : hitTarget.GetPosition();
-                                GameObject bossHitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
-                                UnityEngine.Object.Destroy(bossHitEffect, 2f);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    // 표식/CC 스킬은 ApplySkillEffects에서 이펙트 처리
-                    bool skipEffect = basicAttackData.HasMarkEffect || basicAttackData.HasCCEffect;
-
-                    // 일반 AOE - impactPos에 단일 hit 이펙트 생성 (범위에 맞춰 스케일 조절, 표식/CC 스킬은 제외)
-                    if (hitEffectPrefab != null && !skipEffect)
-                    {
-                        hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, impactPos, Quaternion.identity);
-
-                        // 기본 이펙트 크기를 100 단위로 가정하고 aoeRadius에 비례하여 스케일 조절
-                        float baseEffectSize = 100f;
-                        float scaleFactor = aoeRadius / baseEffectSize;
-                        hitEffect.transform.localScale = Vector3.one * scaleFactor;
-                    }
-
-                    // OverlapSphere 사용
-                    Collider[] hits = Physics.OverlapSphere(impactPos, aoeRadius);
-
-                    for (int i = 0; i < hits.Length; i++)
-                    {
-                        Collider hit = hits[i];
-                        if (!hit.CompareTag(Tag.Monster) && !hit.CompareTag(Tag.BossMonster))
-                            continue;
-
-                        ITargetable hitTarget = hit.GetComponent<ITargetable>();
-                        if (hitTarget != null && hitTarget.IsAlive())
-                        {
-                            // 각 대상에게 히트 이펙트 생성 (표식/CC 스킬은 ApplySkillEffects에서 처리)
-                            // 콜라이더 중심점에 이펙트 생성
-                            if (hitEffectPrefab != null && !skipEffect)
-                            {
-                                Vector3 hitPos = hit.bounds.center;
-                                GameObject targetHitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
-                                UnityEngine.Object.Destroy(targetHitEffect, 1f);
-                            }
-
-                            if (damageToApply > 0) hitTarget.TakeDamage(damageToApply);
-                            ApplySkillEffects(hitTarget, basicAttackData);
-                            hitCount++;
-                        }
-                    }
-
-                    // 일반 AOE hit 이펙트 정리
-                    if (hitEffect != null)
-                    {
-                        UnityEngine.Object.Destroy(hitEffect, 2f);
-                    }
-                }
-
-                Debug.Log($"[Character] {basicAttackData.skill_name} hit {hitCount} targets (radius={aoeRadius:F1}, global={aoeRadius >= 500f})");
-            }
-            catch (OperationCanceledException)
-            {
-                Debug.Log("[Character] BasicAttackAOE cancelled");
-            }
-            finally
-            {
-                if (castEffect != null) UnityEngine.Object.Destroy(castEffect);
-            }
-        }
-
-        /// <summary>
-        /// 스킬 효과 적용 (디버프, CC 등)
-        /// </summary>
-        private void ApplySkillEffects(ITargetable target, MainSkillData skillData)
-        {
-            if (target == null || skillData == null) return;
-
-            // hitEffectPrefab 가져오기 (basicAttack 또는 activeSkill에서)
-            GameObject hitEffectPrefab = basicAttackPrefabs?.hitEffectPrefab ?? activeSkillPrefabs?.hitEffectPrefab;
-
-            // CC 효과 (cc_duration 동안 이펙트 유지)
-            if (skillData.HasCCEffect)
-            {
-                CCType ccType = skillData.GetCCType();
-                float duration = skillData.cc_duration;
-                float slowAmount = skillData.cc_slow_amount;
-
-                if (target.GetTransform().CompareTag(Tag.Monster))
-                {
-                    Monster monster = target.GetTransform().GetComponent<Monster>();
-                    monster?.ApplyCC(ccType, duration, slowAmount, hitEffectPrefab);
-                }
-                else if (target.GetTransform().CompareTag(Tag.BossMonster))
-                {
-                    BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
-                    boss?.ApplyCC(ccType, duration, slowAmount, hitEffectPrefab);
-                }
-            }
-
-            // 디버프 효과 (공격력 감소 등)
-            if (skillData.base_debuff_value > 0)
-            {
-                float debuffValue = skillData.base_debuff_value;
-                if (supportData != null) debuffValue *= supportData.debuff_value_mult;
-                Debug.Log($"[Character] Applied debuff {debuffValue} to {target.GetTransform().name}");
-            }
-
-            // DOT 효과 (지속 피해)
-            if (skillData.HasDOTEffect)
-            {
-                float dotDamage = skillData.dot_damage_per_tick;
-                float tickInterval = skillData.dot_tick_interval;
-                float duration = skillData.dot_duration;
-
-                Monster monster = target as Monster;
-                BossMonster boss = target as BossMonster;
-
-                if (monster != null)
-                {
-                    monster.ApplyDOT(DOTType.Burn, dotDamage, tickInterval, duration, hitEffectPrefab);
-                    Debug.Log($"[Character] Applied DOT to {monster.name}: {dotDamage}/tick every {tickInterval}s for {duration}s");
-                }
-                else if (boss != null)
-                {
-                    boss.ApplyDOT(DOTType.Burn, dotDamage, tickInterval, duration, hitEffectPrefab);
-                    Debug.Log($"[Character] Applied DOT to {boss.name}: {dotDamage}/tick every {tickInterval}s for {duration}s");
-                }
-            }
-
-            // 표식 효과 (mark_duration 동안 받는 데미지 증가)
-            if (skillData.HasMarkEffect)
-            {
-                if (target.GetTransform().CompareTag(Tag.Monster))
-                {
-                    Monster monster = target.GetTransform().GetComponent<Monster>();
-                    monster?.ApplyMark(skillData.GetElementBasedMarkType(), skillData.mark_duration, skillData.mark_damage_mult / 100f, hitEffectPrefab);
-                }
-                else if (target.GetTransform().CompareTag(Tag.BossMonster))
-                {
-                    BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
-                    boss?.ApplyMark(skillData.GetElementBasedMarkType(), skillData.mark_duration, skillData.mark_damage_mult / 100f, hitEffectPrefab);
-                }
-            }
-        }
+        // [REMOVED] ApplySkillEffects - 미사용 메서드 (ApplyMainSkillEffectsToTarget으로 통합됨)
 
         //LMJ : Set spawn offset from CharacterPreset (future feature)
         public void SetSpawnOffsetFromPreset(Vector3 offset)
@@ -2045,10 +1798,10 @@ namespace Novelian.Combat
             LoadSkillData();
         }
 
-        //LMJ : Place trap object on field (Trap type skills)
-        private void PlaceTrapObject(ITargetable target)
+        //LMJ : 통합된 트랩 배치 메서드 - 기본공격/액티브 모두 사용
+        private void PlaceTrapObject(ITargetable target, MainSkillData skillData, MainSkillPrefabEntry prefabs, float damage)
         {
-            if (basicAttackData == null || target == null) return;
+            if (skillData == null || target == null) return;
 
             // Get placement position
             Vector3 placementPos = target.GetPosition();
@@ -2065,17 +1818,17 @@ namespace Novelian.Combat
             }
 
             // Create trap object
-            GameObject trapObj = new GameObject($"Trap_{basicAttackData.skill_name}");
+            GameObject trapObj = new GameObject($"Trap_{skillData.skill_name}");
             TrapObject trap = trapObj.AddComponent<TrapObject>();
-            trap.Initialize(basicAttackData, basicAttackPrefabs, supportData, FinalDamage, placementPos);
+            trap.Initialize(skillData, prefabs, supportData, damage, placementPos);
 
-            Debug.Log($"[Character] Placed Trap: {basicAttackData.skill_name} at {placementPos}");
+            Debug.Log($"[Character] Placed Trap: {skillData.skill_name} at {placementPos}");
         }
 
-        //LMJ : Place mine object on field (Mine type skills)
-        private void PlaceMineObject(ITargetable target)
+        //LMJ : 통합된 지뢰 배치 메서드 - 기본공격/액티브 모두 사용
+        private void PlaceMineObject(ITargetable target, MainSkillData skillData, MainSkillPrefabEntry prefabs, float damage)
         {
-            if (basicAttackData == null || target == null) return;
+            if (skillData == null || target == null) return;
 
             // Get placement position
             Vector3 placementPos = target.GetPosition();
@@ -2092,11 +1845,11 @@ namespace Novelian.Combat
             }
 
             // Create mine object
-            GameObject mineObj = new GameObject($"Mine_{basicAttackData.skill_name}");
+            GameObject mineObj = new GameObject($"Mine_{skillData.skill_name}");
             MineObject mine = mineObj.AddComponent<MineObject>();
-            mine.Initialize(basicAttackData, basicAttackPrefabs, supportData, FinalDamage, placementPos);
+            mine.Initialize(skillData, prefabs, supportData, damage, placementPos);
 
-            Debug.Log($"[Character] Placed Mine: {basicAttackData.skill_name} at {placementPos}");
+            Debug.Log($"[Character] Placed Mine: {skillData.skill_name} at {placementPos}");
         }
 
         //LMJ : Use instant kill skill (심장마비 - 체력 10% 이하 적 즉사, 보스 제외)
@@ -2192,7 +1945,7 @@ namespace Novelian.Combat
             // 버프 스킬은 타겟이 필요 없음 (자기/아군 대상)
             if (skillType == SkillAssetType.Buff)
             {
-                UseBuffSkillAsync().Forget();
+                UseBuffSkillAsync(basicAttackData, basicAttackPrefabs).Forget();
                 return;
             }
 
@@ -2229,7 +1982,7 @@ namespace Novelian.Combat
                     }
                     else
                     {
-                        UseBasicAttackAOEAsync(target).Forget();
+                        UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
                     }
                     break;
 
@@ -2247,33 +2000,33 @@ namespace Novelian.Combat
                     }
                     else
                     {
-                        UseBasicAttackAOEAsync(target).Forget();
+                        UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
                     }
                     break;
 
                 // DOT 스킬 - 범위 내 적에게 지속 데미지 (AOE 방식)
                 case SkillAssetType.DOT:
-                    UseBasicAttackAOEAsync(target).Forget();
+                    UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
                     break;
 
                 // 디버프 스킬 - 범위 내 적에게 디버프 적용 (AOE 방식)
                 case SkillAssetType.Debuff:
-                    UseBasicAttackAOEAsync(target).Forget();
+                    UseAOESkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed).Forget();
                     break;
 
                 // 채널링 스킬 - 지속 시전
                 case SkillAssetType.Channeling:
-                    UseChannelingSkillAsync(target).Forget();
+                    UseChannelingSkillAsync(target, basicAttackData, basicAttackPrefabs, FinalDamage).Forget();
                     break;
 
                 // 트랩 스킬 - 필드에 트랩 오브젝트 설치
                 case SkillAssetType.Trap:
-                    PlaceTrapObject(target);
+                    PlaceTrapObject(target, basicAttackData, basicAttackPrefabs, FinalDamage);
                     break;
 
                 // 지뢰 스킬 - 필드에 지뢰 오브젝트 설치
                 case SkillAssetType.Mine:
-                    PlaceMineObject(target);
+                    PlaceMineObject(target, basicAttackData, basicAttackPrefabs, FinalDamage);
                     break;
 
                 default:

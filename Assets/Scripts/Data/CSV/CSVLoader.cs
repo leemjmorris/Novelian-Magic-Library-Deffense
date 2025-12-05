@@ -42,7 +42,9 @@ public class CSVLoader : MonoBehaviour
 
     private async UniTaskVoid Start()
     {
+        Debug.Log("[CSVLoader] Start() called - Beginning CSV load...");
         await LoadAll();
+        Debug.Log($"[CSVLoader] Start() completed - IsInit: {IsInit}");
     }
 
     /// <summary>
@@ -159,13 +161,24 @@ public class CSVLoader : MonoBehaviour
             // 빌드 또는 에디터에서 파일을 못 찾은 경우: Addressables 사용
             if (string.IsNullOrEmpty(csvText))
             {
-                TextAsset asset = await Addressables.LoadAssetAsync<TextAsset>(addressableKey);
-                if (asset == null)
+                Debug.Log($"[CSVLoader] Loading skill table via Addressables: {addressableKey}");
+                try
                 {
-                    Debug.LogError($"[CSVLoader] Failed to load TextAsset: {addressableKey}");
+                    var handle = Addressables.LoadAssetAsync<TextAsset>(addressableKey);
+                    TextAsset asset = await handle;
+                    if (asset == null)
+                    {
+                        Debug.LogError($"[CSVLoader] Failed to load skill TextAsset (null): {addressableKey}");
+                        return null;
+                    }
+                    csvText = asset.text;
+                    Debug.Log($"[CSVLoader] Skill Addressables load SUCCESS: {addressableKey} (length: {csvText.Length})");
+                }
+                catch (System.Exception loadEx)
+                {
+                    Debug.LogError($"[CSVLoader] Skill Addressables load FAILED: {addressableKey} - {loadEx.Message}");
                     return null;
                 }
-                csvText = asset.text;
             }
 
             // 3행 헤더 형식 처리: 첫번째(한글헤더)와 세번째(타입) 행 제거
@@ -251,13 +264,24 @@ public class CSVLoader : MonoBehaviour
             // 빌드 또는 에디터에서 파일을 못 찾은 경우: Addressables 사용
             if (string.IsNullOrEmpty(csvText))
             {
-                TextAsset asset = await Addressables.LoadAssetAsync<TextAsset>(addressableKey);
-                if (asset == null)
+                Debug.Log($"[CSVLoader] Loading table via Addressables: {addressableKey}");
+                try
                 {
-                    Debug.LogError($"[CSVLoader] Failed to load TextAsset: {addressableKey}");
+                    var handle = Addressables.LoadAssetAsync<TextAsset>(addressableKey);
+                    TextAsset asset = await handle;
+                    if (asset == null)
+                    {
+                        Debug.LogError($"[CSVLoader] Failed to load TextAsset (null): {addressableKey}");
+                        return null;
+                    }
+                    csvText = asset.text;
+                    Debug.Log($"[CSVLoader] Addressables load SUCCESS: {addressableKey} (length: {csvText.Length})");
+                }
+                catch (System.Exception loadEx)
+                {
+                    Debug.LogError($"[CSVLoader] Addressables load FAILED: {addressableKey} - {loadEx.Message}");
                     return null;
                 }
-                csvText = asset.text;
             }
 
             // Create and load CsvTable

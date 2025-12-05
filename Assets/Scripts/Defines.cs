@@ -35,6 +35,10 @@ public static class AddressableKey
     public static readonly string BookmarkStatListTable = "BookmarkStatListTable";
     public static readonly string BookmarkSkillListTable = "BookmarkSkillListTable";
     public static readonly string BookmarkSkillTable = "BookmarkSkillTable";
+    public static readonly string CardLevelTable = "CardLevelTable";
+    public static readonly string CardListTable = "CardListTable";
+    public static readonly string CardTable = "CardTable";
+    public static readonly string ItemTable = "ItemTable";
     public static readonly string CurrencyTable = "CurrencyTable";
     public static readonly string GradeTable = "GradeTable";
     public static readonly string IngredientTable = "IngredientTable";
@@ -54,6 +58,12 @@ public static class AddressableKey
     public static readonly string DispatchLocationTable = "DispatchLocationTable";
     public static readonly string DispatchRewardTable = "DispatchRewardTable";
     public static readonly string DispatchTimeTable = "DispatchTimeTable";
+    public static readonly string MainSkillTable = "MainSkillTable";
+    public static readonly string SupportSkillTable = "SupportSkillTable";
+    public static readonly string SupportCompatibilityTable = "SupportCompatibilityTable";
+    public static readonly string SkillLevelTable = "SkillLevelTable";
+    public static readonly string PlayerLevelTable = "PlayerLevelTable";
+    public static readonly string SkillTypeTable = "SkillTypeTable";    
     
     // JML: Icon Addressable Keys
     public static readonly string Icon_Mystery = "Icon_Mystery";
@@ -69,20 +79,8 @@ public static class AddressableKey
     public static readonly string Icon_RareBookmark = "RareBookmark";
     public static readonly string Icon_UniqueBookmark = "UniqueBookmark";
 
-    // 새 스킬 시스템 CSV 테이블
-    public static readonly string MainSkillTable = "MainSkillTable";
-    public static readonly string SupportSkillTable = "SupportSkillTable";
-    public static readonly string SupportCompatibilityTable = "SupportCompatibilityTable";
-    public static readonly string SkillLevelTable = "SkillLevelTable";
-
     // 스킬 Prefab 데이터베이스
     public static readonly string SkillPrefabDatabase = "SkillPrefabDatabase";
-
-    // 인게임 카드 시스템 CSV 테이블
-    public static readonly string CardTable = "CardTable";
-    public static readonly string CardLevelTable = "CardLevelTable";
-    public static readonly string CardListTable = "CardListTable";
-    public static readonly string PlayerLevelTable = "PlayerLevelTable";
 
     // JML: 범용 프리팹 방식 - 단일 키 반환 (Issue #320)
     public static string GetCharacterKey(int characterId)

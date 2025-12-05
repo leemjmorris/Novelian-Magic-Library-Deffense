@@ -80,8 +80,17 @@ public class BookMarkUI : MonoBehaviour
 
     private async UniTaskVoid Start()
     {
+        Debug.Log("[BookMarkUI] Start() called - Loading recipes...");
+
         await LoadRecipesFromCSV(); // TODO JML: 부트씬 로드하면 필요 없어짐
+
+        Debug.Log($"[BookMarkUI] Recipes loaded - stat: {statRecipes.Count}, skill: {skillRecipes.Count}");
+        Debug.Log("[BookMarkUI] Preloading bookmark icons...");
+
         await PreloadBookmarkIcons(); // JML: 책갈피 아이콘 미리 캐싱
+
+        Debug.Log($"[BookMarkUI] Icons cached: {cachedBookmarkIcons.Count}");
+        Debug.Log("[BookMarkUI] Setting up button listeners...");
 
         // JML: Choice Panel Button Listeners
         selectionStatButton.onClick.AddListener(OnSelectionStatButtonClicked);
@@ -125,6 +134,8 @@ public class BookMarkUI : MonoBehaviour
         {
             filterDropdown.onValueChanged.AddListener(OnFilterChanged);
         }
+
+        Debug.Log("[BookMarkUI] Start() completed - All listeners setup done");
     }
 
     private void OnDestroy()

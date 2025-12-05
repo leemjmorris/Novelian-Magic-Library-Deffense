@@ -126,8 +126,8 @@ namespace Novelian.Combat
             {
                 GameObject explosionEffect = Object.Instantiate(skillPrefabs.hitEffectPrefab, explosionPos, Quaternion.identity);
 
-                // Scale explosion effect to match aoe_radius
-                float baseSize = 100f;
+                // Scale explosion effect to match aoe_radius (baseSize 25로 이펙트 크기 확대)
+                float baseSize = 25f;
                 float scaleFactor = aoeRadius / baseSize;
                 explosionEffect.transform.localScale = Vector3.one * scaleFactor;
 

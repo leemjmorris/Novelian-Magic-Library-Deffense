@@ -60,8 +60,8 @@ namespace Novelian.Combat
                 areaEffectInstance = Object.Instantiate(prefabs.projectilePrefab, position, Quaternion.identity);
                 areaEffectInstance.transform.SetParent(transform);
 
-                // Scale effect to match aoe_radius
-                float baseSize = 100f;
+                // Scale effect to match aoe_radius (baseSize 25로 이펙트 크기 확대)
+                float baseSize = 25f;
                 float scaleFactor = aoeRadius / baseSize;
                 areaEffectInstance.transform.localScale = Vector3.one * scaleFactor;
             }

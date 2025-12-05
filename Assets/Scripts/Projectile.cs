@@ -614,8 +614,8 @@ namespace Novelian.Combat
             if (hitEffectPrefab != null)
             {
                 GameObject explosionEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, explosionPos, Quaternion.identity);
-                // AOE 범위에 맞춰 스케일 조절
-                float baseEffectSize = 100f;
+                // AOE 범위에 맞춰 스케일 조절 (baseEffectSize 25로 이펙트 크기 확대)
+                float baseEffectSize = 25f;
                 float scaleFactor = dynamiteAoeRadius / baseEffectSize;
                 explosionEffect.transform.localScale = Vector3.one * scaleFactor;
                 UnityEngine.Object.Destroy(explosionEffect, 2f);
@@ -984,6 +984,12 @@ namespace Novelian.Combat
             // JML: OnTriggerEnter 로그 제거
 
             if (!isInitialized) return;
+
+            // Wall collision - ignore (projectiles should pass through walls)
+            if (other.CompareTag(Tag.Wall))
+            {
+                return; // 벽 무시 - 투사체는 벽을 통과
+            }
 
             // Obstacle collision
             if (other.CompareTag(Tag.Obstacle))
