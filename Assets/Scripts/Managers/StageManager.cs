@@ -114,7 +114,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (monsterEvents != null)
             {
                 monsterEvents.AddMonsterDiedListener(AddExp);
-                Debug.Log("[StageManager] monsterEvents 구독 완료 (AddExp)");
+                Debug.Log($"[StageManager] monsterEvents 구독 완료 (AddExp) - InstanceID: {monsterEvents.GetInstanceID()}");
             }
             else
             {

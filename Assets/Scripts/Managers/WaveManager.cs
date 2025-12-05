@@ -447,11 +447,9 @@ namespace NovelianMagicLibraryDefense.Managers
                     // JML: Addressable 키 설정 (DespawnByKey에서 사용)
                     monster.SetAddressableKey(addressableKey);
 
-                    // JML: CSV 데이터로 몬스터 스탯 초기화
-                    if (levelData != null)
-                    {
-                        monster.Initialize(levelData);
-                    }
+                    // JML: CSV 데이터로 몬스터 스탯 초기화 + MonsterEvents 주입
+                    // (Addressables 로드 시 ScriptableObject 참조가 별도 인스턴스로 로드되는 문제 해결)
+                    monster.Initialize(levelData, monsterEvents);
 
                     // 목적지 설정 (Wall 위치로)
                     if (wallTarget != null)

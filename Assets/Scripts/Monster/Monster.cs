@@ -40,8 +40,14 @@ public class Monster : BaseEntity, ITargetable, IMovable
     /// CSV 데이터 기반으로 몬스터 스탯 초기화 (MonsterLevelData)
     /// OnSpawn() 후 WaveManager에서 호출
     /// </summary>
-    public void Initialize(MonsterLevelData levelData)
+    public void Initialize(MonsterLevelData levelData, MonsterEvents events = null)
     {
+        // MonsterEvents 주입 (Addressables 로드 시 ScriptableObject 참조 문제 해결)
+        if (events != null)
+        {
+            monsterEvents = events;
+        }
+
         if (levelData == null)
         {
             Debug.LogWarning("[Monster] MonsterLevelData is null, using default stats");
@@ -959,6 +965,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // LMJ: Use EventChannel instead of static event
         if (monsterEvents != null)
         {
+            Debug.Log($"[Monster] Die() - monsterEvents InstanceID: {monsterEvents.GetInstanceID()}");
             monsterEvents.RaiseMonsterDied(this);
             Debug.Log($"[Monster] Die() - RaiseMonsterDied called for {gameObject.name}");
         }
