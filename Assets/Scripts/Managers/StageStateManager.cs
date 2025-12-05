@@ -3,6 +3,7 @@ using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.Managers;
 using NovelianMagicLibraryDefense.UI;
+using Novelian.Combat;
 using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Managers
@@ -131,6 +132,9 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 Debug.Log("[StageStateManager] Stage Cleared!");
 
+                // JML: 모든 캐릭터 승리 애니메이션 재생
+                PlayAllCharactersVictoryAnimation();
+
                 // JML: 스테이지 클리어 시 진행도 저장 (다음 스테이지 해금)
                 if (SelectedStage.HasSelection)
                 {
@@ -155,6 +159,10 @@ namespace NovelianMagicLibraryDefense.Managers
             else if (newState == StageState.Failed)
             {
                 Debug.Log("[StageStateManager] Stage Failed!");
+
+                // JML: 모든 캐릭터 사망 애니메이션 재생
+                PlayAllCharactersDieAnimation();
+
                 // JML: StageFailedPanel 사용 (로비/재시작 선택 가능)
                 if (stageFailedPanel != null)
                 {
@@ -174,5 +182,35 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             return CurrentState;
         }
+
+        #region Character Animation
+
+        /// <summary>
+        /// JML: 모든 캐릭터의 승리 애니메이션 재생
+        /// </summary>
+        private void PlayAllCharactersVictoryAnimation()
+        {
+            Character[] characters = FindObjectsOfType<Character>();
+            foreach (var character in characters)
+            {
+                character.PlayVictoryAnimation();
+            }
+            Debug.Log($"[StageStateManager] {characters.Length}명의 캐릭터 승리 애니메이션 재생");
+        }
+
+        /// <summary>
+        /// JML: 모든 캐릭터의 사망 애니메이션 재생
+        /// </summary>
+        private void PlayAllCharactersDieAnimation()
+        {
+            Character[] characters = FindObjectsOfType<Character>();
+            foreach (var character in characters)
+            {
+                character.PlayDieAnimation();
+            }
+            Debug.Log($"[StageStateManager] {characters.Length}명의 캐릭터 사망 애니메이션 재생");
+        }
+
+        #endregion
     }
 }

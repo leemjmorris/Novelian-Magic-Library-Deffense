@@ -14,6 +14,14 @@ namespace Novelian.Combat
         [Header("Character Visual")]
         [SerializeField] private GameObject characterObj;
 
+        [Header("Character Animator")]
+        [SerializeField] private Animator characterAnimator;
+
+        // JML: Animation trigger hash (성능 최적화)
+        private static readonly int ANIM_ATTACK = Animator.StringToHash("Attack");
+        private static readonly int ANIM_DIE = Animator.StringToHash("Die");
+        private static readonly int ANIM_VICTORY = Animator.StringToHash("Victory");
+
         [Header("스킬 장착 (Skill Equipment) - CSV ID 기반")]
         [SerializeField, Tooltip("기본 공격 스킬 ID (MainSkillTable)")]
         private int basicAttackSkillId = 39001;
@@ -545,6 +553,9 @@ namespace Novelian.Combat
                 return;
             }
 
+            // JML: 공격 애니메이션 재생
+            PlayAttackAnimation();
+
             // 스킬 타입별 분기 처리
             switch (skillType)
             {
@@ -792,6 +803,9 @@ namespace Novelian.Combat
             ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, searchRange, useWeightTargeting);
 
             if (target == null) return;
+
+            // JML: 공격 애니메이션 재생 (액티브 스킬도 동일)
+            PlayAttackAnimation();
 
             // 스킬 타입별 분기 처리 (TryAttack과 동일한 구조)
             switch (skillType)
@@ -2742,6 +2756,16 @@ namespace Novelian.Combat
 
         #endregion
 
+        #region 애니메이션 시스템 (Animation System)
+
+        /// <summary>
+        /// JML: 공격 애니메이션 재생
+        /// </summary>
+        public void PlayAttackAnimation()
+        {
+            if (characterAnimator != null)
+            {
+                characterAnimator.SetTrigger(ANIM_ATTACK);
         #region 이펙트 레이어/콜라이더 유틸리티 (Channeling Wall 통과용)
 
         /// <summary>
@@ -2762,6 +2786,24 @@ namespace Novelian.Combat
         }
 
         /// <summary>
+        /// JML: 사망 애니메이션 재생 (게임 패배 시)
+        /// </summary>
+        public void PlayDieAnimation()
+        {
+            if (characterAnimator != null)
+            {
+                characterAnimator.SetTrigger(ANIM_DIE);
+            }
+        }
+
+        /// <summary>
+        /// JML: 승리 애니메이션 재생 (스테이지 클리어 시)
+        /// </summary>
+        public void PlayVictoryAnimation()
+        {
+            if (characterAnimator != null)
+            {
+                characterAnimator.SetTrigger(ANIM_VICTORY);
         /// LMJ: GameObject와 모든 자식의 Collider를 재귀적으로 비활성화
         /// Channeling 빔은 시각적 효과만 필요하므로 물리 충돌 제거
         /// </summary>
