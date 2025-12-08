@@ -1,18 +1,16 @@
 using UnityEngine;
+using Firebase.Data;
 
 namespace Dispatch
 {
     /// <summary>
     /// 파견 상태 확인을 위한 유틸리티 클래스
+    /// Firebase 데이터 기반으로 동작
     /// </summary>
     public static class DispatchStateHelper
     {
-        // 전투형/채집형 파견 저장 키
-        private const string COMBAT_DISPATCH_SAVE_KEY = "CombatDispatch_SaveData";
-        private const string GATHERING_DISPATCH_SAVE_KEY = "GatheringDispatch_SaveData";
-
         /// <summary>
-        /// 파견 상태 저장 데이터 구조
+        /// 파견 상태 저장 데이터 구조 (레거시 호환용)
         /// </summary>
         [System.Serializable]
         public class DispatchSaveData
@@ -28,10 +26,9 @@ namespace Dispatch
         /// <summary>
         /// 파견 완료 여부 확인 (전투형 또는 채집형 중 하나라도 완료되면 true)
         /// </summary>
-        /// <returns>파견 완료 상태면 true, 아니면 false</returns>
         public static bool IsDispatchCompleted()
         {
-            return IsDispatchCompleted(COMBAT_DISPATCH_SAVE_KEY) || IsDispatchCompleted(GATHERING_DISPATCH_SAVE_KEY);
+            return IsCombatDispatchCompleted() || IsGatheringDispatchCompleted();
         }
 
         /// <summary>
@@ -39,7 +36,8 @@ namespace Dispatch
         /// </summary>
         public static bool IsCombatDispatchCompleted()
         {
-            return IsDispatchCompleted(COMBAT_DISPATCH_SAVE_KEY);
+            var state = GetCombatDispatchState();
+            return IsDispatchStateCompleted(state);
         }
 
         /// <summary>
@@ -47,61 +45,37 @@ namespace Dispatch
         /// </summary>
         public static bool IsGatheringDispatchCompleted()
         {
-            return IsDispatchCompleted(GATHERING_DISPATCH_SAVE_KEY);
+            var state = GetGatheringDispatchState();
+            return IsDispatchStateCompleted(state);
         }
 
         /// <summary>
-        /// 파견 완료 여부 확인 (커스텀 키)
+        /// 파견 상태가 완료되었는지 확인
         /// </summary>
-        /// <param name="saveKey">확인할 파견 저장 키</param>
-        /// <returns>파견 완료 상태면 true, 아니면 false</returns>
-        public static bool IsDispatchCompleted(string saveKey)
+        private static bool IsDispatchStateCompleted(DispatchStateData state)
         {
-            // 저장된 파견 상태가 없으면 false
-            if (!PlayerPrefs.HasKey(saveKey))
-            {
+            if (state == null || !state.isActive)
                 return false;
-            }
 
-            // 파견 상태 데이터 로드
-            string json = PlayerPrefs.GetString(saveKey);
-            var saveData = JsonUtility.FromJson<DispatchSaveData>(json);
-
-            if (saveData == null || !saveData.isDispatching)
-            {
+            if (string.IsNullOrEmpty(state.endTime))
                 return false;
-            }
 
-            // 시작 시간 파싱
-            if (!System.DateTime.TryParse(saveData.startTimeString, out System.DateTime startTime))
-            {
+            if (!System.DateTime.TryParse(state.endTime, out System.DateTime endTime))
                 return false;
-            }
 
-            // 경과 시간 계산
-            System.TimeSpan elapsed = System.DateTime.Now - startTime;
-            float elapsedSeconds = (float)elapsed.TotalSeconds;
-            float remainingTime = saveData.totalDispatchTime - elapsedSeconds;
-
-            // 파견 완료 여부 반환
-            return remainingTime <= 0f;
+            return System.DateTime.UtcNow >= endTime;
         }
 
         /// <summary>
-        /// 남은 파견 시간 계산 (초 단위) - 전투형/채집형 중 파견 중인 것의 남은 시간 반환
+        /// 남은 파견 시간 계산 (초 단위)
         /// </summary>
-        /// <returns>남은 시간 (초), 파견 중이 아니면 -1</returns>
         public static float GetRemainingTime()
         {
-            float combatRemaining = GetRemainingTime(COMBAT_DISPATCH_SAVE_KEY);
-            float gatheringRemaining = GetRemainingTime(GATHERING_DISPATCH_SAVE_KEY);
+            float combatRemaining = GetRemainingTimeForState(GetCombatDispatchState());
+            float gatheringRemaining = GetRemainingTimeForState(GetGatheringDispatchState());
 
-            // 둘 다 파견 중이면 더 짧은 남은 시간 반환
             if (combatRemaining >= 0f && gatheringRemaining >= 0f)
-            {
                 return Mathf.Min(combatRemaining, gatheringRemaining);
-            }
-            // 하나만 파견 중이면 해당 시간 반환
             if (combatRemaining >= 0f) return combatRemaining;
             if (gatheringRemaining >= 0f) return gatheringRemaining;
 
@@ -109,58 +83,98 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 특정 키의 남은 파견 시간 계산 (초 단위)
+        /// 전투형 파견 남은 시간
         /// </summary>
-        private static float GetRemainingTime(string saveKey)
+        public static float GetCombatRemainingTime()
         {
-            if (!PlayerPrefs.HasKey(saveKey))
-            {
-                return -1f;
-            }
-
-            string json = PlayerPrefs.GetString(saveKey);
-            var saveData = JsonUtility.FromJson<DispatchSaveData>(json);
-
-            if (saveData == null || !saveData.isDispatching)
-            {
-                return -1f;
-            }
-
-            if (!System.DateTime.TryParse(saveData.startTimeString, out System.DateTime startTime))
-            {
-                return -1f;
-            }
-
-            System.TimeSpan elapsed = System.DateTime.Now - startTime;
-            float elapsedSeconds = (float)elapsed.TotalSeconds;
-            float remainingTime = saveData.totalDispatchTime - elapsedSeconds;
-
-            return Mathf.Max(0f, remainingTime);
+            return GetRemainingTimeForState(GetCombatDispatchState());
         }
 
         /// <summary>
-        /// 파견 중인지 확인 (전투형 또는 채집형 중 하나라도 파견 중이면 true)
+        /// 채집형 파견 남은 시간
         /// </summary>
-        /// <returns>파견 중이면 true, 아니면 false</returns>
+        public static float GetGatheringRemainingTime()
+        {
+            return GetRemainingTimeForState(GetGatheringDispatchState());
+        }
+
+        /// <summary>
+        /// 특정 상태의 남은 파견 시간 계산 (초 단위)
+        /// </summary>
+        private static float GetRemainingTimeForState(DispatchStateData state)
+        {
+            if (state == null || !state.isActive)
+                return -1f;
+
+            if (string.IsNullOrEmpty(state.endTime))
+                return -1f;
+
+            if (!System.DateTime.TryParse(state.endTime, out System.DateTime endTime))
+                return -1f;
+
+            System.TimeSpan remaining = endTime - System.DateTime.UtcNow;
+            return Mathf.Max(0f, (float)remaining.TotalSeconds);
+        }
+
+        /// <summary>
+        /// 파견 중인지 확인
+        /// </summary>
         public static bool IsDispatching()
         {
-            return IsDispatchingByKey(COMBAT_DISPATCH_SAVE_KEY) || IsDispatchingByKey(GATHERING_DISPATCH_SAVE_KEY);
+            return IsCombatDispatching() || IsGatheringDispatching();
         }
 
         /// <summary>
-        /// 특정 키의 파견 중 여부 확인
+        /// 전투형 파견 중인지 확인
         /// </summary>
-        private static bool IsDispatchingByKey(string saveKey)
+        public static bool IsCombatDispatching()
         {
-            if (!PlayerPrefs.HasKey(saveKey))
+            var state = GetCombatDispatchState();
+            return state != null && state.isActive;
+        }
+
+        /// <summary>
+        /// 채집형 파견 중인지 확인
+        /// </summary>
+        public static bool IsGatheringDispatching()
+        {
+            var state = GetGatheringDispatchState();
+            return state != null && state.isActive;
+        }
+
+        /// <summary>
+        /// 전투형 파견 상태 가져오기
+        /// </summary>
+        public static DispatchStateData GetCombatDispatchState()
+        {
+            return FirebaseSaveManager.Instance?.CachedData?.dispatch?.combat;
+        }
+
+        /// <summary>
+        /// 채집형 파견 상태 가져오기
+        /// </summary>
+        public static DispatchStateData GetGatheringDispatchState()
+        {
+            return FirebaseSaveManager.Instance?.CachedData?.dispatch?.gathering;
+        }
+
+        /// <summary>
+        /// Firebase 데이터를 레거시 DispatchSaveData 형식으로 변환
+        /// </summary>
+        public static DispatchSaveData ConvertToLegacyFormat(DispatchStateData state)
+        {
+            if (state == null)
+                return null;
+
+            return new DispatchSaveData
             {
-                return false;
-            }
-
-            string json = PlayerPrefs.GetString(saveKey);
-            var saveData = JsonUtility.FromJson<DispatchSaveData>(json);
-
-            return saveData != null && saveData.isDispatching;
+                isDispatching = state.isActive,
+                totalDispatchTime = state.hours * 3600f,
+                startTimeString = state.startTime,
+                selectedLocation = state.locationId,
+                selectedHours = state.hours,
+                selectedTimeID = state.hours // 시간 ID는 hours와 동일하게 사용
+            };
         }
     }
 }

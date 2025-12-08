@@ -139,36 +139,45 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 파견 완료 상태 확인 및 Red Dot 표시
+        /// 파견 완료 상태 확인 및 Red Dot 표시 (Firebase 기반)
         /// </summary>
         private void CheckDispatchStateAndShowRedDot()
         {
-            if (!PlayerPrefs.HasKey(dispatchSaveKey))
+            // Firebase 캐시 데이터에서 파견 상태 확인
+            var dispatchData = FirebaseSaveManager.Instance?.CachedData?.dispatch;
+            if (dispatchData == null)
             {
-                Debug.Log($"{LogTag} 저장된 파견 상태 없음");
+                Debug.Log($"{LogTag} Firebase 데이터 없음");
                 return;
             }
 
-            string json = PlayerPrefs.GetString(dispatchSaveKey);
-            var saveData = JsonUtility.FromJson<DispatchSaveData>(json);
+            // dispatchType에 따라 해당 파견 상태 확인
+            Firebase.Data.DispatchStateData state = null;
+            if (dispatchSaveKey.Contains("Combat"))
+            {
+                state = dispatchData.combat;
+            }
+            else if (dispatchSaveKey.Contains("Gathering"))
+            {
+                state = dispatchData.gathering;
+            }
 
-            if (saveData == null || !saveData.isDispatching)
+            if (state == null || !state.isActive)
             {
                 Debug.Log($"{LogTag} 파견 중이 아님");
                 return;
             }
 
-            // 시작 시간 파싱
-            if (!System.DateTime.TryParse(saveData.startTimeString, out System.DateTime startTime))
+            // 종료 시간 파싱
+            if (!System.DateTime.TryParse(state.endTime, out System.DateTime endTime))
             {
-                Debug.LogError($"{LogTag} 파견 시작 시간 파싱 실패");
+                Debug.LogError($"{LogTag} 파견 종료 시간 파싱 실패");
                 return;
             }
 
-            // 경과 시간 계산
-            System.TimeSpan elapsed = System.DateTime.Now - startTime;
-            float elapsedSeconds = (float)elapsed.TotalSeconds;
-            float remainingTime = saveData.totalDispatchTime - elapsedSeconds;
+            // 남은 시간 계산
+            System.TimeSpan remaining = endTime - System.DateTime.UtcNow;
+            float remainingTime = (float)remaining.TotalSeconds;
 
             // 파견 완료 상태라면 Red Dot 활성화
             if (remainingTime <= 0f)

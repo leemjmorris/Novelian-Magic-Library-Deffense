@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Firebase.Data;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// JML: Bookmark Manager (Singleton)
@@ -45,6 +48,9 @@ public class BookMarkManager : MonoBehaviour
 
         // JML: 이벤트 발생 (UI 갱신용)
         OnBookmarkAdded?.Invoke(bookmark);
+
+        // Firebase에 저장
+        SaveToFirebase();
     }
 
     /// <summary>
@@ -65,12 +71,31 @@ public class BookMarkManager : MonoBehaviour
 
                 Debug.Log($"[BookMarkManager] 책갈피 제거: {ownedBookmarks[i]}");
                 ownedBookmarks.RemoveAt(i);
+                SaveToFirebase();
                 return true;
             }
         }
 
         Debug.LogWarning($"[BookMarkManager] 존재하지 않는 책갈피 ID: {uniqueID}");
         return false;
+    }
+
+    /// <summary>
+    /// 현재 책갈피 상태를 Firebase에 저장
+    /// </summary>
+    private void SaveToFirebase()
+    {
+        if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
+            return;
+
+        if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
+            return;
+
+        var data = ToBookmarkSaveData();
+        FirebaseSaveManager.Instance.SaveBookmarksAsync(
+            FirebaseManager.Instance.CurrentUserId,
+            data
+        ).Forget();
     }
 
     /// <summary>
@@ -257,6 +282,7 @@ public class BookMarkManager : MonoBehaviour
         bookmark.Equip(characterID, slotIndex);
 
         Debug.Log($"[BookMarkManager] 책갈피 장착: {bookmark.Name} (슬롯 {slotIndex})");
+        SaveToFirebase();
         return true;
     }
 
@@ -299,6 +325,7 @@ public class BookMarkManager : MonoBehaviour
         bookmarks[slotIndex] = null;
 
         Debug.Log($"[BookMarkManager] 책갈피 해제: {bookmarkToUnequip.Name} (슬롯 {slotIndex})");
+        SaveToFirebase();
         return true;
     }
 
@@ -366,6 +393,110 @@ public class BookMarkManager : MonoBehaviour
         return currentCount < maxCount;
     }
 
+    #endregion
+
+    #region Firebase Save/Load
+
+    /// <summary>
+    /// Firebase 데이터로 책갈피 설정 (BootScene에서 호출)
+    /// </summary>
+    public void SetBookmarksFromFirebase(BookmarkSaveData data)
+    {
+        if (data == null) return;
+
+        // 기존 데이터 초기화
+        ownedBookmarks.Clear();
+        characterBookmarks.Clear();
+
+        // 다음 고유 ID 설정
+        BookMark.SetNextUniqueID(data.nextId);
+
+        // 책갈피 복원
+        if (data.items != null)
+        {
+            foreach (var kvp in data.items)
+            {
+                if (int.TryParse(kvp.Key, out int uniqueId))
+                {
+                    var item = kvp.Value;
+
+                    // 생성 시간 파싱
+                    DateTime createdTime = DateTime.UtcNow;
+                    if (!string.IsNullOrEmpty(item.createdTime))
+                    {
+                        DateTime.TryParse(item.createdTime, out createdTime);
+                    }
+
+                    // 책갈피 생성
+                    var bookmark = new BookMark(
+                        uniqueId,
+                        item.dataId,
+                        item.name,
+                        (Grade)item.grade,
+                        (BookmarkType)item.type,
+                        item.optionType,
+                        item.optionValue,
+                        item.skillId,
+                        createdTime,
+                        item.equippedCharacterId,
+                        item.equipSlotIndex
+                    );
+
+                    ownedBookmarks.Add(bookmark);
+
+                    // 장착 상태 복원
+                    if (item.equippedCharacterId >= 0 && item.equipSlotIndex >= 0)
+                    {
+                        BookMark[] bookmarks = GetOrCreateBookmarkArray(item.equippedCharacterId);
+                        if (item.equipSlotIndex < bookmarks.Length)
+                        {
+                            bookmarks[item.equipSlotIndex] = bookmark;
+                        }
+                    }
+                }
+            }
+        }
+
+        Debug.Log($"<color=#3EB489>[BookMarkManager]</color> Firebase에서 책갈피 로드: {ownedBookmarks.Count}개");
+    }
+
+    /// <summary>
+    /// 모든 책갈피를 Firebase 저장용 데이터로 변환
+    /// </summary>
+    public BookmarkSaveData ToBookmarkSaveData()
+    {
+        var data = new BookmarkSaveData();
+        data.items = new Dictionary<string, BookmarkItemData>();
+
+        int maxId = 0;
+        foreach (var bookmark in ownedBookmarks)
+        {
+            var itemData = new BookmarkItemData
+            {
+                dataId = bookmark.BookmarkDataID,
+                name = bookmark.Name,
+                grade = (int)bookmark.Grade,
+                type = (int)bookmark.Type,
+                optionType = bookmark.OptionType,
+                optionValue = bookmark.OptionValue,
+                skillId = bookmark.SkillID,
+                createdTime = bookmark.CreatedTime.ToString("o"),
+                equippedCharacterId = bookmark.EquippedLibrarianID,
+                equipSlotIndex = bookmark.EquipSlotIndex
+            };
+
+            data.items[bookmark.UniqueID.ToString()] = itemData;
+
+            if (bookmark.UniqueID > maxId)
+                maxId = bookmark.UniqueID;
+        }
+
+        data.nextId = maxId + 1;
+        return data;
+    }
+
+    #endregion
+
     // 사용법
     // // 캐릭터 ID로 장착된 모든 책갈피 가져오기 (null 제외)
     // List<BookMark> equippedBookmarks = BookMarkManager.Instance.GetEquippedBookmarksForCharacter(characterID);
@@ -384,58 +515,57 @@ public class BookMarkManager : MonoBehaviour
     //         // 스킬 적용 로직
     //     }
     // }
-#endregion
 
-#region Debug Methods
+    #region Debug Methods
 
-/// <summary>
-/// JML: Add Test Stat Bookmark
-/// 테스트용 스탯 책갈피 추가
-/// </summary>
-[ContextMenu("테스트 스탯 책갈피 추가")]
-private void AddTestStatBookmark()
-{
-    var testBookmark = new BookMark(
-        bookmarkDataID: 1001,
-        name: "테스트 스탯 책갈피",
-        grade: Grade.Common,
-        optionType: 1,
-        optionValue: 10.5f
-    );
-    AddBookmark(testBookmark);
-}
-
-/// <summary>
-/// JML: Add Test Skill Bookmark
-/// 테스트용 스킬 책갈피 추가
-/// </summary>
-[ContextMenu("테스트 스킬 책갈피 추가")]
-private void AddTestSkillBookmark()
-{
-    var testBookmark = new BookMark(
-        bookmarkDataID: 1111,
-        name: "체인 러브 쇼크",
-        grade: Grade.Common,
-        optionType: 1,
-        optionValue: 1,
-        skillID: 3121
-    );
-    AddBookmark(testBookmark);
-}
-
-/// <summary>
-/// JML: Print All Bookmarks
-/// 보유 책갈피 목록 출력
-/// </summary>
-[ContextMenu("보유 책갈피 목록 출력")]
-private void PrintAllBookmarks()
-{
-    Debug.Log($"=== 보유 책갈피 목록 ({ownedBookmarks.Count}개) ===");
-    for (int i = 0; i < ownedBookmarks.Count; i++)
+    /// <summary>
+    /// JML: Add Test Stat Bookmark
+    /// 테스트용 스탯 책갈피 추가
+    /// </summary>
+    [ContextMenu("테스트 스탯 책갈피 추가")]
+    private void AddTestStatBookmark()
     {
-        Debug.Log(ownedBookmarks[i]);
+        var testBookmark = new BookMark(
+            bookmarkDataID: 1001,
+            name: "테스트 스탯 책갈피",
+            grade: Grade.Common,
+            optionType: 1,
+            optionValue: 10.5f
+        );
+        AddBookmark(testBookmark);
     }
-}
+
+    /// <summary>
+    /// JML: Add Test Skill Bookmark
+    /// 테스트용 스킬 책갈피 추가
+    /// </summary>
+    [ContextMenu("테스트 스킬 책갈피 추가")]
+    private void AddTestSkillBookmark()
+    {
+        var testBookmark = new BookMark(
+            bookmarkDataID: 1111,
+            name: "체인 러브 쇼크",
+            grade: Grade.Common,
+            optionType: 1,
+            optionValue: 1,
+            skillID: 3121
+        );
+        AddBookmark(testBookmark);
+    }
+
+    /// <summary>
+    /// JML: Print All Bookmarks
+    /// 보유 책갈피 목록 출력
+    /// </summary>
+    [ContextMenu("보유 책갈피 목록 출력")]
+    private void PrintAllBookmarks()
+    {
+        Debug.Log($"=== 보유 책갈피 목록 ({ownedBookmarks.Count}개) ===");
+        for (int i = 0; i < ownedBookmarks.Count; i++)
+        {
+            Debug.Log(ownedBookmarks[i]);
+        }
+    }
 
     #endregion
 }

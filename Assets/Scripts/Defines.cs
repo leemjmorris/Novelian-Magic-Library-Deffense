@@ -11,6 +11,7 @@ public static class Tag
 
 public static class SceneName
 {
+    public static readonly string TitleScene = "TitleScene";
     public static readonly string LobbyScene = "LobbyScene";
     public static readonly string StageScene = "StageScene";
     public static readonly string GameScene = "GameScene";

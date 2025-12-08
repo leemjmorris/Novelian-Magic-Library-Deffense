@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Firebase.Data;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 캐릭터 보유 시스템 관리
@@ -73,6 +75,26 @@ public class CharacterOwnershipManager : MonoBehaviour
 
         // 이벤트 발생 (UI 갱신용)
         OnCharacterUnlocked?.Invoke(characterId);
+
+        // Firebase에 저장
+        SaveToFirebase();
+    }
+
+    /// <summary>
+    /// 현재 보유 캐릭터 상태를 Firebase에 저장
+    /// </summary>
+    private void SaveToFirebase()
+    {
+        if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
+            return;
+
+        if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
+            return;
+
+        FirebaseSaveManager.Instance.SaveOwnedCharactersAsync(
+            FirebaseManager.Instance.CurrentUserId,
+            ownedCharacters
+        ).Forget();
     }
 
     /// <summary>
@@ -89,6 +111,25 @@ public class CharacterOwnershipManager : MonoBehaviour
     public int GetOwnedCount()
     {
         return ownedCharacters.Count;
+    }
+
+    /// <summary>
+    /// Firebase 데이터로 보유 캐릭터 설정 (BootScene에서 호출)
+    /// </summary>
+    public void SetOwnedCharactersFromFirebase(Dictionary<string, bool> owned)
+    {
+        if (owned == null) return;
+
+        ownedCharacters.Clear();
+        foreach (var kvp in owned)
+        {
+            if (kvp.Value && int.TryParse(kvp.Key, out int characterId))
+            {
+                ownedCharacters.Add(characterId);
+            }
+        }
+
+        Debug.Log($"<color=#3EB489>[CharacterOwnership]</color> Firebase에서 보유 캐릭터 로드: {ownedCharacters.Count}개");
     }
 
     /// <summary>

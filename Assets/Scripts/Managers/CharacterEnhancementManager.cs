@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Firebase.Data;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 캐릭터 강화 시스템 관리
@@ -76,6 +78,25 @@ public class CharacterEnhancementManager : MonoBehaviour
             characterEnhancementLevels[characterId] = 1;
         }
         return characterEnhancementLevels[characterId];
+    }
+
+    /// <summary>
+    /// Firebase 데이터로 강화 레벨 설정 (BootScene에서 호출)
+    /// </summary>
+    public void SetEnhancementsFromFirebase(Dictionary<string, int> enhancements)
+    {
+        if (enhancements == null) return;
+
+        characterEnhancementLevels.Clear();
+        foreach (var kvp in enhancements)
+        {
+            if (int.TryParse(kvp.Key, out int characterId))
+            {
+                characterEnhancementLevels[characterId] = kvp.Value;
+            }
+        }
+
+        Debug.Log($"<color=#3EB489>[CharacterEnhancement]</color> Firebase에서 강화 데이터 로드: {characterEnhancementLevels.Count}개");
     }
 
     /// <summary>
@@ -216,7 +237,28 @@ public class CharacterEnhancementManager : MonoBehaviour
         string enhancedCharName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";
         Debug.Log($"[Enhancement Success] {enhancedCharName} Lv.{currentLevel} → Lv.{currentLevel + 1}");
 
+        // Firebase에 저장
+        SaveEnhancementToFirebase(characterId, currentLevel + 1);
+
         return true;
+    }
+
+    /// <summary>
+    /// 특정 캐릭터의 강화 레벨을 Firebase에 저장
+    /// </summary>
+    private void SaveEnhancementToFirebase(int characterId, int level)
+    {
+        if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
+            return;
+
+        if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
+            return;
+
+        FirebaseSaveManager.Instance.SaveCharacterEnhancementAsync(
+            FirebaseManager.Instance.CurrentUserId,
+            characterId,
+            level
+        ).Forget();
     }
 
     /// <summary>

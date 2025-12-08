@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Firebase.Data;
+using Cysharp.Threading.Tasks;
 
 public class CurrencyManager : MonoBehaviour
 {
@@ -158,6 +160,7 @@ public class CurrencyManager : MonoBehaviour
         Debug.Log($"[CurrencyManager] {currencyName} +{amount}. 현재: {currencies[currencyId]}");
 
         OnCurrencyChanged?.Invoke(currencyId, currencies[currencyId]);
+        SaveToFirebase();
     }
 
     /// <summary>
@@ -184,6 +187,7 @@ public class CurrencyManager : MonoBehaviour
         Debug.Log($"[CurrencyManager] {name} -{amount}. 현재: {currencies[currencyId]}");
 
         OnCurrencyChanged?.Invoke(currencyId, currencies[currencyId]);
+        SaveToFirebase();
         return true;
     }
 
@@ -198,7 +202,7 @@ public class CurrencyManager : MonoBehaviour
     /// <summary>
     /// 재화 직접 설정 (세이브/로드용)
     /// </summary>
-    public void SetCurrency(int currencyId, int amount)
+    public void SetCurrency(int currencyId, int amount, bool saveToFirebase = true)
     {
         if (amount < 0)
         {
@@ -208,6 +212,57 @@ public class CurrencyManager : MonoBehaviour
 
         currencies[currencyId] = amount;
         OnCurrencyChanged?.Invoke(currencyId, amount);
+
+        if (saveToFirebase)
+        {
+            SaveToFirebase();
+        }
+    }
+
+    /// <summary>
+    /// Firebase 데이터로 재화 설정 (BootScene에서 호출)
+    /// </summary>
+    public void SetCurrenciesFromFirebase(CurrencySaveData data)
+    {
+        if (data == null) return;
+
+        currencies[GOLD_ID] = data.gold;
+        currencies[EXP_ID] = data.exp;
+        currencies[APPLICATION_ID] = data.application;
+        currencies[RECOMMENDATION_ID] = data.recommendation;
+        currencies[MAGIC_STONE_ID] = data.magicStone;
+        currencies[AP_ID] = data.ap;
+
+        Debug.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase에서 재화 로드 완료 - 골드: {data.gold}, AP: {data.ap}");
+    }
+
+    /// <summary>
+    /// 현재 재화 상태를 Firebase에 저장
+    /// </summary>
+    public void SaveToFirebase()
+    {
+        if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
+        {
+            return;
+        }
+
+        if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
+        {
+            return;
+        }
+
+        var data = new CurrencySaveData
+        {
+            gold = currencies[GOLD_ID],
+            exp = currencies[EXP_ID],
+            application = currencies[APPLICATION_ID],
+            recommendation = currencies[RECOMMENDATION_ID],
+            magicStone = currencies[MAGIC_STONE_ID],
+            ap = currencies[AP_ID],
+            apRecoveryTime = DateTime.UtcNow.ToString("o")
+        };
+
+        FirebaseSaveManager.Instance.SaveCurrenciesAsync(FirebaseManager.Instance.CurrentUserId, data).Forget();
     }
 
     /// <summary>

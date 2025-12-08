@@ -1,5 +1,6 @@
 using System;
 using Cysharp.Threading.Tasks;
+using Firebase.Data;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
@@ -32,12 +33,12 @@ public class BootScene : MonoBehaviour
     [Header("Loading Progress")]
     [SerializeField] private float minimumLoadTime = 1.0f; // JML: Minimum time to show loading screen
 
+    [Header("Firebase")]
+    [SerializeField] private FirebaseSaveManager firebaseSaveManager;
+
     private async void Start()
     {
         Log("=== Boot Scene Started ===");
-
-        // 파견 상태 초기화 (새 게임 시작 시)
-        ClearDispatchState();
 
         // LCB: 페이드 패널을 검은 화면으로 미리 설정 (튕김 방지)
         if (FadeController.Instance != null)
@@ -50,6 +51,9 @@ public class BootScene : MonoBehaviour
 
         // JML: Initialize all systems in parallel where possible
         await InitializeBootSystems();
+
+        // Firebase 데이터 로드 및 매니저에 적용
+        await LoadFirebaseDataAndApplyToManagers();
 
         // JML: Wait for minimum load time (for UX purposes)
         float elapsed = Time.time - startTime;
@@ -473,34 +477,145 @@ public class BootScene : MonoBehaviour
     }
 
     /// <summary>
+    /// Firebase 데이터 로드 및 매니저에 적용
+    /// </summary>
+    private async UniTask LoadFirebaseDataAndApplyToManagers()
+    {
+        Log("--- Loading Firebase Data ---");
+
+        // FirebaseManager가 로그인되어 있는지 확인
+        if (FirebaseManager.Instance == null || !FirebaseManager.Instance.IsSignedIn)
+        {
+            Log("Firebase 로그인 안됨 - 데이터 로드 건너뜀");
+            return;
+        }
+
+        // FirebaseSaveManager 초기화
+        if (firebaseSaveManager != null)
+        {
+            // Awake가 완료될 때까지 대기
+            await UniTask.WaitUntil(() => FirebaseSaveManager.Instance != null);
+            FirebaseSaveManager.Instance.Initialize();
+            Log("✓ FirebaseSaveManager 초기화 완료");
+        }
+        else
+        {
+            Log("⚠️ FirebaseSaveManager 참조 없음 - 데이터 로드 건너뜀");
+            return;
+        }
+
+        // 유저 데이터 로드
+        string userId = FirebaseManager.Instance.CurrentUserId;
+        var userData = await FirebaseSaveManager.Instance.LoadUserDataAsync(userId);
+
+        if (userData == null)
+        {
+            Log("❌ 유저 데이터 로드 실패");
+            return;
+        }
+
+        Log("✓ 유저 데이터 로드 완료");
+
+        // 각 매니저에 데이터 적용
+        ApplyDataToManagers(userData);
+
+        Log("--- Firebase Data Applied ---");
+    }
+
+    /// <summary>
+    /// 로드된 Firebase 데이터를 각 매니저에 적용
+    /// </summary>
+    private void ApplyDataToManagers(UserData userData)
+    {
+        // 1. 진행도 적용 (StageProgressManager)
+        if (StageProgressManager.Instance != null && userData.progression != null)
+        {
+            StageProgressManager.Instance.SetProgressFromFirebase(userData.progression);
+            Log("✓ StageProgressManager 데이터 적용");
+        }
+
+        // 2. 재화 적용 (CurrencyManager)
+        if (CurrencyManager.Instance != null && userData.currencies != null)
+        {
+            CurrencyManager.Instance.SetCurrenciesFromFirebase(userData.currencies);
+            Log("✓ CurrencyManager 데이터 적용");
+        }
+
+        // 3. 캐릭터 보유 정보 적용 (CharacterOwnershipManager)
+        if (CharacterOwnershipManager.Instance != null && userData.characters != null)
+        {
+            CharacterOwnershipManager.Instance.SetOwnedCharactersFromFirebase(userData.characters.owned);
+            Log("✓ CharacterOwnershipManager 데이터 적용");
+        }
+
+        // 4. 캐릭터 강화 정보 적용 (CharacterEnhancementManager)
+        if (CharacterEnhancementManager.Instance != null && userData.characters != null)
+        {
+            CharacterEnhancementManager.Instance.SetEnhancementsFromFirebase(userData.characters.enhancements);
+            Log("✓ CharacterEnhancementManager 데이터 적용");
+        }
+
+        // 5. 덱 정보 적용 (DeckManager)
+        if (DeckManager.Instance != null && userData.deck != null)
+        {
+            DeckManager.Instance.SetDeckFromFirebase(userData.deck);
+            Log("✓ DeckManager 데이터 적용");
+        }
+
+        // 6. 재료 정보 적용 (IngredientManager)
+        if (IngredientManager.Instance != null && userData.ingredients != null)
+        {
+            IngredientManager.Instance.SetIngredientsFromFirebase(userData.ingredients);
+            Log("✓ IngredientManager 데이터 적용");
+        }
+
+        // 7. 책갈피 정보 적용 (BookMarkManager)
+        if (BookMarkManager.Instance != null && userData.bookmarks != null)
+        {
+            BookMarkManager.Instance.SetBookmarksFromFirebase(userData.bookmarks);
+            Log("✓ BookMarkManager 데이터 적용");
+        }
+
+        // 파견 데이터는 FirebaseSaveManager.CachedData에서 직접 참조하므로 별도 적용 불필요
+        Log("✓ 파견 데이터는 캐시에서 직접 참조");
+    }
+
+    /// <summary>
     /// 파견 상태 초기화 (새 게임 시작 시)
-    /// 전투형, 채집형 파견 상태 모두 초기화
+    /// 전투형, 채집형 파견 상태 모두 초기화 (Firebase)
     /// </summary>
     private void ClearDispatchState()
     {
-        bool cleared = false;
-
-        // 전투형 파견 상태 초기화
-        const string COMBAT_DISPATCH_KEY = "CombatDispatch_SaveData";
-        if (PlayerPrefs.HasKey(COMBAT_DISPATCH_KEY))
+        if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance?.CurrentUserId == null)
         {
-            PlayerPrefs.DeleteKey(COMBAT_DISPATCH_KEY);
-            cleared = true;
+            Log("Firebase 연결 안됨 - 파견 상태 초기화 건너뜀");
+            return;
         }
 
-        // 채집형 파견 상태 초기화
-        const string GATHERING_DISPATCH_KEY = "GatheringDispatch_SaveData";
-        if (PlayerPrefs.HasKey(GATHERING_DISPATCH_KEY))
+        var emptyState = new Firebase.Data.DispatchStateData
         {
-            PlayerPrefs.DeleteKey(GATHERING_DISPATCH_KEY);
-            cleared = true;
-        }
+            isActive = false,
+            locationId = 0,
+            hours = 0,
+            startTime = "",
+            endTime = ""
+        };
 
-        if (cleared)
-        {
-            PlayerPrefs.Save();
-            Log("파견 상태 초기화됨 (전투형/채집형)");
-        }
+        // 전투형 파견 초기화
+        FirebaseSaveManager.Instance.SaveDispatchAsync(
+            FirebaseManager.Instance.CurrentUserId,
+            "combat",
+            emptyState
+        ).Forget();
+
+        // 채집형 파견 초기화
+        FirebaseSaveManager.Instance.SaveDispatchAsync(
+            FirebaseManager.Instance.CurrentUserId,
+            "gathering",
+            emptyState
+        ).Forget();
+
+        Log("파견 상태 초기화됨 (전투형/채집형) - Firebase");
     }
 
     /// <summary>
