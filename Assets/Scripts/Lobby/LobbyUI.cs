@@ -17,6 +17,13 @@ public class LobbyUI : MonoBehaviour
     [SerializeField] private GameObject dispatchRedDot; // 파견 버튼 Red Dot
     [SerializeField] private float dispatchCheckInterval = 1f; // 파견 상태 확인 주기 (초)
 
+    [Header("Stage Select Panel")]
+    [SerializeField] private GameObject stageSelectPanel; // 스테이지 선택 패널
+    [SerializeField] private GameObject lobbyWindow; // 로비 메인 Window
+
+    [Header("Inventory Panel")]
+    [SerializeField] private GameObject inventoryPanel; // 인벤토리 패널
+
     private bool isDispatchCompleted = false; // 파견 완료 상태 캐싱
 
     private void OnEnable()
@@ -141,7 +148,31 @@ public class LobbyUI : MonoBehaviour
 
     public void OnInventoryButton()
     {
-        LoadSceneWithFadeOnly(SceneName.Inventory).Forget();
+        // 씬 전환 대신 패널 토글 방식으로 변경
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(true);
+        }
+        if (lobbyWindow != null)
+        {
+            lobbyWindow.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 인벤토리 패널에서 뒤로가기 버튼 클릭 시 호출
+    /// 로비 메인 화면으로 복귀
+    /// </summary>
+    public void OnInventoryBackButton()
+    {
+        if (inventoryPanel != null)
+        {
+            inventoryPanel.SetActive(false);
+        }
+        if (lobbyWindow != null)
+        {
+            lobbyWindow.SetActive(true);
+        }
     }
 
     // 오른쪽 버튼들
@@ -168,7 +199,31 @@ public class LobbyUI : MonoBehaviour
     // 중앙 버튼
     public void OnBattleButton()
     {
-        LoadSceneWithLoadingUI(SceneName.StageScene).Forget();
+        // 씬 전환 대신 패널 토글 방식으로 변경
+        if (stageSelectPanel != null)
+        {
+            stageSelectPanel.SetActive(true);
+        }
+        if (lobbyWindow != null)
+        {
+            lobbyWindow.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 스테이지 선택 패널에서 홈 버튼 클릭 시 호출
+    /// 로비 메인 화면으로 복귀
+    /// </summary>
+    public void OnStageSelectHomeButton()
+    {
+        if (stageSelectPanel != null)
+        {
+            stageSelectPanel.SetActive(false);
+        }
+        if (lobbyWindow != null)
+        {
+            lobbyWindow.SetActive(true);
+        }
     }
 
     // 하단 버튼들
