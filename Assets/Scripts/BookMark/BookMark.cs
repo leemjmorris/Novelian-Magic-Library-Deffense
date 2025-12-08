@@ -79,6 +79,35 @@ public class BookMark
         return nextUniqueID++;
     }
 
+    /// <summary>
+    /// Firebase에서 다음 고유 ID 설정 (BookMarkManager에서 호출)
+    /// </summary>
+    public static void SetNextUniqueID(int nextId)
+    {
+        nextUniqueID = nextId;
+    }
+
+    /// <summary>
+    /// Firebase 로드용 생성자 (고유 ID 포함)
+    /// </summary>
+    public BookMark(int uniqueId, int bookmarkDataID, string name, Grade grade, BookmarkType type,
+        int optionType, float optionValue, int skillID, DateTime createdTime,
+        int equippedCharacterId, int equipSlotIndex)
+    {
+        UniqueID = uniqueId;
+        BookmarkDataID = bookmarkDataID;
+        Name = name;
+        Grade = grade;
+        Type = type;
+        OptionType = optionType;
+        OptionValue = optionValue;
+        SkillID = skillID;
+        CreatedTime = createdTime;
+        IsEquipped = equippedCharacterId >= 0;
+        EquippedLibrarianID = equippedCharacterId;
+        EquipSlotIndex = equipSlotIndex;
+    }
+
     public void Equip(int librarianID, int slotIndex)
     {
         IsEquipped = true;

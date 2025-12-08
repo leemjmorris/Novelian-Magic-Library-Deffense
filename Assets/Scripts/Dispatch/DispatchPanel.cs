@@ -1190,45 +1190,69 @@ namespace Dispatch
         private System.DateTime dispatchStartTime;
 
         /// <summary>
-        /// 파견 상태 저장
+        /// 파견 상태 저장 (Firebase)
         /// </summary>
         private void SaveDispatchState()
         {
-            DispatchSaveData saveData = new DispatchSaveData
+            if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance?.CurrentUserId == null)
             {
-                isDispatching = isDispatching,
-                totalDispatchTime = currentSelectedHours, // 전체 파견 시간 (테스트용 초 단위)
-                startTimeString = dispatchStartTime.ToString("o"), // ISO 8601 형식
-                selectedLocation = (int)currentSelectedLocation,
-                selectedHours = currentSelectedHours,
-                selectedTimeID = currentSelectedTimeID,
-                dispatchType = (int)currentDispatchType // 파견 타입 저장
+                AddLog($"⚠️ Firebase 연결 안됨 - 파견 상태 저장 실패");
+                return;
+            }
+
+            // 종료 시간 계산
+            System.DateTime endTime = dispatchStartTime.AddSeconds(currentSelectedHours);
+
+            var state = new Firebase.Data.DispatchStateData
+            {
+                isActive = isDispatching,
+                locationId = (int)currentSelectedLocation,
+                hours = currentSelectedHours,
+                startTime = dispatchStartTime.ToString("o"),
+                endTime = endTime.ToString("o")
             };
 
-            string json = JsonUtility.ToJson(saveData);
-            string saveKey = GetSaveKey();
-            PlayerPrefs.SetString(saveKey, json);
-            PlayerPrefs.Save();
+            string dispatchType = panelDispatchType == DispatchType.Combat ? "combat" : "gathering";
+            FirebaseSaveManager.Instance.SaveDispatchAsync(
+                FirebaseManager.Instance.CurrentUserId,
+                dispatchType,
+                state
+            ).Forget();
 
             AddLog($"💾 파견 상태 저장됨 ({currentDispatchType}) - 남은 시간: {remainingTime}초");
         }
 
         /// <summary>
-        /// 파견 상태 복원 (자신의 패널 타입만 로드)
+        /// 파견 상태 복원 (Firebase 데이터에서 로드)
         /// </summary>
         private void LoadDispatchState()
         {
-            // 이 패널의 고정된 타입에 해당하는 저장 키만 확인
-            string saveKey = GetSaveKey();
+            // Firebase 캐시 데이터에서 로드
+            var dispatchData = FirebaseSaveManager.Instance?.CachedData?.dispatch;
+            if (dispatchData == null)
+            {
+                AddLog($"📂 Firebase 데이터 없음 ({panelDispatchType})");
+                return;
+            }
 
-            if (!PlayerPrefs.HasKey(saveKey))
+            var state = panelDispatchType == DispatchType.Combat ? dispatchData.combat : dispatchData.gathering;
+            if (state == null || !state.isActive)
             {
                 AddLog($"📂 저장된 파견 상태 없음 ({panelDispatchType})");
                 return;
             }
 
-            string json = PlayerPrefs.GetString(saveKey);
-            DispatchSaveData saveData = JsonUtility.FromJson<DispatchSaveData>(json);
+            // 레거시 형식으로 변환하여 처리
+            DispatchSaveData saveData = new DispatchSaveData
+            {
+                isDispatching = state.isActive,
+                totalDispatchTime = state.hours,
+                startTimeString = state.startTime,
+                selectedLocation = state.locationId,
+                selectedHours = state.hours,
+                selectedTimeID = state.hours,
+                dispatchType = (int)panelDispatchType
+            };
 
             if (saveData == null || !saveData.isDispatching)
             {
@@ -1390,17 +1414,33 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 저장된 파견 상태 삭제
+        /// 저장된 파견 상태 삭제 (Firebase)
         /// </summary>
         private void ClearDispatchState()
         {
-            string saveKey = GetSaveKey();
-            if (PlayerPrefs.HasKey(saveKey))
+            if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance?.CurrentUserId == null)
             {
-                PlayerPrefs.DeleteKey(saveKey);
-                PlayerPrefs.Save();
-                AddLog($"🗑️ 파견 상태 삭제됨 ({currentDispatchType})");
+                AddLog($"⚠️ Firebase 연결 안됨 - 파견 상태 삭제 실패");
+                return;
             }
+
+            var state = new Firebase.Data.DispatchStateData
+            {
+                isActive = false,
+                locationId = 0,
+                hours = 0,
+                startTime = "",
+                endTime = ""
+            };
+
+            string dispatchType = panelDispatchType == DispatchType.Combat ? "combat" : "gathering";
+            FirebaseSaveManager.Instance.SaveDispatchAsync(
+                FirebaseManager.Instance.CurrentUserId,
+                dispatchType,
+                state
+            ).Forget();
+
+            AddLog($"🗑️ 파견 상태 삭제됨 ({currentDispatchType})");
         }
 
         private void OnDestroy()

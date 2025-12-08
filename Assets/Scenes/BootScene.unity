@@ -404,6 +404,7 @@ GameObject:
   - component: {fileID: 729743812}
   - component: {fileID: 729743813}
   - component: {fileID: 729743814}
+  - component: {fileID: 729743815}
   m_Layer: 0
   m_Name: ManagerObj
   m_TagString: Untagged
@@ -571,7 +572,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   manualInstance: {fileID: 729743814}
-  simulateTouchInEditor: 0
+  simulateTouchInEditor: 1
+--- !u!114 &729743815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 729743801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f31a456e1ce46f44b85bc9c620f99c0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1456735814
 GameObject:
   m_ObjectHideFlags: 0
@@ -695,6 +708,7 @@ MonoBehaviour:
   loadingUIManager: {fileID: 729743811}
   inputManager: {fileID: 729743814}
   minimumLoadTime: 1
+  firebaseSaveManager: {fileID: 729743815}
 --- !u!4 &1862903903
 Transform:
   m_ObjectHideFlags: 0

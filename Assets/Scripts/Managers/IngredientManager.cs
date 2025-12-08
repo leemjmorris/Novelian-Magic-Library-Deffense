@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public class IngredientManager : MonoBehaviour
 {
@@ -84,6 +85,8 @@ public class IngredientManager : MonoBehaviour
 
         string addedIngredientName = CSVLoader.Instance.GetData<StringTable>(ingredientData.Ingredient_Name_ID)?.Text ?? "Unknown";
         Debug.Log($"{addedIngredientName} {count}개 획득! (보유: {Ingredients[id]}/{maxCount})");
+
+        SaveSingleIngredientToFirebase(id);
     }
 
     public bool RemoveIngredient(int id, int count)
@@ -98,11 +101,58 @@ public class IngredientManager : MonoBehaviour
         if (Ingredients[id] == 0)
             Ingredients.Remove(id);
 
+        SaveSingleIngredientToFirebase(id);
         return true;
+    }
+
+    /// <summary>
+    /// 단일 재료를 Firebase에 저장
+    /// </summary>
+    private void SaveSingleIngredientToFirebase(int ingredientId)
+    {
+        if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
+            return;
+
+        if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
+            return;
+
+        int currentCount = Ingredients.ContainsKey(ingredientId) ? Ingredients[ingredientId] : 0;
+        FirebaseSaveManager.Instance.SaveSingleIngredientAsync(
+            FirebaseManager.Instance.CurrentUserId,
+            ingredientId,
+            currentCount
+        ).Forget();
     }
 
     public bool HasIngredient(int id, int count)
     {
         return Ingredients.ContainsKey(id) && Ingredients[id] >= count;
+    }
+
+    /// <summary>
+    /// Firebase 데이터로 재료 설정 (BootScene에서 호출)
+    /// </summary>
+    public void SetIngredientsFromFirebase(System.Collections.Generic.Dictionary<string, int> ingredients)
+    {
+        if (ingredients == null) return;
+
+        Ingredients.Clear();
+        foreach (var kvp in ingredients)
+        {
+            if (int.TryParse(kvp.Key, out int ingredientId))
+            {
+                Ingredients[ingredientId] = kvp.Value;
+            }
+        }
+
+        Debug.Log($"<color=#3EB489>[IngredientManager]</color> Firebase에서 재료 로드: {Ingredients.Count}종");
+    }
+
+    /// <summary>
+    /// 모든 재료 반환 (저장용)
+    /// </summary>
+    public Dictionary<int, int> GetAllIngredients()
+    {
+        return new Dictionary<int, int>(Ingredients);
     }
 }

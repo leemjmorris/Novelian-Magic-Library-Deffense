@@ -1,17 +1,20 @@
 using UnityEngine;
+using Cysharp.Threading.Tasks;
+using Firebase.Data;
 
 namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
-    /// JML: 스테이지 진행도 관리 (PlayerPrefs 저장/로드)
+    /// JML: 스테이지 진행도 관리 (Firebase 저장/로드)
     /// - 클리어한 스테이지 번호 저장
     /// - 스테이지 해금 여부 확인
     /// </summary>
     public class StageProgressManager : MonoBehaviour
     {
+        private const string LOG_PREFIX = "<color=#3EB489>[StageProgress]</color>";
+
         public static StageProgressManager Instance { get; private set; }
 
-        private const string CLEARED_STAGE_KEY = "ClearedStageNumber";
         private const int DEFAULT_UNLOCKED_STAGE = 1; // 1스테이지는 기본 해금
 
         private int highestClearedStage = 0;
@@ -22,7 +25,7 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 Instance = this;
                 DontDestroyOnLoad(gameObject);
-                LoadProgress();
+                // Firebase에서 로드하므로 여기서는 로드하지 않음
             }
             else
             {
@@ -31,22 +34,37 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// PlayerPrefs에서 진행도 로드
+        /// Firebase 데이터로 진행도 설정 (BootScene에서 호출)
         /// </summary>
-        private void LoadProgress()
+        public void SetProgressFromFirebase(ProgressionData progression)
         {
-            highestClearedStage = PlayerPrefs.GetInt(CLEARED_STAGE_KEY, 0);
-            Debug.Log($"[StageProgressManager] 진행도 로드: 클리어한 최고 스테이지 = {highestClearedStage}");
+            if (progression != null)
+            {
+                highestClearedStage = progression.highestClearedStage;
+                Debug.Log($"{LOG_PREFIX} Firebase에서 진행도 로드: 클리어한 최고 스테이지 = {highestClearedStage}");
+            }
         }
 
         /// <summary>
-        /// 진행도 저장
+        /// 진행도 저장 (Firebase)
         /// </summary>
         private void SaveProgress()
         {
-            PlayerPrefs.SetInt(CLEARED_STAGE_KEY, highestClearedStage);
-            PlayerPrefs.Save();
-            Debug.Log($"[StageProgressManager] 진행도 저장: 클리어한 최고 스테이지 = {highestClearedStage}");
+            if (FirebaseSaveManager.Instance != null && FirebaseManager.Instance?.CurrentUserId != null)
+            {
+                var progression = new ProgressionData
+                {
+                    highestClearedStage = highestClearedStage,
+                    playerLevel = FirebaseSaveManager.Instance.CachedData?.progression?.playerLevel ?? 1,
+                    playerExp = FirebaseSaveManager.Instance.CachedData?.progression?.playerExp ?? 0
+                };
+
+                FirebaseSaveManager.Instance.SaveProgressionAsync(
+                    FirebaseManager.Instance.CurrentUserId,
+                    progression
+                ).Forget();
+            }
+            Debug.Log($"{LOG_PREFIX} 진행도 저장: 클리어한 최고 스테이지 = {highestClearedStage}");
         }
 
         /// <summary>

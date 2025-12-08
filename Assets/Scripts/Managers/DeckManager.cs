@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Firebase.Data;
+using Cysharp.Threading.Tasks;
 
 public class DeckManager : MonoBehaviour
 {
@@ -49,6 +51,7 @@ public class DeckManager : MonoBehaviour
 
         currentDeck[index] = characterID;
         Debug.Log($"[DeckManager] 슬롯 {index}에 캐릭터 ID {characterID} 설정. (현재 덱: {GetDeckCount()}/{MAX_DECK_SIZE})");
+        SaveToFirebase();
         return true;
     }
 
@@ -74,6 +77,7 @@ public class DeckManager : MonoBehaviour
             int characterID = currentDeck[index];
             currentDeck[index] = -1;
             Debug.Log($"[DeckManager] 슬롯 {index}에서 캐릭터 ID {characterID} 제거.");
+            SaveToFirebase();
         }
     }
 
@@ -119,6 +123,43 @@ public class DeckManager : MonoBehaviour
     {
         currentDeck.Clear();
         Debug.Log("덱을 초기화했습니다.");
+        SaveToFirebase();
+    }
+
+    /// <summary>
+    /// 현재 덱 상태를 Firebase에 저장
+    /// </summary>
+    private void SaveToFirebase()
+    {
+        if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
+            return;
+
+        if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
+            return;
+
+        FirebaseSaveManager.Instance.SaveDeckAsync(
+            FirebaseManager.Instance.CurrentUserId,
+            currentDeck
+        ).Forget();
+    }
+
+    /// <summary>
+    /// Firebase 데이터로 덱 설정 (BootScene에서 호출)
+    /// </summary>
+    public void SetDeckFromFirebase(DeckData data)
+    {
+        if (data == null) return;
+
+        currentDeck.Clear();
+        currentDeck.AddRange(data.ToList());
+
+        int validCount = 0;
+        foreach (int id in currentDeck)
+        {
+            if (id > 0) validCount++;
+        }
+
+        Debug.Log($"<color=#3EB489>[DeckManager]</color> Firebase에서 덱 로드: {validCount}개 캐릭터");
     }
 
     /// <summary>
