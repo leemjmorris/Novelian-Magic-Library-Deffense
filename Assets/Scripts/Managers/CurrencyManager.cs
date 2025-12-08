@@ -211,6 +211,21 @@ public class CurrencyManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 재화 K/M 단위 축약 표기
+    /// </summary>
+    public static string FormatCurrency(int amount)
+    {
+        if (amount >= 1000000)
+            return $"{amount / 1000000f:0.#}M";
+        else if (amount >= 1000)
+            return $"{amount / 1000f:0.#}K";
+        else if(amount>=1000000000)
+                return $"{amount / 1000000000f:0.#}B";
+        else
+            return amount.ToString();
+    }
+
+    /// <summary>
     /// 재화 이름 조회 (StringTable 연동)
     /// </summary>
     public string GetCurrencyName(int currencyId)
