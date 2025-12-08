@@ -118,7 +118,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 gold = CurrencyManager.Instance.GetCurrency(CurrencyManager.GOLD_ID);
             }
 
-            goldPanelText.text = $"{gold}";
+            goldPanelText.text = CurrencyManager.FormatCurrency(gold);
         }
 
         private void UpdateMagicStoneText()
@@ -142,7 +142,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             else if (currencyId == CurrencyManager.GOLD_ID && goldPanelText != null)
             {
-                goldPanelText.text = $"{newAmount}";
+                goldPanelText.text = CurrencyManager.FormatCurrency(newAmount);
             }
             else if (currencyId == CurrencyManager.MAGIC_STONE_ID && magicStoneText != null)
             {

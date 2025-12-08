@@ -93,7 +93,7 @@ public class LobbyUI : MonoBehaviour
             gold = CurrencyManager.Instance.GetCurrency(CurrencyManager.GOLD_ID);
         }
 
-        goldText.text = $"{gold}";
+        goldText.text = CurrencyManager.FormatCurrency(gold);
     }
 
     private void UpdatePremiumText()
@@ -117,7 +117,7 @@ public class LobbyUI : MonoBehaviour
         }
         else if (currencyId == CurrencyManager.GOLD_ID && goldText != null)
         {
-            goldText.text = $"{newAmount} G";
+            goldText.text = CurrencyManager.FormatCurrency(newAmount);
         }
         else if (currencyId == CurrencyManager.MAGIC_STONE_ID && premiumText != null)
         {
