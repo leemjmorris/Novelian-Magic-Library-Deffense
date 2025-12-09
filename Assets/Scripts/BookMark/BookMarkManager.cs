@@ -370,15 +370,14 @@ public class BookMarkManager : MonoBehaviour
 
     /// <summary>
     /// JML: 책갈피 타입별 최대 장착 개수
-    /// Stat: 3개, Skill: 1개, SubSkill: 1개
+    /// Stat: 4개, Skill: 1개
     /// </summary>
     public int GetMaxBookmarkCountByType(BookmarkType type)
     {
         return type switch
         {
-            BookmarkType.Stat => 3,
+            BookmarkType.Stat => 4,
             BookmarkType.Skill => 1,
-            BookmarkType.SubSkill => 1,
             _ => 0
         };
     }
@@ -515,6 +514,62 @@ public class BookMarkManager : MonoBehaviour
     //         // 스킬 적용 로직
     //     }
     // }
+
+    #region Reward Modifier Methods (Option_Type 10, 11, 12)
+
+    /// <summary>
+    /// 아이템 획득 확률 modifier 합계 (Option_Type 10)
+    /// 모든 캐릭터에 장착된 책갈피의 합계
+    /// </summary>
+    public float GetItemDropModifier()
+    {
+        return GetTotalModifierByOptionType(10);
+    }
+
+    /// <summary>
+    /// 골드 획득량 modifier 합계 (Option_Type 11)
+    /// 모든 캐릭터에 장착된 책갈피의 합계
+    /// </summary>
+    public float GetGoldModifier()
+    {
+        return GetTotalModifierByOptionType(11);
+    }
+
+    /// <summary>
+    /// 파견 시간 감소 modifier 합계 (Option_Type 12)
+    /// 모든 캐릭터에 장착된 책갈피의 합계
+    /// </summary>
+    public float GetDispatchTimeModifier()
+    {
+        return GetTotalModifierByOptionType(12);
+    }
+
+    /// <summary>
+    /// 특정 OptionType의 모든 장착된 책갈피 modifier 합계
+    /// </summary>
+    private float GetTotalModifierByOptionType(int optionType)
+    {
+        float total = 0f;
+
+        // 모든 캐릭터에 장착된 책갈피 순회
+        foreach (var kvp in characterBookmarks)
+        {
+            BookMark[] bookmarks = kvp.Value;
+            for (int i = 0; i < bookmarks.Length; i++)
+            {
+                if (bookmarks[i] != null &&
+                    bookmarks[i].Type == BookmarkType.Stat &&
+                    bookmarks[i].OptionType == optionType)
+                {
+                    total += bookmarks[i].OptionValue;
+                }
+            }
+        }
+
+        return total;
+    }
+
+    #endregion
 
     #region Debug Methods
 

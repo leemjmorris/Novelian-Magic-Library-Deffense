@@ -227,7 +227,7 @@ public static class BookMarkCraft
     /// JML: Create Bookmark from Result_ID
     /// Result_ID로부터 BookMark 생성
     /// </summary>
-    /// <param name="resultID">스탯: BookmarkStatListData의 List_ID / 스킬: Grade_ID</param>
+    /// <param name="resultID">Grade_ID (1501~1505) - 스탯/스킬 모두 등급 ID 사용</param>
     /// <param name="bookmarkType">제작할 책갈피 타입 (Stat 또는 Skill)</param>
     private static BookMark CreateBookmarkFromResult(int resultID, BookmarkType bookmarkType)
     {
@@ -247,58 +247,46 @@ public static class BookMarkCraft
     }
 
     /// <summary>
-    /// JML: Create Stat Bookmark from BookmarkStatListTable
-    /// 스탯 책갈피 생성 (BookmarkStatListTable 사용)
+    /// JML: Create Stat Bookmark by Grade_ID
+    /// 스탯 책갈피 생성 (등급별 필터링)
     /// </summary>
-    /// <param name="listID">BookmarkStatListData의 List_ID</param>
-    private static BookMark CreateStatBookmark(int listID)
+    /// <param name="gradeID">Grade_ID (1501~1505)</param>
+    private static BookMark CreateStatBookmark(int gradeID)
     {
-        // JML: Load BookmarkStatListData
-        var listData = CSVLoader.Instance.GetData<BookmarkStatListData>(listID);
-        if (listData == null)
+        // JML: Get all BookmarkData
+        var allBookmarks = CSVLoader.Instance.GetTable<BookmarkData>().GetAll();
+        if (allBookmarks == null || allBookmarks.Count == 0)
         {
-            Debug.LogError($"[BookMarkCraft] BookmarkStatListData를 찾을 수 없음: {listID}");
+            Debug.LogError("[BookMarkCraft] BookmarkData 테이블을 찾을 수 없음");
             return null;
         }
 
-        // JML: Collect Option_1~4 (without LINQ)
-        int[] optionIDs = new int[]
+        // JML: Filter by Grade_ID and Stat type (Skill_ID == 0, Option_ID > 0)
+        var matchingBookmarkIDs = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < allBookmarks.Count; i++)
         {
-            listData.Option_1_ID,
-            listData.Option_2_ID,
-            listData.Option_3_ID,
-            listData.Option_4_ID
-        };
-
-        // JML: Filter valid options (exclude 0)
-        int[] validOptions = new int[4];
-        int validCount = 0;
-
-        for (int i = 0; i < optionIDs.Length; i++)
-        {
-            if (optionIDs[i] > 0)
+            var bookmark = allBookmarks[i];
+            if (bookmark.Grade_ID == gradeID && bookmark.Skill_ID == 0 && bookmark.Option_ID > 0)
             {
-                validOptions[validCount] = optionIDs[i];
-                validCount++;
+                matchingBookmarkIDs.Add(bookmark.Bookmark_ID);
             }
         }
 
-        if (validCount == 0)
+        if (matchingBookmarkIDs.Count == 0)
         {
-            Debug.LogError($"[BookMarkCraft] BookmarkStatListData {listID}에 유효한 옵션이 없습니다!");
+            Debug.LogError($"[BookMarkCraft] Grade_ID {gradeID}에 해당하는 스탯 책갈피가 없습니다!");
             return null;
         }
 
         // JML: Random selection
-        int selectedOptionID = validOptions[Random.Range(0, validCount)];
-        Debug.Log($"[BookMarkCraft] 스탯 옵션 랜덤 선택: {selectedOptionID} (총 {validCount}개 중)");
+        int selectedBookmarkID = matchingBookmarkIDs[Random.Range(0, matchingBookmarkIDs.Count)];
+        Debug.Log($"[BookMarkCraft] 스탯 책갈피 랜덤 선택: {selectedBookmarkID} (등급 {gradeID}, 총 {matchingBookmarkIDs.Count}개 중)");
 
-        // JML: Find BookmarkData by Option_ID
-        var allBookmarks = CSVLoader.Instance.GetTable<BookmarkData>().GetAll();
-        BookmarkData bookmarkData = allBookmarks.Find(b => b.Option_ID == selectedOptionID);
+        // JML: Get selected BookmarkData
+        var bookmarkData = CSVLoader.Instance.GetData<BookmarkData>(selectedBookmarkID);
         if (bookmarkData == null)
         {
-            Debug.LogError($"[BookMarkCraft] Option_ID {selectedOptionID}에 해당하는 BookmarkData를 찾을 수 없음");
+            Debug.LogError($"[BookMarkCraft] Bookmark_ID {selectedBookmarkID}에 해당하는 BookmarkData를 찾을 수 없음");
             return null;
         }
 
@@ -313,14 +301,14 @@ public static class BookMarkCraft
         // JML: Create Stat Bookmark
         string statBookmarkName = CSVLoader.Instance.GetData<StringTable>(bookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
         Debug.Log($"[BookMarkCraft] 스탯 북마크 생성: {statBookmarkName}");
-        var statBookmark = new BookMark(
+
+        return new BookMark(
             bookmarkDataID: bookmarkData.Bookmark_ID,
             name: statBookmarkName,
             grade: CSVLoader.Instance.GetData<GradeData>(bookmarkData.Grade_ID)?.Grade_Type ?? Grade.Common,
             optionType: (int)optionData.Option_Type,
             optionValue: optionData.Option_Value
         );
-        return statBookmark;
     }
 
     /// <summary>
@@ -354,7 +342,8 @@ public static class BookMarkCraft
             int bookmarkID = allSkillList[i].Bookmark_ID;
             var bookmarkData = CSVLoader.Instance.GetData<BookmarkData>(bookmarkID);
 
-            if (bookmarkData != null && bookmarkData.Grade_ID == gradeID && bookmarkData.Skill_ID > 0)
+            // JML: Skill_ID < 40000 조건 추가 - 보조스킬(40000+)은 제작에서 제외
+            if (bookmarkData != null && bookmarkData.Grade_ID == gradeID && bookmarkData.Skill_ID > 0 && bookmarkData.Skill_ID < 40000)
             {
                 matchingBookmarkIDs.Add(bookmarkID);
             }
