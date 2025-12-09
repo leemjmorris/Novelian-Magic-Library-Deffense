@@ -99,7 +99,11 @@ namespace NovelianMagicLibraryDefense.Demo
 
         private void OnSpawnCharacterClicked()
         {
-            if (placementManager == null) return;
+            if (placementManager == null || !placementManager.IsReady)
+            {
+                UpdateStatusLabel("Not ready yet!");
+                return;
+            }
 
             bool success = placementManager.SpawnCharacter();
 
@@ -117,7 +121,11 @@ namespace NovelianMagicLibraryDefense.Demo
 
         private void OnSpawnMonsterClicked()
         {
-            if (monsterSpawner == null) return;
+            if (monsterSpawner == null || !monsterSpawner.IsReady)
+            {
+                UpdateStatusLabel("Not ready yet!");
+                return;
+            }
 
             monsterSpawner.SpawnMonstersForCurrentMode(monstersPerSpawn);
             UpdateStatusLabel($"Spawned {monstersPerSpawn} monsters");
