@@ -38,6 +38,12 @@ public class LobbyUI : MonoBehaviour
             CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
         }
 
+        // 메뉴 레이아웃 초기화 (항상 꺼진 상태로 시작)
+        if (menuLayout != null)
+        {
+            menuLayout.SetActive(false);
+        }
+
         // 파견 완료 플래그 초기화
         isDispatchCompleted = false;
 
@@ -151,6 +157,12 @@ public class LobbyUI : MonoBehaviour
 
     public void OnInventoryButton()
     {
+        // 메뉴 레이아웃이 열려있으면 먼저 닫기
+        if (menuLayout != null && menuLayout.activeSelf)
+        {
+            menuLayout.SetActive(false);
+        }
+
         // 씬 전환 대신 패널 토글 방식으로 변경
         if (inventoryPanel != null)
         {
@@ -213,6 +225,12 @@ public class LobbyUI : MonoBehaviour
     // 중앙 버튼
     public void OnBattleButton()
     {
+        // 메뉴 레이아웃이 열려있으면 먼저 닫기
+        if (menuLayout != null && menuLayout.activeSelf)
+        {
+            menuLayout.SetActive(false);
+        }
+
         // 씬 전환 대신 패널 토글 방식으로 변경
         if (stageSelectPanel != null)
         {
