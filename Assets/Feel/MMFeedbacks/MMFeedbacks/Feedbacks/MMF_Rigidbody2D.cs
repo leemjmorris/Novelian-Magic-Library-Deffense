@@ -12,6 +12,7 @@ namespace MoreMountains.Feedbacks
 	[AddComponentMenu("")]
 	[FeedbackHelp("This feedback will let you apply forces and torques (relative or not) to a Rigidbody.")]
 	[MovedFrom(false, null, "MoreMountains.Feedbacks")]
+	[System.Serializable]
 	[FeedbackPath("GameObject/Rigidbody2D")]
 	public class MMF_Rigidbody2D : MMF_Feedback
 	{
@@ -59,9 +60,12 @@ namespace MoreMountains.Feedbacks
 		/// the force mode to apply
 		[Tooltip("the force mode to apply")]
 		public ForceMode2D AppliedForceMode = ForceMode2D.Impulse;
-		/// if this is true, the velocity of the rigidbody will be reset before applying the new force
-		[Tooltip("if this is true, the velocity of the rigidbody will be reset before applying the new force")]
+		/// if this is true, the velocity of the rigidbody 2D will be reset before applying the new force
+		[Tooltip("if this is true, the velocity of the rigidbody 2D will be reset before applying the new force")]
 		public bool ResetVelocityOnPlay = false;
+		/// if this is true, the angular velocity of the rigidbody 2D will be reset before applying the new force
+		[Tooltip("if this is true, the angular velocity of the rigidbody 2D will be reset before applying the new force")]
+		public bool ResetAngularVelocityOnPlay = false;
 
 		protected Vector2 _force;
 		protected float _torque;
@@ -95,6 +99,11 @@ namespace MoreMountains.Feedbacks
 			if(ResetVelocityOnPlay)
 			{
 				rb.linearVelocity = Vector2.zero;
+			}
+
+			if (ResetAngularVelocityOnPlay)
+			{
+				rb.angularVelocity = 0f;
 			}
 			
 			switch (Mode)

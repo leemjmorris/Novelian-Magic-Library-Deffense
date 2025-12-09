@@ -24,7 +24,23 @@ namespace MoreMountains.Tools
 		/// </summary>
 		/// <param name="sceneToLoadName"></param>
 		public virtual void PrepareAntiFill(string sceneToLoadName, string antiSpillSceneName = "")
-		{
+		{			
+			var sourceSkybox = RenderSettings.skybox;
+			var sourceAmbientMode = RenderSettings.ambientMode;
+			var sourceAmbientLight = RenderSettings.ambientLight;
+			var sourceAmbientSkyColor = RenderSettings.ambientSkyColor;
+			var sourceAmbientEquatorColor = RenderSettings.ambientEquatorColor;
+			var sourceAmbientGroundColor = RenderSettings.ambientGroundColor;
+			var sourceFog = RenderSettings.fog;
+			var sourceFogColor = RenderSettings.fogColor;
+			var sourceFogMode = RenderSettings.fogMode;
+			var sourceFogDensity = RenderSettings.fogDensity;
+			var sourceFogStartDistance = RenderSettings.fogStartDistance;
+			var sourceFogEndDistance = RenderSettings.fogEndDistance;
+			var sourceLightmapsMode = LightmapSettings.lightmapsMode;
+			var sourceLightProbes = LightmapSettings.lightProbes;
+			var sourceLightmaps = LightmapSettings.lightmaps;
+			
 			_destinationScene = default; 
 			_sceneToLoadName = sceneToLoadName;
 			
@@ -49,6 +65,22 @@ namespace MoreMountains.Tools
 				_antiSpillSceneName = _antiSpillScene.name;
 				SceneManager.sceneLoaded += PrepareAntiFillOnSceneLoaded;
 			}
+			
+			RenderSettings.skybox = sourceSkybox;
+			RenderSettings.ambientMode = sourceAmbientMode;
+			RenderSettings.ambientLight = sourceAmbientLight;
+			RenderSettings.ambientSkyColor = sourceAmbientSkyColor;
+			RenderSettings.ambientEquatorColor = sourceAmbientEquatorColor;
+			RenderSettings.ambientGroundColor = sourceAmbientGroundColor;
+			RenderSettings.fog = sourceFog;
+			RenderSettings.fogColor = sourceFogColor;
+			RenderSettings.fogMode = sourceFogMode;
+			RenderSettings.fogDensity = sourceFogDensity;
+			RenderSettings.fogStartDistance = sourceFogStartDistance;
+			RenderSettings.fogEndDistance = sourceFogEndDistance;
+			LightmapSettings.lightmapsMode = sourceLightmapsMode;
+			LightmapSettings.lightProbes = sourceLightProbes;
+			LightmapSettings.lightmaps = sourceLightmaps;
 		}
 
 		/// <summary>

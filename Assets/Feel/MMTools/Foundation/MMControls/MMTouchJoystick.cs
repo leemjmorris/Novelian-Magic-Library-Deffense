@@ -142,8 +142,8 @@ namespace MoreMountains.Tools
 		/// the render mode of the parent canvas this stick is on
 		public virtual RenderMode ParentCanvasRenderMode { get; protected set; }
 
-		protected Vector2 _neutralPosition;
-		protected Vector2 _newTargetPosition;
+		protected Vector3 _neutralPosition;
+		protected Vector3 _newTargetPosition;
 		protected Vector3 _newJoystickPosition;
 		protected float _initialZPosition;
 		protected float _targetOpacity;
@@ -278,42 +278,52 @@ namespace MoreMountains.Tools
 
 			_newTargetPosition = ConvertToWorld(eventData.position);
 
-			// We clamp the stick's position to let it move only inside its defined max range
-			ClampToBounds();
+			Vector3 localDelta = TransformToLocalSpace(_newTargetPosition - _neutralPosition);
+			localDelta = Vector2.ClampMagnitude(localDelta, ComputedMaxRange);
 
-			// If we haven't authorized certain axis, we force them to zero
 			if (!HorizontalAxisEnabled)
 			{
-				_newTargetPosition.x = 0;
+				localDelta.x = 0;
 			}
 			if (!VerticalAxisEnabled)
 			{
-				_newTargetPosition.y = 0;
+				localDelta.y = 0;
 			}
-			// For each axis, we evaluate its lerped value (-1...1)
-			RawValue.x = EvaluateInputValue(_newTargetPosition.x);
-			RawValue.y = EvaluateInputValue(_newTargetPosition.y);
 
-			_newJoystickPosition = _neutralPosition + _newTargetPosition;
+			RawValue.x = EvaluateInputValue(localDelta.x);
+			RawValue.y = EvaluateInputValue(localDelta.y);
+
+			_newTargetPosition = _neutralPosition + TransformToWorldSpace(localDelta);
+			_newJoystickPosition = _newTargetPosition;
 			_newJoystickPosition.z = _initialZPosition;
 
-			// We move the joystick to its dragged position
 			_knobTransform.position = _newJoystickPosition;
 		}
 
 		/// <summary>
-		/// Clamps the stick to the specified range
+		/// Transforms a world space vector to the canvas/camera local space
 		/// </summary>
-		protected virtual void ClampToBounds()
+		protected virtual Vector3 TransformToLocalSpace(Vector3 worldVector)
 		{
-			_newTargetPosition = Vector2.ClampMagnitude(_newTargetPosition - _neutralPosition, ComputedMaxRange);
+			if (ParentCanvasRenderMode == RenderMode.ScreenSpaceCamera && TargetCamera != null)
+			{
+				return Quaternion.Inverse(TargetCamera.transform.rotation) * worldVector;
+			}
+			return worldVector;
 		}
 
 		/// <summary>
-		/// Converts a position to world position
+		/// Transforms a local space vector back to world space
 		/// </summary>
-		/// <param name="position"></param>
-		/// <returns></returns>
+		protected virtual Vector3 TransformToWorldSpace(Vector3 localVector)
+		{
+			if (ParentCanvasRenderMode == RenderMode.ScreenSpaceCamera && TargetCamera != null)
+			{
+				return TargetCamera.transform.rotation * localVector;
+			}
+			return localVector;
+		}
+		
 		protected virtual Vector3 ConvertToWorld(Vector3 position)
 		{
 			if (ParentCanvasRenderMode == RenderMode.ScreenSpaceCamera)
@@ -326,6 +336,14 @@ namespace MoreMountains.Tools
 			{
 				return position;
 			}
+		}
+
+		/// <summary>
+		/// Clamps the position of the new target
+		/// </summary>
+		protected virtual void ClampToBounds()
+		{
+			_newTargetPosition = Vector2.ClampMagnitude(_newTargetPosition - _neutralPosition, ComputedMaxRange);
 		}
 
 		/// <summary>
@@ -405,11 +423,11 @@ namespace MoreMountains.Tools
 			Handles.color = MMColors.Orange;
 			if (!Application.isPlaying)
 			{
-				Handles.DrawWireDisc(this.transform.position, Vector3.forward, ComputedMaxRange);	
+				Handles.DrawWireDisc(this.transform.position, this.transform.forward, ComputedMaxRange);	
 			}
 			else
 			{
-				Handles.DrawWireDisc(_neutralPosition, Vector3.forward, ComputedMaxRange);
+				Handles.DrawWireDisc(_neutralPosition, this.transform.forward, ComputedMaxRange);
 			}
 		}
 		#endif

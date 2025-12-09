@@ -294,58 +294,58 @@ namespace MoreMountains.Feedbacks
 					break;
 				case Methods.MaterialAlpha:
 					_currentColor.a = value;
-					ApplyCurrentColor(TargetRenderer);
+					ApplyCurrentColor(TargetRenderer, MaterialIndex);
 					for (var index = 0; index < ExtraRenderers.Count; index++)
 					{
 						var blinkRenderer = ExtraRenderers[index];
-						ApplyCurrentColor(blinkRenderer.TargetRenderer);
+						ApplyCurrentColor(blinkRenderer.TargetRenderer, blinkRenderer.TargetMaterialIndex);
 					}
 					break;
 				case Methods.MaterialEmissionIntensity:
 					_currentColor = _initialColor * value;
-					ApplyCurrentColor(TargetRenderer);
+					ApplyCurrentColor(TargetRenderer, MaterialIndex);
 					for (var index = 0; index < ExtraRenderers.Count; index++)
 					{
 						var blinkRenderer = ExtraRenderers[index];
-						ApplyCurrentColor(blinkRenderer.TargetRenderer);
+						ApplyCurrentColor(blinkRenderer.TargetRenderer, blinkRenderer.TargetMaterialIndex);
 					}
 					break;
 				case Methods.ShaderFloatValue:
-					ApplyFloatValue(TargetRenderer, value);
+					ApplyFloatValue(TargetRenderer, value, MaterialIndex);
 					for (var index = 0; index < ExtraRenderers.Count; index++)
 					{
 						var blinkRenderer = ExtraRenderers[index];
-						ApplyFloatValue(blinkRenderer.TargetRenderer, value);
+						ApplyFloatValue(blinkRenderer.TargetRenderer, value, blinkRenderer.TargetMaterialIndex);
 					}
 					break;
 			}
 		}
 
-		protected virtual void ApplyFloatValue(Renderer targetRenderer, float value)
+		protected virtual void ApplyFloatValue(Renderer targetRenderer, float value, int materialIndex)
 		{
 			if (UseMaterialPropertyBlocks)
 			{
-				targetRenderer.GetPropertyBlock(_propertyBlock, MaterialIndex);
+				targetRenderer.GetPropertyBlock(_propertyBlock, materialIndex);
 				_propertyBlock.SetFloat(_propertyID, value);
 				targetRenderer.SetPropertyBlock(_propertyBlock);
 			}
 			else
 			{
-				targetRenderer.materials[MaterialIndex].SetFloat(_propertyID, value); 
+				targetRenderer.materials[materialIndex].SetFloat(_propertyID, value); 
 			}
 		}
 
-		protected virtual void ApplyCurrentColor(Renderer targetRenderer)
+		protected virtual void ApplyCurrentColor(Renderer targetRenderer, int materialIndex)
 		{
 			if (UseMaterialPropertyBlocks)
 			{
-				targetRenderer.GetPropertyBlock(_propertyBlock, MaterialIndex);
+				targetRenderer.GetPropertyBlock(_propertyBlock, materialIndex);
 				_propertyBlock.SetColor(_propertyID, _currentColor);
 				targetRenderer.SetPropertyBlock(_propertyBlock);
 			}
 			else
 			{
-				targetRenderer.materials[MaterialIndex].SetColor(_propertyID, _currentColor);    
+				targetRenderer.materials[materialIndex].SetColor(_propertyID, _currentColor);    
 			}
 		}
 

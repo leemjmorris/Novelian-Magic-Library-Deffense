@@ -11,6 +11,7 @@ namespace MoreMountains.Feedbacks
 	[AddComponentMenu("")]
 	[FeedbackHelp("This feedback allows you to trigger a target MMF_Player, or any MMF_Player on the specified Channel within a certain range. You'll need an MMFeedbacksShaker on them.")]
 	[MovedFrom(false, null, "MoreMountains.Feedbacks")]
+	[System.Serializable]
 	[FeedbackPath("Feedbacks/Feedbacks Player")]
 	public class MMF_Feedbacks : MMF_Feedback
 	{
@@ -42,7 +43,7 @@ namespace MoreMountains.Feedbacks
 		}
 		public override bool HasChannel => true;
         
-		public enum Modes { PlayFeedbacksInArea, PlayTargetFeedbacks }
+		public enum Modes { PlayFeedbacksInArea, PlayTargetFeedbacks, TriggerMMF_PlayerEvent }
         
 		[MMFInspectorGroup("Feedbacks", true, 79)]
         
@@ -106,6 +107,10 @@ namespace MoreMountains.Feedbacks
 			else if (Mode == Modes.PlayTargetFeedbacks)
 			{
 				TargetFeedbacks?.PlayFeedbacks(position, feedbacksIntensity);
+			}
+			else if (Mode == Modes.TriggerMMF_PlayerEvent)
+			{
+				MMF_PlayerEvent.Trigger(ChannelData, true, Owner.transform.position, MMF_PlayerEvent.Modes.PlayFeedbacks, feedbacksIntensity, false);	
 			}
 		}
 	}

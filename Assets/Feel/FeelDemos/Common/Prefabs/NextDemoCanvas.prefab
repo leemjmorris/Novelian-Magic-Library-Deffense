@@ -440,7 +440,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: v5.8
+  m_Text: v5.9.1
 --- !u!1 &8516721323258378253
 GameObject:
   m_ObjectHideFlags: 0
@@ -694,6 +694,9 @@ MonoBehaviour:
   RestoreInitialValuesOnDisable: 0
   StopFeedbacksOnDisable: 0
   PlayCount: 0
+  MMF_ChannelMode: 0
+  MMF_Channel: 0
+  MMF_ChannelDefinition: {fileID: 0}
   references:
     version: 2
     RefIds:
@@ -945,6 +948,7 @@ MonoBehaviour:
         Loop: 0
         Persistent: 0
         DoNotPlayIfClipAlreadyPlaying: 0
+        MaximumConcurrentInstances: 3
         StopSoundOnFeedbackStop: 0
         FadeIn: 0
         FadeInInitialVolume: 0

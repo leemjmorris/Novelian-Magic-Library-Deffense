@@ -167,11 +167,8 @@ namespace MoreMountains.Tools
 			{
 				return null;
 			}
-
-			bool initialStatus = typeOfObject.activeSelf;
-			typeOfObject.SetActive(false);
-			GameObject newGameObject = (GameObject)Instantiate(typeOfObject);
-			typeOfObject.SetActive(initialStatus);
+			
+			GameObject newGameObject = (GameObject)MMGameObjectExtensions.MMInstantiateDisabled(typeOfObject);
 			SceneManager.MoveGameObjectToScene(newGameObject, this.gameObject.scene);
 			if (NestWaitingPool)
 			{

@@ -202,6 +202,11 @@ namespace MoreMountains.Tools
 			{
 				// we pick an idle audio source from the pool if possible
 				audioSource = _pool.GetAvailableAudioSource(PoolCanExpand, this.transform);
+				if (!audioSource)
+				{
+					Debug.LogError("There are no available audiosources, this sound won't play. You should probably consider a bigger pool size, or let your pool expand by setting PoolCanExpand to true on your MM Sound Manager.");
+					return null;
+				}
 				audioSource.clip = audioClip;
 				if ((audioSource) && (!loop))
 				{
@@ -1017,6 +1022,24 @@ namespace MoreMountains.Tools
 			}
 
 			return null;
+		}
+
+		/// <summary>
+		/// Returns the amount of audiosources currently playing the specified clip on this sound manager
+		/// </summary>
+		/// <param name="clip"></param>
+		/// <returns></returns>
+		public virtual int CurrentlyPlayingCount(AudioClip clip)
+		{
+			int count = 0;
+			foreach (MMSoundManagerSound sound in _sounds)
+			{
+				if ((sound.Source != null) && (sound.Source.clip == clip) && (sound.Source.isPlaying))
+				{
+					count++;
+				}
+			}
+			return count;
 		}
 
 		#endregion

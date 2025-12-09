@@ -16,5 +16,8 @@ namespace MoreMountains.Tools
 		public string TrueState;
 		/// the state to transition to if this Decision returns false
 		public string FalseState;
+		/// the value of the last decision evaluation for this transition, for debug purposes
+		[MMReadOnly] 
+		public bool LastDecisionEvaluation = false;
 	}
 }

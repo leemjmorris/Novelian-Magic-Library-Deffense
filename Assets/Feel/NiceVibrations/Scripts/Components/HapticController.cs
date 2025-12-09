@@ -206,8 +206,7 @@ namespace Lofelt.NiceVibrations
         private static void ApplyLevelsToGamepadRumbler()
         {
             #if ((!UNITY_ANDROID && !UNITY_IOS) || UNITY_EDITOR) && NICE_VIBRATIONS_INPUTSYSTEM_INSTALLED && ENABLE_INPUT_SYSTEM && !NICE_VIBRATIONS_DISABLE_GAMEPAD_SUPPORT
-                            GamepadRumbler.lowFrequencyMotorSpeedMultiplication = _outputLevel * _clipLevel;
-                            GamepadRumbler.highFrequencyMotorSpeedMultiplication = _outputLevel * _clipLevel;
+            GamepadRumbler.SetMotorSpeedMultiplication(_outputLevel * _clipLevel,  _outputLevel * _clipLevel);
             #endif
         }
 
@@ -272,7 +271,9 @@ namespace Lofelt.NiceVibrations
         /// terminator</param>
         public static void Load(byte[] data)
         {
-            GamepadRumbler.Unload();
+	        #if ((!UNITY_ANDROID && !UNITY_IOS) || UNITY_EDITOR) && NICE_VIBRATIONS_INPUTSYSTEM_INSTALLED && ENABLE_INPUT_SYSTEM && !NICE_VIBRATIONS_DISABLE_GAMEPAD_SUPPORT
+            GamepadRumbler.Unload(GamepadRumbler.GetCurrentGamepadID());
+            #endif
             lastSeekTime = 0.0f;
             clipLoaded = true;
             clipLoadedDurationSecs = 0.0f;
@@ -313,8 +314,9 @@ namespace Lofelt.NiceVibrations
         public static void Load(byte[] json, GamepadRumble rumble)
         {
             Load(json);
-
-            GamepadRumbler.Load(rumble);
+            #if ((!UNITY_ANDROID && !UNITY_IOS) || UNITY_EDITOR) && NICE_VIBRATIONS_INPUTSYSTEM_INSTALLED && ENABLE_INPUT_SYSTEM && !NICE_VIBRATIONS_DISABLE_GAMEPAD_SUPPORT
+            GamepadRumbler.Load(rumble, GamepadRumbler.GetCurrentGamepadID());
+            #endif
             // GamepadRumbler.Load() resets the motor speed multiplication to 1.0, so the levels
             // need to be applied here again
             ApplyLevelsToGamepadRumbler();
