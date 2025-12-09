@@ -1128,7 +1128,6 @@ namespace Dispatch
         {
             if (targetImage == null) return;
 
-            // 현재는 모든 캐릭터가 같은 이미지 사용 ("ChaIcon")
             UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(AddressableKey.Icon_Character).Completed += handle =>
             {
                 if (handle.Status == UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)

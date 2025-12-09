@@ -142,8 +142,7 @@ public class LibraryCharacterSlot : MonoBehaviour
     // 캐릭터 스프라이트 로드
     private void LoadCharacterSprite(int characterId)
     {
-        string spriteKey = "ChaIcon";
-        //= AddressableKey.GetCardSpriteKey(characterId);
+        string spriteKey = AddressableKey.Icon_Character;
 
         Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
         {

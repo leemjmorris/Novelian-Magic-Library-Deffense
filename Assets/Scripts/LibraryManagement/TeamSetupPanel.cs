@@ -86,14 +86,25 @@ public class TeamSetupPanel : MonoBehaviour
     /// </summary>
     private void RestoreDeckFromManager()
     {
-        if (DeckManager.Instance == null) return;
+        if (DeckManager.Instance == null)
+        {
+            Debug.LogWarning("[TeamSetupPanel] DeckManager.Instance가 null입니다!");
+            return;
+        }
+
+        // DeckManager의 현재 덱 상태 확인
+        var deckData = DeckManager.Instance.GetDeck();
+        Debug.Log($"[TeamSetupPanel] DeckManager 덱 데이터: [{string.Join(", ", deckData)}]");
 
         for (int i = 0; i < deckSlots.Count; i++)
         {
             int characterId = DeckManager.Instance.GetCharacterAtIndex(i);
+            Debug.Log($"[TeamSetupPanel] 슬롯 {i} 복원 시도: characterId={characterId}");
+
             if (characterId > 0)
             {
                 deckSlots[i].SetCharacter(characterId);
+                Debug.Log($"[TeamSetupPanel] 슬롯 {i}에 캐릭터 {characterId} 설정 완료");
             }
             else
             {
@@ -247,7 +258,9 @@ public class TeamSetupPanel : MonoBehaviour
     {
         if (deckUnsetPanel != null)
         {
-            raycastPanel?.SetActive(true);
+            // Unity SerializeField는 ?.가 제대로 동작하지 않으므로 명시적 null 체크
+            if (raycastPanel != null)
+                raycastPanel.SetActive(true);
             deckUnsetPanel.SetActive(true);
             Debug.Log("[TeamSetupPanel] 덱 해제 패널 표시");
         }
@@ -261,7 +274,9 @@ public class TeamSetupPanel : MonoBehaviour
         if (deckUnsetPanel != null)
         {
             deckUnsetPanel.SetActive(false);
-            raycastPanel?.SetActive(false);
+            // Unity SerializeField는 ?.가 제대로 동작하지 않으므로 명시적 null 체크
+            if (raycastPanel != null)
+                raycastPanel.SetActive(false);
             Debug.Log("[TeamSetupPanel] 덱 해제 패널 숨김");
         }
     }
