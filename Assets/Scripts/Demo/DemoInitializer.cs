@@ -5,17 +5,23 @@ namespace NovelianMagicLibraryDefense.Demo
 {
     /// <summary>
     /// Demo scene initializer
-    /// Initializes CSVLoader without depending on GameManager
-    /// Must be placed in DemoScene and execute before other Demo components
+    /// Ensures CSVLoader is ready before other Demo components start
+    /// Must be placed in DemoScene
     /// </summary>
     public class DemoInitializer : MonoBehaviour
     {
-        [Header("Execution Order")]
-        [SerializeField, Tooltip("Script Execution Order should be set to run before other Demo scripts")]
-        private bool showExecutionOrderWarning = true;
+        public static DemoInitializer Instance { get; private set; }
+        public bool IsReady { get; private set; }
 
         private void Awake()
         {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+
             InitializeAsync().Forget();
         }
 
@@ -23,26 +29,31 @@ namespace NovelianMagicLibraryDefense.Demo
         {
             Debug.Log("[DemoInitializer] Starting initialization...");
 
-            // Initialize CSVLoader if not already initialized
+            // Wait for CSVLoader instance
             if (CSVLoader.Instance == null)
             {
-                // CSVLoader should be a singleton that auto-creates
                 Debug.Log("[DemoInitializer] Waiting for CSVLoader instance...");
                 await UniTask.WaitUntil(() => CSVLoader.Instance != null);
             }
 
+            // Wait for CSVLoader to finish loading (it auto-loads in Start)
             if (!CSVLoader.Instance.IsInit)
             {
-                Debug.Log("[DemoInitializer] Initializing CSVLoader...");
-                await CSVLoader.Instance.InitCSV();
-                Debug.Log("[DemoInitializer] CSVLoader initialized!");
-            }
-            else
-            {
-                Debug.Log("[DemoInitializer] CSVLoader already initialized");
+                Debug.Log("[DemoInitializer] Waiting for CSVLoader to finish loading...");
+                await UniTask.WaitUntil(() => CSVLoader.Instance.IsInit);
             }
 
+            Debug.Log("[DemoInitializer] CSVLoader ready!");
+            IsReady = true;
             Debug.Log("[DemoInitializer] Demo initialization complete!");
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
         }
     }
 }
