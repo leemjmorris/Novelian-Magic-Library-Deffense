@@ -57,6 +57,18 @@ namespace Novelian.Combat
         [SerializeField, Tooltip("체력 회복 변형 (%)")]
         private float healthRegenModifier = 0f;
 
+        [SerializeField, Tooltip("쿨타임 감소 (%)")]
+        private float cooldownModifier = 0f;
+
+        [SerializeField, Tooltip("시전 속도 감소 (%)")]
+        private float castTimeModifier = 0f;
+
+        [SerializeField, Tooltip("보스 데미지 증가 (%)")]
+        private float bossDamageModifier = 0f;
+
+        // 속성(장르) 강화 modifier (GenreType별 누적)
+        private Dictionary<GenreType, float> genreModifiers = new Dictionary<GenreType, float>();
+
         [Header("Spawn Position")]
         [SerializeField, Tooltip("Projectile spawn offset (Y=1.5 for chest height)")]
         private Vector3 spawnOffset = new Vector3(0f, 1.5f, 0f);
@@ -2257,9 +2269,9 @@ namespace Novelian.Combat
                 {
                     ApplyStatBookmark(bookmark);
                 }
-                else if (bookmark.Type == BookmarkType.Skill || bookmark.Type == BookmarkType.SubSkill)
+                else if (bookmark.Type == BookmarkType.Skill)
                 {
-                    // JML: Skill(메인스킬)과 SubSkill(서포트스킬) 모두 ApplySkillBookmark로 처리
+                    // JML: 스킬 책갈피 적용
                     ApplySkillBookmark(bookmark);
                 }
             }
@@ -2267,35 +2279,99 @@ namespace Novelian.Combat
 
         /// <summary>
         /// JML: 스탯 책갈피 적용 (OptionType에 따라 스탯 변형)
+        /// BookmarkOptionTable.csv Option_Type 기준
         /// </summary>
         private void ApplyStatBookmark(BookMark bookmark)
         {
             switch (bookmark.OptionType)
             {
-                case 1: // AttackPower → damageModifier
+                case 1: // 공격력 증가
                     damageModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 데미지 +{bookmark.OptionValue}% (총 {damageModifier}%)");
+                    Debug.Log($"[Character] 스탯 책갈피: 공격력 +{bookmark.OptionValue * 100f:F0}% (총 {damageModifier * 100f:F0}%)");
                     break;
-                case 2: // AttackSpeed
+                case 2: // 공격 속도 증가
                     attackSpeedModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 공격속도 +{bookmark.OptionValue}% (총 {attackSpeedModifier}%)");
+                    Debug.Log($"[Character] 스탯 책갈피: 공격속도 +{bookmark.OptionValue * 100f:F0}% (총 {attackSpeedModifier * 100f:F0}%)");
                     break;
-                case 3: // ProjectileSpeed
-                    projectileSpeedModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 투사체속도 +{bookmark.OptionValue}% (총 {projectileSpeedModifier}%)");
+                case 3: // 치명타 배율 증가
+                    critMultiplierModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 치명타 배율 +{bookmark.OptionValue * 100f:F0}% (총 {critMultiplierModifier * 100f:F0}%)");
                     break;
-                case 4: // Range
-                    rangeModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 사거리 +{bookmark.OptionValue}% (총 {rangeModifier}%)");
+                case 4: // 치명타 확률 증가
+                    critChanceModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 치명타 확률 +{bookmark.OptionValue * 100f:F0}% (총 {critChanceModifier * 100f:F0}%)");
+                    break;
+                case 5: // 치명타 피해 증가 (배율에 누적)
+                    critMultiplierModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 치명타 피해 +{bookmark.OptionValue * 100f:F0}% (총 {critMultiplierModifier * 100f:F0}%)");
+                    break;
+                case 6: // 속성 강화 (GenreType별)
+                    ApplyGenreModifier(bookmark);
+                    break;
+                case 7: // 쿨타임 감소
+                    cooldownModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 쿨타임 -{bookmark.OptionValue * 100f:F0}% (총 {cooldownModifier * 100f:F0}%)");
+                    break;
+                case 8: // 시전 속도 감소
+                    castTimeModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 시전속도 -{bookmark.OptionValue * 100f:F0}% (총 {castTimeModifier * 100f:F0}%)");
+                    break;
+                // case 9: 제거됨 (발사체 속도)
+                // case 10, 11, 12: RewardHelper에서 처리 (아이템/골드/파견시간)
+                // case 13, 14, 15: 보류 (적 디버프)
+                case 16: // 보스 데미지 증가
+                    bossDamageModifier += bookmark.OptionValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 보스 데미지 +{bookmark.OptionValue * 100f:F0}% (총 {bossDamageModifier * 100f:F0}%)");
                     break;
                 default:
-                    Debug.LogWarning($"[Character] 알 수 없는 OptionType: {bookmark.OptionType}");
+                    // 10, 11, 12는 RewardHelper에서 처리하므로 경고 안 함
+                    if (bookmark.OptionType < 10 || bookmark.OptionType > 12)
+                    {
+                        Debug.LogWarning($"[Character] 미구현 OptionType: {bookmark.OptionType}");
+                    }
                     break;
             }
         }
 
         /// <summary>
-        /// JML: 스킬 책갈피 적용 (MainSkill → activeSkillId, SupportSkill → supportSkillId)
+        /// JML: 속성(장르) 강화 적용 - Option_Name_ID로 GenreType 구분
+        /// </summary>
+        private void ApplyGenreModifier(BookMark bookmark)
+        {
+            // BookmarkOptionTable.csv Option_Name_ID 기준:
+            // 80340420: 로맨스, 80340421: 모험, 80340422: 코미디, 80340423: 추리, 80340424: 공포
+            GenreType genre = GetGenreFromBookmark(bookmark);
+
+            if (!genreModifiers.ContainsKey(genre))
+                genreModifiers[genre] = 0f;
+
+            genreModifiers[genre] += bookmark.OptionValue;
+            Debug.Log($"[Character] 스탯 책갈피: {genre} 속성 강화 +{bookmark.OptionValue * 100f:F0}% (총 {genreModifiers[genre] * 100f:F0}%)");
+        }
+
+        /// <summary>
+        /// JML: BookMark의 Option_Name_ID 또는 BookmarkDataID로 GenreType 결정
+        /// </summary>
+        private GenreType GetGenreFromBookmark(BookMark bookmark)
+        {
+            // CSV에서 Option_Name_ID 조회
+            var optionData = CSVLoader.Instance?.GetData<BookmarkOptionData>(bookmark.BookmarkDataID);
+            if (optionData == null) return GenreType.Horror; // 기본값
+
+            // Option_Name_ID로 속성 구분
+            return optionData.Option_Name_ID switch
+            {
+                80340420 => GenreType.Romance,   // 로맨스 속성 강화
+                80340421 => GenreType.Adventure, // 모험 속성 강화
+                80340422 => GenreType.Comedy,    // 코미디 속성 강화
+                80340423 => GenreType.Mystery,   // 추리 속성 강화
+                80340424 => GenreType.Horror,    // 공포 속성 강화
+                _ => GenreType.Horror
+            };
+        }
+
+        /// <summary>
+        /// JML: 스킬 책갈피 적용 (MainSkill → activeSkillId)
         /// </summary>
         private void ApplySkillBookmark(BookMark bookmark)
         {
@@ -2309,18 +2385,6 @@ namespace Novelian.Combat
                 {
                     activeSkillId = bookmark.SkillID;
                     Debug.Log($"[Character] 스킬 책갈피: activeSkillId = {bookmark.SkillID} ({mainSkill.skill_name})");
-                }
-                return;
-            }
-
-            // SupportSkillData 확인
-            var supportSkill = CSVLoader.Instance?.GetData<SupportSkillData>(bookmark.SkillID);
-            if (supportSkill != null)
-            {
-                if (supportSkillId == 0) // 비어있을 때만 설정
-                {
-                    supportSkillId = bookmark.SkillID;
-                    Debug.Log($"[Character] 서포트 책갈피: supportSkillId = {bookmark.SkillID} ({supportSkill.support_name})");
                 }
             }
         }

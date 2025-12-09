@@ -317,6 +317,7 @@ namespace NovelianMagicLibraryDefense.UI
 
         /// <summary>
         /// 아이템 지급 (Currency 또는 Ingredient)
+        /// RewardHelper를 통해 골드 modifier 적용 (Option_Type 11)
         /// </summary>
         private void GiveItem(int itemId, int amount)
         {
@@ -324,13 +325,23 @@ namespace NovelianMagicLibraryDefense.UI
             // 1600번대: Currency
             // 10000번대: Ingredient
 
+            // RewardHelper를 통해 골드 modifier 적용
+            int finalAmount = RewardHelper.CalculateRewardAmount(amount, itemId);
+
             if (itemId >= 1600 && itemId < 1700)
             {
                 // Currency 지급
                 if (CurrencyManager.Instance != null)
                 {
-                    CurrencyManager.Instance.AddCurrency(itemId, amount);
-                    Debug.Log($"[StageClearPanel] Currency 지급: ID={itemId}, Amount={amount}");
+                    CurrencyManager.Instance.AddCurrency(itemId, finalAmount);
+                    if (finalAmount != amount)
+                    {
+                        Debug.Log($"[StageClearPanel] Currency 지급: ID={itemId}, 기본={amount}, 최종={finalAmount} (골드 modifier 적용)");
+                    }
+                    else
+                    {
+                        Debug.Log($"[StageClearPanel] Currency 지급: ID={itemId}, Amount={finalAmount}");
+                    }
                 }
             }
             else if (itemId >= 10000)
@@ -338,8 +349,8 @@ namespace NovelianMagicLibraryDefense.UI
                 // Ingredient 지급
                 if (IngredientManager.Instance != null)
                 {
-                    IngredientManager.Instance.AddIngredient(itemId, amount);
-                    Debug.Log($"[StageClearPanel] Ingredient 지급: ID={itemId}, Amount={amount}");
+                    IngredientManager.Instance.AddIngredient(itemId, finalAmount);
+                    Debug.Log($"[StageClearPanel] Ingredient 지급: ID={itemId}, Amount={finalAmount}");
                 }
             }
             else

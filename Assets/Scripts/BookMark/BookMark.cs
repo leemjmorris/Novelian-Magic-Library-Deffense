@@ -54,8 +54,7 @@ public class BookMark
     }
 
     /// <summary>
-    /// SKill BookMark Constructor
-    /// JML: skillID 범위로 MainSkill(39xxx)/SupportSkill(40xxx) 구분
+    /// Skill BookMark Constructor
     /// </summary>
     public BookMark(int bookmarkDataID, string name, Grade grade, int optionType, int optionValue, int skillID)
     {
@@ -63,8 +62,7 @@ public class BookMark
         BookmarkDataID = bookmarkDataID;
         Name = name;
         Grade = grade;
-        // JML: skillID 범위로 Type 결정 (39xxx = Skill, 40xxx = SubSkill)
-        Type = skillID >= 40000 ? BookmarkType.SubSkill : BookmarkType.Skill;
+        Type = BookmarkType.Skill;
         OptionType = optionType;
         OptionValue = optionValue;
         SkillID = skillID;

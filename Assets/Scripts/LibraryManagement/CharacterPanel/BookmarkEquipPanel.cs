@@ -108,7 +108,6 @@ public class BookmarkEquipPanel : MonoBehaviour
         {
             BookmarkType.Stat => "PictoIcon_Buff",
             BookmarkType.Skill => "PictoIcon_Battle",
-            BookmarkType.SubSkill => "PictoIcon_Attack",
             _ => "PictoIcon_Battle"
         };
     }

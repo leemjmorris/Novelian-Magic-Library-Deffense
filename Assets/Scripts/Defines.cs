@@ -191,10 +191,28 @@ public enum Genre
     Comedy = 4,
     Mystery = 5
 }
+/// <summary>
+/// 책갈피 옵션 타입 (BookmarkOptionTable.csv Option_Type 기준)
+/// </summary>
 public enum OptionType
 {
-    AttackPower = 1,
-    AttackSkill = 2,
+    None = 0,
+    AttackPower = 1,            // 공격력 증가
+    AttackSpeed = 2,            // 공격 속도 증가
+    CritMultiplier = 3,         // 치명타 배율 증가
+    CritChance = 4,             // 치명타 확률 증가
+    CritDamage = 5,             // 치명타 피해 증가
+    GenreBonus = 6,             // 속성 강화 (로맨스/모험/코미디/추리/공포)
+    CooldownReduction = 7,      // 쿨타임 감소
+    CastTimeReduction = 8,      // 시전 속도 감소
+    // 09: 제거됨 (발사체 속도)
+    ItemDropRate = 10,          // 아이템 획득 확률 증가
+    GoldBonus = 11,             // 골드 획득량 증가
+    DispatchTimeReduction = 12, // 파견 시간 감소
+    EnemyAttackReduction = 13,  // 적 공격력 감소 (보류)
+    EnemySpeedReduction = 14,   // 적 공격 속도 감소 (보류)
+    EnemyMoveReduction = 15,    // 적 이동 속도 감소 (보류)
+    BossDamage = 16             // 보스 데미지 증가
 }
 public enum UseType
 {
@@ -208,7 +226,6 @@ public enum BookmarkType
     None = 0,
     Stat = 1,
     Skill = 2,
-    SubSkill = 3,   // JML: 보조스킬 (추후 구현)
     All = 99        // JML: 전체 필터용
 }
 
@@ -263,7 +280,6 @@ public static class WarningText
 {
     public const string FeatureNotReady = "준비 중인 기능입니다";
     public const string MainSkillBookmarkLimitReached = "메인 스킬 책갈피는 1개만 장착 가능합니다";
-    public const string SubSkillBookmarkLimitReached = "서브 스킬 책갈피는 1개만 장착 가능합니다";
-    public const string StatBookmarkLimitReached = "스탯 책갈피는 3개까지만 장착 가능합니다";
+    public const string StatBookmarkLimitReached = "스탯 책갈피는 4개까지만 장착 가능합니다";
 }
 
