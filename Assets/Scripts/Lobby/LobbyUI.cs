@@ -24,6 +24,9 @@ public class LobbyUI : MonoBehaviour
     [Header("Inventory Panel")]
     [SerializeField] private GameObject inventoryPanel; // 인벤토리 패널
 
+    [Header("Menu Layout")]
+    [SerializeField] private GameObject menuLayout; // 메뉴 레이아웃 (토글용)
+
     private bool isDispatchCompleted = false; // 파견 완료 상태 캐싱
 
     private void OnEnable()
@@ -179,6 +182,17 @@ public class LobbyUI : MonoBehaviour
     public void OnSettingsButton()
     {
         WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+    }
+
+    /// <summary>
+    /// 메뉴 버튼 클릭 시 MenuLayout 토글
+    /// </summary>
+    public void OnMenuButton()
+    {
+        if (menuLayout != null)
+        {
+            menuLayout.SetActive(!menuLayout.activeSelf);
+        }
     }
 
     public void OnShopButton()

@@ -12,7 +12,12 @@ public class TitleSceneController : MonoBehaviour
     private const string LOG_PREFIX = "<color=#3EB489>[Firebase]</color>";
     private const string BOOT_SCENE_NAME = "BootScene";
 
+    [Header("UI References")]
+    [SerializeField] private GameObject loginPanel;
+    [SerializeField] private GameObject pressText;
+
     private bool isProcessing;
+    private bool isLoginButtonsShown;
 
     private async void Start()
     {
@@ -120,5 +125,32 @@ public class TitleSceneController : MonoBehaviour
     private void LoadBootScene()
     {
         SceneManager.LoadScene(BOOT_SCENE_NAME);
+    }
+
+    /// <summary>
+    /// Background 터치 시 호출 - 로그인 상태 확인 후 분기
+    /// </summary>
+    public void OnBackgroundClicked()
+    {
+        if (isLoginButtonsShown || isProcessing) return;
+
+        // 이미 로그인된 상태면 바로 BootScene으로
+        if (FirebaseManager.Instance != null && FirebaseManager.Instance.IsSignedIn)
+        {
+            Debug.Log($"{LOG_PREFIX} 이미 로그인됨! BootScene으로 이동합니다...");
+            LoadBootScene();
+            return;
+        }
+
+        // 로그인 안 된 상태면 LoginPanel 표시
+        isLoginButtonsShown = true;
+
+        if (loginPanel != null)
+            loginPanel.SetActive(true);
+
+        if (pressText != null)
+            pressText.SetActive(false);
+
+        Debug.Log($"{LOG_PREFIX} 로그인 필요 - 로그인 패널 표시");
     }
 }
