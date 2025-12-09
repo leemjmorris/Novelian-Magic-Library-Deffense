@@ -173,6 +173,9 @@ public class DeckSlot : MonoBehaviour
     {
         Addressables.LoadAssetAsync<Sprite>(AddressableKey.Icon_Plus).Completed += handle =>
         {
+            // 콜백 시점에 이미 캐릭터가 설정되어 있으면 Plus 적용하지 않음
+            if (IsSet) return;
+
             if (handle.Status == AsyncOperationStatus.Succeeded && characterImage != null)
             {
                 characterImage.sprite = handle.Result;
