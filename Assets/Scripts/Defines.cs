@@ -64,7 +64,8 @@ public static class AddressableKey
     public static readonly string SupportCompatibilityTable = "SupportCompatibilityTable";
     public static readonly string SkillLevelTable = "SkillLevelTable";
     public static readonly string PlayerLevelTable = "PlayerLevelTable";
-    public static readonly string SkillTypeTable = "SkillTypeTable";    
+    public static readonly string SkillTypeTable = "SkillTypeTable";
+    public static readonly string LayoutPresetTable = "LayoutPresetTable";  // Issue #420    
     
     // JML: Icon Addressable Keys
     public static readonly string Icon_Mystery = "Icon_Mystery";

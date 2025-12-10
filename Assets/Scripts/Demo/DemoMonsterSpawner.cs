@@ -82,7 +82,11 @@ namespace NovelianMagicLibraryDefense.Demo
 
                 if (wallCollider != null && wallComponent != null)
                 {
-                    Monster.InitializeWallCache(targetObj, wallCollider, wallComponent);
+                    // 단일 Wall을 List로 래핑하여 전달 (다중 Wall 지원 시그니처)
+                    var walls = new List<Wall> { wallComponent };
+                    var transforms = new List<Transform> { targetObj };
+                    var colliders = new List<Collider> { wallCollider };
+                    Monster.InitializeWallCache(walls, transforms, colliders);
                     Debug.Log("[DemoMonsterSpawner] Wall cache initialized");
                 }
                 else
