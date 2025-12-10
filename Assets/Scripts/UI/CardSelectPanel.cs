@@ -20,10 +20,14 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Panel References")]
         [SerializeField] private GameObject panel;
 
-        [Header("Card Container")]
+        [Header("Card Slots (CardGrid의 Card1~4)")]
+        [Tooltip("CardGrid 오브젝트의 Card1~4 슬롯을 연결 (StageCard 컴포넌트 필요)")]
+        [SerializeField] private StageCard[] cardSlots = new StageCard[4];
+
+        [Header("Legacy - Card Container (Deprecated)")]
         [SerializeField] private Transform cardContainer;
 
-        [Header("Card Prefabs")]
+        [Header("Legacy - Card Prefabs (Deprecated)")]
         [SerializeField] private GameObject characterCardPrefab;
         [SerializeField] private GameObject statCard_AttackSpeed;
         [SerializeField] private GameObject statCard_Damage;
@@ -52,6 +56,10 @@ namespace NovelianMagicLibraryDefense.UI
         private CharacterPlacementManager placementManager;
         private float previousTimeScale = 1f;
         private bool isPaused = false;
+
+        // JML: 카드 슬롯 시스템용 활성 카드 데이터 추적
+        private CardData[] activeCardData;
+        private bool useCardSlotSystem = false;
 
         // JML: 현재 플레이어 레벨 (StageManager에서 가져옴)
         private int currentPlayerLevel = 1;
@@ -154,11 +162,11 @@ namespace NovelianMagicLibraryDefense.UI
 
             CardData[] cards;
 
-            if (levelData != null && levelData.Character_Card_Appear == 1)
+            if (levelData != null && levelData.Card_Type == 2)
             {
-                // 캐릭터 카드 레벨 (3, 6, 9, 12...)
+                // 캐릭터 카드 레벨 (Card_Type 2 = 캐릭터 카드)
                 cards = GetCharacterCardsForLevelUp();
-                Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Character_Card_Appear=1 → 캐릭터 카드");
+                Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=2 → 캐릭터 카드");
             }
             else if (levelData != null && levelData.Card_List_ID > 0)
             {
@@ -274,21 +282,21 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private CardData[] GetStatCardsFromCardList(int cardListId)
         {
-            var cardListData = CSVLoader.Instance?.GetData<CardListData>(cardListId);
+            //var cardListData = CSVLoader.Instance?.GetData<CardListData>(cardListId);
 
-            if (cardListData == null)
-            {
-                Debug.LogWarning($"[CardSelectPanel] CardListData not found for ID: {cardListId}");
-                return GetRandomStatCards(2);
-            }
+            // if (cardListData == null)
+            // {
+            //     Debug.LogWarning($"[CardSelectPanel] CardListData not found for ID: {cardListId}");
+            //     return GetRandomStatCards(2);
+            // }
 
             CardData[] cards = new CardData[2];
 
             // Card_1_ID, Card_2_ID를 Ability ID로 매핑
-            cards[0] = ConvertCardIdToCardData(cardListData.Card_1_ID);
-            cards[1] = ConvertCardIdToCardData(cardListData.Card_2_ID);
+            // cards[0] = ConvertCardIdToCardData(cardListData.Card_1_ID);
+            // cards[1] = ConvertCardIdToCardData(cardListData.Card_2_ID);
 
-            Debug.Log($"[CardSelectPanel] CardList {cardListId}: Card1={cardListData.Card_1_ID}, Card2={cardListData.Card_2_ID}");
+            // Debug.Log($"[CardSelectPanel] CardList {cardListId}: Card1={cardListData.Card_1_ID}, Card2={cardListData.Card_2_ID}");
             return cards;
         }
 
@@ -426,9 +434,180 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// Create 2 cards in the container
+        /// JML: 카드 생성/설정 (Issue #424)
+        /// cardSlots이 연결되어 있으면 새 시스템 사용, 아니면 기존 시스템 사용
         /// </summary>
         private void CreateCards(CardData[] cards)
+        {
+            // cardSlots가 유효한지 확인 (하나라도 할당되어 있으면 새 시스템 사용)
+            useCardSlotSystem = cardSlots != null && cardSlots.Length > 0 && cardSlots[0] != null;
+
+            if (useCardSlotSystem)
+            {
+                SetupCardSlots(cards).Forget();
+            }
+            else
+            {
+                CreateCardsLegacy(cards);
+            }
+        }
+
+        /// <summary>
+        /// JML: 새 카드 슬롯 시스템 - CardGrid의 Card1~4 사용 (Issue #424)
+        /// StageCard.Initialize로 CardTable 기반 카드 설정
+        /// </summary>
+        private async UniTask SetupCardSlots(CardData[] cards)
+        {
+            activeCardData = cards;
+
+            // 모든 슬롯 초기화 (비활성화)
+            for (int i = 0; i < cardSlots.Length; i++)
+            {
+                if (cardSlots[i] != null)
+                {
+                    cardSlots[i].gameObject.SetActive(false);
+                }
+            }
+
+            // 필요한 카드만 활성화 및 설정
+            for (int i = 0; i < cards.Length && i < cardSlots.Length; i++)
+            {
+                if (cardSlots[i] == null) continue;
+
+                // CardTable ID로 변환
+                int cardTableId = ConvertToCardTableId(cards[i]);
+
+                if (cardTableId > 0)
+                {
+                    // StageCard 컴포넌트로 초기화
+                    await cardSlots[i].Initialize(cardTableId);
+                }
+                else
+                {
+                    // CardTable에 없는 카드 (fallback: 직접 텍스트 설정)
+                    SetupCardSlotManually(cardSlots[i], cards[i]);
+                }
+
+                // 버튼 이벤트 설정
+                var button = cardSlots[i].GetComponent<UnityEngine.UI.Button>();
+                if (button != null)
+                {
+                    button.onClick.RemoveAllListeners();
+                    int slotIndex = i; // 클로저용 복사본
+                    button.onClick.AddListener(() => OnCardSlotClicked(slotIndex));
+                }
+
+                cardSlots[i].gameObject.SetActive(true);
+                Debug.Log($"[CardSelectPanel] CardSlot[{i}] 설정: CardTableID={cardTableId}, Type={cards[i].Type}, ID={cards[i].Id}");
+            }
+        }
+
+        /// <summary>
+        /// JML: 카드 슬롯 클릭 처리 (새 시스템용)
+        /// </summary>
+        private void OnCardSlotClicked(int slotIndex)
+        {
+            if (isCardSelected || activeCardData == null || slotIndex >= activeCardData.Length) return;
+
+            CardData cardData = activeCardData[slotIndex];
+            OnCardClicked(cardData);
+        }
+
+        /// <summary>
+        /// JML: CardData를 CardTable ID로 변환
+        /// - Character: CharacterID → CardTable의 Card_Type 2 (082XXX)
+        /// - Ability: StatType → CardTable의 Card_Type 1 (081XXX)
+        /// </summary>
+        private int ConvertToCardTableId(CardData cardData)
+        {
+            if (cardData.Type == CardType.Character)
+            {
+                // CharacterID (021001~025020) → CardTable ID (082009~082028)
+                // CharacterTable의 Character_ID를 CardTable의 캐릭터 카드 ID로 매핑
+                return MapCharacterIdToCardTableId(cardData.Id);
+            }
+            else
+            {
+                // StatType enum → CardTable ID (081001~081008)
+                return MapStatTypeToCardTableId(cardData.Id);
+            }
+        }
+
+        /// <summary>
+        /// JML: CharacterID를 CardTable의 캐릭터 카드 ID로 매핑
+        /// CharacterTable의 Character_ID → CardTable의 082XXX
+        /// </summary>
+        private int MapCharacterIdToCardTableId(int characterId)
+        {
+            // CharacterTable ID 패턴: 021001~025020 (Genre 1~5, 각 4캐릭터)
+            // CardTable의 캐릭터 카드: 082009~082028 (20개 캐릭터)
+            // 매핑: characterId의 하위 3자리로 순번 추출
+
+            // 캐릭터 ID 패턴 분석: 02XYYY (X=장르, YYY=순번)
+            // 예: 021001=그믐, 021002=테네브라, ... 025020=베리타
+
+            // CardTable 매핑: 082009=그믐, 082010=테네브라, ...
+            // CardTable의 Card_Name_ID가 CharacterTable의 Character_Name_ID와 일치
+
+            // CSV 기반 매핑 시도
+            var cardTable = CSVLoader.Instance?.GetTable<global::CardData>()?.GetAll();
+            if (cardTable != null)
+            {
+                var charData = CSVLoader.Instance?.GetData<CharacterData>(characterId);
+                if (charData != null)
+                {
+                    // Character_Name_ID로 CardTable에서 찾기
+                    foreach (var card in cardTable)
+                    {
+                        if (card.Card_Type == 2 && card.Card_Name_ID == charData.Character_Name_ID)
+                        {
+                            return card.Card_ID;
+                        }
+                    }
+                }
+            }
+
+            // fallback: ID 패턴 기반 매핑
+            // 021001→082009, 021002→082010, ...
+            int genre = (characterId / 1000) % 10;
+            int sequence = characterId % 1000;
+            int cardIndex = (genre - 1) * 4 + sequence;
+            return 082008 + cardIndex;
+        }
+
+        /// <summary>
+        /// JML: StatType enum을 CardTable ID로 매핑
+        /// </summary>
+        private int MapStatTypeToCardTableId(int statTypeValue)
+        {
+            return statTypeValue switch
+            {
+                (int)StatType.Damage => 081001,           // 공격력 증가
+                (int)StatType.CritMultiplier => 081002,   // 치명타 피해 증가
+                (int)StatType.AttackSpeed => 081003,      // 공격 속도 증가
+                (int)StatType.CritChance => 081004,       // 치명타 확률 증가
+                // StatType.ProjectileSpeed, TotalDamage 등은 CardTable에 없음 → fallback
+                _ => 081001 // fallback: 공격력 증가
+            };
+        }
+
+        /// <summary>
+        /// JML: CardTable에 없는 카드 직접 설정 (fallback)
+        /// </summary>
+        private void SetupCardSlotManually(StageCard slot, CardData cardData)
+        {
+            // StageCard의 텍스트 필드에 직접 접근하여 설정
+            var nameText = slot.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+            if (nameText != null)
+            {
+                nameText.text = GetCardName(cardData);
+            }
+        }
+
+        /// <summary>
+        /// Legacy: 기존 카드 생성 방식 (cardContainer + Instantiate)
+        /// </summary>
+        private void CreateCardsLegacy(CardData[] cards)
         {
             ClearCards();
 
@@ -576,30 +755,221 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// JML: 스탯 카드 효과 적용 (Issue #349)
-        /// CardLevelTable의 value_change 값 사용
-        /// abilityId는 StatType enum 값과 일치
+        /// JML: 스탯 카드 효과 적용 (Issue #424 - CardTable 기반)
+        /// CardTable의 Card_ID에 따라 대상별 효과 분기:
+        /// - 081001-081004: Character stat buffs
+        /// - 081005-081006: Monster debuffs
+        /// - 081007: Wall shield
+        /// - 081008: Wall heal
+        /// - 081029-081051: Support skill cards
         /// </summary>
         private void ApplyStatCardEffect(int abilityId)
         {
+            var stageManager = GameManager.Instance?.Stage;
+            if (stageManager == null)
+            {
+                Debug.LogError("[CardSelectPanel] StageManager를 찾을 수 없습니다!");
+                return;
+            }
+
             // abilityId가 StatType enum 값이므로 직접 캐스팅
             StatType statType = (StatType)abilityId;
 
             // CSV에서 value_change 조회 (CardLevelTable)
-            // abilityId를 CardLevelTable ID로 매핑
             int cardLevelId = MapAbilityIdToCardLevelId(abilityId);
             float buffValue = GetValueChangeFromCSV(cardLevelId);
 
+            stageManager.ApplyGlobalStatBuff(statType, buffValue);
+            Debug.Log($"[CardSelectPanel] 스탯 버프 적용: {statType} +{buffValue * 100f}% (CardLevelID: {cardLevelId})");
+        }
+
+        /// <summary>
+        /// JML: CardTable ID 기반 카드 효과 적용 (Issue #424)
+        /// </summary>
+        private void ApplyCardEffectByCardId(int cardId)
+        {
             var stageManager = GameManager.Instance?.Stage;
-            if (stageManager != null)
+            if (stageManager == null)
             {
-                stageManager.ApplyGlobalStatBuff(statType, buffValue);
-                Debug.Log($"[CardSelectPanel] 스탯 버프 적용: {statType} +{buffValue * 100f}% (CardLevelID: {cardLevelId})");
+                Debug.LogError("[CardSelectPanel] StageManager를 찾을 수 없습니다!");
+                return;
+            }
+
+            // CardTable에서 데이터 조회
+            var cardData = CSVLoader.Instance?.GetData<global::CardData>(cardId);
+            if (cardData == null)
+            {
+                Debug.LogWarning($"[CardSelectPanel] CardData not found for ID: {cardId}");
+                return;
+            }
+
+            // Card_Level1_ID로 value_change 조회 (Tier 1 기준)
+            float buffValue = GetValueChangeFromCSV(cardData.Card_Level1_ID);
+
+            // Card_ID에 따른 효과 분기
+            switch (cardId)
+            {
+                // Character Stat Buffs (081001-081004)
+                case 081001: // 공격력 증가
+                    stageManager.ApplyGlobalStatBuff(StatType.Damage, buffValue);
+                    Debug.Log($"[CardSelectPanel] 공격력 증가: +{buffValue * 100f}%");
+                    break;
+
+                case 081002: // 치명타 피해 증가
+                    stageManager.ApplyGlobalStatBuff(StatType.CritMultiplier, buffValue);
+                    Debug.Log($"[CardSelectPanel] 치명타 피해 증가: +{buffValue * 100f}%");
+                    break;
+
+                case 081003: // 공격 속도 증가
+                    stageManager.ApplyGlobalStatBuff(StatType.AttackSpeed, buffValue);
+                    Debug.Log($"[CardSelectPanel] 공격 속도 증가: +{buffValue * 100f}%");
+                    break;
+
+                case 081004: // 치명타 확률 증가
+                    stageManager.ApplyGlobalStatBuff(StatType.CritChance, buffValue);
+                    Debug.Log($"[CardSelectPanel] 치명타 확률 증가: +{buffValue * 100f}%");
+                    break;
+
+                // Monster Debuffs (081005-081006)
+                case 081005: // 적의 공격속도 감소
+                    stageManager.ApplyGlobalMonsterDebuff(DeBuffType.ATK_Speed_Down, buffValue);
+                    Debug.Log($"[CardSelectPanel] 적 공격속도 감소: -{buffValue * 100f}%");
+                    break;
+
+                case 081006: // 적의 공격력 감소
+                    stageManager.ApplyGlobalMonsterDebuff(DeBuffType.ATK_Damage_Down, buffValue);
+                    Debug.Log($"[CardSelectPanel] 적 공격력 감소: -{buffValue * 100f}%");
+                    break;
+
+                // Wall Effects (081007-081008)
+                case 081007: // 결계 내구도 증가 (Shield)
+                    stageManager.ApplyWallShield(buffValue);
+                    Debug.Log($"[CardSelectPanel] 결계 Shield 추가: +{buffValue * 100f}%");
+                    break;
+
+                case 081008: // 결계 회복 (Heal)
+                    stageManager.ApplyWallHeal(buffValue);
+                    Debug.Log($"[CardSelectPanel] 결계 회복: +{buffValue * 100f}%");
+                    break;
+
+                // Support Skill Cards (081029-081051)
+                default:
+                    if (cardId >= 081029 && cardId <= 081051)
+                    {
+                        ApplySupportSkillCard(cardId, cardData.Card_Level1_ID);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[CardSelectPanel] Unknown card ID: {cardId}");
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// JML: 서포트 스킬 카드 적용 (Issue #424)
+        /// CardTable ID → SupportSkillTable ID 매핑
+        /// 호환성 필터 적용 후 적합한 캐릭터에 자동 장착
+        /// </summary>
+        private void ApplySupportSkillCard(int cardId, int skillCardLevelId)
+        {
+            // CardTable ID → SupportSkillTable ID 변환
+            // 081029 → 40001, 081030 → 40002, ...
+            int supportId = (cardId - 081029) + 40001;
+
+            Debug.Log($"[CardSelectPanel] 서포트 스킬 카드: CardID={cardId} → SupportID={supportId}");
+
+            // 호환성 데이터 조회
+            var compatibilityData = CSVLoader.Instance?.GetTable<SupportCompatibilityData>()?.GetId(supportId);
+            if (compatibilityData == null)
+            {
+                Debug.LogWarning($"[CardSelectPanel] SupportCompatibilityData not found for ID: {supportId}");
+                return;
+            }
+
+            // 필드 캐릭터 중 호환 가능한 캐릭터 찾기
+            var fieldCharacters = placementManager?.GetAllCharacters() ?? new List<Novelian.Combat.Character>();
+            Novelian.Combat.Character targetCharacter = null;
+
+            foreach (var character in fieldCharacters)
+            {
+                // 이미 서포트 스킬이 있는 캐릭터는 스킵
+                if (character.HasSupportSkill()) continue;
+
+                // 메인 스킬 타입 조회
+                int mainSkillId = character.GetBasicAttackSkillId();
+                var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(mainSkillId);
+                if (mainSkillData == null) continue;
+
+                // 호환성 검증
+                SkillAssetType skillType = mainSkillData.GetSkillType();
+                if (compatibilityData.IsCompatibleWith(skillType))
+                {
+                    targetCharacter = character;
+                    Debug.Log($"[CardSelectPanel] 호환 캐릭터 발견: {character.GetCharacterId()}, 스킬타입: {skillType}");
+                    break;
+                }
+            }
+
+            if (targetCharacter == null)
+            {
+                // 호환 캐릭터 없으면 서포트 없는 첫 캐릭터에 강제 장착 시도
+                foreach (var character in fieldCharacters)
+                {
+                    if (!character.HasSupportSkill())
+                    {
+                        targetCharacter = character;
+                        Debug.LogWarning($"[CardSelectPanel] 호환 캐릭터 없음. 첫 번째 캐릭터에 장착 시도: {character.GetCharacterId()}");
+                        break;
+                    }
+                }
+            }
+
+            if (targetCharacter == null)
+            {
+                Debug.LogWarning("[CardSelectPanel] 서포트 스킬을 장착할 캐릭터가 없습니다 (모든 캐릭터에 이미 서포트 스킬 장착됨)");
+                return;
+            }
+
+            // 서포트 스킬 장착
+            bool success = targetCharacter.EquipSupportSkill(supportId);
+            if (success)
+            {
+                var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
+                string skillName = supportData?.support_name ?? $"Support_{supportId}";
+                Debug.Log($"[CardSelectPanel] 서포트 스킬 '{skillName}' 장착 완료! (캐릭터 ID: {targetCharacter.GetCharacterId()})");
             }
             else
             {
-                Debug.LogError("[CardSelectPanel] StageManager를 찾을 수 없습니다!");
+                Debug.LogWarning($"[CardSelectPanel] 서포트 스킬 장착 실패! (SupportID: {supportId})");
             }
+        }
+
+        /// <summary>
+        /// JML: 특정 서포트 스킬과 호환되는 캐릭터 목록 반환 (Issue #424)
+        /// </summary>
+        private List<Novelian.Combat.Character> GetCompatibleCharacters(int supportId)
+        {
+            var compatibleCharacters = new List<Novelian.Combat.Character>();
+
+            var compatibilityData = CSVLoader.Instance?.GetTable<SupportCompatibilityData>()?.GetId(supportId);
+            if (compatibilityData == null) return compatibleCharacters;
+
+            var fieldCharacters = placementManager?.GetAllCharacters() ?? new List<Novelian.Combat.Character>();
+
+            foreach (var character in fieldCharacters)
+            {
+                int mainSkillId = character.GetBasicAttackSkillId();
+                var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(mainSkillId);
+                if (mainSkillData == null) continue;
+
+                if (compatibilityData.IsCompatibleWith(mainSkillData.GetSkillType()))
+                {
+                    compatibleCharacters.Add(character);
+                }
+            }
+
+            return compatibleCharacters;
         }
 
         /// <summary>
@@ -682,6 +1052,26 @@ namespace NovelianMagicLibraryDefense.UI
 
         private void ClearCards()
         {
+            // 새 시스템: 카드 슬롯 비활성화
+            if (useCardSlotSystem && cardSlots != null)
+            {
+                for (int i = 0; i < cardSlots.Length; i++)
+                {
+                    if (cardSlots[i] != null)
+                    {
+                        var button = cardSlots[i].GetComponent<UnityEngine.UI.Button>();
+                        if (button != null)
+                        {
+                            button.onClick.RemoveAllListeners();
+                        }
+                        cardSlots[i].gameObject.SetActive(false);
+                    }
+                }
+                activeCardData = null;
+                return;
+            }
+
+            // Legacy: 동적 생성된 카드 삭제
             if (cardContainer == null) return;
 
             foreach (Transform child in cardContainer)
@@ -746,6 +1136,16 @@ namespace NovelianMagicLibraryDefense.UI
 
         private void AutoSelectCard()
         {
+            // 새 시스템: cardSlots 사용
+            if (useCardSlotSystem && activeCardData != null && activeCardData.Length > 0)
+            {
+                int randomIndex = UnityEngine.Random.Range(0, activeCardData.Length);
+                Debug.Log($"[CardSelectPanel] 랜덤 선택: 카드 슬롯 {randomIndex + 1}");
+                OnCardSlotClicked(randomIndex);
+                return;
+            }
+
+            // Legacy: cardInstances 사용
             if (cardInstances == null || cardInstances.Length == 0)
             {
                 Debug.LogWarning("[CardSelectPanel] 선택할 카드가 없습니다!");
@@ -753,11 +1153,11 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
-            int randomIndex = UnityEngine.Random.Range(0, cardInstances.Length);
-            var cardButton = cardInstances[randomIndex]?.GetComponent<UnityEngine.UI.Button>();
+            int legacyRandomIndex = UnityEngine.Random.Range(0, cardInstances.Length);
+            var cardButton = cardInstances[legacyRandomIndex]?.GetComponent<UnityEngine.UI.Button>();
             if (cardButton != null)
             {
-                Debug.Log($"[CardSelectPanel] 랜덤 선택: 카드 {randomIndex + 1}");
+                Debug.Log($"[CardSelectPanel] 랜덤 선택: 카드 {legacyRandomIndex + 1}");
                 cardButton.onClick.Invoke();
             }
             else

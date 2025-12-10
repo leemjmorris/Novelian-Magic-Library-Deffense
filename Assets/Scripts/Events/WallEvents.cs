@@ -6,11 +6,13 @@ namespace NovelianMagicLibraryDefense.Events
     /// <summary>
     /// LMJ: ScriptableObject EventChannel for Wall-related events
     /// Replaces static events to prevent memory leaks and enable Inspector visibility
+    /// JML: Shield 시스템 추가 (Issue #424)
     /// </summary>
     [CreateAssetMenu(fileName = "WallEvents", menuName = "Events/Wall Events")]
     public class WallEvents : ScriptableObject
     {
         private event Action<float, float> onHealthChanged;
+        private event Action<float, float> onShieldChanged;
         private event Action onWallDestroyed;
 
         /// <summary>
@@ -27,6 +29,30 @@ namespace NovelianMagicLibraryDefense.Events
         public void RaiseWallDestroyed()
         {
             onWallDestroyed?.Invoke();
+        }
+
+        /// <summary>
+        /// JML: Raise when wall shield changes (Issue #424)
+        /// </summary>
+        public void RaiseShieldChanged(float currentShield, float maxShield)
+        {
+            onShieldChanged?.Invoke(currentShield, maxShield);
+        }
+
+        /// <summary>
+        /// JML: Subscribe to shield changed events (Issue #424)
+        /// </summary>
+        public void AddShieldChangedListener(Action<float, float> listener)
+        {
+            onShieldChanged += listener;
+        }
+
+        /// <summary>
+        /// JML: Unsubscribe from shield changed events (Issue #424)
+        /// </summary>
+        public void RemoveShieldChangedListener(Action<float, float> listener)
+        {
+            onShieldChanged -= listener;
         }
 
         /// <summary>
@@ -68,6 +94,7 @@ namespace NovelianMagicLibraryDefense.Events
         private void OnDisable()
         {
             onHealthChanged = null;
+            onShieldChanged = null;
             onWallDestroyed = null;
         }
     }

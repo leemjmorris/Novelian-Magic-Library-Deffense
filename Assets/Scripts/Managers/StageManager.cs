@@ -275,6 +275,9 @@ namespace NovelianMagicLibraryDefense.Managers
 
             // JML: Reset global stat buffs (Issue #349)
             globalStatBuffs.Clear();
+
+            // JML: Reset global monster debuffs (Issue #424)
+            globalMonsterDebuffs.Clear();
         }
 
         protected override void OnDispose()
@@ -479,6 +482,13 @@ namespace NovelianMagicLibraryDefense.Managers
         #region GlobalStatBuff Methods (Issue #349)
 
         /// <summary>
+        /// JML: 전역 몬스터 디버프 저장소 (Issue #424)
+        /// 적 공격속도/공격력 감소 카드 선택 시 누적
+        /// 새로 스폰되는 몬스터에도 자동 적용
+        /// </summary>
+        private Dictionary<DeBuffType, float> globalMonsterDebuffs = new Dictionary<DeBuffType, float>();
+
+        /// <summary>
         /// JML: 전역 스텟 버프 적용
         /// 스텟 카드 선택 시 호출됨
         /// 기존 필드 캐릭터 + 새로 소환되는 캐릭터 모두에 적용
@@ -562,6 +572,109 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             Debug.Log($"[StageManager] Buff applied to {characters.Count} characters");
+        }
+
+        #endregion
+
+        #region Monster Debuff & Wall Effect Methods (Issue #424)
+
+        /// <summary>
+        /// JML: 전역 몬스터 디버프 적용 (적의 공격속도/공격력 감소 카드)
+        /// 현재 필드의 모든 몬스터 + 새로 스폰되는 몬스터에 적용
+        /// </summary>
+        /// <param name="debuffType">디버프 타입 (ATK_Damage_Down, ATK_Speed_Down)</param>
+        /// <param name="value">감소 값 (% 단위, 예: 0.1 = 10%)</param>
+        public void ApplyGlobalMonsterDebuff(DeBuffType debuffType, float value)
+        {
+            // 1. 전역 디버프 저장소에 누적
+            if (globalMonsterDebuffs.ContainsKey(debuffType))
+            {
+                globalMonsterDebuffs[debuffType] += value;
+            }
+            else
+            {
+                globalMonsterDebuffs[debuffType] = value;
+            }
+
+            Debug.Log($"[StageManager] Global Monster Debuff Applied: {debuffType} -{value * 100f}% (Total: {globalMonsterDebuffs[debuffType] * 100f}%)");
+
+            // 2. 현재 필드의 모든 몬스터에 디버프 적용
+            ApplyDebuffToAllMonsters(debuffType, value);
+        }
+
+        /// <summary>
+        /// JML: 현재 필드의 모든 몬스터에 디버프 적용
+        /// TargetRegistry를 통해 활성 몬스터 목록 조회
+        /// </summary>
+        private void ApplyDebuffToAllMonsters(DeBuffType debuffType, float value)
+        {
+            var allTargets = TargetRegistry.Instance.GetAllTargets();
+            int appliedCount = 0;
+
+            foreach (var target in allTargets)
+            {
+                // Monster로 캐스팅 (ITargetable이 Monster인 경우만)
+                if (target is Monster monster)
+                {
+                    // 영구 디버프로 적용 (duration = float.MaxValue)
+                    monster.ApplyDebuff(debuffType, value, float.MaxValue);
+                    appliedCount++;
+                }
+            }
+
+            Debug.Log($"[StageManager] Debuff {debuffType} applied to {appliedCount} monsters");
+        }
+
+        /// <summary>
+        /// JML: 특정 디버프의 전역 값 조회
+        /// 새로 스폰되는 몬스터에 적용할 때 사용
+        /// </summary>
+        public float GetGlobalMonsterDebuff(DeBuffType debuffType)
+        {
+            return globalMonsterDebuffs.TryGetValue(debuffType, out float value) ? value : 0f;
+        }
+
+        /// <summary>
+        /// JML: 모든 전역 몬스터 디버프 조회
+        /// 새로 스폰되는 몬스터에 모든 디버프 적용 시 사용
+        /// </summary>
+        public Dictionary<DeBuffType, float> GetAllGlobalMonsterDebuffs()
+        {
+            return new Dictionary<DeBuffType, float>(globalMonsterDebuffs);
+        }
+
+        /// <summary>
+        /// JML: Wall에 Shield 추가 (결계 내구도 증가 카드)
+        /// </summary>
+        /// <param name="value">추가량 (% 단위, 예: 0.1 = 최대 쉴드의 10%)</param>
+        public void ApplyWallShield(float value)
+        {
+            if (wallComponent != null)
+            {
+                wallComponent.AddShieldByPercent(value);
+                Debug.Log($"[StageManager] Wall Shield 추가: +{value * 100f}%");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] wallComponent is null! Cannot apply shield.");
+            }
+        }
+
+        /// <summary>
+        /// JML: Wall 체력 회복 (결계 회복 카드)
+        /// </summary>
+        /// <param name="value">회복량 (% 단위, 예: 0.1 = 최대 체력의 10%)</param>
+        public void ApplyWallHeal(float value)
+        {
+            if (wallComponent != null)
+            {
+                wallComponent.HealByPercent(value);
+                Debug.Log($"[StageManager] Wall 체력 회복: +{value * 100f}%");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] wallComponent is null! Cannot heal.");
+            }
         }
 
         #endregion

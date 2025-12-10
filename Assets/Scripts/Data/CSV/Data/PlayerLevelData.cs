@@ -27,12 +27,12 @@ public class PlayerLevelData
     public int Card_List_ID { get; set; }
 
     /// <summary>
-    /// 캐릭터 카드 출현 여부
-    /// 1 = 캐릭터 카드 2장 표시
-    /// 0 = Card_List_ID의 스탯 카드 2장 표시
+    /// 카드 타입
+    /// 1 = 스탯 카드
+    /// 2 = 캐릭터 카드
     /// </summary>
-    public int Character_Card_Appear { get; set; }
-
+    public int Card_Type { get; set; }
+    
     /// <summary>
     /// Level_ID에서 실제 레벨 추출 (0701 → 1, 0750 → 50)
     /// </summary>
