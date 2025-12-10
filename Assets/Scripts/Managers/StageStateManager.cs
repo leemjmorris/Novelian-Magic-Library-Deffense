@@ -29,6 +29,10 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private StageEvents stageEvents;
         [SerializeField] private WallEvents wallEvents;
 
+        [Header("Dual Defense Layout (양방향 방어)")]
+        [SerializeField] private Wall wall2;           // 2번째 Wall (하단)
+        [SerializeField] private WallEvents wallEvents2;  // 2번째 Wall 이벤트
+
         public StageState CurrentState { get; private set; }
 
         protected override void OnInitialize()
@@ -46,6 +50,12 @@ namespace NovelianMagicLibraryDefense.Managers
             if (wallEvents != null)
             {
                 wallEvents.AddWallDestroyedListener(HandleWallDestroyed);
+            }
+
+            // JML: Wall 2 이벤트도 구독 (양방향 방어 - 하나라도 파괴되면 게임 오버)
+            if (wallEvents2 != null)
+            {
+                wallEvents2.AddWallDestroyedListener(HandleWallDestroyed);
             }
         }
 
@@ -68,6 +78,12 @@ namespace NovelianMagicLibraryDefense.Managers
             if (wallEvents != null)
             {
                 wallEvents.RemoveWallDestroyedListener(HandleWallDestroyed);
+            }
+
+            // JML: Wall 2 이벤트 구독 해제
+            if (wallEvents2 != null)
+            {
+                wallEvents2.RemoveWallDestroyedListener(HandleWallDestroyed);
             }
         }
 
@@ -148,7 +164,8 @@ namespace NovelianMagicLibraryDefense.Managers
                     // 진행 시간, 처치 몬스터 수, Wall HP 비율 전달
                     float progressTime = stageManager != null ? stageManager.GetProgressTime() : 0f;
                     int killCount = waveManager != null ? waveManager.GetKillCount() : 0;
-                    float wallHpRatio = wall != null ? wall.GetHealth() / wall.GetMaxHealth() : 1f;
+                    // JML: 양방향 방어 시 두 Wall 중 낮은 HP 비율 사용
+                    float wallHpRatio = GetLowestWallHpRatio();
                     stageClearPanel.Show(progressTime, killCount, wallHpRatio);
                 }
                 else
@@ -181,6 +198,23 @@ namespace NovelianMagicLibraryDefense.Managers
         public StageState GetCurrentState()
         {
             return CurrentState;
+        }
+
+        /// <summary>
+        /// JML: 가장 낮은 Wall HP 비율 반환 (양방향 방어 지원)
+        /// </summary>
+        private float GetLowestWallHpRatio()
+        {
+            float ratio1 = wall != null ? wall.GetHealth() / wall.GetMaxHealth() : 1f;
+
+            // Wall 2가 활성화된 경우 (양방향 방어)
+            if (wall2 != null && wall2.gameObject.activeInHierarchy)
+            {
+                float ratio2 = wall2.GetHealth() / wall2.GetMaxHealth();
+                return Mathf.Min(ratio1, ratio2);
+            }
+
+            return ratio1;
         }
 
         #region Character Animation
