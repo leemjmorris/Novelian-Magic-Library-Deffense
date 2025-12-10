@@ -398,13 +398,13 @@ GameObject:
   - component: {fileID: 729743805}
   - component: {fileID: 729743808}
   - component: {fileID: 729743809}
-  - component: {fileID: 729743804}
   - component: {fileID: 729743810}
   - component: {fileID: 729743811}
   - component: {fileID: 729743812}
   - component: {fileID: 729743813}
   - component: {fileID: 729743814}
   - component: {fileID: 729743815}
+  - component: {fileID: 729743816}
   m_Layer: 0
   m_Name: ManagerObj
   m_TagString: Untagged
@@ -428,21 +428,6 @@ Transform:
   - {fileID: 2041480851}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &729743804
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 729743801}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 87b3362a79b2ca24d91014a52c135567, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  audioMixer: {fileID: 0}
-  bgmSource: {fileID: 0}
-  sfxPoolSize: 10
 --- !u!114 &729743805
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -585,6 +570,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f31a456e1ce46f44b85bc9c620f99c0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &729743816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 729743801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56662d7438cc11b42bebf96c5230efa4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  audioMixer: {fileID: 0}
+  bgmSource: {fileID: 0}
+  sfxPoolSize: 10
 --- !u!1 &1456735814
 GameObject:
   m_ObjectHideFlags: 0
@@ -698,7 +698,7 @@ MonoBehaviour:
   csvLoader: {fileID: 729743807}
   currencyManager: {fileID: 729743806}
   ingredientManager: {fileID: 729743805}
-  audioManager: {fileID: 729743804}
+  audioManager: {fileID: 729743816}
   bookMarkManager: {fileID: 729743808}
   deckManager: {fileID: 729743809}
   characterEnhancementManager: {fileID: 729743810}

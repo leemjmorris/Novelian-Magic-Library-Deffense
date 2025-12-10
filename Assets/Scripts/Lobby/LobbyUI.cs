@@ -38,10 +38,10 @@ public class LobbyUI : MonoBehaviour
             CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
         }
 
-        // 메뉴 레이아웃 초기화 (항상 꺼진 상태로 시작)
+        // 메뉴 레이아웃 활성화 (항상 보이는 상태로 시작)
         if (menuLayout != null)
         {
-            menuLayout.SetActive(false);
+            menuLayout.SetActive(true);
         }
 
         // 파견 완료 플래그 초기화
