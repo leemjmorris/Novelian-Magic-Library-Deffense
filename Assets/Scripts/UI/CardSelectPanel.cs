@@ -43,6 +43,9 @@ namespace NovelianMagicLibraryDefense.UI
         [SerializeField] private bool pauseOnGameStart = true;
         [SerializeField] private bool pauseOnLevelUp = true;
 
+        [Header("CharacterCardGrid (Issue #424)")]
+        [SerializeField] private CharacterCardGridManager characterCardGridManager;
+
         [Header("Timer")]
         [SerializeField] private TextMeshProUGUI timerText;
         private const float SELECTION_TIME = 20f;
@@ -111,6 +114,12 @@ namespace NovelianMagicLibraryDefense.UI
                 }
             }
 
+            // JML: CharacterCardGridManager 자동 찾기 (Issue #424)
+            if (characterCardGridManager == null)
+            {
+                characterCardGridManager = FindFirstObjectByType<CharacterCardGridManager>();
+            }
+
             Debug.Log("[CardSelectPanel] Awake completed, ready to use");
         }
 
@@ -168,17 +177,11 @@ namespace NovelianMagicLibraryDefense.UI
                 cards = GetCharacterCardsForLevelUp();
                 Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=2 → 캐릭터 카드");
             }
-            else if (levelData != null && levelData.Card_List_ID > 0)
-            {
-                // 스탯 카드 레벨 - CardListTable에서 지정된 카드 2장
-                cards = GetStatCardsFromCardList(levelData.Card_List_ID);
-                Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_List_ID={levelData.Card_List_ID} → 스탯 카드");
-            }
             else
             {
-                // fallback: 랜덤 스탯 카드
+                // 스킬/스탯 카드 레벨 (Card_Type 1 또는 levelData null)
                 cards = GetRandomStatCards(2);
-                Debug.LogWarning($"[CardSelectPanel] Level {currentPlayerLevel}: No valid data, using random stat cards");
+                Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=1 → 스킬/스탯 카드");
             }
 
             panel.SetActive(true);
@@ -275,29 +278,6 @@ namespace NovelianMagicLibraryDefense.UI
 
             Debug.Log($"[CardSelectPanel] 유효한 캐릭터 풀: {validPool.Count}개 [{string.Join(", ", validPool)}]");
             return validPool;
-        }
-
-        /// <summary>
-        /// JML: CardListTable에서 지정된 스탯 카드 2장 가져오기
-        /// </summary>
-        private CardData[] GetStatCardsFromCardList(int cardListId)
-        {
-            //var cardListData = CSVLoader.Instance?.GetData<CardListData>(cardListId);
-
-            // if (cardListData == null)
-            // {
-            //     Debug.LogWarning($"[CardSelectPanel] CardListData not found for ID: {cardListId}");
-            //     return GetRandomStatCards(2);
-            // }
-
-            CardData[] cards = new CardData[2];
-
-            // Card_1_ID, Card_2_ID를 Ability ID로 매핑
-            // cards[0] = ConvertCardIdToCardData(cardListData.Card_1_ID);
-            // cards[1] = ConvertCardIdToCardData(cardListData.Card_2_ID);
-
-            // Debug.Log($"[CardSelectPanel] CardList {cardListId}: Card1={cardListData.Card_1_ID}, Card2={cardListData.Card_2_ID}");
-            return cards;
         }
 
         /// <summary>
@@ -723,8 +703,9 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// JML: 캐릭터 카드 처리 (Issue #349)
+        /// JML: 캐릭터 카드 처리 (Issue #349, #424)
         /// 필드에 없으면 소환, 있으면 성급 업그레이드
+        /// CharacterCardGridManager에 UI 업데이트 알림
         /// </summary>
         private void ProcessCharacterCard(int characterId)
         {
@@ -744,13 +725,32 @@ namespace NovelianMagicLibraryDefense.UI
                 if (upgraded)
                 {
                     Debug.Log($"[CardSelectPanel] 캐릭터 ID {characterId} 성급 업그레이드 완료!");
+
+                    // CharacterCardGridManager에 업그레이드 알림
+                    if (characterCardGridManager != null)
+                    {
+                        characterCardGridManager.OnCharacterUpgraded(characterId, existingCharacter.GetStarTier());
+                    }
                 }
             }
             else
             {
                 // 필드에 없으면 새로 소환
-                placementManager.SpawnCharacterById(characterId);
-                Debug.Log($"[CardSelectPanel] 캐릭터 ID {characterId} 소환 완료!");
+                int slotIndex = placementManager.GetFirstEmptySlotIndex();
+                bool spawned = placementManager.SpawnCharacterById(characterId);
+
+                if (spawned)
+                {
+                    Debug.Log($"[CardSelectPanel] 캐릭터 ID {characterId} 소환 완료!");
+
+                    // CharacterCardGridManager에 소환 알림 (Issue #424)
+                    if (characterCardGridManager != null && slotIndex >= 0)
+                    {
+                        var spawnedCharacter = placementManager.GetCharacterById(characterId);
+                        int starTier = spawnedCharacter?.GetStarTier() ?? 1;
+                        characterCardGridManager.OnCharacterSpawned(slotIndex, characterId, starTier, spawnedCharacter).Forget();
+                    }
+                }
             }
         }
 

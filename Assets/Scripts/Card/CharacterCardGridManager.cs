@@ -43,7 +43,8 @@ public class CharacterCardGridManager : MonoBehaviour
     /// <param name="slotIndex">GridSlot 인덱스 (0~3)</param>
     /// <param name="characterId">캐릭터 ID</param>
     /// <param name="starTier">성급 (기본 1)</param>
-    public async UniTask OnCharacterSpawned(int slotIndex, int characterId, int starTier = 1)
+    /// <param name="character">소환된 Character 인스턴스 (스탯 표시용)</param>
+    public async UniTask OnCharacterSpawned(int slotIndex, int characterId, int starTier = 1, Character character = null)
     {
         if (slotIndex < 0 || slotIndex >= cardSlots.Length)
         {
@@ -61,8 +62,8 @@ public class CharacterCardGridManager : MonoBehaviour
         // 슬롯 매핑 저장
         slotToCharacterId[slotIndex] = characterId;
 
-        // ChaCard 초기화
-        await card.Initialize(characterId, starTier);
+        // ChaCard 초기화 (Character 인스턴스 포함)
+        await card.Initialize(characterId, starTier, character);
 
         Debug.Log($"[CharacterCardGridManager] Slot {slotIndex} updated: Character {characterId}, {starTier}성");
     }

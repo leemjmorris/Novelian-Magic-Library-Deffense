@@ -21,14 +21,8 @@ public class PlayerLevelData
     public float Tot_EXP { get; set; }
 
     /// <summary>
-    /// 카드 목록 ID (CardListTable 참조)
-    /// N/A인 경우 0으로 저장됨
-    /// </summary>
-    public int Card_List_ID { get; set; }
-
-    /// <summary>
     /// 카드 타입
-    /// 1 = 스탯 카드
+    /// 1 = 스킬/스탯 카드
     /// 2 = 캐릭터 카드
     /// </summary>
     public int Card_Type { get; set; }

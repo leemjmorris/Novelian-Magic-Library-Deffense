@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using Novelian.Combat;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -6,7 +7,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// JML: CharacterCardGrid의 각 슬롯에 표시되는 캐릭터 카드 (Issue #424)
-/// 소환된 캐릭터 정보 표시 (아이콘, 이름, 성급)
+/// 소환된 캐릭터 정보 표시 (아이콘, 이름, 스탯)
+/// 스탯: 장착 스킬, 공격력, 공격속도, 치명타 확률, 치명타 배율
 /// </summary>
 public class ChaCard : MonoBehaviour
 {
@@ -28,6 +30,7 @@ public class ChaCard : MonoBehaviour
     private int characterId = -1;
     private int starTier = 1;
     private bool isEmpty = true;
+    private Character linkedCharacter; // 연결된 캐릭터 인스턴스
 
     public int CharacterId => characterId;
     public int StarTier => starTier;
@@ -45,11 +48,13 @@ public class ChaCard : MonoBehaviour
     /// </summary>
     /// <param name="charId">캐릭터 ID (CharacterTable)</param>
     /// <param name="tier">성급 (1~3)</param>
-    public async UniTask Initialize(int charId, int tier = 1)
+    /// <param name="character">연결할 Character 인스턴스 (스탯 표시용)</param>
+    public async UniTask Initialize(int charId, int tier = 1, Character character = null)
     {
         characterId = charId;
         starTier = Mathf.Clamp(tier, 1, 3);
         isEmpty = false;
+        linkedCharacter = character;
 
         // 1. CSV에서 캐릭터 데이터 로드
         if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
@@ -62,12 +67,6 @@ public class ChaCard : MonoBehaviour
                 if (characterNameText != null)
                 {
                     characterNameText.text = stringData?.Text ?? $"Character_{charId}";
-                }
-
-                // 캐릭터 정보 (성급 표시)
-                if (characterInfoText != null)
-                {
-                    characterInfoText.text = $"{starTier}성";
                 }
 
                 // 아이콘 로드
@@ -114,7 +113,10 @@ public class ChaCard : MonoBehaviour
         // 2. 성급 표시 업데이트
         UpdateStarDisplay();
 
-        // 3. 배경 색상 활성화
+        // 3. 스탯 정보 업데이트
+        UpdateStatDisplay();
+
+        // 4. 배경 색상 활성화
         if (backgroundImage != null)
         {
             backgroundImage.color = activeBackgroundColor;
@@ -202,5 +204,59 @@ public class ChaCard : MonoBehaviour
         if (star1 != null) star1.SetActive(starTier >= 1);
         if (star2 != null) star2.SetActive(starTier >= 2);
         if (star3 != null) star3.SetActive(starTier >= 3);
+    }
+
+    /// <summary>
+    /// JML: 스탯 정보 표시 업데이트 (Issue #424)
+    /// characterInfoText에 스탯 정보 표시
+    /// 형식: 장착 스킬: {스킬명}\n공격력: {값}\n공격속도: {값}\n치명타 확률: {값}%\n치명타 배율: {값}%
+    /// </summary>
+    private void UpdateStatDisplay()
+    {
+        if (characterInfoText == null) return;
+
+        if (linkedCharacter != null)
+        {
+            // 캐릭터 인스턴스에서 실제 스탯 가져오기
+            string skillName = linkedCharacter.GetDisplaySkillName();
+            float damage = linkedCharacter.GetDisplayDamage();
+            float attackSpeed = linkedCharacter.GetDisplayAttackSpeed();
+            float critChance = linkedCharacter.GetDisplayCritChance();
+            float critMultiplier = linkedCharacter.GetDisplayCritMultiplier();
+
+            characterInfoText.text = $"장착 스킬: {skillName}\n" +
+                                     $"공격력: {damage:F1}\n" +
+                                     $"공격속도: {attackSpeed:F2}\n" +
+                                     $"치명타 확률: {critChance:F1}%\n" +
+                                     $"치명타 배율: {critMultiplier:F1}%";
+        }
+        else
+        {
+            // 캐릭터 인스턴스가 없으면 기본값 표시
+            characterInfoText.text = "장착 스킬: 없음\n" +
+                                     "공격력: -\n" +
+                                     "공격속도: -\n" +
+                                     "치명타 확률: -\n" +
+                                     "치명타 배율: -";
+        }
+    }
+
+    /// <summary>
+    /// JML: 캐릭터 인스턴스 연결 및 스탯 갱신 (Issue #424)
+    /// 캐릭터 소환 완료 후 호출
+    /// </summary>
+    public void LinkCharacter(Character character)
+    {
+        linkedCharacter = character;
+        UpdateStatDisplay();
+    }
+
+    /// <summary>
+    /// JML: 스탯 갱신 (외부에서 호출 가능)
+    /// 캐릭터 스탯이 변경될 때 호출
+    /// </summary>
+    public void RefreshStats()
+    {
+        UpdateStatDisplay();
     }
 }
