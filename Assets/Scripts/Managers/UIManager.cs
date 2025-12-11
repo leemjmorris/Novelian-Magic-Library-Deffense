@@ -80,7 +80,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         // ===== CardSelectPanel =====
         /// <summary>
-        /// Open card selection for game start (2 character cards only)
+        /// Open card selection for game start (deck count character cards: 3-4)
         /// </summary>
         public void OpenCardSelectForGameStart()
         {
@@ -91,7 +91,9 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// Open card selection for level up (2 random cards: character + ability mix)
+        /// Open card selection for level up
+        /// - Card_Type 1: 4 stat cards (fixed)
+        /// - Card_Type 2: deck count character cards (3-4)
         /// </summary>
         public void OpenCardSelectForLevelUp()
         {

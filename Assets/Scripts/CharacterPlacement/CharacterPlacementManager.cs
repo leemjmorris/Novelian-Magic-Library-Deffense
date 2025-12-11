@@ -302,6 +302,23 @@ public class CharacterPlacementManager : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// JML: 첫 번째 빈 슬롯의 인덱스 반환 (Issue #424)
+    /// CharacterCardGridManager UI 연동용
+    /// </summary>
+    /// <returns>빈 슬롯 인덱스 (0~3), 없으면 -1</returns>
+    public int GetFirstEmptySlotIndex()
+    {
+        for (int i = 0; i < gridSlots.Count; i++)
+        {
+            if (gridSlots[i].IsEmpty())
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     //JML: Get random empty slot
     private GridSlot GetRandomEmptySlot()
     {

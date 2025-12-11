@@ -85,16 +85,15 @@ public class CSVLoader : MonoBehaviour
                 RegisterTableAsync<PathData>(AddressableKey.PathTable, x => x.Addressable_ID),
                 RegisterTableAsync<LayoutPresetData>(AddressableKey.LayoutPresetTable, x => x.Layout_ID),  // Issue #420
 
-                // 스킬 테이블 (3행 헤더 형식)
-                RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "MainSkillTable.csv", x => x.skill_id),
-                RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "SupportSkillTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "SupportCompatibilityTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "SkillLevelTable.csv", x => x.GetCompositeKey()),
+                // 스킬 테이블 (3행 헤더 형식) - Skill 폴더
+                RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
+                RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
+                RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "Skill/SupportCompatibilityTable.csv", x => x.support_id),
+                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "Skill/SkillLevelTable.csv", x => x.GetCompositeKey()),
 
-                // 인게임 카드 시스템 테이블 (3행 헤더 형식)
-                RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "CardTable.csv", x => x.Card_ID),
-                RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "CardLevelTable.csv", x => x.Card_Level_ID),
-                RegisterSkillTableAsync<CardListData>(AddressableKey.CardListTable, "CardListTable.csv", x => x.Card_List_ID),
+                // 인게임 카드 시스템 테이블 (3행 헤더 형식) - Card/Stage 폴더
+                RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "Card/CardTable.csv", x => x.Card_ID),
+                RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "Card/CardLevelTable.csv", x => x.Card_Level_ID),
                 RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID)
             );
 
@@ -185,8 +184,12 @@ public class CSVLoader : MonoBehaviour
             // 3행 헤더 형식 처리: 첫번째(한글헤더)와 세번째(타입) 행 제거
             csvText = ProcessSkillCsvFormat(csvText);
 
-            // N/A 처리
+            // N/A 및 빈 값 처리
             csvText = System.Text.RegularExpressions.Regex.Replace(csvText, @",N/A(?=[,\r\n]|$)", ",0");
+            // 연속된 쉼표 사이의 빈 값을 0으로 변환 (int 필드용)
+            csvText = System.Text.RegularExpressions.Regex.Replace(csvText, @",,", ",0,");
+            // 한번 더 실행 (연속된 빈 값 처리)
+            csvText = System.Text.RegularExpressions.Regex.Replace(csvText, @",,", ",0,");
 
             // Create and load CsvTable
             var table = new CsvTable<T>(idSelector);
@@ -341,9 +344,9 @@ public class CSVLoader : MonoBehaviour
         Debug.Log("[CSVLoader] Reloading skill tables...");
 
         await UniTask.WhenAll(
-            RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "MainSkillTable.csv", x => x.skill_id),
-            RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "SupportSkillTable.csv", x => x.support_id),
-            RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "SkillLevelTable.csv", x => x.GetCompositeKey())
+            RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
+            RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
+            RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "Skill/SkillLevelTable.csv", x => x.GetCompositeKey())
         );
 
         Debug.Log("[CSVLoader] Skill tables reloaded!");
@@ -384,16 +387,15 @@ public class CSVLoader : MonoBehaviour
                 RegisterTableAsync<DispatchTimeTableData>(AddressableKey.DispatchTimeTable, x => x.Dispatch_Time_ID),
                 RegisterTableAsync<DispatchRewardTableData>(AddressableKey.DispatchRewardTable, x => x.Dispatch_Reward_ID),
 
-                // 스킬 테이블 (3행 헤더)
-                RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "MainSkillTable.csv", x => x.skill_id),
-                RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "SupportSkillTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "SupportCompatibilityTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "SkillLevelTable.csv", x => x.GetCompositeKey()),
+                // 스킬 테이블 (3행 헤더) - Skill 폴더
+                RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
+                RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
+                RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "Skill/SupportCompatibilityTable.csv", x => x.support_id),
+                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "Skill/SkillLevelTable.csv", x => x.GetCompositeKey()),
 
-                // 인게임 카드 시스템 테이블 (3행 헤더)
-                RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "CardTable.csv", x => x.Card_ID),
-                RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "CardLevelTable.csv", x => x.Card_Level_ID),
-                RegisterSkillTableAsync<CardListData>(AddressableKey.CardListTable, "CardListTable.csv", x => x.Card_List_ID),
+                // 인게임 카드 시스템 테이블 (3행 헤더) - Card/Stage 폴더
+                RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "Card/CardTable.csv", x => x.Card_ID),
+                RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "Card/CardLevelTable.csv", x => x.Card_Level_ID),
                 RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID)
             );
 

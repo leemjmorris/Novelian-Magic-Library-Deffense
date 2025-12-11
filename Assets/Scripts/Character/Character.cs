@@ -590,6 +590,67 @@ namespace Novelian.Combat
             LoadSkillData();
         }
 
+        /// <summary>
+        /// JML: 서포트 스킬 장착 (Issue #424)
+        /// 호환성 검증 후 장착, 성공 여부 반환
+        /// </summary>
+        /// <param name="supportId">SupportSkillTable의 support_id</param>
+        /// <returns>장착 성공 여부</returns>
+        public bool EquipSupportSkill(int supportId)
+        {
+            if (supportId <= 0)
+            {
+                Debug.LogWarning("[Character] Invalid support skill ID");
+                return false;
+            }
+
+            // 호환성 검증
+            var newSupportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
+            if (newSupportData == null)
+            {
+                Debug.LogWarning($"[Character] SupportSkillData not found for ID: {supportId}");
+                return false;
+            }
+
+            var compatibilityTable = CSVLoader.Instance?.GetTable<SupportCompatibilityData>();
+            if (compatibilityTable != null)
+            {
+                var compatibility = compatibilityTable.GetId(supportId);
+                if (compatibility != null && basicAttackData != null)
+                {
+                    if (!compatibility.IsCompatibleWith(basicAttackData.GetSkillType()))
+                    {
+                        Debug.LogWarning($"[Character] 서포트 스킬 '{newSupportData.support_name}'은(는) 메인 스킬 '{basicAttackData.skill_name}'과 호환되지 않습니다!");
+                        return false;
+                    }
+                }
+            }
+
+            // 장착
+            supportSkillId = supportId;
+            supportData = newSupportData;
+            var prefabDb = SkillPrefabDatabase.Instance;
+            supportPrefabs = prefabDb?.GetSupportSkillEntry(supportSkillId);
+
+            Debug.Log($"[Character] 서포트 스킬 장착 완료: {newSupportData.support_name} (ID: {supportId})");
+            return true;
+        }
+
+        /// <summary>
+        /// JML: 현재 기본 공격 스킬 ID 반환 (Issue #424)
+        /// </summary>
+        public int GetBasicAttackSkillId() => basicAttackSkillId;
+
+        /// <summary>
+        /// JML: 현재 서포트 스킬 ID 반환 (Issue #424)
+        /// </summary>
+        public int GetSupportSkillId() => supportSkillId;
+
+        /// <summary>
+        /// JML: 서포트 스킬 장착 여부 (Issue #424)
+        /// </summary>
+        public bool HasSupportSkill() => supportSkillId > 0 && supportData != null;
+
         #endregion
     }
 }
