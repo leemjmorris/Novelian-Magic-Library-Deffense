@@ -46,6 +46,7 @@ public class Wall : MonoBehaviour, IEntity
     public bool IsAlive() => health > 0;
     public Vector3 GetPosition() => transform.position;
     public Transform GetTransform() => transform;
+    public WallEvents GetWallEvents() => wallEvents;
 
     /// <summary>
     /// Wall 체력 회복 (체력 회복 카드 선택 시 호출)
