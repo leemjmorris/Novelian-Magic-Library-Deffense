@@ -1,4 +1,5 @@
-﻿using NovelianMagicLibraryDefense.Events;
+﻿using System.Collections.Generic;
+using NovelianMagicLibraryDefense.Events;
 using UnityEngine;
 
 //JML: Monster entity with movement and wall attack behavior
@@ -80,11 +81,17 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private const float WEIGHT_UPDATE_INTERVAL = 0.5f;
     private const string WALL_TAG = "Wall";
 
-    // Static cache for Wall reference (shared across all Monster instances)
-    private static Transform cachedWallTransform;
-    private static Collider cachedWallCollider;
-    private static Wall cachedWall;
+    // Static cache for Wall references (다중 Wall 지원 - 양방향 방어)
+    private static List<Wall> cachedWalls = new List<Wall>();
+    private static List<Transform> cachedWallTransforms = new List<Transform>();
+    private static List<Collider> cachedWallColliders = new List<Collider>();
 
+    // 인스턴스별 타겟 Wall (가장 가까운 Wall로 설정됨)
+    private Wall targetWall;
+    private Transform targetWallTransform;
+    private Collider targetWallCollider;
+
+    // 기존 변수 (하위 호환성)
     private Transform wallTransform;
     private Collider wallCollider; // Wall Collider 참조 (ClosestPoint 계산용)
     private System.Threading.CancellationTokenSource weightUpdateCts;
@@ -723,27 +730,20 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
 
     /// <summary>
-    /// Face toward Wall on spawn (instant rotation)
+    /// Face toward Wall on spawn (instant rotation) - 가장 가까운 Wall 방향으로 회전
     /// </summary>
     private void FaceTowardWall()
     {
-        // Use cached Wall reference
-        Transform targetWall = cachedWallTransform;
-
-        if (targetWall == null)
+        // 가장 가까운 Wall 찾기 (양방향 방어 지원)
+        if (targetWallTransform == null)
         {
-            // Fallback: try to find Wall
-            GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
-            if (wallObj != null)
-            {
-                targetWall = wallObj.transform;
-            }
+            FindNearestWall();
         }
 
-        if (targetWall != null)
+        if (targetWallTransform != null)
         {
             // Calculate direction to Wall (horizontal only)
-            Vector3 directionToWall = (targetWall.position - transform.position);
+            Vector3 directionToWall = (targetWallTransform.position - transform.position);
             directionToWall.y = 0f; // Keep rotation horizontal
 
             if (directionToWall.sqrMagnitude > 0.001f)
@@ -754,14 +754,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
 
     /// <summary>
-    /// Initialize static Wall cache (called once by WaveManager at game start)
+    /// Initialize static Wall cache (다중 Wall 지원 - 양방향 방어)
+    /// StageManager에서 호출
     /// </summary>
-    public static void InitializeWallCache(Transform wallTransform, Collider wallCollider, Wall wall)
+    public static void InitializeWallCache(List<Wall> walls, List<Transform> transforms, List<Collider> colliders)
     {
-        cachedWallTransform = wallTransform;
-        cachedWallCollider = wallCollider;
-        cachedWall = wall;
-        Debug.Log("[Monster] Wall cache initialized via WaveManager");
+        cachedWalls = walls ?? new List<Wall>();
+        cachedWallTransforms = transforms ?? new List<Transform>();
+        cachedWallColliders = colliders ?? new List<Collider>();
+        Debug.Log($"[Monster] Wall cache initialized with {cachedWalls.Count} wall(s)");
     }
 
     /// <summary>
@@ -769,52 +770,59 @@ public class Monster : BaseEntity, ITargetable, IMovable
     /// </summary>
     public static void ClearWallCache()
     {
-        cachedWallTransform = null;
-        cachedWallCollider = null;
-        cachedWall = null;
+        cachedWalls.Clear();
+        cachedWallTransforms.Clear();
+        cachedWallColliders.Clear();
+    }
+
+    /// <summary>
+    /// 가장 가까운 Wall을 타겟으로 설정 (양방향 방어 지원)
+    /// </summary>
+    private void FindNearestWall()
+    {
+        if (cachedWalls.Count == 0) return;
+
+        float minDistance = float.MaxValue;
+
+        for (int i = 0; i < cachedWalls.Count; i++)
+        {
+            if (cachedWalls[i] == null || !cachedWalls[i].IsAlive()) continue;
+
+            float dist = Vector3.Distance(transform.position, cachedWallTransforms[i].position);
+            if (dist < minDistance)
+            {
+                minDistance = dist;
+                targetWall = cachedWalls[i];
+                targetWallTransform = cachedWallTransforms[i];
+                targetWallCollider = cachedWallColliders[i];
+
+                // 하위 호환성: 기존 변수에도 할당
+                wall = targetWall;
+                wallTransform = targetWallTransform;
+                wallCollider = targetWallCollider;
+            }
+        }
     }
 
     /// <summary>
     /// 외부에서 목적지 설정
-    /// Wall Collider의 가장 가까운 지점을 자동 계산하여 자연스럽게 분산
+    /// 가장 가까운 Wall Collider의 가장 가까운 지점을 자동 계산 (양방향 방어 지원)
     /// </summary>
     public void SetDestination(Vector3 destination)
     {
         if (monsterMove == null) return;
 
-        // Use cached Wall reference (fallback to FindWithTag only if cache is empty)
-        if (wallCollider == null)
+        // 가장 가까운 Wall 찾기 (양방향 방어 지원)
+        if (targetWallCollider == null)
         {
-            if (cachedWallCollider != null)
-            {
-                wallCollider = cachedWallCollider;
-                wallTransform = cachedWallTransform;
-                wall = cachedWall;
-            }
-            else
-            {
-                // Fallback: FindWithTag only once per scene if cache not initialized
-                GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
-                if (wallObj != null)
-                {
-                    wallCollider = wallObj.GetComponent<Collider>();
-                    wallTransform = wallObj.transform;
-                    wall = wallObj.GetComponent<Wall>();
-
-                    // Update static cache for other monsters
-                    cachedWallCollider = wallCollider;
-                    cachedWallTransform = wallTransform;
-                    cachedWall = wall;
-                    Debug.Log("[Monster] Wall cache initialized via FindWithTag fallback");
-                }
-            }
+            FindNearestWall();
         }
 
         // Wall Collider가 있으면 가장 가까운 지점 계산
-        if (wallCollider != null)
+        if (targetWallCollider != null)
         {
             // 몬스터의 현재 위치에서 Wall Collider의 가장 가까운 지점 계산
-            Vector3 closestPoint = wallCollider.ClosestPoint(transform.position);
+            Vector3 closestPoint = targetWallCollider.ClosestPoint(transform.position);
             monsterMove.SetDestination(closestPoint);
         }
         else
@@ -831,41 +839,20 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
 
     /// <summary>
-    /// 공격 범위 체크 (Wall Collider의 가장 가까운 지점까지의 거리 기반)
+    /// 공격 범위 체크 (가장 가까운 Wall Collider 기반 - 양방향 방어 지원)
     /// </summary>
     private void CheckAttackRange()
     {
-        // Use cached Wall reference
-        if (wallCollider == null)
+        // 가장 가까운 Wall 찾기
+        if (targetWallCollider == null)
         {
-            if (cachedWallCollider != null)
-            {
-                wallCollider = cachedWallCollider;
-                wallTransform = cachedWallTransform;
-                wall = cachedWall;
-            }
-            else
-            {
-                // Fallback: FindWithTag only if cache not initialized
-                GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
-                if (wallObj != null)
-                {
-                    wallCollider = wallObj.GetComponent<Collider>();
-                    wallTransform = wallObj.transform;
-                    wall = wallObj.GetComponent<Wall>();
-
-                    // Update static cache
-                    cachedWallCollider = wallCollider;
-                    cachedWallTransform = wallTransform;
-                    cachedWall = wall;
-                }
-            }
+            FindNearestWall();
         }
 
-        if (wallCollider == null) return;
+        if (targetWallCollider == null) return;
 
         // Wall Collider의 가장 가까운 지점까지의 거리 계산
-        Vector3 closestPoint = wallCollider.ClosestPoint(transform.position);
+        Vector3 closestPoint = targetWallCollider.ClosestPoint(transform.position);
         float distanceToWall = Vector3.Distance(transform.position, closestPoint);
 
         // 공격 범위 내 진입 체크
@@ -893,23 +880,10 @@ public class Monster : BaseEntity, ITargetable, IMovable
     //LMJ : Start weight update loop
     private void StartWeightUpdate()
     {
-        // Use cached Wall reference
-        if (wallTransform == null)
+        // 가장 가까운 Wall 찾기 (양방향 방어 지원)
+        if (targetWallTransform == null)
         {
-            if (cachedWallTransform != null)
-            {
-                wallTransform = cachedWallTransform;
-            }
-            else
-            {
-                // Fallback: FindWithTag only if cache not initialized
-                GameObject wallObj = GameObject.FindWithTag(WALL_TAG);
-                if (wallObj != null)
-                {
-                    wallTransform = wallObj.transform;
-                    cachedWallTransform = wallTransform;
-                }
-            }
+            FindNearestWall();
         }
 
         // Cancel previous CTS before creating new one
@@ -932,9 +906,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
     //LMJ : Calculate weight based on wall distance
     private void UpdateWeight()
     {
-        if (wallTransform == null || isDead) return;
+        if (targetWallTransform == null || isDead) return;
 
-        float distanceToWall = Vector3.Distance(transform.position, wallTransform.position);
+        float distanceToWall = Vector3.Distance(transform.position, targetWallTransform.position);
 
         // Calculate weight: 벽에 가까울수록 가중치 증가
         float newWeight = 1f;
@@ -1062,6 +1036,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
         wall = null;
         wallTransform = null;
         wallCollider = null; // Wall 참조 초기화
+        targetWall = null;   // 타겟 Wall 초기화 (양방향 방어)
+        targetWallTransform = null;
+        targetWallCollider = null;
         attackTimer = 0f;
         Weight = 1f;
 
@@ -1109,6 +1086,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
         wall = null;
         wallTransform = null;
         wallCollider = null;
+        targetWall = null;   // 타겟 Wall 초기화 (양방향 방어)
+        targetWallTransform = null;
+        targetWallCollider = null;
         attackTimer = 0f;
         Weight = 1f;
         CancelInvoke(nameof(DespawnMonster));

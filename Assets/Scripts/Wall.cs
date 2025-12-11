@@ -85,6 +85,7 @@ public class Wall : MonoBehaviour, IEntity
     public bool IsAlive() => health > 0;
     public Vector3 GetPosition() => transform.position;
     public Transform GetTransform() => transform;
+    public WallEvents GetWallEvents() => wallEvents;
 
     #region Shield System (Issue #424)
 

@@ -44,6 +44,9 @@ namespace NovelianMagicLibraryDefense.UI
         [SerializeField] private bool pauseOnGameStart = true;
         [SerializeField] private bool pauseOnLevelUp = true;
 
+        [Header("Dependencies")]
+        [SerializeField] private CharacterPlacementManager placementManager;
+
         [Header("CharacterCardGrid (Issue #424)")]
         [SerializeField] private CharacterCardGridManager characterCardGridManager;
 
@@ -57,7 +60,6 @@ namespace NovelianMagicLibraryDefense.UI
         public event Action<CardData> OnCardSelected;
 
         private GameObject[] cardInstances;
-        private CharacterPlacementManager placementManager;
         private float previousTimeScale = 1f;
         private bool isPaused = false;
 
@@ -88,10 +90,19 @@ namespace NovelianMagicLibraryDefense.UI
 
         private async void Awake()
         {
-            placementManager = FindFirstObjectByType<CharacterPlacementManager>();
+            // JML: Inspector 참조가 없으면 Tag로 fallback 시도
             if (placementManager == null)
             {
-                Debug.LogWarning("[CardSelectPanel] CharacterPlacementManager not found in scene!");
+                GameObject cpmObj = GameObject.FindWithTag("CharacterPlacementManager");
+                if (cpmObj != null)
+                {
+                    placementManager = cpmObj.GetComponent<CharacterPlacementManager>();
+                }
+            }
+
+            if (placementManager == null)
+            {
+                Debug.LogWarning("[CardSelectPanel] CharacterPlacementManager not found! Inspector에서 할당해주세요.");
             }
             else
             {

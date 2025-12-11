@@ -56,8 +56,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 monsterEvents.AddBossDiedListener(HandleBossDied);
             }
 
-            // Initialize Monster's static Wall cache (Inspector references preferred)
-            InitializeWallCache();
+            // JML: Monster's static Wall cache is now initialized by StageManager.InitializeMonsterWallCache()
+            // to support dual defense layout (multiple walls)
 
             // LMJ: Initialize pools asynchronously
             InitializePoolsAsync().Forget();
@@ -66,13 +66,18 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// Initialize Monster's static Wall cache using Inspector references
         /// Falls back to FindWithTag if Inspector references are not set
+        /// NOTE: For dual defense layout (multiple walls), use StageManager.InitializeMonsterWallCache() instead
         /// </summary>
         private void InitializeWallCache()
         {
             // Use Inspector references if available
             if (wallTarget != null && wallCollider != null && wallComponent != null)
             {
-                Monster.InitializeWallCache(wallTarget, wallCollider, wallComponent);
+                // 단일 Wall을 List로 래핑하여 전달
+                var walls = new List<Wall> { wallComponent };
+                var transforms = new List<Transform> { wallTarget };
+                var colliders = new List<Collider> { wallCollider };
+                Monster.InitializeWallCache(walls, transforms, colliders);
                 return;
             }
 
@@ -87,7 +92,10 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 if (wallCollider != null && wallComponent != null)
                 {
-                    Monster.InitializeWallCache(wallTarget, wallCollider, wallComponent);
+                    var walls = new List<Wall> { wallComponent };
+                    var transforms = new List<Transform> { wallTarget };
+                    var colliders = new List<Collider> { wallCollider };
+                    Monster.InitializeWallCache(walls, transforms, colliders);
                     return;
                 }
             }
@@ -99,7 +107,10 @@ namespace NovelianMagicLibraryDefense.Managers
                 wallTarget = wallObj.transform;
                 wallCollider = wallObj.GetComponent<Collider>();
                 wallComponent = wallObj.GetComponent<Wall>();
-                Monster.InitializeWallCache(wallTarget, wallCollider, wallComponent);
+                var walls = new List<Wall> { wallComponent };
+                var transforms = new List<Transform> { wallTarget };
+                var colliders = new List<Collider> { wallCollider };
+                Monster.InitializeWallCache(walls, transforms, colliders);
                 Debug.LogWarning("[WaveManager] Wall references not set in Inspector, using FindWithTag fallback");
             }
             else
@@ -512,6 +523,60 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             return enemyCount;
         }
+
+        #region Issue #420 - 레이아웃 프리셋 시스템
+
+        /// <summary>
+        /// JML: 몬스터 스포너 동적 설정 (Issue #420)
+        /// StageManager에서 레이아웃 변경 시 호출
+        /// </summary>
+        public void SetMonsterSpawner(MonsterSpawner spawner)
+        {
+            if (spawner != null)
+            {
+                monsterSpawner = spawner;
+                Debug.Log($"[WaveManager] MonsterSpawner set to: {spawner.name}");
+            }
+        }
+
+        /// <summary>
+        /// JML: 보스 스포너 동적 설정 (Issue #420)
+        /// </summary>
+        public void SetBossSpawner(MonsterSpawner spawner)
+        {
+            if (spawner != null)
+            {
+                bossSpawner = spawner;
+                Debug.Log($"[WaveManager] BossSpawner set to: {spawner.name}");
+            }
+        }
+
+        /// <summary>
+        /// JML: Wall 타겟 동적 설정 (Issue #420)
+        /// StageManager에서 맵 로드 후 Wall 참조 설정 시 호출
+        /// </summary>
+        public void SetWallTarget(Transform wall, Wall wallComp = null, Collider wallColl = null)
+        {
+            wallTarget = wall;
+            wallComponent = wallComp;
+            wallCollider = wallColl;
+            Debug.Log($"[WaveManager] WallTarget set to: {wall?.name ?? "null"}");
+        }
+
+        /// <summary>
+        /// JML: 다중 스포너 설정 (Issue #420)
+        /// spawnArea1 = 몬스터 스포너, spawnArea2 = 보스 스포너 (또는 2번째 몬스터 스포너)
+        /// </summary>
+        public void SetSpawners(MonsterSpawner spawnArea1, MonsterSpawner spawnArea2 = null)
+        {
+            SetMonsterSpawner(spawnArea1);
+            if (spawnArea2 != null)
+            {
+                SetBossSpawner(spawnArea2);
+            }
+        }
+
+        #endregion
 
         protected override void OnDestroy()
         {
