@@ -12,4 +12,5 @@ public class StageData
     public int Reward_Group_ID { get; set; }
     public int AP_Cost_ID { get; set; }
     public int AP_Cost { get; set; }
+    public int Layout_Type { get; set; }
 }

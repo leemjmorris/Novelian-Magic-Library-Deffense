@@ -184,8 +184,13 @@ public class BookMarkUI : MonoBehaviour
 
     private void OnSelectionStatButtonClicked()
     {
-        // JML: 스탯 책갈피 제작은 준비 중
-        NovelianMagicLibraryDefense.Managers.WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+        choicePanel.SetActive(false);
+
+        recipePanel.SetActive(true);
+        statRecipeLayout.SetActive(true);
+        skillRecipeLayout.SetActive(false);
+        recipePanelTitleText.text = "스탯 책갈피 제작";
+        SelectedBookmarkType = BookmarkType.Stat;
     }
 
     private void OnSelectionSkillButtonClicked()
@@ -493,7 +498,7 @@ public class BookMarkUI : MonoBehaviour
 
     /// <summary>
     /// JML: 필터 드롭다운 변경 시 슬롯 필터링
-    /// 드롭다운 인덱스: 0=스텟, 1=스킬, 2=보조스킬(추후), 3=전체
+    /// 드롭다운 인덱스: 0=전체, 1=스텟, 2=스킬
     /// </summary>
     private void OnFilterChanged(int index)
     {
@@ -503,8 +508,7 @@ public class BookMarkUI : MonoBehaviour
             0 => BookmarkType.All,
             1 => BookmarkType.Stat,
             2 => BookmarkType.Skill,
-            3 => BookmarkType.SubSkill,  // 추후 구현
-             _ => BookmarkType.All
+            _ => BookmarkType.All
         };
 
         // JML: 슬롯들 필터링
@@ -538,7 +542,6 @@ public class BookMarkUI : MonoBehaviour
         {
             BookmarkType.Stat => "PictoIcon_Buff",
             BookmarkType.Skill => "PictoIcon_Battle",
-            BookmarkType.SubSkill => "PictoIcon_Attack",
             _ => "PictoIcon_Battle"
         };
     }
@@ -658,8 +661,11 @@ public class BookMarkUI : MonoBehaviour
 
         if (bookMark.Type == BookmarkType.Stat)
         {
-            string optionName = GetOptionTypeName(bookMark.OptionType);
-            return $"{gradeName} 등급\n{optionName} +{bookMark.OptionValue}\n책갈피 제작 성공!";
+            // JML: CSV에서 옵션 이름 가져오기
+            string optionName = GetOptionNameFromCSV(bookMark.BookmarkDataID);
+            // JML: 소수점 값을 %로 변환 (0.02 → 2%)
+            int percentValue = Mathf.RoundToInt(bookMark.OptionValue * 100);
+            return $"{gradeName} 등급\n{optionName} +{percentValue}%\n책갈피 제작 성공!";
         }
         else // Skill
         {
@@ -699,18 +705,33 @@ public class BookMarkUI : MonoBehaviour
     }
 
     /// <summary>
-    /// JML: 옵션 타입 이름 반환
-    /// TODO: 나중에 CSV 테이블에서 가져오도록 변경
+    /// JML: BookmarkDataID로 CSV에서 옵션 이름 가져오기
+    /// BookmarkData → BookmarkOptionData → StringTable 체인 조회
     /// </summary>
-    private string GetOptionTypeName(int optionType)
+    private string GetOptionNameFromCSV(int bookmarkDataID)
     {
-        switch (optionType)
+        // 1. BookmarkData에서 Option_ID 가져오기
+        var bookmarkData = CSVLoader.Instance.GetData<BookmarkData>(bookmarkDataID);
+        if (bookmarkData == null || bookmarkData.Option_ID <= 0)
         {
-            case 1: return "공격력";
-            case 2: return "방어력";
-            case 3: return "체력";
-            default: return "알 수 없음";
+            return "알 수 없음";
         }
+
+        // 2. BookmarkOptionData에서 Option_Name_ID 가져오기
+        var optionData = CSVLoader.Instance.GetData<BookmarkOptionData>(bookmarkData.Option_ID);
+        if (optionData == null)
+        {
+            return "알 수 없음";
+        }
+
+        // 3. StringTable에서 이름 가져오기
+        var stringData = CSVLoader.Instance.GetData<StringTable>(optionData.Option_Name_ID);
+        if (stringData == null || string.IsNullOrEmpty(stringData.Text))
+        {
+            return "알 수 없음";
+        }
+
+        return stringData.Text;
     }
 
     /// <summary>

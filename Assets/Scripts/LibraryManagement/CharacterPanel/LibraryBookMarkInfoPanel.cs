@@ -127,7 +127,6 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
             string warningMessage = currentBookmark.Type switch
             {
                 BookmarkType.Skill => WarningText.MainSkillBookmarkLimitReached,
-                BookmarkType.SubSkill => WarningText.SubSkillBookmarkLimitReached,
                 BookmarkType.Stat => WarningText.StatBookmarkLimitReached,
                 _ => WarningText.FeatureNotReady
             };
@@ -234,7 +233,6 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
                 string warningMessage = currentBookmark.Type switch
                 {
                     BookmarkType.Skill => WarningText.MainSkillBookmarkLimitReached,
-                    BookmarkType.SubSkill => WarningText.SubSkillBookmarkLimitReached,
                     BookmarkType.Stat => WarningText.StatBookmarkLimitReached,
                     _ => WarningText.FeatureNotReady
                 };

@@ -1,0 +1,595 @@
+//LMJ : Character with simple projectile-based combat (Issue #265)
+//     Migrated to new CSV-based skill system
+//     Refactored to partial classes for better maintainability
+namespace Novelian.Combat
+{
+    using UnityEngine;
+    using Cysharp.Threading.Tasks;
+    using System.Threading;
+    using System.Collections.Generic;
+    using NovelianMagicLibraryDefense.Managers;
+
+    /// <summary>
+    /// 캐릭터 메인 클래스 (코어)
+    /// - MonoBehaviour 필드 및 생명주기 관리
+    /// - 공격 루프 및 스킬 실행 조율
+    /// - IPoolable 구현
+    ///
+    /// Partial Classes:
+    /// - Character.Stats.cs: 스탯/버프/성급/책갈피
+    /// - Character.SkillData.cs: 스킬 데이터 로딩/계산
+    /// - Character.SkillExecutor.cs: 스킬 실행 (투사체/AOE/채널링/버프/트랩)
+    /// - Character.Targeting.cs: 타겟 선정 로직
+    /// - Character.StatusEffects.cs: 상태이상 적용
+    /// - Character.Visuals.cs: 비주얼 파츠 관리
+    /// - Character.Animation.cs: 애니메이션 제어
+    /// </summary>
+    public partial class Character : MonoBehaviour, IPoolable
+    {
+        #region Serialized Fields
+
+        [Header("Character Visual")]
+        [SerializeField] private GameObject characterObj;
+
+        [Header("Character Animator")]
+        [SerializeField] private Animator characterAnimator;
+
+        [Header("스킬 장착 (Skill Equipment) - CSV ID 기반")]
+        [SerializeField, Tooltip("기본 공격 스킬 ID (MainSkillTable)")]
+        private int basicAttackSkillId = 39001;
+
+        [SerializeField, Tooltip("액티브 스킬 ID (MainSkillTable)")]
+        private int activeSkillId = 0;
+
+        [SerializeField, Tooltip("보조 스킬 ID (SupportSkillTable)")]
+        private int supportSkillId = 0;
+
+        [Header("캐릭터 스텟 변형 (%) (Character Stat Modifiers)")]
+        [SerializeField, Tooltip("데미지 변형 (%)")]
+        private float damageModifier = 0f;
+
+        [SerializeField, Tooltip("공격 속도 변형 (%)")]
+        private float attackSpeedModifier = 0f;
+
+        [SerializeField, Tooltip("투사체 속도 변형 (%)")]
+        private float projectileSpeedModifier = 0f;
+
+        [SerializeField, Tooltip("사거리 변형 (%)")]
+        private float rangeModifier = 0f;
+
+        [SerializeField, Tooltip("치명타 확률 변형 (%)")]
+        private float critChanceModifier = 0f;
+
+        [SerializeField, Tooltip("치명타 배율 변형 (%)")]
+        private float critMultiplierModifier = 0f;
+
+        [SerializeField, Tooltip("추가 데미지 변형 (%)")]
+        private float bonusDamageModifier = 0f;
+
+        [SerializeField, Tooltip("체력 회복 변형 (%)")]
+        private float healthRegenModifier = 0f;
+
+        [SerializeField, Tooltip("쿨타임 감소 (%)")]
+        private float cooldownModifier = 0f;
+
+        [SerializeField, Tooltip("시전 속도 감소 (%)")]
+        private float castTimeModifier = 0f;
+
+        [SerializeField, Tooltip("보스 데미지 증가 (%)")]
+        private float bossDamageModifier = 0f;
+
+        [Header("Spawn Position")]
+        [SerializeField, Tooltip("Projectile spawn offset (Y=1.5 for chest height)")]
+        private Vector3 spawnOffset = new Vector3(0f, 1.5f, 0f);
+
+        [Header("Projectile Template")]
+        [SerializeField, Tooltip("Generic projectile template (used when skill has no projectile prefab)")]
+        private GameObject projectileTemplate;
+
+        [Header("Targeting Strategy")]
+        [SerializeField, Tooltip("Use weight-based targeting (default: distance-based)")]
+        private bool useWeightTargeting = false;
+
+        #endregion
+
+        #region Private Fields
+
+        // 캐싱된 스킬 데이터
+        private MainSkillData basicAttackData;
+        private MainSkillData activeSkillData;
+        private SupportSkillData supportData;
+        private MainSkillPrefabEntry basicAttackPrefabs;
+        private MainSkillPrefabEntry activeSkillPrefabs;
+        private SupportSkillPrefabEntry supportPrefabs;
+
+        // 스킬 레벨 데이터 (현재는 레벨 1 고정, 추후 레벨 시스템 추가 시 확장)
+#pragma warning disable CS0414 // 추후 레벨 시스템 구현 시 사용 예정
+        private int currentSkillLevel = 1;
+#pragma warning restore CS0414
+
+        // Attack state
+        private CancellationTokenSource attackCts;
+        private CancellationTokenSource activeSkillCts;
+        private CancellationTokenSource channelingCts;
+        private bool isInitialized = false;
+        private bool isChanneling = false;
+
+        // JML: 책갈피 시스템 (Issue #320)
+        private int characterId = -1;
+        private bool isManuallyInitialized = false;  // Initialize()로 초기화되었는지 여부
+        private bool autoAttackEnabled = true;  // 자동 공격 활성화 여부 (테스트 씬에서 false로 설정)
+
+        // JML: 비주얼 파츠 캐시 (Issue #356)
+        private Dictionary<string, Transform> cachedTransforms = new Dictionary<string, Transform>();
+        private Transform weaponRightSlot;
+        private Transform weaponLeftSlot;
+
+        // 속성(장르) 강화 modifier (GenreType별 누적)
+        private Dictionary<GenreType, float> genreModifiers = new Dictionary<GenreType, float>();
+
+        #endregion
+
+        #region Lifecycle
+
+        private void Start()
+        {
+            // Initialize()로 이미 초기화되었으면 스킵
+            if (isManuallyInitialized) return;
+
+            // 기존 방식 (프리팹 Inspector 값 사용) - 하위 호환성
+            ApplyBookmarksIfAvailable();
+            LoadSkillData();
+            InitializeProjectilePool();
+            InitializeActiveSkillPool();
+
+            // 자동 공격이 활성화된 경우에만 공격 루프 시작
+            if (autoAttackEnabled)
+            {
+                StartAttackLoop();
+                StartActiveSkillLoop();
+            }
+
+            isInitialized = true;
+        }
+
+        /// <summary>
+        /// JML: CSV 데이터 기반 초기화 (Issue #320)
+        /// CharacterPlacementManager에서 호출
+        /// </summary>
+        public void Initialize(int csvCharacterId)
+        {
+            characterId = csvCharacterId;
+            isManuallyInitialized = true;
+
+            Debug.Log($"[Character] Initialize 시작 (CharacterID: {csvCharacterId})");
+
+            // 0. 비주얼 파츠 적용 (Issue #356)
+            ApplyVisualConfig(csvCharacterId);
+
+            // 1. CSV에서 캐릭터 데이터 로드
+            var characterData = CSVLoader.Instance?.GetData<CharacterData>(csvCharacterId);
+            if (characterData != null)
+            {
+                // Base_Skill_ID를 기본 공격 스킬로 설정
+                basicAttackSkillId = characterData.Base_Skill_ID;
+                Debug.Log($"[Character] CSV에서 Base_Skill_ID 로드: {basicAttackSkillId}");
+            }
+            else
+            {
+                Debug.LogWarning($"[Character] CharacterData를 찾을 수 없음 (ID: {csvCharacterId}). 기본값 사용.");
+            }
+
+            // 2. 책갈피 적용 (스탯 + 스킬)
+            ApplyBookmarksIfAvailable();
+
+            // 3. 스킬 데이터 로드 및 초기화
+            LoadSkillData();
+            InitializeProjectilePool();
+            InitializeActiveSkillPool();
+            StartAttackLoop();
+            StartActiveSkillLoop();
+
+            isInitialized = true;
+            Debug.Log($"[Character] Initialize 완료 (CharacterID: {csvCharacterId}, BasicSkill: {basicAttackSkillId})");
+        }
+
+        private void OnDestroy()
+        {
+            attackCts?.Cancel();
+            attackCts?.Dispose();
+            activeSkillCts?.Cancel();
+            activeSkillCts?.Dispose();
+            channelingCts?.Cancel();
+            channelingCts?.Dispose();
+        }
+
+        #endregion
+
+        #region Attack Loop
+
+        //LMJ : Start attack loop
+        private void StartAttackLoop()
+        {
+            attackCts?.Cancel();
+            attackCts?.Dispose();
+            attackCts = new CancellationTokenSource();
+            AttackLoopAsync(attackCts.Token).Forget();
+        }
+
+        //LMJ : Main attack loop with UniTask (using skill-based attack speed)
+        private async UniTaskVoid AttackLoopAsync(CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                // Wait for attack interval (using final attack speed from skill + character modifier)
+                float interval = 1f / FinalAttackSpeed;
+                await UniTask.Delay((int)(interval * 1000), cancellationToken: ct);
+
+                // Pause support (skip attack when Time.timeScale = 0)
+                if (Time.timeScale == 0f) continue;
+
+                TryAttack();
+            }
+        }
+
+        //LMJ : Start active skill loop
+        private void StartActiveSkillLoop()
+        {
+            if (activeSkillData == null)
+            {
+                Debug.LogWarning("[Character] activeSkillData is null. Skipping active skill loop.");
+                return;
+            }
+
+            activeSkillCts?.Cancel();
+            activeSkillCts?.Dispose();
+            activeSkillCts = new CancellationTokenSource();
+            ActiveSkillLoopAsync(activeSkillCts.Token).Forget();
+        }
+
+        //LMJ : Active skill loop with UniTask (independent cooldown)
+        private async UniTaskVoid ActiveSkillLoopAsync(CancellationToken ct)
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                // Wait for active skill interval (using final attack speed from active skill + character modifier)
+                float interval = 1f / FinalActiveAttackSpeed;
+                await UniTask.Delay((int)(interval * 1000), cancellationToken: ct);
+
+                // Pause support (skip attack when Time.timeScale = 0)
+                if (Time.timeScale == 0f) continue;
+
+                TryUseActiveSkill();
+            }
+        }
+
+        //LMJ : Attempt to attack nearest or highest weight target (skill-based)
+        //      Now supports all skill types (same as ForceAttack)
+        private void TryAttack()
+        {
+            // 디버그: 초기화 상태 확인
+            if (!isInitialized)
+            {
+                Debug.LogWarning("[Character] TryAttack skipped: not initialized");
+                return;
+            }
+            if (basicAttackData == null)
+            {
+                Debug.LogWarning("[Character] TryAttack skipped: basicAttackData is null");
+                return;
+            }
+
+            // Check skill type and call appropriate method
+            var skillType = basicAttackData.GetSkillType();
+
+            // 버프 스킬은 타겟이 필요 없음 (자기/아군 대상)
+            if (skillType == SkillAssetType.Buff)
+            {
+                UseBuffSkillAsync(basicAttackData, basicAttackPrefabs).Forget();
+                return;
+            }
+
+            // 타겟 탐색 범위 결정: range가 0이면 aoe_radius 사용 (관중의야유 등 전역 디버프)
+            float searchRange = FinalRange;
+            if (searchRange <= 0 && basicAttackData.aoe_radius > 0)
+            {
+                searchRange = basicAttackData.aoe_radius;
+            }
+            // 그래도 0이면 기본값 사용
+            if (searchRange <= 0) searchRange = 100f;
+
+            // Find target with mark priority, then use weight/distance strategy
+            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, searchRange, useWeightTargeting);
+
+            if (target == null)
+            {
+                // 타겟이 없으면 공격 스킵 (정상적인 상황)
+                return;
+            }
+
+            // JML: 공격 애니메이션 재생
+            PlayAttackAnimation();
+
+            // 스킬 타입별 분기 처리
+            ExecuteSkillByType(skillType, target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed, FinalProjectileLifetime, isActiveSkill: false);
+        }
+
+        //LMJ : Attempt to use active skill on target
+        private void TryUseActiveSkill()
+        {
+            if (!isInitialized || activeSkillData == null) return;
+
+            // Skip if already channeling
+            if (isChanneling) return;
+
+            // Check skill type
+            var skillType = activeSkillData.GetSkillType();
+
+            // 버프 스킬은 타겟이 필요 없음 (자기/아군 대상)
+            if (skillType == SkillAssetType.Buff)
+            {
+                UseBuffSkillAsync(activeSkillData, activeSkillPrefabs).Forget();
+                return;
+            }
+
+            // 타겟 탐색 범위 결정: range가 0이면 aoe_radius 사용
+            float searchRange = FinalActiveRange;
+            if (searchRange <= 0 && activeSkillData.aoe_radius > 0)
+            {
+                searchRange = activeSkillData.aoe_radius;
+            }
+            if (searchRange <= 0) searchRange = 100f;
+
+            // Find target with mark priority, then use weight/distance strategy
+            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, searchRange, useWeightTargeting);
+
+            if (target == null) return;
+
+            // JML: 공격 애니메이션 재생 (액티브 스킬도 동일)
+            PlayAttackAnimation();
+
+            // 스킬 타입별 분기 처리
+            ExecuteSkillByType(skillType, target, activeSkillData, activeSkillPrefabs, FinalActiveDamage, FinalActiveRange, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, isActiveSkill: true);
+        }
+
+        /// <summary>
+        /// 스킬 타입별 실행 분기 (TryAttack, TryUseActiveSkill, ForceAttack 공통)
+        /// </summary>
+        private void ExecuteSkillByType(SkillAssetType skillType, ITargetable target, MainSkillData skillData, MainSkillPrefabEntry prefabs, float damage, float range, float projectileSpeed, float lifetime, bool isActiveSkill)
+        {
+            switch (skillType)
+            {
+                // 투사체 스킬 - 투사체 발사
+                case SkillAssetType.Projectile:
+                    if (isActiveSkill)
+                    {
+                        // 액티브 스킬 특수 처리 (다이너마이트, 전설의 지팡이 등)
+                        if (skillData.IsDynamiteSkill)
+                            LaunchActiveProjectile(target, isDynamite: true);
+                        else if (skillData.IsLegendaryStaffSkill)
+                            LaunchActiveProjectile(target, isLegendaryStaff: true);
+                        else if (skillData.IsTimeBombSkill)
+                            LaunchActiveProjectile(target, isTimeBomb: true);
+                        else if (skillData.IsBoomerangSkill)
+                            LaunchActiveProjectile(target, isBoomerang: true);
+                        else
+                            LaunchActiveProjectile(target);
+                    }
+                    else
+                    {
+                        LaunchProjectile(target);
+                    }
+                    break;
+
+                // 단일 즉발 스킬 - 타겟에게 즉시 데미지/효과
+                case SkillAssetType.InstantSingle:
+                    // 심장마비: 체력 10% 이하 적 즉사 (보스 제외)
+                    if (skillData.IsInstantKillSkill)
+                    {
+                        if (isActiveSkill)
+                            UseActiveInstantKillSkill(target);
+                        else
+                            UseInstantKillSkill(target);
+                    }
+                    else
+                    {
+                        UseAOESkillAsync(target, skillData, prefabs, damage, range, projectileSpeed).Forget();
+                    }
+                    break;
+
+                // 범위 스킬 - 타겟 위치에 AOE 효과
+                case SkillAssetType.AOE:
+                    // 다이너마이트: 투사체를 던져서 N초 후 폭발 (특수 처리)
+                    if (skillData.IsDynamiteSkill)
+                    {
+                        if (isActiveSkill)
+                            LaunchActiveProjectile(target, isDynamite: true);
+                        else
+                            LaunchDynamiteProjectile(target);
+                    }
+                    // 전설의 지팡이: 투사체가 일직선으로 날아가며 경로상 AOE 데미지 (특수 처리)
+                    else if (skillData.IsLegendaryStaffSkill)
+                    {
+                        if (isActiveSkill)
+                            LaunchActiveProjectile(target, isLegendaryStaff: true);
+                        else
+                            LaunchLegendaryStaffProjectile(target);
+                    }
+                    else
+                    {
+                        UseAOESkillAsync(target, skillData, prefabs, damage, range, projectileSpeed).Forget();
+                    }
+                    break;
+
+                // DOT 스킬 - 범위 내 적에게 지속 데미지 (AOE 방식)
+                case SkillAssetType.DOT:
+                    UseAOESkillAsync(target, skillData, prefabs, damage, range, projectileSpeed).Forget();
+                    break;
+
+                // 디버프 스킬 - 범위 내 적에게 디버프 적용 (AOE 방식)
+                case SkillAssetType.Debuff:
+                    UseAOESkillAsync(target, skillData, prefabs, damage, range, projectileSpeed).Forget();
+                    break;
+
+                // 채널링 스킬 - 지속 시전
+                case SkillAssetType.Channeling:
+                    UseChannelingSkillAsync(target, skillData, prefabs, damage).Forget();
+                    break;
+
+                // 트랩 스킬 - 필드에 트랩 오브젝트 설치
+                case SkillAssetType.Trap:
+                    PlaceTrapObject(target, skillData, prefabs, damage);
+                    break;
+
+                // 지뢰 스킬 - 필드에 지뢰 오브젝트 설치
+                case SkillAssetType.Mine:
+                    PlaceMineObject(target, skillData, prefabs, damage);
+                    break;
+
+                default:
+                    Debug.LogWarning($"[Character] Unknown skill type: {skillType}, falling back to projectile");
+                    if (isActiveSkill)
+                        LaunchActiveProjectile(target);
+                    else
+                        LaunchProjectile(target);
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region IPoolable Implementation
+
+        public void OnSpawn()
+        {
+            characterObj.SetActive(true);
+
+            if (!isInitialized)
+            {
+                Start();
+            }
+            else
+            {
+                StartAttackLoop();
+                StartActiveSkillLoop();
+            }
+
+            Debug.Log("[Character] Character spawned and ready");
+        }
+
+        public void OnDespawn()
+        {
+            characterObj.SetActive(false);
+            attackCts?.Cancel();
+            attackCts?.Dispose();
+            attackCts = null;
+            activeSkillCts?.Cancel();
+            activeSkillCts?.Dispose();
+            activeSkillCts = null;
+            channelingCts?.Cancel();
+            channelingCts?.Dispose();
+            channelingCts = null;
+            Debug.Log("[Character] Character despawned");
+        }
+
+        #endregion
+
+        #region Public API (Test Methods)
+
+        /// <summary>
+        /// 테스트용: 수동으로 공격 발사 (SkillTestManager에서 호출)
+        /// 스킬 타입에 따라 적절한 메서드를 호출
+        /// </summary>
+        public void ForceAttack()
+        {
+            if (!isInitialized || basicAttackData == null)
+            {
+                Debug.LogWarning("[Character] ForceAttack skipped: not initialized or no skill data");
+                return;
+            }
+
+            // Check skill type and call appropriate method
+            var skillType = basicAttackData.GetSkillType();
+            Debug.Log($"[Character] ForceAttack: {basicAttackData.skill_name} (Type: {skillType})");
+
+            // 버프 스킬은 타겟이 필요 없음 (자기/아군 대상)
+            if (skillType == SkillAssetType.Buff)
+            {
+                UseBuffSkillAsync(basicAttackData, basicAttackPrefabs).Forget();
+                return;
+            }
+
+            // 타겟 탐색 범위 결정: range가 0이면 aoe_radius 사용 (관중의야유 등 전역 디버프)
+            float searchRange = FinalRange;
+            if (searchRange <= 0 && basicAttackData.aoe_radius > 0)
+            {
+                searchRange = basicAttackData.aoe_radius;
+            }
+            // 그래도 0이면 기본값 사용
+            if (searchRange <= 0) searchRange = 100f;
+
+            // Find target (버프 외 스킬은 타겟 필요)
+            ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, searchRange, useWeightTargeting);
+            if (target == null)
+            {
+                Debug.LogWarning($"[Character] ForceAttack skipped: no target found (searchRange={searchRange})");
+                return;
+            }
+
+            ExecuteSkillByType(skillType, target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed, FinalProjectileLifetime, isActiveSkill: false);
+        }
+
+        /// <summary>
+        /// 테스트용: 자동 공격 루프 활성화/비활성화 (SkillTestManager에서 사용)
+        /// Start() 전에 호출하면 자동 공격 시작을 방지, 후에 호출하면 루프 중지/재시작
+        /// </summary>
+        public void SetAutoAttackEnabled(bool enabled)
+        {
+            autoAttackEnabled = enabled;
+
+            if (!enabled)
+            {
+                // 자동 공격 루프 중지 (이미 시작된 경우)
+                attackCts?.Cancel();
+                attackCts?.Dispose();
+                attackCts = null;
+
+                activeSkillCts?.Cancel();
+                activeSkillCts?.Dispose();
+                activeSkillCts = null;
+
+                Debug.Log("[Character] 자동 공격 비활성화");
+            }
+            else if (isInitialized)
+            {
+                // 이미 초기화된 후에 활성화하면 루프 재시작
+                StartAttackLoop();
+                StartActiveSkillLoop();
+                Debug.Log("[Character] 자동 공격 활성화");
+            }
+        }
+
+        //LMJ : Set spawn offset from CharacterPreset (future feature)
+        public void SetSpawnOffsetFromPreset(Vector3 offset)
+        {
+            spawnOffset = offset;
+        }
+
+        //LMJ : Set targeting strategy at runtime
+        public void SetTargetingStrategy(bool useWeight)
+        {
+            useWeightTargeting = useWeight;
+        }
+
+        //LMJ : Set skill IDs at runtime
+        public void SetSkillIds(int basicAttackId, int activeId = 0, int supportId = 0)
+        {
+            basicAttackSkillId = basicAttackId;
+            activeSkillId = activeId;
+            supportSkillId = supportId;
+            LoadSkillData();
+        }
+
+        #endregion
+    }
+}

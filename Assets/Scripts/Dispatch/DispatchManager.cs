@@ -71,13 +71,16 @@ namespace Dispatch
             }
 
             DateTime startTime = timeProvider.GetCurrentTime();
-            DateTime endTime = startTime.AddHours(hours);
+
+            // 북마크 파견 시간 감소 modifier 적용
+            float reducedHours = RewardHelper.CalculateDispatchTime(hours);
+            DateTime endTime = startTime.AddHours(reducedHours);
 
             var dispatchInfo = new ActiveDispatchInfo(
                 locationId,
                 locationName,
                 type,
-                hours,
+                hours, // 원본 시간 저장 (UI 표시용)
                 startTime,
                 endTime
             );
@@ -90,14 +93,14 @@ namespace Dispatch
             Debug.Log($"<color=cyan>[DispatchManager] 파견 시작!</color>\n" +
                       $"장소: {locationName}\n" +
                       $"타입: {(type == DispatchType.Combat ? "전투형" : "채집형")}\n" +
-                      $"시간: {hours}시간 (배율: x{rewardMultiplier})\n" +
+                      $"시간: {hours}시간 → {reducedHours:F1}시간 (북마크 감소 적용, 배율: x{rewardMultiplier})\n" +
                       $"시작: {startTime:yyyy-MM-dd HH:mm:ss}\n" +
                       $"완료 예정: {endTime:yyyy-MM-dd HH:mm:ss}");
 
             if (useTestMode)
             {
-                float realSeconds = (hours * 3600f) / testTimeScale;
-                Debug.Log($"<color=yellow>[테스트] 실제 대기 시간: 약 {realSeconds:F1}초</color>");
+                float realSeconds = (reducedHours * 3600f) / testTimeScale;
+                Debug.Log($"<color=yellow>[테스트] 실제 대기 시간: 약 {realSeconds:F1}초 (원본 {hours}시간 → {reducedHours:F1}시간)</color>");
             }
         }
 

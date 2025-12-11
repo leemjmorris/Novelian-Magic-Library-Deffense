@@ -461,12 +461,14 @@ namespace Dispatch
             // 파견 시작 상태로 전환
             isDispatching = true;
             // 테스트용: 초 단위로 시간 설정 (실제 게임에서는 시간 * 3600)
-            remainingTime = currentSelectedHours; // 선택한 숫자를 초로 사용 (4시간 선택 = 4초)
+            // 북마크 파견 시간 감소 modifier 적용
+            float reducedTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
+            remainingTime = reducedTime; // 선택한 숫자를 초로 사용 (4시간 선택 = 4초, modifier 적용)
 
             // UI 업데이트
             UpdateDispatchUI();
 
-            AddLog($"⏰ 테스트 모드: {currentSelectedHours}초 후 완료 예정");
+            AddLog($"⏰ 테스트 모드: {reducedTime:F1}초 후 완료 예정 (원본: {currentSelectedHours}초, 감소 적용)");
             AddLog("==============================================\n");
         }
 
@@ -982,8 +984,9 @@ namespace Dispatch
                 var reward = CSVLoader.Instance.GetData<RewardData>(rewardID);
                 if (reward == null) continue;
 
-                // Is_Fixed = 1이면 무조건 드랍, 0이면 확률에 따라 드랍
-                bool shouldDrop = reward.Is_Fixed || Random.value <= reward.Probability;
+                // Is_Fixed = 1이면 무조건 드랍, 0이면 확률에 따라 드랍 (북마크 아이템 드랍율 보너스 적용)
+                float modifiedProbability = RewardHelper.CalculateItemDropRate(reward.Probability);
+                bool shouldDrop = reward.Is_Fixed || Random.value <= modifiedProbability;
 
                 if (shouldDrop)
                 {
@@ -998,27 +1001,30 @@ namespace Dispatch
 
                     int dropCount = Random.Range(minCount, maxCount + 1);
 
+                    // 북마크 보너스 적용 (골드인 경우 골드 보너스 적용)
+                    int finalAmount = RewardHelper.CalculateRewardAmount(dropCount, reward.Item_ID);
+
                     // 아이템 이름 가져오기
                     string itemName = GetItemName(reward.Item_ID);
 
-                    // 드랍 로그
-                    string fixedText = reward.Is_Fixed ? "[고정]" : $"[{reward.Probability * 100:F1}% 성공]";
-                    AddLog($"  ✅ {fixedText} {itemName} x{dropCount}");
+                    // 드랍 로그 (확률 보너스 표시)
+                    string fixedText = reward.Is_Fixed ? "[고정]" : $"[{modifiedProbability * 100:F1}% 성공]";
+                    AddLog($"  ✅ {fixedText} {itemName} x{finalAmount}");
 
                     // 골드(1601)는 CurrencyManager로, 나머지는 IngredientManager로 추가
                     if (reward.Item_ID == 1601)
                     {
                         if (CurrencyManager.Instance != null)
                         {
-                            CurrencyManager.Instance.AddGold(dropCount);
-                            AddLog($"  💰 골드 추가됨");
+                            CurrencyManager.Instance.AddGold(finalAmount);
+                            AddLog($"  💰 골드 추가됨 (북마크 보너스 적용)");
                         }
                     }
                     else
                     {
                         if (IngredientManager.Instance != null)
                         {
-                            IngredientManager.Instance.AddIngredient(reward.Item_ID, dropCount);
+                            IngredientManager.Instance.AddIngredient(reward.Item_ID, finalAmount);
                             AddLog($"  💼 인벤토리에 추가됨");
                         }
                     }
@@ -1122,7 +1128,6 @@ namespace Dispatch
         {
             if (targetImage == null) return;
 
-            // 현재는 모든 캐릭터가 같은 이미지 사용 ("ChaIcon")
             UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(AddressableKey.Icon_Character).Completed += handle =>
             {
                 if (handle.Status == UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)
@@ -1200,8 +1205,9 @@ namespace Dispatch
                 return;
             }
 
-            // 종료 시간 계산
-            System.DateTime endTime = dispatchStartTime.AddSeconds(currentSelectedHours);
+            // 종료 시간 계산 (북마크 파견 시간 감소 modifier 적용)
+            float reducedDispatchTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
+            System.DateTime endTime = dispatchStartTime.AddSeconds(reducedDispatchTime);
 
             var state = new Firebase.Data.DispatchStateData
             {
