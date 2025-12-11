@@ -27,6 +27,9 @@ public class LobbyUI : MonoBehaviour
     [Header("Menu Layout")]
     [SerializeField] private GameObject menuLayout; // 메뉴 레이아웃 (토글용)
 
+    [Header("Profile Panel")]
+    [SerializeField] private GameObject profileDetailPanel; // 프로필 상세 패널 (버튼 누르면 열림)
+
     private bool isDispatchCompleted = false; // 파견 완료 상태 캐싱
 
     private void OnEnable()
@@ -207,6 +210,8 @@ public class LobbyUI : MonoBehaviour
         }
     }
 
+    
+
     public void OnShopButton()
     {
         WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
@@ -316,6 +321,34 @@ public class LobbyUI : MonoBehaviour
     public void OnChallengeDungeonButton()
     {
         WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+    }
+
+    /// <summary>
+    /// 프로필 버튼 클릭 시 프로필 상세 패널 활성화
+    /// </summary>
+    public void OnProfileButton()
+    {
+        Debug.Log("[LobbyUI] OnProfileButton 호출됨!");
+        if (profileDetailPanel != null)
+        {
+            profileDetailPanel.SetActive(true);
+            Debug.Log("[LobbyUI] profileDetailPanel 활성화됨");
+        }
+        else
+        {
+            Debug.LogWarning("[LobbyUI] profileDetailPanel이 null입니다!");
+        }
+    }
+
+    /// <summary>
+    /// 프로필 상세 패널 닫기 버튼
+    /// </summary>
+    public void OnProfileCloseButton()
+    {
+        if (profileDetailPanel != null)
+        {
+            profileDetailPanel.SetActive(false);
+        }
     }
 
 
