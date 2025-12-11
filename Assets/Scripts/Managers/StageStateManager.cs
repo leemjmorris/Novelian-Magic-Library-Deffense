@@ -74,7 +74,8 @@ namespace NovelianMagicLibraryDefense.Managers
             if (wallObj != null)
             {
                 wall = wallObj.GetComponent<Wall>();
-                wallEvents = wallObj.GetComponent<WallEvents>();
+                // WallEvents는 ScriptableObject이므로 Wall 컴포넌트에서 가져옴
+                wallEvents = wall?.GetWallEvents();
                 Debug.Log($"[StageStateManager] Found Wall: {wallObj.name}");
             }
             else
@@ -87,7 +88,8 @@ namespace NovelianMagicLibraryDefense.Managers
             if (wall2Obj != null)
             {
                 wall2 = wall2Obj.GetComponent<Wall>();
-                wallEvents2 = wall2Obj.GetComponent<WallEvents>();
+                // WallEvents는 ScriptableObject이므로 Wall 컴포넌트에서 가져옴
+                wallEvents2 = wall2?.GetWallEvents();
                 Debug.Log($"[StageStateManager] Found Wall2: {wall2Obj.name}");
             }
         }

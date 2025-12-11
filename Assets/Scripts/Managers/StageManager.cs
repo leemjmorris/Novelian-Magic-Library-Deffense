@@ -228,6 +228,8 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private async UniTaskVoid ApplyLayoutPresetAsync(StageData stageData)
         {
+            try
+            {
             int layoutType = stageData.Layout_Type;
 
             if (layoutType <= 0)
@@ -308,7 +310,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 Debug.Log($"[StageManager] Wall 2 HP set to {stageData.Barrier_HP}");
             }
 
-            // 7. WaveManager에 MonsterSpawner 설정
+            // 7. WaveManager에 MonsterSpawner 및 WallTarget 설정
             if (waveManager != null)
             {
                 var spawner1 = spawnArea1?.GetComponent<NovelianMagicLibraryDefense.Spawners.MonsterSpawner>();
@@ -323,6 +325,14 @@ namespace NovelianMagicLibraryDefense.Managers
                 {
                     waveManager.SetBossSpawner(spawner2);
                     Debug.Log("[StageManager] MonsterSpawner 2 (Boss) set to WaveManager");
+                }
+
+                // JML: WaveManager에 Wall 타겟 설정 (몬스터 목적지 설정에 필요)
+                if (protectionObj != null)
+                {
+                    var wallColl = protectionObj.GetComponent<Collider>();
+                    waveManager.SetWallTarget(protectionObj, wallComponent, wallColl);
+                    Debug.Log("[StageManager] WallTarget set to WaveManager");
                 }
             }
 
@@ -342,6 +352,11 @@ namespace NovelianMagicLibraryDefense.Managers
             ShowStartCardSelection().Forget();
 
             Debug.Log($"[StageManager] Layout preset '{layoutData.Layout_Name}' applied successfully!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[StageManager] ApplyLayoutPresetAsync EXCEPTION: {e.Message}\n{e.StackTrace}");
+            }
         }
 
         /// <summary>

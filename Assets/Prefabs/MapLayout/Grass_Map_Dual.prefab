@@ -772,8 +772,31 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7814809119520851629, guid: fe18f25c93a3862418cf507c6f65ec0c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5397029555525119152}
   m_SourcePrefab: {fileID: 100100000, guid: fe18f25c93a3862418cf507c6f65ec0c, type: 3}
+--- !u!1 &73632709015026778 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7814809119520851629, guid: fe18f25c93a3862418cf507c6f65ec0c, type: 3}
+  m_PrefabInstance: {fileID: 7887597291919817463}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &5397029555525119152
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 73632709015026778}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a0d2cf21e4cdfa49b35543182afd9bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spawnAreaSize: {x: 10, y: 1, z: 2}
+  gizmoColor: {r: 1, g: 0.5, b: 0, a: 0.3}
+  wireColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!4 &7744273775141901349 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 436690859656900306, guid: fe18f25c93a3862418cf507c6f65ec0c, type: 3}
@@ -839,10 +862,33 @@ PrefabInstance:
     - {fileID: 9209415342694085319, guid: 65cfbe91da94b944e8c7fab4197ea07c, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 404499695542733003, guid: 65cfbe91da94b944e8c7fab4197ea07c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8118113765421757416}
   m_SourcePrefab: {fileID: 100100000, guid: 65cfbe91da94b944e8c7fab4197ea07c, type: 3}
 --- !u!4 &6378048452635414945 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2653193153358317817, guid: 65cfbe91da94b944e8c7fab4197ea07c, type: 3}
   m_PrefabInstance: {fileID: 8958055877525084504}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8776523981389795731 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 404499695542733003, guid: 65cfbe91da94b944e8c7fab4197ea07c, type: 3}
+  m_PrefabInstance: {fileID: 8958055877525084504}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8118113765421757416
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8776523981389795731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a0d2cf21e4cdfa49b35543182afd9bf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  spawnAreaSize: {x: 10, y: 1, z: 2}
+  gizmoColor: {r: 1, g: 0.5, b: 0, a: 0.3}
+  wireColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}

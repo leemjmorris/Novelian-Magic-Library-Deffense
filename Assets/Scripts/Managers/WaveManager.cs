@@ -552,6 +552,18 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
+        /// JML: Wall 타겟 동적 설정 (Issue #420)
+        /// StageManager에서 맵 로드 후 Wall 참조 설정 시 호출
+        /// </summary>
+        public void SetWallTarget(Transform wall, Wall wallComp = null, Collider wallColl = null)
+        {
+            wallTarget = wall;
+            wallComponent = wallComp;
+            wallCollider = wallColl;
+            Debug.Log($"[WaveManager] WallTarget set to: {wall?.name ?? "null"}");
+        }
+
+        /// <summary>
         /// JML: 다중 스포너 설정 (Issue #420)
         /// spawnArea1 = 몬스터 스포너, spawnArea2 = 보스 스포너 (또는 2번째 몬스터 스포너)
         /// </summary>
