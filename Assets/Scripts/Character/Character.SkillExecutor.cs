@@ -53,7 +53,9 @@ namespace Novelian.Combat
                 // 연속 발사 (기관총처럼 순차 발사)
                 if (projectileCount > 1)
                 {
-                    FireBurstProjectilesAsync(pool, spawnPos, targetPos, projectileCount).Forget();
+                    // attackCts.Token 전달하여 씬 전환 시 안전하게 취소
+                    var ct = attackCts?.Token ?? System.Threading.CancellationToken.None;
+                    FireBurstProjectilesAsync(pool, spawnPos, targetPos, projectileCount, ct).Forget();
                 }
                 else
                 {
@@ -194,8 +196,9 @@ namespace Novelian.Combat
         /// <summary>
         /// 연속 발사 (기관총처럼 순차 발사)
         /// projectile_count가 2 이상인 스킬에서 사용
+        /// CancellationToken을 받아 씬 전환 시 안전하게 취소됨
         /// </summary>
-        private async UniTaskVoid FireBurstProjectilesAsync(ObjectPoolManager pool, Vector3 spawnPos, Vector3 targetPos, int projectileCount)
+        private async UniTaskVoid FireBurstProjectilesAsync(ObjectPoolManager pool, Vector3 spawnPos, Vector3 targetPos, int projectileCount, System.Threading.CancellationToken ct = default)
         {
             const float BURST_INTERVAL = 0.1f; // 연속 발사 간격 (100ms)
 
@@ -203,14 +206,37 @@ namespace Novelian.Combat
 
             for (int i = 0; i < projectileCount; i++)
             {
+                // 취소 요청 확인 (씬 전환 등)
+                if (ct.IsCancellationRequested)
+                {
+                    Debug.Log($"[Character] Burst fire cancelled at {i}/{projectileCount}");
+                    return;
+                }
+
                 // 발사 시점에 타겟 방향 재계산 (동일한 방향으로 연속 발사)
                 Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+
+                // 풀이 클리어된 경우 안전하게 종료
+                if (projectile == null)
+                {
+                    Debug.LogWarning($"[Character] Burst fire stopped: pool returned null at {i}/{projectileCount}");
+                    return;
+                }
+
                 projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId);
 
-                // 마지막 발사가 아니면 대기
+                // 마지막 발사가 아니면 대기 (CancellationToken 전달)
                 if (i < projectileCount - 1)
                 {
-                    await UniTask.Delay(TimeSpan.FromSeconds(BURST_INTERVAL));
+                    try
+                    {
+                        await UniTask.Delay(TimeSpan.FromSeconds(BURST_INTERVAL), cancellationToken: ct);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Debug.Log($"[Character] Burst fire cancelled during delay at {i}/{projectileCount}");
+                        return;
+                    }
                 }
             }
 
