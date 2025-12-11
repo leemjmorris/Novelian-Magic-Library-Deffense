@@ -19,10 +19,12 @@ namespace NovelianMagicLibraryDefense.UI
         [SerializeField] private GameObject lockIcon;
         [SerializeField] private Button button;
 
+        [Header("Color References")]
+        [SerializeField] private Image starImage;        // n-1Star - 클리어(해금) 색상 참조용
+        [SerializeField] private Image overlayImage;     // n-1LookOverlay - 잠금 색상 참조용
+
         [Header("Settings")]
         [SerializeField] private int stageNumber;
-        [SerializeField] private Color unlockedColor = Color.white;
-        [SerializeField] private Color lockedColor = new Color(0.5f, 0.5f, 0.5f, 1f);
 
         private bool isLocked = true;
         [SerializeField] private bool startLocked = true; // Inspector에서 초기 잠금 상태 설정
@@ -70,9 +72,14 @@ namespace NovelianMagicLibraryDefense.UI
             if (lockIcon != null)
                 lockIcon.SetActive(locked);
 
-            // Change image color (darker when locked)
+            // Change image color based on reference images
             if (stageImage != null)
-                stageImage.color = locked ? lockedColor : unlockedColor;
+            {
+                if (locked && overlayImage != null)
+                    stageImage.color = overlayImage.color;  // 잠금 시 overlay 색상
+                else if (!locked && starImage != null)
+                    stageImage.color = starImage.color;     // 해금 시 star 색상
+            }
 
             // Disable button interaction when locked
             if (button != null)
