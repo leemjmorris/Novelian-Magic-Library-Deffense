@@ -14,7 +14,7 @@ public static class SceneName
     public static readonly string TitleScene = "TitleScene";
     public static readonly string LobbyScene = "LobbyScene";
     public static readonly string StageScene = "StageScene";
-    public static readonly string GameScene = "GameScene (JML)";
+    public static readonly string GameScene = "GameScene";
     public static readonly string Inventory = "Inventory";
     public static readonly string LibraryManagementScene = "LibraryManagementScene";
     public static readonly string DispatchSystemScene = "DispatchSystemScene";
