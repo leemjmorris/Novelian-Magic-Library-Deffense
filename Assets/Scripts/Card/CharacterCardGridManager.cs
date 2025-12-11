@@ -232,4 +232,20 @@ public class CharacterCardGridManager : MonoBehaviour
         }
         return true;
     }
+
+    /// <summary>
+    /// JML: 모든 슬롯의 스탯 정보 갱신 (Issue #424)
+    /// 스탯 카드 적용 후 호출하여 UI 실시간 업데이트
+    /// </summary>
+    public void RefreshAllStats()
+    {
+        for (int i = 0; i < cardSlots.Length; i++)
+        {
+            if (cardSlots[i] != null && !cardSlots[i].IsEmpty)
+            {
+                cardSlots[i].RefreshStats();
+            }
+        }
+        Debug.Log("[CharacterCardGridManager] All card stats refreshed");
+    }
 }

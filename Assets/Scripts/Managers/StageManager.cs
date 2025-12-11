@@ -224,17 +224,17 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// LMJ: Show start card selection (2 character cards only)
+        /// LMJ: Show start card selection (deck count character cards: 3-4)
         /// Game does NOT pause for start selection
         /// </summary>
         private async UniTaskVoid ShowStartCardSelection()
         {
-            Debug.Log("[StageManager] Opening start card selection (2 character cards)");
+            Debug.Log("[StageManager] Opening start card selection (deck count character cards)");
 
             var ui = GameManager.Instance?.UI;
             if (ui != null)
             {
-                ui.OpenCardSelectForGameStart(); // Opens 2 character cards, no pause
+                ui.OpenCardSelectForGameStart(); // Opens deck count character cards (3-4)
 
                 // Wait until card panel is closed
                 while (ui != null && ui.IsCardSelectOpen())
@@ -393,12 +393,12 @@ namespace NovelianMagicLibraryDefense.Managers
                 maxExp = GetRequiredExpForNextLevel();
                 ui?.UpdateExperience(currentExp, maxExp);
 
-                // LMJ: Open card selection for level up
+                // LMJ: Open card selection for level up (Card_Type 1: 4 stat cards, Card_Type 2: deck count character cards)
                 Debug.Log($"[StageManager] Level up to {level}! (Next: {maxExp} exp)");
 
                 if (ui != null)
                 {
-                    ui.OpenCardSelectForLevelUp(); // Opens with 2 random cards (character + ability mix)
+                    ui.OpenCardSelectForLevelUp(); // Card_Type 1: 4 stat cards, Card_Type 2: deck count character cards (3-4)
 
                     // Wait until card panel is closed
                     while (ui != null && ui.IsCardSelectOpen())
