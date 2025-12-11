@@ -191,6 +191,32 @@ public static class DamageCalculator
     }
 
     /// <summary>
+    /// 치명타 데미지 계산
+    /// 크리티컬 판정 후 배율 적용
+    /// </summary>
+    /// <param name="baseDamage">기본 데미지</param>
+    /// <param name="critChance">치명타 확률 (%, 예: 5 = 5%)</param>
+    /// <param name="critMultiplier">치명타 배율 (%, 예: 150 = 150%)</param>
+    /// <returns>(최종 데미지, 크리티컬 여부)</returns>
+    public static (float damage, bool isCritical) CalculateCriticalDamage(
+        float baseDamage,
+        float critChance,
+        float critMultiplier)
+    {
+        // 크리티컬 판정: 0~100 사이 랜덤값이 critChance보다 작으면 크리티컬
+        bool isCrit = Random.value * 100f < critChance;
+
+        if (isCrit)
+        {
+            // 크리티컬 배율 적용 (150% = 1.5배)
+            float finalDamage = baseDamage * (critMultiplier / 100f);
+            return (finalDamage, true);
+        }
+
+        return (baseDamage, false);
+    }
+
+    /// <summary>
     /// 데미지 정보 로그 출력 (디버그용)
     /// </summary>
     public static void LogDamageBreakdown(

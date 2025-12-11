@@ -70,6 +70,12 @@ namespace NovelianMagicLibraryDefense.UI
         // JML: 현재 플레이어 레벨 (StageManager에서 가져옴)
         private int currentPlayerLevel = 1;
 
+        // JML: 서포트 스킬 카드 선택 상태 (Issue #437)
+        private int selectedSupportCardId = -1;
+        private int selectedSlotIndex = -1;
+        private const float SELECTED_CARD_SCALE = 1.15f;
+        private const float NORMAL_CARD_SCALE = 1.0f;
+
         public enum CardType
         {
             Character,
@@ -649,13 +655,152 @@ namespace NovelianMagicLibraryDefense.UI
 
         /// <summary>
         /// JML: 카드 슬롯 클릭 처리 (새 시스템용)
+        /// 서포트 스킬 카드: 선택 상태만 (스케일 업 + 호환 캐릭터 표시)
+        /// 스탯/캐릭터 카드: 기존대로 바로 적용
         /// </summary>
         private void OnCardSlotClicked(int slotIndex)
         {
             if (isCardSelected || activeCardData == null || slotIndex >= activeCardData.Length) return;
 
             CardData cardData = activeCardData[slotIndex];
-            OnCardClicked(cardData);
+
+            // 서포트 스킬 카드인지 확인 (081029~081051)
+            if (cardData.Type == CardType.Ability && IsSupportSkillCard(cardData.Id))
+            {
+                // 서포트 스킬: 선택 상태만 (장착은 캐릭터 클릭 시)
+                SelectSupportSkillCard(slotIndex, cardData.Id);
+            }
+            else
+            {
+                // 스탯/캐릭터 카드: 기존대로 바로 적용
+                OnCardClicked(cardData);
+            }
+        }
+
+        /// <summary>
+        /// JML: 서포트 스킬 카드인지 확인 (081029~081051 범위)
+        /// </summary>
+        private bool IsSupportSkillCard(int cardId)
+        {
+            return cardId >= 81029 && cardId <= 81051;
+        }
+
+        /// <summary>
+        /// JML: 서포트 스킬 카드 선택 (Issue #437)
+        /// 스케일 업 연출 + 호환 캐릭터 표시
+        /// </summary>
+        private void SelectSupportSkillCard(int slotIndex, int cardId)
+        {
+            // 이전 선택 해제 (다른 스킬 클릭 시)
+            if (selectedSlotIndex >= 0 && selectedSlotIndex < cardSlots.Length && cardSlots[selectedSlotIndex] != null)
+            {
+                cardSlots[selectedSlotIndex].transform.localScale = Vector3.one * NORMAL_CARD_SCALE;
+            }
+
+            // 새 선택
+            selectedSlotIndex = slotIndex;
+            selectedSupportCardId = cardId;
+
+            // 스케일 업 연출
+            if (cardSlots[slotIndex] != null)
+            {
+                cardSlots[slotIndex].transform.localScale = Vector3.one * SELECTED_CARD_SCALE;
+            }
+
+            // CardTable ID → Support_ID 변환 (081029 → 40001)
+            int supportId = (cardId - 81029) + 40001;
+
+            // 호환 캐릭터 표시 (CharacterCardGrid 애니메이션)
+            if (characterCardGridManager != null)
+            {
+                characterCardGridManager.ShowCompatibleCharacters(supportId, this);
+            }
+
+            Debug.Log($"[CardSelectPanel] 서포트 스킬 선택: CardID={cardId}, SupportID={supportId}");
+        }
+
+        /// <summary>
+        /// JML: 서포트 스킬 선택 해제
+        /// </summary>
+        private void DeselectSupportSkillCard()
+        {
+            if (selectedSlotIndex >= 0 && selectedSlotIndex < cardSlots.Length && cardSlots[selectedSlotIndex] != null)
+            {
+                cardSlots[selectedSlotIndex].transform.localScale = Vector3.one * NORMAL_CARD_SCALE;
+            }
+
+            selectedSlotIndex = -1;
+            selectedSupportCardId = -1;
+
+            // 캐릭터 애니메이션 초기화
+            if (characterCardGridManager != null)
+            {
+                characterCardGridManager.ResetCharacterAnimations();
+            }
+        }
+
+        /// <summary>
+        /// JML: 캐릭터 카드 클릭 시 선택된 스킬 장착 (CharacterCardGridManager에서 호출)
+        /// </summary>
+        public void EquipSelectedSkillToCharacter(int characterId)
+        {
+            if (selectedSupportCardId < 0)
+            {
+                Debug.LogWarning("[CardSelectPanel] 선택된 서포트 스킬이 없습니다.");
+                return;
+            }
+
+            // 서포트 스킬 장착
+            int supportId = (selectedSupportCardId - 81029) + 40001;
+            var targetCharacter = placementManager?.GetCharacterById(characterId);
+
+            if (targetCharacter == null)
+            {
+                Debug.LogError($"[CardSelectPanel] 캐릭터 {characterId}를 찾을 수 없습니다.");
+                return;
+            }
+
+            bool success = targetCharacter.EquipSupportSkill(supportId);
+            if (success)
+            {
+                var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
+                string skillName = supportData?.support_name ?? $"Support_{supportId}";
+                Debug.Log($"[CardSelectPanel] 서포트 스킬 '{skillName}' → 캐릭터 {characterId}에 장착 완료!");
+
+                // 선택 초기화
+                StopTimer();
+                isCardSelected = true;
+
+                // UI 갱신
+                if (characterCardGridManager != null)
+                {
+                    characterCardGridManager.RefreshAllStats();
+                }
+
+                // 패널 닫기
+                Close();
+            }
+            else
+            {
+                Debug.LogWarning($"[CardSelectPanel] 서포트 스킬 장착 실패! (SupportID: {supportId}, CharacterID: {characterId})");
+            }
+        }
+
+        /// <summary>
+        /// JML: 현재 서포트 스킬이 선택되어 있는지 확인
+        /// </summary>
+        public bool HasSelectedSupportSkill()
+        {
+            return selectedSupportCardId >= 0;
+        }
+
+        /// <summary>
+        /// JML: 선택된 서포트 스킬 ID 반환
+        /// </summary>
+        public int GetSelectedSupportId()
+        {
+            if (selectedSupportCardId < 0) return -1;
+            return (selectedSupportCardId - 81029) + 40001;
         }
 
         /// <summary>
@@ -1316,8 +1461,32 @@ namespace NovelianMagicLibraryDefense.UI
                 isPaused = false;
             }
 
+            // 서포트 스킬 선택 상태 초기화 (Issue #437)
+            ResetSupportSkillSelection();
+
             ClearCards();
             isCardSelected = false;
+        }
+
+        /// <summary>
+        /// JML: 서포트 스킬 선택 상태 완전 초기화 (Issue #437)
+        /// </summary>
+        private void ResetSupportSkillSelection()
+        {
+            // 스케일 복원
+            if (selectedSlotIndex >= 0 && selectedSlotIndex < cardSlots.Length && cardSlots[selectedSlotIndex] != null)
+            {
+                cardSlots[selectedSlotIndex].transform.localScale = Vector3.one * NORMAL_CARD_SCALE;
+            }
+
+            selectedSlotIndex = -1;
+            selectedSupportCardId = -1;
+
+            // 캐릭터 애니메이션 초기화
+            if (characterCardGridManager != null)
+            {
+                characterCardGridManager.ResetCharacterAnimations();
+            }
         }
 
         private void ClearCards()
