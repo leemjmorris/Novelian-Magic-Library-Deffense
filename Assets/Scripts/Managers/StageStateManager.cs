@@ -25,19 +25,23 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private StageManager stageManager;
         [SerializeField] private StageClearPanel stageClearPanel; // JML: 클리어 패널 (로비/다음 스테이지 선택)
         [SerializeField] private StageFailedPanel stageFailedPanel; // JML: 실패 패널 (로비/재시작 선택)
-        [SerializeField] private Wall wall;
         [SerializeField] private StageEvents stageEvents;
-        [SerializeField] private WallEvents wallEvents;
 
-        [Header("Dual Defense Layout (양방향 방어)")]
-        [SerializeField] private Wall wall2;           // 2번째 Wall (하단)
-        [SerializeField] private WallEvents wallEvents2;  // 2번째 Wall 이벤트
+        [Header("Wall References (동적 로드 - Tag로 찾음)")]
+        [Tooltip("맵 프리팹에서 동적으로 로드됨 - Inspector 할당 불필요")]
+        private Wall wall;       // Tag: Wall에서 GetComponent로 찾음
+        private Wall wall2;      // Tag: Wall2에서 GetComponent로 찾음 (양방향 방어)
+        private WallEvents wallEvents;   // Wall에서 GetComponent로 찾음
+        private WallEvents wallEvents2;  // Wall2에서 GetComponent로 찾음
 
         public StageState CurrentState { get; private set; }
 
         protected override void OnInitialize()
         {
             CurrentState = StageState.Playing;
+
+            // JML: Tag로 Wall 참조 찾기 (동적 맵 로드 지원)
+            FindWallReferences();
 
             // LMJ: Subscribe to EventChannels instead of static events
             if (stageEvents != null)
@@ -57,6 +61,68 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 wallEvents2.AddWallDestroyedListener(HandleWallDestroyed);
             }
+        }
+
+        /// <summary>
+        /// JML: Tag로 Wall 참조 찾기 (동적 맵 로드 지원)
+        /// StageManager에서 맵이 로드된 후 호출되어야 함
+        /// </summary>
+        private void FindWallReferences()
+        {
+            // Wall 1 찾기 (Tag: Wall)
+            GameObject wallObj = GameObject.FindWithTag("Wall");
+            if (wallObj != null)
+            {
+                wall = wallObj.GetComponent<Wall>();
+                // WallEvents는 ScriptableObject이므로 Wall 컴포넌트에서 가져옴
+                wallEvents = wall?.GetWallEvents();
+                Debug.Log($"[StageStateManager] Found Wall: {wallObj.name}");
+            }
+            else
+            {
+                Debug.LogWarning("[StageStateManager] Wall not found by tag. Will retry when map is loaded.");
+            }
+
+            // Wall 2 찾기 (Tag: Wall2 - 양방향 방어)
+            GameObject wall2Obj = GameObject.FindWithTag("Wall2");
+            if (wall2Obj != null)
+            {
+                wall2 = wall2Obj.GetComponent<Wall>();
+                // WallEvents는 ScriptableObject이므로 Wall 컴포넌트에서 가져옴
+                wallEvents2 = wall2?.GetWallEvents();
+                Debug.Log($"[StageStateManager] Found Wall2: {wall2Obj.name}");
+            }
+        }
+
+        /// <summary>
+        /// JML: 외부에서 Wall 참조 갱신 요청 시 호출 (맵 로드 완료 후)
+        /// </summary>
+        public void RefreshWallReferences()
+        {
+            // 기존 이벤트 구독 해제
+            if (wallEvents != null)
+            {
+                wallEvents.RemoveWallDestroyedListener(HandleWallDestroyed);
+            }
+            if (wallEvents2 != null)
+            {
+                wallEvents2.RemoveWallDestroyedListener(HandleWallDestroyed);
+            }
+
+            // 새로운 참조 찾기
+            FindWallReferences();
+
+            // 새로운 이벤트 구독
+            if (wallEvents != null)
+            {
+                wallEvents.AddWallDestroyedListener(HandleWallDestroyed);
+            }
+            if (wallEvents2 != null)
+            {
+                wallEvents2.AddWallDestroyedListener(HandleWallDestroyed);
+            }
+
+            Debug.Log("[StageStateManager] Wall references refreshed");
         }
 
         protected override void OnReset()

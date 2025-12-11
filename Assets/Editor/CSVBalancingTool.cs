@@ -71,7 +71,7 @@ public class CSVBalancingTool : EditorWindow
     private List<MonsterLevelData> monsterLevelDataList = new List<MonsterLevelData>();
     private List<CardData> cardDataList = new List<CardData>();
     private List<CardLevelData> cardLevelDataList = new List<CardLevelData>();
-    private List<CardListData> cardListDataList = new List<CardListData>();
+    //private List<CardListData> cardListDataList = new List<CardListData>();
 
     // CSV 경로
     private const string CSV_PATH = "Assets/Data/CSV";
@@ -784,7 +784,7 @@ public class CSVBalancingTool : EditorWindow
                     DrawCardLevelTable();
                     break;
                 case TableTab.CardList:
-                    DrawCardListTable();
+                   // DrawCardListTable();
                     break;
             }
         }
@@ -1118,30 +1118,30 @@ public class CSVBalancingTool : EditorWindow
         }
     }
 
-    private void DrawCardListTable()
-    {
-        if (cardListDataList == null || cardListDataList.Count == 0)
-        {
-            EditorGUILayout.HelpBox("No Card List data loaded", MessageType.Warning);
-            return;
-        }
+    // private void DrawCardListTable()
+    // {
+    //     if (cardListDataList == null || cardListDataList.Count == 0)
+    //     {
+    //         EditorGUILayout.HelpBox("No Card List data loaded", MessageType.Warning);
+    //         return;
+    //     }
 
-        GUILayout.Label($"Card List Table ({cardListDataList.Count} entries)", EditorStyles.boldLabel);
+    //     GUILayout.Label($"Card List Table ({cardListDataList.Count} entries)", EditorStyles.boldLabel);
 
-        foreach (var data in cardListDataList)
-        {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            {
-                EditorGUI.BeginChangeCheck();
-                EditorGUILayout.LabelField($"List ID: {data.Card_List_ID}", EditorStyles.boldLabel);
-                data.Card_1_ID = EditorGUILayout.IntField("Card 1", data.Card_1_ID);
-                data.Card_2_ID = EditorGUILayout.IntField("Card 2", data.Card_2_ID);
-                if (EditorGUI.EndChangeCheck())
-                    MarkModified("CardListTable");
-            }
-            EditorGUILayout.EndVertical();
-        }
-    }
+    //     foreach (var data in cardListDataList)
+    //     {
+    //         EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+    //         {
+    //             EditorGUI.BeginChangeCheck();
+    //             EditorGUILayout.LabelField($"List ID: {data.Card_List_ID}", EditorStyles.boldLabel);
+    //             data.Card_1_ID = EditorGUILayout.IntField("Card 1", data.Card_1_ID);
+    //             data.Card_2_ID = EditorGUILayout.IntField("Card 2", data.Card_2_ID);
+    //             if (EditorGUI.EndChangeCheck())
+    //                 MarkModified("CardListTable");
+    //         }
+    //         EditorGUILayout.EndVertical();
+    //     }
+    // }
 
     #endregion
 
@@ -1238,7 +1238,7 @@ public class CSVBalancingTool : EditorWindow
             monsterLevelDataList = CSVLoader.Instance.GetTable<MonsterLevelData>()?.GetAll() ?? new List<MonsterLevelData>();
             cardDataList = CSVLoader.Instance.GetTable<CardData>()?.GetAll() ?? new List<CardData>();
             cardLevelDataList = CSVLoader.Instance.GetTable<CardLevelData>()?.GetAll() ?? new List<CardLevelData>();
-            cardListDataList = CSVLoader.Instance.GetTable<CardListData>()?.GetAll() ?? new List<CardListData>();
+            //cardListDataList = CSVLoader.Instance.GetTable<CardListData>()?.GetAll() ?? new List<CardListData>();
 
             isDataLoaded = true;
             statusMessage = $"Loaded: {characterDataList.Count} chars, {mainSkillDataList.Count} skills, {monsterDataList.Count} monsters";
@@ -1338,7 +1338,7 @@ public class CSVBalancingTool : EditorWindow
                         SaveSkillCSV("CardLevelTable.csv", cardLevelDataList);
                         break;
                     case "CardListTable":
-                        SaveSkillCSV("CardListTable.csv", cardListDataList);
+                        //SaveSkillCSV("CardListTable.csv", cardListDataList);
                         break;
                 }
             }

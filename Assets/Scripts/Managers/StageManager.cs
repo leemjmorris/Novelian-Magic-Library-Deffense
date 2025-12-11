@@ -23,22 +23,28 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private WaveManager waveManager;
         [SerializeField] private MonsterEvents monsterEvents;
         [SerializeField] private StageEvents stageEvents;
-        [SerializeField] private Wall wallComponent; // JML: Wall 참조 (Barrier HP 설정용)
         [SerializeField] private CharacterPlacementManager characterPlacementManager; // JML: Inspector에서 직접 참조 (Issue #349)
+        [SerializeField] private StageStateManager stageStateManager; // JML: 맵 로드 후 Wall 참조 갱신용
 
-        [Header("Layout Preset References (Issue #420)")]
-        [SerializeField] private Transform protectionObj;
+        [Header("Camera (Required - not in map prefab)")]
         [SerializeField] private Unity.Cinemachine.CinemachineCamera cinemachineCamera;
-        [SerializeField] private Transform spawnArea1;
-        [SerializeField] private Transform spawnArea2;
 
-        [Header("Dual Defense Layout (양방향 방어)")]
-        [SerializeField] private Transform protectionObj2;  // 2번째 Protection (하단)
-        [SerializeField] private Wall wallComponent2;       // 2번째 Wall 컴포넌트
-
-        [Header("Map Prefab (Issue #420)")]
-        [SerializeField] private GameObject currentMapObject;  // 현재 씬에 배치된 맵 오브젝트 (교체 대상)
+        [Header("Map Prefab Dynamic Loading (Issue #420)")]
+        [Tooltip("맵 프리팹에서 동적으로 로드됨 - Inspector 할당 불필요")]
+        private Transform protectionObj;       // Tag: Wall
+        private Wall wallComponent;            // Tag: Wall에서 GetComponent
+        private Transform spawnArea1;          // Tag: SpawnArea1
+        private Transform spawnArea2;          // Tag: SpawnArea2
+        private Transform protectionObj2;      // Tag: Wall2 (양방향 방어)
+        private Wall wallComponent2;           // Tag: Wall2에서 GetComponent
+        private GameObject currentMapObject;   // 현재 로드된 맵 오브젝트
         private AsyncOperationHandle<GameObject> loadedMapHandle;  // Addressables 핸들 (메모리 해제용)
+        private string currentMapPrefabKey = null;  // 현재 로드된 맵의 Addressable Key (중복 로드 방지용)
+
+        /// <summary>
+        /// JML: 맵 로드 완료 여부 (외부에서 확인용)
+        /// </summary>
+        public bool IsMapLoaded { get; private set; } = false;
 
         [Header("Settings")]
         [SerializeField] private StageSettings stageSettings;
@@ -121,10 +127,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnInitialize()
         {
-            // Debug.Log("[StageManager] Initializing stage");
-
-            // JML: CSV 데이터 기반 스테이지 초기화
-            InitializeFromCSV();
+            Debug.Log("[StageManager] OnInitialize called");
 
             // LMJ: Subscribe to monster death event for exp via EventChannel
             if (monsterEvents != null)
@@ -137,19 +140,47 @@ namespace NovelianMagicLibraryDefense.Managers
                 Debug.LogError("[StageManager] monsterEvents가 NULL! 인스펙터에서 MonsterEvents 할당 필요!");
             }
 
-            // LMJ: Start stage timer using UniTask (no MonoBehaviour required!)
+            // JML: CSVLoader 초기화 대기 후 스테이지 초기화 (Issue #420)
+            // CSVLoader는 Start()에서 로드되므로 Awake에서는 아직 준비 안됨
+            WaitForCSVAndInitialize().Forget();
+        }
+
+        /// <summary>
+        /// JML: CSVLoader 초기화 완료 대기 후 스테이지 초기화 (Issue #420)
+        /// </summary>
+        private async UniTaskVoid WaitForCSVAndInitialize()
+        {
+            Debug.Log("[StageManager] Waiting for CSVLoader to initialize...");
+
+            // CSVLoader 초기화 대기 (최대 10초)
+            float timeout = 10f;
+            float elapsed = 0f;
+            while ((CSVLoader.Instance == null || !CSVLoader.Instance.IsInit) && elapsed < timeout)
+            {
+                await UniTask.Yield();
+                elapsed += Time.unscaledDeltaTime;
+            }
+
+            if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
+            {
+                Debug.LogError("[StageManager] CSVLoader initialization timeout! Please start from BootScene.");
+                return;
+            }
+
+            Debug.Log($"[StageManager] CSVLoader ready! (waited {elapsed:F2}s)");
+
+            // JML: CSV 데이터 기반 스테이지 초기화
+            InitializeFromCSV();
+
+            // LMJ: Start stage timer using UniTask
             timerCts = new CancellationTokenSource();
             StageTimer(timerCts.Token).Forget();
-
-            // LCB: Show start card selection before starting the game
-            ShowStartCardSelection().Forget();
-
-            // Debug.Log("[StageManager] Initialized");
         }
 
         /// <summary>
         /// JML: CSV 데이터 기반으로 스테이지 초기화
         /// SelectedStage.Data에서 Time_Limit, Wave ID, Barrier_HP 등을 가져옴
+        /// 동적 맵 로드 지원: 맵 로드 완료 후 Wall/SpawnArea 참조 및 Wave 초기화
         /// </summary>
         private void InitializeFromCSV()
         {
@@ -186,43 +217,27 @@ namespace NovelianMagicLibraryDefense.Managers
             SetStageDuration(stageData.Time_Limit);
             Debug.Log($"[StageManager] Time Limit set to {stageData.Time_Limit} seconds");
 
-            // 2. Wall(Barrier) HP 설정
-            if (wallComponent != null)
-            {
-                wallComponent.SetMaxHealth(stageData.Barrier_HP);
-                Debug.Log($"[StageManager] Wall HP set to {stageData.Barrier_HP}");
-            }
-            else
-            {
-                Debug.LogError("[StageManager] wallComponent is null! Cannot set Barrier HP.");
-            }
-
-            // 3. Wave 데이터 수집 및 WaveManager 초기화
-            List<WaveData> waveDataList = CollectWaveData(stageData);
-            if (waveDataList.Count > 0)
-            {
-                waveManager.InitializeWithWaveData(waveDataList);
-                waveManager.WaveLoop().Forget();
-                Debug.Log($"[StageManager] Initialized with {waveDataList.Count} waves from CSV");
-            }
-            else
-            {
-                Debug.LogError("[StageManager] No wave data found! Check Wave IDs in StageTable.csv");
-            }
-
-            // 4. Layout Preset 적용 (Issue #420)
-            ApplyLayoutPreset(stageData.Layout_Type);
+            // 2. Layout Preset 적용 (맵 로드 → 참조 찾기 → Wall/Wave 초기화)
+            // ApplyLayoutPresetAsync 내부에서 Wall HP 설정 및 Wave 초기화 수행
+            ApplyLayoutPresetAsync(stageData).Forget();
         }
 
         /// <summary>
-        /// JML: 레이아웃 프리셋 적용 (Issue #420)
-        /// StageData의 Layout_Type에 해당하는 LayoutPresetData를 가져와 적용
+        /// JML: 레이아웃 프리셋 비동기 적용 (Issue #420 - 완전 동적 로드)
+        /// 1. 맵 프리팹 로드 → 2. Tag로 Wall/SpawnArea 찾기 → 3. Wall HP 설정 → 4. Wave 초기화
         /// </summary>
-        private void ApplyLayoutPreset(int layoutType)
+        private async UniTaskVoid ApplyLayoutPresetAsync(StageData stageData)
         {
+            try
+            {
+            int layoutType = stageData.Layout_Type;
+
             if (layoutType <= 0)
             {
                 Debug.Log("[StageManager] No layout type specified, using default layout");
+                // 기본 레이아웃에서도 Wave 초기화 및 카드 선택 필요
+                InitializeWavesAfterMapLoad(stageData);
+                ShowStartCardSelection().Forget();
                 return;
             }
 
@@ -231,12 +246,23 @@ namespace NovelianMagicLibraryDefense.Managers
             if (layoutData == null)
             {
                 Debug.LogWarning($"[StageManager] Layout preset not found for ID: {layoutType}");
+                InitializeWavesAfterMapLoad(stageData);
+                ShowStartCardSelection().Forget();
                 return;
             }
 
             Debug.Log($"[StageManager] Applying layout preset: {layoutData.Layout_Name} (ID: {layoutType})");
 
-            // 1. CharacterPlacementManager에 그리드 레이아웃 적용
+            // 1. Map Prefab 로드 (await로 완료 대기)
+            if (!string.IsNullOrEmpty(layoutData.Map_Prefab_Key))
+            {
+                await LoadAndSwapMapPrefabAsync(layoutData.Map_Prefab_Key);
+            }
+
+            // 2. 맵에서 Tag로 참조 찾기
+            FindMapReferences(layoutData.Protection_Count);
+
+            // 3. CharacterPlacementManager에 그리드 레이아웃 적용
             if (characterPlacementManager != null)
             {
                 characterPlacementManager.ApplyLayout(layoutData);
@@ -246,18 +272,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 Debug.LogWarning("[StageManager] CharacterPlacementManager is null!");
             }
 
-            // 2. ProtectionObj 위치 적용
-            if (protectionObj != null)
-            {
-                protectionObj.position = new Vector3(
-                    layoutData.Protection_Pos_X,
-                    layoutData.Protection_Pos_Y,
-                    layoutData.Protection_Pos_Z
-                );
-                Debug.Log($"[StageManager] ProtectionObj moved to ({layoutData.Protection_Pos_X}, {layoutData.Protection_Pos_Y}, {layoutData.Protection_Pos_Z})");
-            }
-
-            // 3. Camera 위치/회전 적용
+            // 4. Camera 위치/회전 적용
             if (cinemachineCamera != null)
             {
                 cinemachineCamera.transform.position = new Vector3(
@@ -270,34 +285,32 @@ namespace NovelianMagicLibraryDefense.Managers
                     layoutData.Camera_Rot_Y,
                     layoutData.Camera_Rot_Z
                 );
-                Debug.Log($"[StageManager] Camera positioned at ({layoutData.Camera_Pos_X}, {layoutData.Camera_Pos_Y}, {layoutData.Camera_Pos_Z})");
+                Debug.Log($"[StageManager] Camera positioned at ({layoutData.Camera_Pos_X}, {layoutData.Camera_Pos_Y}, {layoutData.Camera_Pos_Z}), rotation ({layoutData.Camera_Rot_X}, {layoutData.Camera_Rot_Y}, {layoutData.Camera_Rot_Z})");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] cinemachineCamera is null! Inspector에서 할당해주세요.");
             }
 
-            // 4. SpawnArea 위치 적용
-            if (spawnArea1 != null)
+            // 5. Wall HP 설정 (맵 로드 후 참조가 있어야 가능)
+            if (wallComponent != null)
             {
-                spawnArea1.position = new Vector3(
-                    layoutData.Spawn_1_X,
-                    layoutData.Spawn_1_Y,
-                    layoutData.Spawn_1_Z
-                );
+                wallComponent.SetMaxHealth(stageData.Barrier_HP);
+                Debug.Log($"[StageManager] Wall HP set to {stageData.Barrier_HP}");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] wallComponent is null after map load! Check 'Wall' tag in map prefab.");
             }
 
-            if (spawnArea2 != null && layoutData.Spawn_Area_Count >= 2)
+            // 6. Wall 2 HP 설정 (양방향 방어)
+            if (layoutData.Protection_Count >= 2 && wallComponent2 != null)
             {
-                spawnArea2.position = new Vector3(
-                    layoutData.Spawn_2_X,
-                    layoutData.Spawn_2_Y,
-                    layoutData.Spawn_2_Z
-                );
-                spawnArea2.gameObject.SetActive(true);
-            }
-            else if (spawnArea2 != null)
-            {
-                spawnArea2.gameObject.SetActive(false);
+                wallComponent2.SetMaxHealth(stageData.Barrier_HP);
+                Debug.Log($"[StageManager] Wall 2 HP set to {stageData.Barrier_HP}");
             }
 
-            // 5. WaveManager에 MonsterSpawner 설정 (Issue #420)
+            // 7. WaveManager에 MonsterSpawner 및 WallTarget 설정
             if (waveManager != null)
             {
                 var spawner1 = spawnArea1?.GetComponent<NovelianMagicLibraryDefense.Spawners.MonsterSpawner>();
@@ -306,48 +319,120 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (spawner1 != null)
                 {
                     waveManager.SetMonsterSpawner(spawner1);
+                    Debug.Log("[StageManager] MonsterSpawner 1 set to WaveManager");
                 }
                 if (spawner2 != null && layoutData.Spawn_Area_Count >= 2)
                 {
                     waveManager.SetBossSpawner(spawner2);
+                    Debug.Log("[StageManager] MonsterSpawner 2 (Boss) set to WaveManager");
                 }
-            }
 
-            // 6. Map Prefab 로드 및 스왑 (Issue #420)
-            if (!string.IsNullOrEmpty(layoutData.Map_Prefab_Key))
-            {
-                LoadAndSwapMapPrefab(layoutData.Map_Prefab_Key).Forget();
-            }
-
-            // 7. 양방향 방어 레이아웃: Protection 2 위치 및 활성화 (Dual Defense)
-            if (layoutData.Protection_Count >= 2 && protectionObj2 != null)
-            {
-                protectionObj2.position = new Vector3(
-                    layoutData.Protection_2_Pos_X,
-                    layoutData.Protection_2_Pos_Y,
-                    layoutData.Protection_2_Pos_Z
-                );
-                protectionObj2.gameObject.SetActive(true);
-
-                // Wall 2 HP 설정
-                if (wallComponent2 != null)
+                // JML: WaveManager에 Wall 타겟 설정 (몬스터 목적지 설정에 필요)
+                if (protectionObj != null)
                 {
-                    StageData stageData = SelectedStage.Data;
-                    wallComponent2.SetMaxHealth(stageData.Barrier_HP);
-                    Debug.Log($"[StageManager] Wall 2 HP set to {stageData.Barrier_HP}");
+                    var wallColl = protectionObj.GetComponent<Collider>();
+                    waveManager.SetWallTarget(protectionObj, wallComponent, wallColl);
+                    Debug.Log("[StageManager] WallTarget set to WaveManager");
                 }
-
-                Debug.Log($"[StageManager] ProtectionObj 2 moved to ({layoutData.Protection_2_Pos_X}, {layoutData.Protection_2_Pos_Y}, {layoutData.Protection_2_Pos_Z})");
-            }
-            else if (protectionObj2 != null)
-            {
-                protectionObj2.gameObject.SetActive(false);
             }
 
             // 8. Monster Wall 캐시 초기화 (다중 Wall 지원)
             InitializeMonsterWallCache(layoutData.Protection_Count);
 
+            // 9. StageStateManager에 Wall 참조 갱신 알림
+            if (stageStateManager != null)
+            {
+                stageStateManager.RefreshWallReferences();
+            }
+
+            // 10. Wave 초기화 (맵 로드 완료 후)
+            InitializeWavesAfterMapLoad(stageData);
+
+            // 11. 카드 선택 표시 (맵 로드 및 그리드 생성 완료 후)
+            ShowStartCardSelection().Forget();
+
             Debug.Log($"[StageManager] Layout preset '{layoutData.Layout_Name}' applied successfully!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[StageManager] ApplyLayoutPresetAsync EXCEPTION: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
+        /// <summary>
+        /// JML: 맵 로드 완료 후 Wave 데이터 수집 및 WaveManager 초기화
+        /// </summary>
+        private void InitializeWavesAfterMapLoad(StageData stageData)
+        {
+            List<WaveData> waveDataList = CollectWaveData(stageData);
+            if (waveDataList.Count > 0)
+            {
+                waveManager.InitializeWithWaveData(waveDataList);
+                waveManager.WaveLoop().Forget();
+                Debug.Log($"[StageManager] Initialized with {waveDataList.Count} waves from CSV");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] No wave data found! Check Wave IDs in StageTable.csv");
+            }
+        }
+
+        /// <summary>
+        /// JML: 맵 프리팹에서 Tag로 Wall, SpawnArea 참조 찾기
+        /// Required Tags: Wall, SpawnArea1, SpawnArea2, Wall2 (양방향 방어)
+        /// </summary>
+        private void FindMapReferences(int protectionCount)
+        {
+            // Wall 1 찾기 (Tag: Wall)
+            GameObject wallObj = GameObject.FindWithTag("Wall");
+            if (wallObj != null)
+            {
+                protectionObj = wallObj.transform;
+                wallComponent = wallObj.GetComponent<Wall>();
+                Debug.Log($"[StageManager] Found Wall at {wallObj.transform.position}");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] Wall not found! Add 'Wall' tag to Protection object in map prefab.");
+            }
+
+            // SpawnArea 1 찾기 (Tag: SpawnArea1)
+            GameObject spawn1Obj = GameObject.FindWithTag("SpawnArea1");
+            if (spawn1Obj != null)
+            {
+                spawnArea1 = spawn1Obj.transform;
+                Debug.Log($"[StageManager] Found SpawnArea1 at {spawn1Obj.transform.position}");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] SpawnArea1 not found! Add 'SpawnArea1' tag to spawn area in map prefab.");
+            }
+
+            // SpawnArea 2 찾기 (Tag: SpawnArea2)
+            GameObject spawn2Obj = GameObject.FindWithTag("SpawnArea2");
+            if (spawn2Obj != null)
+            {
+                spawnArea2 = spawn2Obj.transform;
+                Debug.Log($"[StageManager] Found SpawnArea2 at {spawn2Obj.transform.position}");
+            }
+
+            // Wall 2 찾기 (양방향 방어, Tag: Wall2)
+            if (protectionCount >= 2)
+            {
+                GameObject wall2Obj = GameObject.FindWithTag("Wall2");
+                if (wall2Obj != null)
+                {
+                    protectionObj2 = wall2Obj.transform;
+                    wallComponent2 = wall2Obj.GetComponent<Wall>();
+                    Debug.Log($"[StageManager] Found Wall2 at {wall2Obj.transform.position}");
+                }
+                else
+                {
+                    Debug.LogError("[StageManager] Wall2 not found for dual defense layout! Add 'Wall2' tag to second Protection.");
+                }
+            }
+
+            IsMapLoaded = true;
         }
 
         /// <summary>
@@ -385,23 +470,19 @@ namespace NovelianMagicLibraryDefense.Managers
 
         /// <summary>
         /// JML: Addressables로 맵 프리팹 로드 후 기존 맵과 교체 (Issue #420)
+        /// 같은 키의 맵이 이미 로드되어 있으면 스킵
+        /// await 가능한 버전 - 맵 로드 완료까지 대기
         /// </summary>
-        private async UniTaskVoid LoadAndSwapMapPrefab(string mapPrefabKey)
+        private async UniTask LoadAndSwapMapPrefabAsync(string mapPrefabKey)
         {
-            // 현재 맵 오브젝트가 없으면 스킵
-            if (currentMapObject == null)
+            // 같은 맵이 이미 로드되어 있으면 스킵
+            if (currentMapPrefabKey == mapPrefabKey)
             {
-                Debug.LogWarning("[StageManager] currentMapObject가 설정되지 않았습니다. Inspector에서 맵 오브젝트를 할당해주세요.");
+                Debug.Log($"[StageManager] Map '{mapPrefabKey}' is already loaded, skipping swap.");
                 return;
             }
 
-            // 현재 맵의 위치/회전/스케일 저장
-            Vector3 mapPosition = currentMapObject.transform.position;
-            Quaternion mapRotation = currentMapObject.transform.rotation;
-            Vector3 mapScale = currentMapObject.transform.localScale;
-            Transform mapParent = currentMapObject.transform.parent;
-
-            Debug.Log($"[StageManager] Loading map prefab: {mapPrefabKey}");
+            Debug.Log($"[StageManager] Loading map prefab: {mapPrefabKey} (current: {currentMapPrefabKey ?? "none"})");
 
             try
             {
@@ -409,6 +490,13 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (loadedMapHandle.IsValid())
                 {
                     Addressables.Release(loadedMapHandle);
+                }
+
+                // 기존 맵이 있으면 파괴
+                if (currentMapObject != null)
+                {
+                    UnityEngine.Object.Destroy(currentMapObject);
+                    currentMapObject = null;
                 }
 
                 // 새 맵 프리팹 로드
@@ -421,18 +509,20 @@ namespace NovelianMagicLibraryDefense.Managers
                     return;
                 }
 
-                // 기존 맵 비활성화 (삭제하지 않고 비활성화하여 참조 유지)
-                currentMapObject.SetActive(false);
-
-                // 새 맵 인스턴스 생성
-                GameObject newMap = UnityEngine.Object.Instantiate(mapPrefab, mapPosition, mapRotation, mapParent);
-                newMap.transform.localScale = mapScale;
+                // 새 맵 인스턴스 생성 (0, 0, 20에 생성 - LayoutTestScene 기준 위치)
+                GameObject newMap = UnityEngine.Object.Instantiate(mapPrefab, new Vector3(0f, 0f, 20f), Quaternion.identity);
                 newMap.name = mapPrefabKey;
 
                 // currentMapObject 참조 업데이트
                 currentMapObject = newMap;
 
-                Debug.Log($"[StageManager] Map prefab '{mapPrefabKey}' loaded and swapped successfully!");
+                // 현재 맵 키 업데이트
+                currentMapPrefabKey = mapPrefabKey;
+
+                // 1프레임 대기 (인스턴스화 완료 보장)
+                await UniTask.Yield();
+
+                Debug.Log($"[StageManager] Map prefab '{mapPrefabKey}' loaded and instantiated successfully!");
             }
             catch (Exception e)
             {
@@ -476,17 +566,17 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// LMJ: Show start card selection (2 character cards only)
+        /// LMJ: Show start card selection (deck count character cards: 3-4)
         /// Game does NOT pause for start selection
         /// </summary>
         private async UniTaskVoid ShowStartCardSelection()
         {
-            Debug.Log("[StageManager] Opening start card selection (2 character cards)");
+            Debug.Log("[StageManager] Opening start card selection (deck count character cards)");
 
             var ui = GameManager.Instance?.UI;
             if (ui != null)
             {
-                ui.OpenCardSelectForGameStart(); // Opens 2 character cards, no pause
+                ui.OpenCardSelectForGameStart(); // Opens deck count character cards (3-4)
 
                 // Wait until card panel is closed
                 while (ui != null && ui.IsCardSelectOpen())
@@ -527,6 +617,12 @@ namespace NovelianMagicLibraryDefense.Managers
 
             // JML: Reset global stat buffs (Issue #349)
             globalStatBuffs.Clear();
+
+            // JML: Reset map key for next stage load (Issue #420)
+            currentMapPrefabKey = null;
+
+            // JML: Reset global monster debuffs (Issue #424)
+            globalMonsterDebuffs.Clear();
         }
 
         protected override void OnDispose()
@@ -648,12 +744,12 @@ namespace NovelianMagicLibraryDefense.Managers
                 maxExp = GetRequiredExpForNextLevel();
                 ui?.UpdateExperience(currentExp, maxExp);
 
-                // LMJ: Open card selection for level up
+                // LMJ: Open card selection for level up (Card_Type 1: 4 stat cards, Card_Type 2: deck count character cards)
                 Debug.Log($"[StageManager] Level up to {level}! (Next: {maxExp} exp)");
 
                 if (ui != null)
                 {
-                    ui.OpenCardSelectForLevelUp(); // Opens with 2 random cards (character + ability mix)
+                    ui.OpenCardSelectForLevelUp(); // Card_Type 1: 4 stat cards, Card_Type 2: deck count character cards (3-4)
 
                     // Wait until card panel is closed
                     while (ui != null && ui.IsCardSelectOpen())
@@ -735,6 +831,13 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         #region GlobalStatBuff Methods (Issue #349)
+
+        /// <summary>
+        /// JML: 전역 몬스터 디버프 저장소 (Issue #424)
+        /// 적 공격속도/공격력 감소 카드 선택 시 누적
+        /// 새로 스폰되는 몬스터에도 자동 적용
+        /// </summary>
+        private Dictionary<DeBuffType, float> globalMonsterDebuffs = new Dictionary<DeBuffType, float>();
 
         /// <summary>
         /// JML: 전역 스텟 버프 적용
@@ -825,6 +928,109 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             Debug.Log($"[StageManager] Buff applied to {characters.Count} characters");
+        }
+
+        #endregion
+
+        #region Monster Debuff & Wall Effect Methods (Issue #424)
+
+        /// <summary>
+        /// JML: 전역 몬스터 디버프 적용 (적의 공격속도/공격력 감소 카드)
+        /// 현재 필드의 모든 몬스터 + 새로 스폰되는 몬스터에 적용
+        /// </summary>
+        /// <param name="debuffType">디버프 타입 (ATK_Damage_Down, ATK_Speed_Down)</param>
+        /// <param name="value">감소 값 (% 단위, 예: 0.1 = 10%)</param>
+        public void ApplyGlobalMonsterDebuff(DeBuffType debuffType, float value)
+        {
+            // 1. 전역 디버프 저장소에 누적
+            if (globalMonsterDebuffs.ContainsKey(debuffType))
+            {
+                globalMonsterDebuffs[debuffType] += value;
+            }
+            else
+            {
+                globalMonsterDebuffs[debuffType] = value;
+            }
+
+            Debug.Log($"[StageManager] Global Monster Debuff Applied: {debuffType} -{value * 100f}% (Total: {globalMonsterDebuffs[debuffType] * 100f}%)");
+
+            // 2. 현재 필드의 모든 몬스터에 디버프 적용
+            ApplyDebuffToAllMonsters(debuffType, value);
+        }
+
+        /// <summary>
+        /// JML: 현재 필드의 모든 몬스터에 디버프 적용
+        /// TargetRegistry를 통해 활성 몬스터 목록 조회
+        /// </summary>
+        private void ApplyDebuffToAllMonsters(DeBuffType debuffType, float value)
+        {
+            var allTargets = TargetRegistry.Instance.GetAllTargets();
+            int appliedCount = 0;
+
+            foreach (var target in allTargets)
+            {
+                // Monster로 캐스팅 (ITargetable이 Monster인 경우만)
+                if (target is Monster monster)
+                {
+                    // 영구 디버프로 적용 (duration = float.MaxValue)
+                    monster.ApplyDebuff(debuffType, value, float.MaxValue);
+                    appliedCount++;
+                }
+            }
+
+            Debug.Log($"[StageManager] Debuff {debuffType} applied to {appliedCount} monsters");
+        }
+
+        /// <summary>
+        /// JML: 특정 디버프의 전역 값 조회
+        /// 새로 스폰되는 몬스터에 적용할 때 사용
+        /// </summary>
+        public float GetGlobalMonsterDebuff(DeBuffType debuffType)
+        {
+            return globalMonsterDebuffs.TryGetValue(debuffType, out float value) ? value : 0f;
+        }
+
+        /// <summary>
+        /// JML: 모든 전역 몬스터 디버프 조회
+        /// 새로 스폰되는 몬스터에 모든 디버프 적용 시 사용
+        /// </summary>
+        public Dictionary<DeBuffType, float> GetAllGlobalMonsterDebuffs()
+        {
+            return new Dictionary<DeBuffType, float>(globalMonsterDebuffs);
+        }
+
+        /// <summary>
+        /// JML: Wall에 Shield 추가 (결계 내구도 증가 카드)
+        /// </summary>
+        /// <param name="value">추가량 (% 단위, 예: 0.1 = 최대 쉴드의 10%)</param>
+        public void ApplyWallShield(float value)
+        {
+            if (wallComponent != null)
+            {
+                wallComponent.AddShieldByPercent(value);
+                Debug.Log($"[StageManager] Wall Shield 추가: +{value * 100f}%");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] wallComponent is null! Cannot apply shield.");
+            }
+        }
+
+        /// <summary>
+        /// JML: Wall 체력 회복 (결계 회복 카드)
+        /// </summary>
+        /// <param name="value">회복량 (% 단위, 예: 0.1 = 최대 체력의 10%)</param>
+        public void ApplyWallHeal(float value)
+        {
+            if (wallComponent != null)
+            {
+                wallComponent.HealByPercent(value);
+                Debug.Log($"[StageManager] Wall 체력 회복: +{value * 100f}%");
+            }
+            else
+            {
+                Debug.LogError("[StageManager] wallComponent is null! Cannot heal.");
+            }
         }
 
         #endregion

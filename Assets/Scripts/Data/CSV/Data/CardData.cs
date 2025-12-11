@@ -5,8 +5,12 @@
 public class CardData
 {
     public int Card_ID { get; set; }
+    public int Card_Name_ID { get; set; }
+    public int Card_Type { get; set; }
     public int Card_Level1_ID { get; set; }
     public int Card_Level2_ID { get; set; }
     public int Card_Level3_ID { get; set; }
-    public int Card_Type { get; set; }
+    public float Probability { get; set; }
+    public int Card_Description_ID { get; set; }
+    public int Path_ID { get; set; }
 }

@@ -387,5 +387,59 @@ namespace Novelian.Combat
         }
 
         #endregion
+
+        #region Public Stat Getters (Issue #424 - ChaCard UI용)
+
+        /// <summary>
+        /// JML: UI용 최종 공격력 반환 (Issue #424)
+        /// Character.SkillData.cs의 FinalDamage 참조
+        /// </summary>
+        public float GetDisplayDamage()
+        {
+            if (basicAttackData == null) return 0f;
+            return FinalDamage;
+        }
+
+        /// <summary>
+        /// JML: UI용 최종 공격속도 반환 (Issue #424)
+        /// Character.SkillData.cs의 FinalAttackSpeed 참조
+        /// </summary>
+        public float GetDisplayAttackSpeed()
+        {
+            if (basicAttackData == null) return 1f;
+            return FinalAttackSpeed;
+        }
+
+        /// <summary>
+        /// JML: UI용 치명타 확률 반환 (Issue #424)
+        /// 기본값 5% + modifier
+        /// </summary>
+        public float GetDisplayCritChance()
+        {
+            return 5f + critChanceModifier; // 기본 5% + 추가 %
+        }
+
+        /// <summary>
+        /// JML: UI용 치명타 배율 반환 (Issue #424)
+        /// 기본값 150% + modifier
+        /// </summary>
+        public float GetDisplayCritMultiplier()
+        {
+            return 150f + critMultiplierModifier; // 기본 150% + 추가 %
+        }
+
+        /// <summary>
+        /// JML: UI용 장착 스킬 이름 반환 (Issue #424)
+        /// </summary>
+        public string GetDisplaySkillName()
+        {
+            if (supportData != null)
+            {
+                return supportData.support_name;
+            }
+            return "없음";
+        }
+
+        #endregion
     }
 }

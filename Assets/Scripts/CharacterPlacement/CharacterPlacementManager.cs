@@ -302,6 +302,23 @@ public class CharacterPlacementManager : MonoBehaviour
         return false;
     }
 
+    /// <summary>
+    /// JML: 첫 번째 빈 슬롯의 인덱스 반환 (Issue #424)
+    /// CharacterCardGridManager UI 연동용
+    /// </summary>
+    /// <returns>빈 슬롯 인덱스 (0~3), 없으면 -1</returns>
+    public int GetFirstEmptySlotIndex()
+    {
+        for (int i = 0; i < gridSlots.Count; i++)
+        {
+            if (gridSlots[i].IsEmpty())
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     //JML: Get random empty slot
     private GridSlot GetRandomEmptySlot()
     {
@@ -1016,6 +1033,70 @@ public class CharacterPlacementManager : MonoBehaviour
             boundaryDepth
         );
         Gizmos.DrawWireCube(gridCenter, gridBoundarySize);
+
+        // 양방향 방어 모드: Grid 2 그리기
+        if (splitGridMode)
+        {
+            DrawGrid2Gizmos(cubeSize, emptyColor, wireColor, slotIndex);
+        }
+    }
+
+    /// <summary>
+    /// JML: Grid 2 Gizmo 그리기 (양방향 방어 모드)
+    /// </summary>
+    private void DrawGrid2Gizmos(Vector3 cubeSize, Color emptyColor, Color wireColor, int startSlotIndex)
+    {
+        Color grid2Color = new Color(0f, 0.5f, 1f, 0.3f);  // Blue for Grid 2
+        Color grid2WireColor = new Color(0f, 0.7f, 1f, 0.8f);   // Light blue wireframe
+
+        float totalWidth = (gridColumns - 1) * gridSpacingX;
+        int slotIndex = startSlotIndex;
+
+        // Grid 2 위치 계산
+        Vector3 startPos = new Vector3(
+            -totalWidth / 2f + grid2CenterOffset.x,
+            grid2CenterOffset.y,
+            grid2CenterOffset.z
+        );
+
+        for (int col = 0; col < gridColumns; col++)
+        {
+            Vector3 position = startPos + new Vector3(col * gridSpacingX, 0f, 0f);
+
+            // Check if slot is occupied (only in play mode)
+            bool isOccupied = false;
+            int grid2Index = slotIndex - startSlotIndex;
+            if (Application.isPlaying && gridSlots2.Count > grid2Index)
+            {
+                isOccupied = !gridSlots2[grid2Index].IsEmpty();
+            }
+
+            // Set color based on occupancy
+            Gizmos.color = isOccupied ? new Color(1f, 0.5f, 0f, 0.5f) : grid2Color;
+
+            // Draw cube for slot
+            Gizmos.DrawCube(position, cubeSize);
+
+            // Draw wireframe
+            Gizmos.color = grid2WireColor;
+            Gizmos.DrawWireCube(position, cubeSize);
+
+            // Draw slot index label in scene view
+            #if UNITY_EDITOR
+            UnityEditor.Handles.Label(position + Vector3.up * 0.2f, $"G2_{slotIndex}");
+            #endif
+
+            slotIndex++;
+        }
+
+        // Draw Grid 2 boundary
+        Gizmos.color = new Color(0f, 0.7f, 1f, 0.8f);
+        Vector3 grid2BoundarySize = new Vector3(
+            gridColumns * gridSpacingX,
+            0.05f,
+            gridSpacingZ
+        );
+        Gizmos.DrawWireCube(grid2CenterOffset, grid2BoundarySize);
     }
 
     /// <summary>

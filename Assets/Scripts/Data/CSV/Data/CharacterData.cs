@@ -4,6 +4,7 @@ public class CharacterData
 {
     public int Character_ID { get; set; }
     public int Character_Name_ID { get; set; }
+    public int Path_ID { get; set; }
     public Genre Genre { get; set; }
     public int Cha_Level_1_ID { get; set; }
     public int Cha_Level_2_ID { get; set; }
