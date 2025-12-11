@@ -1,5 +1,7 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.UI;
 
 public class CharacterInfoPanel : MonoBehaviour
@@ -61,9 +63,44 @@ public class CharacterInfoPanel : MonoBehaviour
         var characterData = CSVLoader.Instance.GetData<CharacterData>(CharacterID);
         characterNameText.text = $"{CSVLoader.Instance.GetData<StringTable>(characterData.Character_Name_ID)?.Text ?? "Unknown"}";
 
+        // 캐릭터 아이콘 로드
+        LoadCharacterSprite(characterData);
+
         RefreshLevelUI();
         RefreshBookmarkUI();
         enhancementPanel?.Initialize(CharacterID);
+    }
+
+    /// <summary>
+    /// 캐릭터 스프라이트 로드
+    /// </summary>
+    private void LoadCharacterSprite(CharacterData characterData)
+    {
+        if (characterSprite == null || characterData == null) return;
+
+        string spriteKey = AddressableKey.Icon_Character;
+
+        // Path_ID가 있으면 PathTable에서 개별 아이콘 키 조회
+        if (characterData.Path_ID > 0)
+        {
+            var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
+            if (pathData != null && !string.IsNullOrEmpty(pathData.Addressable_Key))
+            {
+                spriteKey = pathData.Addressable_Key;
+            }
+        }
+
+        Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
+        {
+            if (handle.Status == AsyncOperationStatus.Succeeded)
+            {
+                characterSprite.sprite = handle.Result;
+            }
+            else
+            {
+                Debug.LogWarning($"[CharacterInfoPanel] Failed to load character sprite: {spriteKey}");
+            }
+        };
     }
 
     /// <summary>

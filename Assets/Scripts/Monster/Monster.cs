@@ -208,16 +208,25 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     public override void TakeDamage(float damage)
     {
+        TakeDamage(damage, false);
+    }
+
+    /// <summary>
+    /// 데미지 처리 (치명타 여부 포함)
+    /// </summary>
+    /// <param name="damage">데미지량</param>
+    /// <param name="isCriticalHit">치명타 여부 (Projectile에서 전달)</param>
+    public void TakeDamage(float damage, bool isCriticalHit)
+    {
         if (isDead) return;
 
         // Apply Mark damage multiplier if active
         float finalDamage = damage;
-        bool isCritical = false;
+        bool isCritical = isCriticalHit; // 외부에서 전달받은 크리티컬 여부
         if (currentMarkType != MarkType.None && Time.time < markEndTime)
         {
             finalDamage = damage * (1f + markDamageMultiplier / 100f);
-            isCritical = true; // Mark amplified damage shows as critical
-            // JML: Mark damage 로그 제거
+            isCritical = true; // Mark amplified damage도 크리티컬로 표시
         }
 
         // LMJ: Show floating damage text (무적 상태에서도 표시)

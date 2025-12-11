@@ -16,6 +16,10 @@ public class CharacterCardGridManager : MonoBehaviour
     [Header("Dependencies")]
     [SerializeField] private CharacterPlacementManager placementManager;
 
+    [Header("Detail Popup")]
+    [SerializeField] private ChaCard characterInfoCard; // 씬에 미리 배치된 상세 정보 카드
+    [SerializeField] private GameObject dimBackground; // 딤 처리 배경
+
     /// <summary>
     /// 슬롯 인덱스 → 캐릭터 ID 매핑
     /// </summary>
@@ -34,6 +38,12 @@ public class CharacterCardGridManager : MonoBehaviour
     {
         // 모든 슬롯 빈 상태로 초기화
         ClearAllSlots();
+
+        // 상세 정보 카드 초기 비활성화
+        if (characterInfoCard != null)
+        {
+            characterInfoCard.gameObject.SetActive(false);
+        }
     }
 
     /// <summary>
@@ -248,4 +258,178 @@ public class CharacterCardGridManager : MonoBehaviour
         }
         Debug.Log("[CharacterCardGridManager] All card stats refreshed");
     }
+
+    #region Support Skill Selection (Issue #437)
+
+    // 현재 연결된 CardSelectPanel (스킬 장착용)
+    private NovelianMagicLibraryDefense.UI.CardSelectPanel linkedCardSelectPanel;
+
+    /// <summary>
+    /// JML: 서포트 스킬과 호환되는 캐릭터만 하이라이트 (Issue #437)
+    /// 호환되는 캐릭터: 올라오는 애니메이션
+    /// 비호환 캐릭터: 딤 처리
+    /// </summary>
+    /// <param name="supportId">Support_ID (40001~)</param>
+    /// <param name="cardSelectPanel">스킬 장착을 위한 CardSelectPanel 참조</param>
+    public void ShowCompatibleCharacters(int supportId, NovelianMagicLibraryDefense.UI.CardSelectPanel cardSelectPanel)
+    {
+        linkedCardSelectPanel = cardSelectPanel;
+
+        // 호환성 데이터 조회
+        var compatibilityData = CSVLoader.Instance?.GetTable<SupportCompatibilityData>()?.GetId(supportId);
+        if (compatibilityData == null)
+        {
+            Debug.LogWarning($"[CharacterCardGridManager] SupportCompatibilityData not found for ID: {supportId}");
+            ResetCharacterAnimations();
+            return;
+        }
+
+        int compatibleCount = 0;
+
+        for (int i = 0; i < cardSlots.Length; i++)
+        {
+            var card = cardSlots[i];
+            if (card == null || card.IsEmpty) continue;
+
+            // 해당 슬롯의 캐릭터 가져오기
+            int characterId = card.CharacterId;
+            var character = placementManager?.GetCharacterById(characterId);
+
+            if (character == null) continue;
+
+            // 이미 서포트 스킬이 있으면 비호환 처리
+            if (character.HasSupportSkill())
+            {
+                card.PlayDimAnimation();
+                continue;
+            }
+
+            // 메인 스킬 타입 조회
+            int mainSkillId = character.GetBasicAttackSkillId();
+            var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(mainSkillId);
+
+            if (mainSkillData == null)
+            {
+                card.PlayDimAnimation();
+                continue;
+            }
+
+            // 호환성 검증
+            if (compatibilityData.IsCompatibleWith(mainSkillData.GetSkillType()))
+            {
+                card.PlaySelectableAnimation();
+                compatibleCount++;
+            }
+            else
+            {
+                card.PlayDimAnimation();
+            }
+        }
+
+        Debug.Log($"[CharacterCardGridManager] ShowCompatibleCharacters: SupportID={supportId}, 호환={compatibleCount}명");
+    }
+
+    /// <summary>
+    /// JML: 캐릭터 카드 애니메이션 초기화 (Issue #437)
+    /// </summary>
+    public void ResetCharacterAnimations()
+    {
+        linkedCardSelectPanel = null;
+
+        for (int i = 0; i < cardSlots.Length; i++)
+        {
+            if (cardSlots[i] != null && !cardSlots[i].IsEmpty)
+            {
+                cardSlots[i].ResetAnimation();
+            }
+        }
+
+        Debug.Log("[CharacterCardGridManager] Character animations reset");
+    }
+
+    /// <summary>
+    /// JML: 캐릭터 카드 클릭 처리 (Issue #437)
+    /// ChaCard에서 호출됨 → CardSelectPanel에 스킬 장착 요청
+    /// </summary>
+    public void OnCharacterCardClicked(int characterId)
+    {
+        if (linkedCardSelectPanel == null)
+        {
+            Debug.Log("[CharacterCardGridManager] No linked CardSelectPanel");
+            return;
+        }
+
+        if (!linkedCardSelectPanel.HasSelectedSupportSkill())
+        {
+            Debug.Log("[CharacterCardGridManager] No support skill selected");
+            return;
+        }
+
+        // CardSelectPanel에 장착 요청
+        linkedCardSelectPanel.EquipSelectedSkillToCharacter(characterId);
+    }
+
+    #endregion
+
+    #region Detail Popup
+
+    /// <summary>
+    /// JML: 캐릭터 카드 상세 팝업 표시
+    /// 씬에 미리 배치된 characterInfoCard를 활성화하고 데이터 복사
+    /// </summary>
+    /// <param name="sourceCard">원본 ChaCard</param>
+    public void ShowCardDetailPopup(ChaCard sourceCard)
+    {
+        if (sourceCard == null || sourceCard.IsEmpty)
+        {
+            Debug.LogWarning("[CharacterCardGridManager] Cannot show popup for empty card");
+            return;
+        }
+
+        if (characterInfoCard == null)
+        {
+            Debug.LogError("[CharacterCardGridManager] characterInfoCard is not assigned!");
+            return;
+        }
+
+        // 딤 배경 활성화
+        if (dimBackground != null)
+        {
+            dimBackground.SetActive(true);
+        }
+
+        // 상세 정보 카드 활성화
+        characterInfoCard.gameObject.SetActive(true);
+
+        // 팝업 모드 설정 및 데이터 복사
+        characterInfoCard.SetPopupMode(true, CloseCardDetailPopup);
+        characterInfoCard.CopyDataFrom(sourceCard);
+
+        // UI 최상위로 이동 (다른 UI 위에 표시)
+        characterInfoCard.transform.SetAsLastSibling();
+
+        Debug.Log($"[CharacterCardGridManager] Popup opened for CharacterId={sourceCard.CharacterId}");
+    }
+
+    /// <summary>
+    /// JML: 캐릭터 카드 상세 팝업 닫기
+    /// </summary>
+    public void CloseCardDetailPopup()
+    {
+        // 상세 정보 카드 비활성화
+        if (characterInfoCard != null)
+        {
+            characterInfoCard.SetPopupMode(false);
+            characterInfoCard.gameObject.SetActive(false);
+            Debug.Log("[CharacterCardGridManager] Popup closed");
+        }
+
+        // 딤 배경 비활성화
+        if (dimBackground != null)
+        {
+            dimBackground.SetActive(false);
+        }
+    }
+
+    #endregion
 }
