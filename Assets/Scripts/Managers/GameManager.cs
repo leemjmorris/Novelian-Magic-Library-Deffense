@@ -57,6 +57,8 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void InitializeManagers()
         {
+            Debug.Log("[GameManager] InitializeManagers called");
+
             // Initialize in dependency order
             if (inputManager != null)
             {
@@ -80,7 +82,12 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (stageManager != null)
             {
+                Debug.Log("[GameManager] Initializing StageManager...");
                 stageManager.Initialize();
+            }
+            else
+            {
+                Debug.LogError("[GameManager] stageManager is NULL! Inspector에서 StageManager 할당 필요!");
             }
 
             if (stageStateManager != null)
