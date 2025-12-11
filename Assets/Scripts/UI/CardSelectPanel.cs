@@ -400,11 +400,17 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             // Card_Type=1인 카드만 필터링하여 풀 생성
+            // 서포트 스킬 카드(081029~081051)는 호환 캐릭터가 있는 경우에만 추가 (Issue #437)
             var statCardPool = new List<global::CardData>();
             foreach (var card in cardTable)
             {
                 if (card.Card_Type == 1)
                 {
+                    // 서포트 스킬 카드 호환성 필터링
+                    if (!IsSupportSkillCardCompatible(card.Card_ID))
+                    {
+                        continue;  // 호환 캐릭터 없으면 풀에서 제외
+                    }
                     statCardPool.Add(card);
                 }
             }
@@ -1183,6 +1189,57 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             return compatibleCharacters;
+        }
+
+        /// <summary>
+        /// JML: 서포트 스킬 카드가 현재 필드 캐릭터와 호환되는지 확인 (Issue #437)
+        /// 카드 표시 전에 필터링하여 호환 불가 카드를 제외
+        /// </summary>
+        /// <param name="cardId">CardTable ID (081029~081051)</param>
+        /// <returns>호환 가능한 캐릭터가 있으면 true</returns>
+        private bool IsSupportSkillCardCompatible(int cardId)
+        {
+            // 서포트 스킬 카드 범위 확인 (081029~081051)
+            if (cardId < 81029 || cardId > 81051) return true;  // 일반 카드는 통과
+
+            // CardTable ID → Support_ID 변환 (081029 → 40001, 081030 → 40002, ...)
+            int supportId = (cardId - 81029) + 40001;
+
+            // 호환성 데이터 조회
+            var compatibilityData = CSVLoader.Instance?.GetTable<SupportCompatibilityData>()?.GetId(supportId);
+            if (compatibilityData == null)
+            {
+                Debug.LogWarning($"[CardSelectPanel] SupportCompatibilityData not found for Support_ID: {supportId}");
+                return true;  // 데이터 없으면 통과 (fallback)
+            }
+
+            // 필드 캐릭터 중 호환 가능한 캐릭터 검색
+            var fieldCharacters = placementManager?.GetAllCharacters();
+            if (fieldCharacters == null || fieldCharacters.Count == 0)
+            {
+                Debug.Log($"[CardSelectPanel] 필드에 캐릭터 없음 → 서포트 카드 {cardId} 필터링");
+                return false;  // 필드에 캐릭터 없으면 서포트 카드 표시 안 함
+            }
+
+            foreach (var character in fieldCharacters)
+            {
+                // 이미 서포트 스킬이 있는 캐릭터는 스킵
+                if (character.HasSupportSkill()) continue;
+
+                // 메인 스킬 타입 조회
+                int mainSkillId = character.GetBasicAttackSkillId();
+                var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(mainSkillId);
+                if (mainSkillData == null) continue;
+
+                // 호환성 검증
+                if (compatibilityData.IsCompatibleWith(mainSkillData.GetSkillType()))
+                {
+                    return true;  // 호환 가능한 캐릭터 존재
+                }
+            }
+
+            Debug.Log($"[CardSelectPanel] 서포트 카드 {cardId} (Support_ID: {supportId}) 필터링됨 (호환 캐릭터 없음)");
+            return false;  // 호환 가능한 캐릭터 없음
         }
 
         /// <summary>
