@@ -77,7 +77,20 @@ public class DeckCharacterSlot : MonoBehaviour
     /// </summary>
     private void LoadCharacterImage()
     {
-        Addressables.LoadAssetAsync<Sprite>(AddressableKey.Icon_Character).Completed += handle =>
+        string spriteKey = AddressableKey.Icon_Character;
+
+        // CharacterData에서 Path_ID로 개별 아이콘 키 조회
+        var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
+        if (characterData != null && characterData.Path_ID > 0)
+        {
+            var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
+            if (pathData != null && !string.IsNullOrEmpty(pathData.Addressable_Key))
+            {
+                spriteKey = pathData.Addressable_Key;
+            }
+        }
+
+        Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
@@ -85,7 +98,7 @@ public class DeckCharacterSlot : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[DeckCharacterSlot] Failed to load character image: {AddressableKey.Icon_Character}");
+                Debug.LogWarning($"[DeckCharacterSlot] Failed to load character image: {spriteKey}");
             }
         };
     }
