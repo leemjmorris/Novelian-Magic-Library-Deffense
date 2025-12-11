@@ -27,6 +27,9 @@ public class LobbyUI : MonoBehaviour
     [Header("Menu Layout")]
     [SerializeField] private GameObject menuLayout; // 메뉴 레이아웃 (토글용)
 
+    [Header("Profile Panel")]
+    [SerializeField] private GameObject profileDetailPanel; // 프로필 상세 패널 (버튼 누르면 열림)
+
     private bool isDispatchCompleted = false; // 파견 완료 상태 캐싱
 
     private void OnEnable()
@@ -36,6 +39,12 @@ public class LobbyUI : MonoBehaviour
         if (CurrencyManager.Instance != null)
         {
             CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
+        }
+
+        // 메뉴 레이아웃 활성화 (항상 보이는 상태로 시작)
+        if (menuLayout != null)
+        {
+            menuLayout.SetActive(true);
         }
 
         // 파견 완료 플래그 초기화
@@ -151,6 +160,12 @@ public class LobbyUI : MonoBehaviour
 
     public void OnInventoryButton()
     {
+        // 메뉴 레이아웃이 열려있으면 먼저 닫기
+        if (menuLayout != null && menuLayout.activeSelf)
+        {
+            menuLayout.SetActive(false);
+        }
+
         // 씬 전환 대신 패널 토글 방식으로 변경
         if (inventoryPanel != null)
         {
@@ -195,6 +210,8 @@ public class LobbyUI : MonoBehaviour
         }
     }
 
+    
+
     public void OnShopButton()
     {
         WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
@@ -213,6 +230,12 @@ public class LobbyUI : MonoBehaviour
     // 중앙 버튼
     public void OnBattleButton()
     {
+        // 메뉴 레이아웃이 열려있으면 먼저 닫기
+        if (menuLayout != null && menuLayout.activeSelf)
+        {
+            menuLayout.SetActive(false);
+        }
+
         // 씬 전환 대신 패널 토글 방식으로 변경
         if (stageSelectPanel != null)
         {
@@ -298,6 +321,34 @@ public class LobbyUI : MonoBehaviour
     public void OnChallengeDungeonButton()
     {
         WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+    }
+
+    /// <summary>
+    /// 프로필 버튼 클릭 시 프로필 상세 패널 활성화
+    /// </summary>
+    public void OnProfileButton()
+    {
+        Debug.Log("[LobbyUI] OnProfileButton 호출됨!");
+        if (profileDetailPanel != null)
+        {
+            profileDetailPanel.SetActive(true);
+            Debug.Log("[LobbyUI] profileDetailPanel 활성화됨");
+        }
+        else
+        {
+            Debug.LogWarning("[LobbyUI] profileDetailPanel이 null입니다!");
+        }
+    }
+
+    /// <summary>
+    /// 프로필 상세 패널 닫기 버튼
+    /// </summary>
+    public void OnProfileCloseButton()
+    {
+        if (profileDetailPanel != null)
+        {
+            profileDetailPanel.SetActive(false);
+        }
     }
 
 
