@@ -136,19 +136,16 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
                 // 아이콘 로드
                 if (iconImage != null)
                 {
-                    string addressableKey = null;
+                    string addressableKey = AddressableKey.Icon_Character;
 
                     // Path_ID가 있으면 PathTable에서 조회
                     if (characterData.Path_ID > 0)
                     {
                         var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
-                        addressableKey = pathData?.Addressable_Key;
-                    }
-
-                    // Path_ID가 0이거나 PathData가 없으면 기본 아이콘 사용
-                    if (string.IsNullOrEmpty(addressableKey))
-                    {
-                        addressableKey = AddressableKey.Icon_Character; // "ChaIcon"
+                        if (pathData != null && !string.IsNullOrEmpty(pathData.Addressable_Key))
+                        {
+                            addressableKey = pathData.Addressable_Key;
+                        }
                     }
 
                     try
