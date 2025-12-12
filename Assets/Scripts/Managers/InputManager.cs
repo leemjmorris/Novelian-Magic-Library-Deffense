@@ -121,8 +121,9 @@ namespace NovelianMagicLibraryDefense.Managers
             // Singleton 설정
             if (instance != null && instance != this)
             {
-                Debug.LogWarning("[InputManager] Duplicate instance detected! Destroying this instance.");
-                Destroy(gameObject);
+                // 중복 인스턴스는 경고 없이 조용히 무시 (씬 전환 시 정상 동작)
+                // Destroy(gameObject)를 호출하지 않음 - GameManager가 관리하는 오브젝트일 수 있음
+                enabled = false;
                 return;
             }
             instance = this;

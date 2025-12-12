@@ -90,14 +90,21 @@ namespace NovelianMagicLibraryDefense.UI
 
         private async void Awake()
         {
-            // JML: Inspector 참조가 없으면 Tag로 fallback 시도
+            // JML: Inspector 참조가 없으면 여러 방법으로 fallback 시도
             if (placementManager == null)
             {
+                // 1순위: Tag로 찾기
                 GameObject cpmObj = GameObject.FindWithTag("CharacterPlacementManager");
                 if (cpmObj != null)
                 {
                     placementManager = cpmObj.GetComponent<CharacterPlacementManager>();
                 }
+            }
+
+            if (placementManager == null)
+            {
+                // 2순위: FindFirstObjectByType으로 찾기
+                placementManager = FindFirstObjectByType<CharacterPlacementManager>();
             }
 
             if (placementManager == null)
@@ -879,9 +886,15 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void ProcessCharacterCard(int characterId)
         {
+            // JML: placementManager가 null이면 다시 찾기 시도
             if (placementManager == null)
             {
-                Debug.LogError("[CardSelectPanel] CharacterPlacementManager is null!");
+                placementManager = FindFirstObjectByType<CharacterPlacementManager>();
+            }
+
+            if (placementManager == null)
+            {
+                Debug.LogError("[CardSelectPanel] CharacterPlacementManager is null! Inspector에서 할당하거나 씬에 배치해주세요.");
                 return;
             }
 

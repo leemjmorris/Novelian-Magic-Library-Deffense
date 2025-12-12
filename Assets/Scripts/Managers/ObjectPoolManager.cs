@@ -567,7 +567,8 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (!component.gameObject.activeSelf)
             {
-                Debug.LogWarning($"[ObjectPoolManager] DespawnByKey '{key}' - gameObject already inactive");
+                // 이미 비활성화된 오브젝트는 조용히 무시 (중복 Despawn 호출 방지)
+                // Die() 애니메이션 중 여러 번 호출될 수 있음
                 return;
             }
 

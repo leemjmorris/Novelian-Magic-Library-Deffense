@@ -235,9 +235,10 @@ namespace Novelian.Combat
         //LMJ : Start active skill loop
         private void StartActiveSkillLoop()
         {
+            // activeSkillId가 0이면 액티브 스킬이 없는 캐릭터 (정상 케이스)
             if (activeSkillData == null)
             {
-                Debug.LogWarning("[Character] activeSkillData is null. Skipping active skill loop.");
+                // 액티브 스킬이 없는 캐릭터는 경고 없이 스킵
                 return;
             }
 
@@ -303,15 +304,72 @@ namespace Novelian.Combat
 
             if (target == null)
             {
-                // 타겟이 없으면 공격 스킵 (정상적인 상황)
+                // 타겟이 없으면 스포너 방향을 바라봄
+                LookAtNearestSpawner();
                 return;
             }
+
+            // JML: 타겟 방향을 바라봄
+            LookAtTarget(target);
 
             // JML: 공격 애니메이션 재생
             PlayAttackAnimation();
 
             // 스킬 타입별 분기 처리
             ExecuteSkillByType(skillType, target, basicAttackData, basicAttackPrefabs, FinalDamage, FinalRange, FinalProjectileSpeed, FinalProjectileLifetime, isActiveSkill: false);
+        }
+
+        /// <summary>
+        /// JML: 타겟 방향으로 캐릭터 회전
+        /// </summary>
+        private void LookAtTarget(ITargetable target)
+        {
+            if (target == null) return;
+
+            Vector3 targetPos = target.GetPosition();
+            Vector3 direction = targetPos - transform.position;
+            direction.y = 0; // Y축 무시 (수평 회전만)
+
+            if (direction.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.LookRotation(direction);
+            }
+        }
+
+        /// <summary>
+        /// JML: 가장 가까운 스포너 방향으로 캐릭터 회전
+        /// </summary>
+        private void LookAtNearestSpawner()
+        {
+            GameObject spawner1 = GameObject.FindWithTag("SpawnArea1");
+            GameObject spawner2 = GameObject.FindWithTag("SpawnArea2");
+
+            Vector3? targetDir = null;
+
+            if (spawner1 != null && spawner2 != null)
+            {
+                float dist1 = Vector3.Distance(transform.position, spawner1.transform.position);
+                float dist2 = Vector3.Distance(transform.position, spawner2.transform.position);
+
+                targetDir = dist1 <= dist2
+                    ? spawner1.transform.position - transform.position
+                    : spawner2.transform.position - transform.position;
+            }
+            else if (spawner1 != null)
+            {
+                targetDir = spawner1.transform.position - transform.position;
+            }
+            else if (spawner2 != null)
+            {
+                targetDir = spawner2.transform.position - transform.position;
+            }
+
+            if (targetDir.HasValue && targetDir.Value.sqrMagnitude > 0.01f)
+            {
+                Vector3 dir = targetDir.Value;
+                dir.y = 0;
+                transform.rotation = Quaternion.LookRotation(dir);
+            }
         }
 
         //LMJ : Attempt to use active skill on target
@@ -344,6 +402,9 @@ namespace Novelian.Combat
             ITargetable target = TargetRegistry.Instance.FindTarget(transform.position, searchRange, useWeightTargeting);
 
             if (target == null) return;
+
+            // JML: 타겟 방향을 바라봄
+            LookAtTarget(target);
 
             // JML: 공격 애니메이션 재생 (액티브 스킬도 동일)
             PlayAttackAnimation();

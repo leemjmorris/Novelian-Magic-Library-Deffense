@@ -78,10 +78,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 wallEvents = wall?.GetWallEvents();
                 Debug.Log($"[StageStateManager] Found Wall: {wallObj.name}");
             }
-            else
-            {
-                Debug.LogWarning("[StageStateManager] Wall not found by tag. Will retry when map is loaded.");
-            }
+            // 맵 로드 전에는 Wall이 없을 수 있음 - 정상 케이스이므로 경고 제거
+            // RefreshWallReferences()가 맵 로드 후 호출됨
 
             // Wall 2 찾기 (Tag: Wall2 - 양방향 방어)
             GameObject wall2Obj = GameObject.FindWithTag("Wall2");

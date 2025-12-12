@@ -282,22 +282,36 @@ namespace Novelian.Combat
                 return;
             }
 
-            var pool = GameManager.Instance.Pool;
+            var pool = GameManager.Instance?.Pool;
+            if (pool == null)
+            {
+                Debug.LogError("[Character] ObjectPoolManager is null!");
+                return;
+            }
 
             if (!pool.HasPool<Projectile>())
             {
-                pool.CreatePool<Projectile>(projectileTemplate, defaultCapacity: 20, maxSize: 100);
-                pool.WarmUp<Projectile>(20);
-                Debug.Log($"[Character] Projectile pool initialized for skill: {basicAttackData.skill_name}");
+                bool success = pool.CreatePool<Projectile>(projectileTemplate, defaultCapacity: 20, maxSize: 100);
+                if (success)
+                {
+                    pool.WarmUp<Projectile>(20);
+                    Debug.Log($"[Character] Projectile pool initialized for skill: {basicAttackData.skill_name}");
+                }
+                else
+                {
+                    Debug.LogError($"[Character] Failed to create Projectile pool!");
+                }
             }
         }
 
         //LMJ : Initialize active skill projectile pool
         private void InitializeActiveSkillPool()
         {
+            // activeSkillId가 0이면 액티브 스킬이 없는 캐릭터 (정상 케이스)
             if (activeSkillData == null)
             {
-                Debug.LogWarning("[Character] activeSkillData is null. Skipping active skill initialization.");
+                // Debug 레벨을 Log로 낮춤 (모든 캐릭터가 액티브 스킬을 가지는 것은 아님)
+                // Debug.Log("[Character] No active skill assigned. Skipping active skill initialization.");
                 return;
             }
 
@@ -307,14 +321,22 @@ namespace Novelian.Combat
                 return;
             }
 
-            var pool = GameManager.Instance.Pool;
+            var pool = GameManager.Instance?.Pool;
+            if (pool == null)
+            {
+                Debug.LogError("[Character] ObjectPoolManager is null!");
+                return;
+            }
 
             // ProjectileTemplate은 모든 스킬이 공유하므로 이미 생성되어 있을 수 있음
             if (!pool.HasPool<Projectile>())
             {
-                pool.CreatePool<Projectile>(projectileTemplate, defaultCapacity: 10, maxSize: 50);
-                pool.WarmUp<Projectile>(10);
-                Debug.Log($"[Character] Active skill pool initialized for skill: {activeSkillData.skill_name}");
+                bool success = pool.CreatePool<Projectile>(projectileTemplate, defaultCapacity: 10, maxSize: 50);
+                if (success)
+                {
+                    pool.WarmUp<Projectile>(10);
+                    Debug.Log($"[Character] Active skill pool initialized for skill: {activeSkillData.skill_name}");
+                }
             }
         }
 

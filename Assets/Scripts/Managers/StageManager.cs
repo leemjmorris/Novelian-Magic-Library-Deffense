@@ -223,139 +223,186 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// JML: 레이아웃 프리셋 비동기 적용 (Issue #420 - 완전 동적 로드)
-        /// 1. 맵 프리팹 로드 → 2. Tag로 Wall/SpawnArea 찾기 → 3. Wall HP 설정 → 4. Wave 초기화
+        /// JML: 레이아웃 프리셋 비동기 적용 (자가 완결형 맵 프리팹 시스템)
+        /// 1. 맵 프리팹 로드 → 2. Tag로 참조 찾기 → 3. 마커에서 설정 읽기 → 4. Wave 초기화
+        ///
+        /// 자가 완결형: 그리드, 카메라, 스폰 위치 등 모든 설정은 맵 프리팹 내부 마커 컴포넌트에 저장됨
+        /// CSV는 맵 프리팹 키만 저장 (Layout_ID, Layout_Name, Map_Prefab_Key)
         /// </summary>
         private async UniTaskVoid ApplyLayoutPresetAsync(StageData stageData)
         {
             try
             {
-            int layoutType = stageData.Layout_Type;
+                int layoutType = stageData.Layout_Type;
 
-            if (layoutType <= 0)
-            {
-                Debug.Log("[StageManager] No layout type specified, using default layout");
-                // 기본 레이아웃에서도 Wave 초기화 및 카드 선택 필요
+                if (layoutType <= 0)
+                {
+                    Debug.Log("[StageManager] No layout type specified, using default layout");
+                    InitializeWavesAfterMapLoad(stageData);
+                    ShowStartCardSelection().Forget();
+                    return;
+                }
+
+                // CSV에서 LayoutPresetData 가져오기 (맵 프리팹 키만 포함)
+                LayoutPresetData layoutData = CSVLoader.Instance.GetData<LayoutPresetData>(layoutType);
+                if (layoutData == null)
+                {
+                    Debug.LogWarning($"[StageManager] Layout preset not found for ID: {layoutType}");
+                    InitializeWavesAfterMapLoad(stageData);
+                    ShowStartCardSelection().Forget();
+                    return;
+                }
+
+                Debug.Log($"[StageManager] Applying self-contained map: {layoutData.Layout_Name} (ID: {layoutType})");
+
+                // 1. Map Prefab 로드 (자가 완결형 - 모든 설정 포함)
+                if (!string.IsNullOrEmpty(layoutData.Map_Prefab_Key))
+                {
+                    await LoadAndSwapMapPrefabAsync(layoutData.Map_Prefab_Key);
+                }
+
+                // 2. 맵에서 Tag로 참조 찾기 (Wall, SpawnArea 등)
+                FindMapReferences();
+
+                // 3. GridMarker에서 그리드 설정 읽기
+                ApplyGridFromMarker();
+
+                // 4. CameraTarget에서 카메라 설정 읽기
+                ApplyCameraFromMarker();
+
+                // 5. Wall HP 설정 (StageTable.csv의 Barrier_HP 사용)
+                ApplyWallHP(stageData.Barrier_HP);
+
+                // 6. WaveManager에 MonsterSpawner 및 WallTarget 설정
+                SetupWaveManager();
+
+                // 7. Monster Wall 캐시 초기화
+                InitializeMonsterWallCache();
+
+                // 8. StageStateManager에 Wall 참조 갱신 알림
+                if (stageStateManager != null)
+                {
+                    stageStateManager.RefreshWallReferences();
+                }
+
+                // 9. Wave 초기화 (맵 로드 완료 후)
                 InitializeWavesAfterMapLoad(stageData);
+
+                // 10. 카드 선택 표시 (맵 로드 및 그리드 생성 완료 후)
                 ShowStartCardSelection().Forget();
+
+                Debug.Log($"[StageManager] Self-contained map '{layoutData.Layout_Name}' applied successfully!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[StageManager] ApplyLayoutPresetAsync EXCEPTION: {e.Message}\n{e.StackTrace}");
+            }
+        }
+
+        /// <summary>
+        /// JML: GridMarker에서 그리드 설정 읽어서 CharacterPlacementManager에 적용
+        /// </summary>
+        private void ApplyGridFromMarker()
+        {
+            GameObject gridMarkerObj = GameObject.FindWithTag("GridMarker");
+            if (gridMarkerObj == null)
+            {
+                Debug.LogWarning("[StageManager] GridMarker not found! Add 'GridMarker' tag to GridMarker object in map prefab.");
                 return;
             }
 
-            // CSV에서 LayoutPresetData 가져오기
-            LayoutPresetData layoutData = CSVLoader.Instance.GetData<LayoutPresetData>(layoutType);
-            if (layoutData == null)
+            GridMarker gridMarker = gridMarkerObj.GetComponent<GridMarker>();
+            if (gridMarker == null)
             {
-                Debug.LogWarning($"[StageManager] Layout preset not found for ID: {layoutType}");
-                InitializeWavesAfterMapLoad(stageData);
-                ShowStartCardSelection().Forget();
+                Debug.LogError("[StageManager] GridMarker component not found on GridMarker object!");
                 return;
             }
 
-            Debug.Log($"[StageManager] Applying layout preset: {layoutData.Layout_Name} (ID: {layoutType})");
-
-            // 1. Map Prefab 로드 (await로 완료 대기)
-            if (!string.IsNullOrEmpty(layoutData.Map_Prefab_Key))
-            {
-                await LoadAndSwapMapPrefabAsync(layoutData.Map_Prefab_Key);
-            }
-
-            // 2. 맵에서 Tag로 참조 찾기
-            FindMapReferences(layoutData.Protection_Count);
-
-            // 3. CharacterPlacementManager에 그리드 레이아웃 적용
             if (characterPlacementManager != null)
             {
-                characterPlacementManager.ApplyLayout(layoutData);
+                characterPlacementManager.ApplyLayoutFromMarker(gridMarker);
+                Debug.Log($"[StageManager] Grid applied from marker at {gridMarkerObj.transform.position}");
             }
             else
             {
                 Debug.LogWarning("[StageManager] CharacterPlacementManager is null!");
             }
+        }
 
-            // 4. Camera 위치/회전 적용
+        /// <summary>
+        /// JML: CameraTarget에서 카메라 위치/회전 읽어서 적용
+        /// </summary>
+        private void ApplyCameraFromMarker()
+        {
+            GameObject cameraTargetObj = GameObject.FindWithTag("CameraTarget");
+            if (cameraTargetObj == null)
+            {
+                Debug.LogWarning("[StageManager] CameraTarget not found! Add 'CameraTarget' tag to CameraTarget object in map prefab.");
+                return;
+            }
+
             if (cinemachineCamera != null)
             {
-                cinemachineCamera.transform.position = new Vector3(
-                    layoutData.Camera_Pos_X,
-                    layoutData.Camera_Pos_Y,
-                    layoutData.Camera_Pos_Z
-                );
-                cinemachineCamera.transform.eulerAngles = new Vector3(
-                    layoutData.Camera_Rot_X,
-                    layoutData.Camera_Rot_Y,
-                    layoutData.Camera_Rot_Z
-                );
-                Debug.Log($"[StageManager] Camera positioned at ({layoutData.Camera_Pos_X}, {layoutData.Camera_Pos_Y}, {layoutData.Camera_Pos_Z}), rotation ({layoutData.Camera_Rot_X}, {layoutData.Camera_Rot_Y}, {layoutData.Camera_Rot_Z})");
+                cinemachineCamera.transform.position = cameraTargetObj.transform.position;
+                cinemachineCamera.transform.rotation = cameraTargetObj.transform.rotation;
+                Debug.Log($"[StageManager] Camera positioned at {cameraTargetObj.transform.position}, rotation {cameraTargetObj.transform.eulerAngles}");
             }
             else
             {
                 Debug.LogError("[StageManager] cinemachineCamera is null! Inspector에서 할당해주세요.");
             }
+        }
 
-            // 5. Wall HP 설정 (맵 로드 후 참조가 있어야 가능)
+        /// <summary>
+        /// JML: Wall HP 설정 (모든 Wall에 적용)
+        /// </summary>
+        private void ApplyWallHP(float barrierHP)
+        {
             if (wallComponent != null)
             {
-                wallComponent.SetMaxHealth(stageData.Barrier_HP);
-                Debug.Log($"[StageManager] Wall HP set to {stageData.Barrier_HP}");
+                wallComponent.SetMaxHealth(barrierHP);
+                Debug.Log($"[StageManager] Wall HP set to {barrierHP}");
             }
             else
             {
-                Debug.LogError("[StageManager] wallComponent is null after map load! Check 'Wall' tag in map prefab.");
+                Debug.LogError("[StageManager] wallComponent is null! Check 'Wall' tag in map prefab.");
             }
 
-            // 6. Wall 2 HP 설정 (양방향 방어)
-            if (layoutData.Protection_Count >= 2 && wallComponent2 != null)
+            // Wall 2 HP 설정 (양방향 방어)
+            if (wallComponent2 != null)
             {
-                wallComponent2.SetMaxHealth(stageData.Barrier_HP);
-                Debug.Log($"[StageManager] Wall 2 HP set to {stageData.Barrier_HP}");
+                wallComponent2.SetMaxHealth(barrierHP);
+                Debug.Log($"[StageManager] Wall 2 HP set to {barrierHP}");
             }
+        }
 
-            // 7. WaveManager에 MonsterSpawner 및 WallTarget 설정
-            if (waveManager != null)
+        /// <summary>
+        /// JML: WaveManager에 MonsterSpawner 및 WallTarget 설정
+        /// </summary>
+        private void SetupWaveManager()
+        {
+            if (waveManager == null) return;
+
+            var spawner1 = spawnArea1?.GetComponent<NovelianMagicLibraryDefense.Spawners.MonsterSpawner>();
+            var spawner2 = spawnArea2?.GetComponent<NovelianMagicLibraryDefense.Spawners.MonsterSpawner>();
+
+            if (spawner1 != null)
             {
-                var spawner1 = spawnArea1?.GetComponent<NovelianMagicLibraryDefense.Spawners.MonsterSpawner>();
-                var spawner2 = spawnArea2?.GetComponent<NovelianMagicLibraryDefense.Spawners.MonsterSpawner>();
-
-                if (spawner1 != null)
-                {
-                    waveManager.SetMonsterSpawner(spawner1);
-                    Debug.Log("[StageManager] MonsterSpawner 1 set to WaveManager");
-                }
-                if (spawner2 != null && layoutData.Spawn_Area_Count >= 2)
-                {
-                    waveManager.SetBossSpawner(spawner2);
-                    Debug.Log("[StageManager] MonsterSpawner 2 (Boss) set to WaveManager");
-                }
-
-                // JML: WaveManager에 Wall 타겟 설정 (몬스터 목적지 설정에 필요)
-                if (protectionObj != null)
-                {
-                    var wallColl = protectionObj.GetComponent<Collider>();
-                    waveManager.SetWallTarget(protectionObj, wallComponent, wallColl);
-                    Debug.Log("[StageManager] WallTarget set to WaveManager");
-                }
+                waveManager.SetMonsterSpawner(spawner1);
+                Debug.Log("[StageManager] MonsterSpawner 1 set to WaveManager");
             }
-
-            // 8. Monster Wall 캐시 초기화 (다중 Wall 지원)
-            InitializeMonsterWallCache(layoutData.Protection_Count);
-
-            // 9. StageStateManager에 Wall 참조 갱신 알림
-            if (stageStateManager != null)
+            if (spawner2 != null)
             {
-                stageStateManager.RefreshWallReferences();
+                waveManager.SetBossSpawner(spawner2);
+                Debug.Log("[StageManager] MonsterSpawner 2 (Boss) set to WaveManager");
             }
 
-            // 10. Wave 초기화 (맵 로드 완료 후)
-            InitializeWavesAfterMapLoad(stageData);
-
-            // 11. 카드 선택 표시 (맵 로드 및 그리드 생성 완료 후)
-            ShowStartCardSelection().Forget();
-
-            Debug.Log($"[StageManager] Layout preset '{layoutData.Layout_Name}' applied successfully!");
-            }
-            catch (System.Exception e)
+            // WaveManager에 Wall 타겟 설정 (몬스터 목적지 설정에 필요)
+            if (protectionObj != null)
             {
-                Debug.LogError($"[StageManager] ApplyLayoutPresetAsync EXCEPTION: {e.Message}\n{e.StackTrace}");
+                var wallColl = protectionObj.GetComponent<Collider>();
+                waveManager.SetWallTarget(protectionObj, wallComponent, wallColl);
+                Debug.Log("[StageManager] WallTarget set to WaveManager");
             }
         }
 
@@ -378,10 +425,10 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
-        /// JML: 맵 프리팹에서 Tag로 Wall, SpawnArea 참조 찾기
-        /// Required Tags: Wall, SpawnArea1, SpawnArea2, Wall2 (양방향 방어)
+        /// JML: 맵 프리팹에서 Tag로 Wall, SpawnArea 참조 찾기 (자가 완결형)
+        /// Required Tags: Wall, SpawnArea1, SpawnArea2 (선택), Wall2 (양방향 방어, 선택)
         /// </summary>
-        private void FindMapReferences(int protectionCount)
+        private void FindMapReferences()
         {
             // Wall 1 찾기 (Tag: Wall)
             GameObject wallObj = GameObject.FindWithTag("Wall");
@@ -408,7 +455,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 Debug.LogError("[StageManager] SpawnArea1 not found! Add 'SpawnArea1' tag to spawn area in map prefab.");
             }
 
-            // SpawnArea 2 찾기 (Tag: SpawnArea2)
+            // SpawnArea 2 찾기 (Tag: SpawnArea2) - 선택 사항
             GameObject spawn2Obj = GameObject.FindWithTag("SpawnArea2");
             if (spawn2Obj != null)
             {
@@ -416,30 +463,23 @@ namespace NovelianMagicLibraryDefense.Managers
                 Debug.Log($"[StageManager] Found SpawnArea2 at {spawn2Obj.transform.position}");
             }
 
-            // Wall 2 찾기 (양방향 방어, Tag: Wall2)
-            if (protectionCount >= 2)
+            // Wall 2 찾기 (양방향 방어, Tag: Wall2) - 선택 사항
+            GameObject wall2Obj = GameObject.FindWithTag("Wall2");
+            if (wall2Obj != null)
             {
-                GameObject wall2Obj = GameObject.FindWithTag("Wall2");
-                if (wall2Obj != null)
-                {
-                    protectionObj2 = wall2Obj.transform;
-                    wallComponent2 = wall2Obj.GetComponent<Wall>();
-                    Debug.Log($"[StageManager] Found Wall2 at {wall2Obj.transform.position}");
-                }
-                else
-                {
-                    Debug.LogError("[StageManager] Wall2 not found for dual defense layout! Add 'Wall2' tag to second Protection.");
-                }
+                protectionObj2 = wall2Obj.transform;
+                wallComponent2 = wall2Obj.GetComponent<Wall>();
+                Debug.Log($"[StageManager] Found Wall2 at {wall2Obj.transform.position}");
             }
 
             IsMapLoaded = true;
         }
 
         /// <summary>
-        /// JML: Monster의 Wall 캐시 초기화 (양방향 방어 지원)
-        /// Protection_Count에 따라 Wall 목록 구성
+        /// JML: Monster의 Wall 캐시 초기화 (자가 완결형 - 자동 감지)
+        /// 맵에서 찾은 Wall들로 자동 구성
         /// </summary>
-        private void InitializeMonsterWallCache(int protectionCount)
+        private void InitializeMonsterWallCache()
         {
             List<Wall> walls = new List<Wall>();
             List<Transform> wallTransforms = new List<Transform>();
@@ -454,8 +494,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 wallColliders.Add(collider);
             }
 
-            // Wall 2 추가 (양방향 방어 시)
-            if (protectionCount >= 2 && wallComponent2 != null)
+            // Wall 2 추가 (양방향 방어 시 - 자동 감지)
+            if (wallComponent2 != null)
             {
                 walls.Add(wallComponent2);
                 wallTransforms.Add(protectionObj2);
@@ -509,8 +549,8 @@ namespace NovelianMagicLibraryDefense.Managers
                     return;
                 }
 
-                // 새 맵 인스턴스 생성 (0, 0, 20에 생성 - LayoutTestScene 기준 위치)
-                GameObject newMap = UnityEngine.Object.Instantiate(mapPrefab, new Vector3(0f, 0f, 20f), Quaternion.identity);
+                // 새 맵 인스턴스 생성 (원점에 생성 - 자가 완결형 맵 프리팹)
+                GameObject newMap = UnityEngine.Object.Instantiate(mapPrefab, Vector3.zero, Quaternion.identity);
                 newMap.name = mapPrefabKey;
 
                 // currentMapObject 참조 업데이트

@@ -25,7 +25,8 @@ namespace Novelian.Combat
             var visualConfig = CSVLoader.Instance?.GetData<CharacterVisualConfigData>(csvCharacterId);
             if (visualConfig == null)
             {
-                Debug.LogWarning($"[Character] CharacterVisualConfig not found for ID: {csvCharacterId}. Using default visuals.");
+                // 비주얼 설정이 없는 캐릭터는 기본 비주얼 사용 (정상 케이스)
+                // CSV에 모든 캐릭터의 비주얼 설정이 있지 않을 수 있음
                 return;
             }
 
