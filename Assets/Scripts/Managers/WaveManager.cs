@@ -442,13 +442,28 @@ namespace NovelianMagicLibraryDefense.Managers
 
             int spawnedCount = 0;
             int targetCount = waveData.Monster_Count;
+            bool useSpawner1 = true; // 두 스포너 번갈아 사용
 
             while (spawnedCount < targetCount && isPoolReady && !cancellationToken.IsCancellationRequested)
             {
                 // Check if spawner still exists (scene not destroyed)
                 if (monsterSpawner == null) break;
 
-                Vector3 spawnPos = monsterSpawner.GetRandomSpawnPosition();
+                // JML: 두 스포너가 있으면 번갈아가며 스폰
+                Vector3 spawnPos;
+                if (bossSpawner != null)
+                {
+                    // 두 스포너 번갈아 사용
+                    spawnPos = useSpawner1
+                        ? monsterSpawner.GetRandomSpawnPosition()
+                        : bossSpawner.GetRandomSpawnPosition();
+                    useSpawner1 = !useSpawner1;
+                }
+                else
+                {
+                    // 스포너 하나만 있으면 그것만 사용
+                    spawnPos = monsterSpawner.GetRandomSpawnPosition();
+                }
 
                 // JML: 키 기반 스폰 사용 (Addressable 프리팹)
                 var monster = poolManager.SpawnByKey<Monster>(addressableKey, spawnPos);
@@ -478,7 +493,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
             }
 
-            Debug.Log($"[WaveManager] Wave {waveData.Wave_ID} completed: spawned {spawnedCount}/{targetCount} monsters");
+            Debug.Log($"[WaveManager] Wave {waveData.Wave_ID} completed: spawned {spawnedCount}/{targetCount} monsters (dual spawner: {bossSpawner != null})");
         }
 
         private void SpawnBoss()
@@ -574,6 +589,45 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 SetBossSpawner(spawnArea2);
             }
+        }
+
+        #endregion
+
+        #region Cheat Methods (Issue #435)
+
+        /// <summary>
+        /// JML: 치트용 - 스폰 루프 중단 및 남은 몬스터 수 강제 0으로 설정
+        /// 아직 스폰되지 않은 예정된 몬스터도 모두 처리된 것으로 간주
+        /// </summary>
+        public void ForceCompleteAllWaves()
+        {
+            Debug.Log($"[WaveManager] ForceCompleteAllWaves - 남은 enemyCount: {enemyCount}, bossCount: {bossCount}");
+
+            // 1. 스폰 루프 중단
+            spawnCts?.Cancel();
+            spawnCts?.Dispose();
+            spawnCts = null;
+
+            // 2. 카운트 강제 0으로 설정
+            enemyCount = 0;
+            bossCount = 0;
+
+            // 3. UI 업데이트
+            if (uiManager != null)
+            {
+                uiManager.UpdateMonsterCount(0);
+            }
+
+            // 4. Wave 클리어 처리
+            WaveClear();
+
+            // 5. 승리 이벤트 발생
+            if (stageEvents != null)
+            {
+                stageEvents.RaiseAllMonstersDefeated();
+            }
+
+            Debug.Log("[WaveManager] ForceCompleteAllWaves - 모든 웨이브 강제 완료");
         }
 
         #endregion

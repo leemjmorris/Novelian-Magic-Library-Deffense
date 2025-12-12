@@ -28,6 +28,49 @@ public class CSVLoader : MonoBehaviour
     // 리로드 이벤트
     public static event System.Action OnCSVReloaded;
 
+    // CSV 파일 경로 매핑 (Addressable Key -> 실제 하위 폴더 경로)
+    private static readonly Dictionary<string, string> csvPathMap = new Dictionary<string, string>
+    {
+        // BookMark 폴더
+        { AddressableKey.BookmarkTable, "BookMark/BookmarkTable.csv" },
+        { AddressableKey.BookmarkCraftTable, "BookMark/BookMarkCraftTable.csv" },
+        { AddressableKey.BookmarkOptionTable, "BookMark/BookmarkOptionTable.csv" },
+        { AddressableKey.BookmarkStatListTable, "BookMark/BookmarkStatListTable.csv" },
+        { AddressableKey.BookmarkSkillListTable, "BookMark/BookmarkSKillListTable.csv" },
+
+        // Character 폴더
+        { AddressableKey.CharacterTable, "Character/CharacterTable.csv" },
+        { AddressableKey.LevelTable, "Character/LevelTable.csv" },
+        { AddressableKey.EnhancementLevelTable, "Character/EnhancementLevelTable.csv" },
+        { AddressableKey.CharacterEnhancementTable, "Character/CharacterEnhancementTable.csv" },
+
+        // Monster 폴더
+        { AddressableKey.MonsterTable, "Monster/MonsterTable.csv" },
+        { AddressableKey.MonsterLevelTable, "Monster/MonsterLevelTable.csv" },
+
+        // Stage 폴더
+        { AddressableKey.StageTable, "Stage/StageTable.csv" },
+        { AddressableKey.WaveTable, "Stage/WaveTable.csv" },
+
+        // Reward 폴더
+        { AddressableKey.RewardTable, "Reward/RewardTable.csv" },
+        { AddressableKey.RewardGroupTable, "Reward/RewardGroupTable.csv" },
+
+        // Dispatch 폴더
+        { AddressableKey.DispatchCategoryTable, "Dispatch/DispatchCategoryTable.csv" },
+        { AddressableKey.DispatchLocationTable, "Dispatch/DispatchLocationTable.csv" },
+        { AddressableKey.DispatchTimeTable, "Dispatch/DispatchTimeTable.csv" },
+        { AddressableKey.DispatchRewardTable, "Dispatch/DispatchRewardTable.csv" },
+
+        // 루트 폴더 (하위 폴더 없음)
+        { AddressableKey.GradeTable, "GradeTable.csv" },
+        { AddressableKey.CurrencyTable, "CurrencyTable.csv" },
+        { AddressableKey.IngredientTable, "IngredientTable.csv" },
+        { AddressableKey.StringTable, "StringTable.csv" },
+        { AddressableKey.PathTable, "PathTable.csv" },
+        { AddressableKey.LayoutPresetTable, "LayoutPresetTable.csv" },
+    };
+
     private void Awake()
     {
         if (Instance != null)
@@ -154,7 +197,8 @@ public class CSVLoader : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[CSVLoader] File not found: {filePath}, falling back to Addressables");
+                // 경고 없이 Addressables로 fallback
+                Debug.Log($"[CSVLoader] File not found at {filePath}, using Addressables");
             }
 #endif
 
@@ -252,8 +296,19 @@ public class CSVLoader : MonoBehaviour
 
 #if UNITY_EDITOR
             // 에디터: CSV 파일 직접 읽기 (CSV 수정 시 즉시 반영)
-            string fileName = addressableKey + ".csv";
-            string filePath = $"{CSV_PATH}/{fileName}";
+            // 경로 매핑 사용 (하위 폴더 지원)
+            string relativePath;
+            if (csvPathMap.TryGetValue(addressableKey, out relativePath))
+            {
+                // 매핑된 경로 사용
+            }
+            else
+            {
+                // 매핑이 없으면 기본 경로 (루트 폴더)
+                relativePath = addressableKey + ".csv";
+            }
+
+            string filePath = $"{CSV_PATH}/{relativePath}";
             if (File.Exists(filePath))
             {
                 csvText = File.ReadAllText(filePath);
@@ -261,7 +316,8 @@ public class CSVLoader : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[CSVLoader] File not found: {filePath}, falling back to Addressables");
+                // 경고 없이 Addressables로 fallback (빌드 환경과 동일하게 동작)
+                Debug.Log($"[CSVLoader] File not found at {filePath}, using Addressables");
             }
 #endif
 

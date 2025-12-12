@@ -42,8 +42,7 @@ public class CharacterPlacementManager : MonoBehaviour
     private Dictionary<string, GameObject> loadedCharacterPrefabs = new Dictionary<string, GameObject>();
     private bool isPreloadComplete = false;
 
-    // Issue #420: 현재 적용된 레이아웃 정보 저장 (캐릭터 방향 계산용)
-    private LayoutPresetData currentLayout = null;
+    // Note: 자가 완결형 맵 시스템에서는 GridMarker에서 직접 설정을 읽어옴
 
     // Drag state management
     private GameObject draggingCharacter;
@@ -758,21 +757,22 @@ public class CharacterPlacementManager : MonoBehaviour
     #region Issue #420 - 레이아웃 프리셋 시스템
 
     /// <summary>
-    /// JML: 런타임에서 레이아웃 프리셋 적용
-    /// StageManager에서 호출하여 스테이지별 그리드 레이아웃 설정
+    /// JML: GridMarker에서 직접 레이아웃 적용 (자가 완결형 맵용)
+    /// StageManager.ApplyGridFromMarker()에서 호출
+    ///
+    /// 단순화된 시스템:
+    /// - GridMarker 태그: Grid1 위치 (marker.transform.position)
+    /// - Grid2Marker 태그: Grid2 위치 (별도 오브젝트, 있으면 양방향 방어)
     /// </summary>
-    public void ApplyLayout(LayoutPresetData layoutData)
+    public void ApplyLayoutFromMarker(GridMarker marker)
     {
-        if (layoutData == null)
+        if (marker == null)
         {
-            Debug.LogWarning("[CharacterPlacementManager] LayoutPresetData is null!");
+            Debug.LogWarning("[CharacterPlacementManager] GridMarker is null!");
             return;
         }
 
-        Debug.Log($"[CharacterPlacementManager] Applying layout: {layoutData.Layout_Name}");
-
-        // 현재 레이아웃 저장 (캐릭터 방향 계산용)
-        currentLayout = layoutData;
+        Debug.Log($"[CharacterPlacementManager] Applying layout from GridMarker at {marker.transform.position}");
 
         // 기존 그리드 슬롯 제거
         ClearAllSlots();
@@ -785,41 +785,37 @@ public class CharacterPlacementManager : MonoBehaviour
         }
         gridSlots.Clear();
 
+        // 그리드 2도 정리
+        ClearGrid2();
+
         // 새 그리드 설정 적용
-        gridRows = layoutData.Grid_Rows;
-        gridColumns = layoutData.Grid_Columns;
-        gridSpacingX = layoutData.Grid_Spacing_X;
-        gridSpacingZ = layoutData.Grid_Spacing_Z;
-        gridCenterOffset = new Vector3(
-            layoutData.Grid_Center_X,
-            layoutData.Grid_Center_Y,
-            layoutData.Grid_Center_Z
-        );
-        rowGap = layoutData.Row_Gap;
+        gridRows = marker.gridRows;
+        gridColumns = marker.gridColumns;
+        gridSpacingX = marker.gridSpacingX;
+        gridSpacingZ = marker.gridSpacingZ;
+        gridCenterOffset = marker.transform.position; // 마커 위치 = 그리드 중심
+        rowGap = marker.rowGap;
 
         // 그리드 재생성
         CreateGrid();
 
-        // 양방향 방어 모드: Grid_Split_Mode == 1 이면 2번째 그리드 생성
-        if (layoutData.Grid_Split_Mode == 1)
+        // Grid2Marker 태그로 Grid2 위치 찾기 (있으면 양방향 방어)
+        GameObject grid2MarkerObj = GameObject.FindWithTag("Grid2Marker");
+        if (grid2MarkerObj != null)
         {
             splitGridMode = true;
-            grid2CenterOffset = new Vector3(
-                layoutData.Grid_2_Center_X,
-                layoutData.Grid_2_Center_Y,
-                layoutData.Grid_2_Center_Z
-            );
+            grid2CenterOffset = grid2MarkerObj.transform.position; // 프리펩에 배치된 그대로 사용
             CreateGrid2();
-            Debug.Log($"[CharacterPlacementManager] Grid 2 created at ({layoutData.Grid_2_Center_X}, {layoutData.Grid_2_Center_Y}, {layoutData.Grid_2_Center_Z})");
+            Debug.Log($"[CharacterPlacementManager] Grid 2 created at {grid2CenterOffset} (Grid2Marker found)");
         }
         else
         {
             splitGridMode = false;
-            ClearGrid2();
         }
 
-        Debug.Log($"[CharacterPlacementManager] Layout applied: {layoutData.Grid_Rows}x{layoutData.Grid_Columns} grid at ({layoutData.Grid_Center_X}, {layoutData.Grid_Center_Y}, {layoutData.Grid_Center_Z}), rowGap={rowGap}, splitMode={splitGridMode}");
+        Debug.Log($"[CharacterPlacementManager] Layout applied: {marker.gridRows}x{marker.gridColumns} grid at {marker.transform.position}, splitMode={splitGridMode}");
     }
+
 
     /// <summary>
     /// JML: 2번째 그리드 생성 (양방향 방어 - 하단용)
@@ -878,51 +874,53 @@ public class CharacterPlacementManager : MonoBehaviour
     }
 
     /// <summary>
-    /// JML: 슬롯 위치와 레이아웃에 따라 캐릭터 회전값 반환
-    /// - 1행 레이아웃: 모든 캐릭터가 아래(Z-)를 바라봄
-    /// - 2행 레이아웃: 위쪽 행은 위(Z+), 아래쪽 행은 아래(Z-)를 바라봄
-    /// - 양방향 방어: Grid1은 위(Z+), Grid2는 아래(Z-)를 바라봄
+    /// JML: 슬롯 위치에서 가장 가까운 스포너 방향을 바라보도록 회전값 반환
+    /// SpawnArea1, SpawnArea2 태그로 스포너 위치를 찾아서 더 가까운 쪽을 바라봄
     /// </summary>
     private Quaternion GetCharacterRotation(GridSlot slot)
     {
-        // 양방향 방어 모드일 때
-        if (splitGridMode)
-        {
-            // Grid2에 속한 슬롯인지 확인
-            bool isGrid2Slot = gridSlots2.Contains(slot);
+        Vector3 slotPos = slot.GetWorldPosition();
 
-            if (isGrid2Slot)
+        // 스포너 위치 찾기
+        GameObject spawner1 = GameObject.FindWithTag("SpawnArea1");
+        GameObject spawner2 = GameObject.FindWithTag("SpawnArea2");
+
+        Vector3? targetDir = null;
+
+        if (spawner1 != null && spawner2 != null)
+        {
+            // 두 스포너 중 더 가까운 쪽을 바라봄
+            float dist1 = Vector3.Distance(slotPos, spawner1.transform.position);
+            float dist2 = Vector3.Distance(slotPos, spawner2.transform.position);
+
+            if (dist1 <= dist2)
             {
-                // Grid 2: 아래(Z-)를 바라봄
-                return Quaternion.Euler(0f, 180f, 0f);
+                targetDir = spawner1.transform.position - slotPos;
             }
             else
             {
-                // Grid 1: 위(Z+)를 바라봄
-                return Quaternion.Euler(0f, 0f, 0f);
+                targetDir = spawner2.transform.position - slotPos;
             }
         }
-
-        // 레이아웃이 없으면 기본값 (아래를 바라봄)
-        if (currentLayout == null || gridRows == 1)
+        else if (spawner1 != null)
         {
-            return Quaternion.Euler(0f, 180f, 0f); // Z- 방향
+            targetDir = spawner1.transform.position - slotPos;
+        }
+        else if (spawner2 != null)
+        {
+            targetDir = spawner2.transform.position - slotPos;
         }
 
-        // 2행 이상일 때: 슬롯 인덱스로 행 판단
-        int slotIndex = slot.GetSlotIndex();
-        bool isTopRow = slotIndex < gridColumns;
+        // 스포너를 찾았으면 그 방향을 바라봄
+        if (targetDir.HasValue && targetDir.Value.sqrMagnitude > 0.01f)
+        {
+            Vector3 dir = targetDir.Value;
+            dir.y = 0; // Y축 무시 (수평 회전만)
+            return Quaternion.LookRotation(dir);
+        }
 
-        if (isTopRow)
-        {
-            // 위쪽 행: 위(Z+)를 바라봄
-            return Quaternion.Euler(0f, 0f, 0f);
-        }
-        else
-        {
-            // 아래쪽 행: 아래(Z-)를 바라봄
-            return Quaternion.Euler(0f, 180f, 0f);
-        }
+        // 스포너를 못 찾으면 기본값 (Z- 방향)
+        return Quaternion.Euler(0f, 180f, 0f);
     }
 
     /// <summary>
