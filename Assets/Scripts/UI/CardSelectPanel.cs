@@ -96,6 +96,9 @@ namespace NovelianMagicLibraryDefense.UI
 
         private async void Awake()
         {
+            // JML: 카드 슬롯 초기 비활성화 (씬 진입 시 카드 초기화가 보이는 문제 방지)
+            HideCardSlotsOnAwake();
+
             // JML: Inspector 참조가 없으면 Tag로 fallback 시도
             if (placementManager == null)
             {
@@ -139,6 +142,22 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             Debug.Log("[CardSelectPanel] Awake completed, ready to use");
+        }
+
+        /// <summary>
+        /// JML: Awake에서 카드 슬롯 즉시 비활성화 (씬 진입 시 초기화 과정이 보이는 문제 방지)
+        /// </summary>
+        private void HideCardSlotsOnAwake()
+        {
+            if (cardSlots == null) return;
+
+            for (int i = 0; i < cardSlots.Length; i++)
+            {
+                if (cardSlots[i] != null)
+                {
+                    cardSlots[i].gameObject.SetActive(false);
+                }
+            }
         }
 
         /// <summary>
