@@ -110,17 +110,27 @@ namespace Novelian.Combat
         private float elapsedTime;
         private bool isInitialized = false;
 
+        // Critical hit state (치명타 시스템)
+        private float critChance = 5f;      // 기본 5%
+        private float critMultiplier = 150f; // 기본 150%
+
         // Lifetime tracking
         private CancellationTokenSource lifetimeCts;
 
         //LMJ : Launch projectile in Physics mode - basic version (for backward compatibility)
         public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime)
         {
-            Launch(spawnPos, targetPos, projectileSpeed, projectileLifetime, this.damage, 0, 0);
+            Launch(spawnPos, targetPos, projectileSpeed, projectileLifetime, this.damage, 0, 0, 5f, 150f);
         }
 
-        //LMJ : Launch projectile in Physics mode - with skill IDs (new CSV-based system)
+        //LMJ : Launch projectile in Physics mode - with skill IDs (backward compatibility without crit)
         public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, float damageAmount, int mainSkillId, int supportId)
+        {
+            Launch(spawnPos, targetPos, projectileSpeed, projectileLifetime, damageAmount, mainSkillId, supportId, 5f, 150f);
+        }
+
+        //LMJ : Launch projectile in Physics mode - full version with crit support (치명타 시스템)
+        public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, float damageAmount, int mainSkillId, int supportId, float criticalChance, float criticalMultiplier)
         {
             mode = ProjectileMode.Physics;
             transform.position = spawnPos;
@@ -134,6 +144,10 @@ namespace Novelian.Combat
             damage = damageAmount;
             elapsedTime = 0f;
             isInitialized = true;
+
+            // 치명타 정보 저장
+            critChance = criticalChance;
+            critMultiplier = criticalMultiplier;
 
             // Rigidbody 자동 추가 (없으면 Physics 충돌이 작동하지 않음)
             if (rb == null)
@@ -606,10 +620,10 @@ namespace Novelian.Combat
                     Monster monster = col.GetComponent<Monster>();
                     if (monster != null)
                     {
-                        float damageToApply = CalculateDamageToApply();
-                        monster.TakeDamage(damageToApply);
+                        var (damageToApply, isCrit) = CalculateDamageToApply();
+                        monster.TakeDamage(damageToApply, isCrit);
                         hitCount++;
-                        Debug.Log($"[Projectile] Dynamite hit {monster.name}: damage={damageToApply:F1}");
+                        Debug.Log($"[Projectile] Dynamite hit {monster.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
                     }
                 }
                 else if (col.CompareTag(Tag.BossMonster))
@@ -617,10 +631,10 @@ namespace Novelian.Combat
                     BossMonster boss = col.GetComponent<BossMonster>();
                     if (boss != null)
                     {
-                        float damageToApply = CalculateDamageToApply();
-                        boss.TakeDamage(damageToApply);
+                        var (damageToApply, isCrit) = CalculateDamageToApply();
+                        boss.TakeDamage(damageToApply, isCrit);
                         hitCount++;
-                        Debug.Log($"[Projectile] Dynamite hit {boss.name}: damage={damageToApply:F1}");
+                        Debug.Log($"[Projectile] Dynamite hit {boss.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
                     }
                 }
             }
@@ -689,13 +703,13 @@ namespace Novelian.Combat
                         if (legendaryStaffHitTargets.Contains(instanceId)) continue;
 
                         legendaryStaffHitTargets.Add(instanceId);
-                        float damageToApply = CalculateDamageToApply();
-                        monster.TakeDamage(damageToApply);
+                        var (damageToApply, isCrit) = CalculateDamageToApply();
+                        monster.TakeDamage(damageToApply, isCrit);
 
                         // 히트 이펙트 재생 (콜라이더 중심점)
                         SpawnHitEffectAtCollider(col);
 
-                        Debug.Log($"[Projectile] LegendaryStaff hit {monster.name}: damage={damageToApply:F1}");
+                        Debug.Log($"[Projectile] LegendaryStaff hit {monster.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
                     }
                 }
                 else if (col.CompareTag(Tag.BossMonster))
@@ -708,13 +722,13 @@ namespace Novelian.Combat
                         if (legendaryStaffHitTargets.Contains(instanceId)) continue;
 
                         legendaryStaffHitTargets.Add(instanceId);
-                        float damageToApply = CalculateDamageToApply();
-                        boss.TakeDamage(damageToApply);
+                        var (damageToApply, isCrit) = CalculateDamageToApply();
+                        boss.TakeDamage(damageToApply, isCrit);
 
                         // 히트 이펙트 재생 (콜라이더 중심점)
                         SpawnHitEffectAtCollider(col);
 
-                        Debug.Log($"[Projectile] LegendaryStaff hit {boss.name}: damage={damageToApply:F1}");
+                        Debug.Log($"[Projectile] LegendaryStaff hit {boss.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
                     }
                 }
             }
@@ -851,15 +865,15 @@ namespace Novelian.Combat
             // 부착된 타겟에게 데미지
             if (timeBombAttachTarget != null)
             {
-                float damageToApply = CalculateDamageToApply();
+                var (damageToApply, isCrit) = CalculateDamageToApply();
 
                 if (timeBombAttachTarget.CompareTag(Tag.Monster))
                 {
                     Monster monster = timeBombAttachTarget.GetComponent<Monster>();
                     if (monster != null)
                     {
-                        monster.TakeDamage(damageToApply);
-                        Debug.Log($"[Projectile] TimeBomb hit {monster.name}: damage={damageToApply:F1}");
+                        monster.TakeDamage(damageToApply, isCrit);
+                        Debug.Log($"[Projectile] TimeBomb hit {monster.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
                     }
                 }
                 else if (timeBombAttachTarget.CompareTag(Tag.BossMonster))
@@ -867,8 +881,8 @@ namespace Novelian.Combat
                     BossMonster boss = timeBombAttachTarget.GetComponent<BossMonster>();
                     if (boss != null)
                     {
-                        boss.TakeDamage(damageToApply);
-                        Debug.Log($"[Projectile] TimeBomb hit {boss.name}: damage={damageToApply:F1}");
+                        boss.TakeDamage(damageToApply, isCrit);
+                        Debug.Log($"[Projectile] TimeBomb hit {boss.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
                     }
                 }
             }
@@ -1056,8 +1070,8 @@ namespace Novelian.Combat
                         ApplyStatusEffect(monster);
                     }
 
-                    // Apply damage (새 데미지 공식 적용)
-                    float damageToApply = CalculateDamageToApply();
+                    // Apply damage (새 데미지 공식 + 치명타 적용)
+                    var (damageToApply, isCrit) = CalculateDamageToApply();
 
                     // Issue #362 - 저체력 보너스 데미지 적용 (처형 서포트 등)
                     if (supportSkillData != null && supportSkillData.IsLowHpBonusSupport)
@@ -1069,7 +1083,7 @@ namespace Novelian.Combat
                             supportSkillData.low_hp_bonus_damage_mult);
                     }
 
-                    monster.TakeDamage(damageToApply);
+                    monster.TakeDamage(damageToApply, isCrit);
 
                     // Spawn hit effect at monster collider center (몸통 중심)
                     SpawnHitEffectAtCollider(other);
@@ -1206,8 +1220,8 @@ namespace Novelian.Combat
                         ApplyStatusEffectToBoss(boss);
                     }
 
-                    // Apply damage (새 데미지 공식 적용)
-                    float damageToApply = CalculateDamageToApply();
+                    // Apply damage (새 데미지 공식 + 치명타 적용)
+                    var (damageToApply, isCrit) = CalculateDamageToApply();
 
                     // Issue #362 - 저체력 보너스 데미지 적용 (처형 서포트 등)
                     if (supportSkillData != null && supportSkillData.IsLowHpBonusSupport)
@@ -1219,7 +1233,7 @@ namespace Novelian.Combat
                             supportSkillData.low_hp_bonus_damage_mult);
                     }
 
-                    boss.TakeDamage(damageToApply);
+                    boss.TakeDamage(damageToApply, isCrit);
 
                     // Spawn hit effect at boss collider center (몸통 중심)
                     SpawnHitEffectAtCollider(other);
@@ -1306,28 +1320,33 @@ namespace Novelian.Combat
             }
         }
 
-        //LMJ : Calculate damage to apply (새 데미지 공식)
+        //LMJ : Calculate damage to apply (새 데미지 공식 + 치명타 시스템)
         // 관통/체이닝 감소 공식: n번째 타격 데미지 = (단일 타격 데미지) × (1 - 감소율)^n
-        private float CalculateDamageToApply()
+        // 치명타 공식: 데미지 × (치명타 배율 / 100)
+        private (float damage, bool isCritical) CalculateDamageToApply()
         {
+            float baseDamage;
+
             // 1. 체이닝 활성화된 경우
             if (maxChainCount > 0)
             {
-                return currentChainDamage;
+                baseDamage = currentChainDamage;
             }
-
             // 2. 관통 활성화된 경우 - DamageCalculator 사용
-            if (maxPierceCount > 0 && currentPierceCount > 0)
+            else if (maxPierceCount > 0 && currentPierceCount > 0)
             {
                 // 관통 감소율: 서포트 스킬의 chain_damage_reduction 또는 기본값 30%
                 float reductionRate = supportSkillData?.chain_damage_reduction / 100f ?? 0.3f;
-                float pierceDamage = DamageCalculator.CalculatePierceChainDamage(baseDamageForPierce, reductionRate, currentPierceCount);
-                // JML: Pierce damage 로그 제거
-                return pierceDamage;
+                baseDamage = DamageCalculator.CalculatePierceChainDamage(baseDamageForPierce, reductionRate, currentPierceCount);
+            }
+            // 3. 기본 데미지
+            else
+            {
+                baseDamage = damage;
             }
 
-            // 3. 기본 데미지 반환
-            return damage;
+            // 4. 치명타 판정 및 적용
+            return DamageCalculator.CalculateCriticalDamage(baseDamage, critChance, critMultiplier);
         }
 
         //LMJ : Apply status effect to monster (MainSkillData + SupportSkillData)
@@ -1508,7 +1527,14 @@ namespace Novelian.Combat
         {
             if (totalCount <= 0) return;
 
-            var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool;
+            var pool = NovelianMagicLibraryDefense.Managers.GameManager.Instance?.Pool;
+
+            // 스테이지 클리어 등으로 풀이 정리된 경우 분열 스킵
+            if (pool == null || !pool.HasPool<Projectile>())
+            {
+                return;
+            }
+
             float spreadAngle = 30f; // 부채꼴 총 각도 (좌우 각각 15도씩)
 
             // 원본 발사체의 이펙트 프리팹 참조 저장
@@ -1550,8 +1576,10 @@ namespace Novelian.Combat
                 Vector3 targetPos = spawnPos + fragmentDirection * 50f;
 
                 Projectile fragment = pool.Spawn<Projectile>(spawnPos);
-                // 분열 발사체는 supportSkillId = 0으로 설정하여 재분열 방지
-                fragment.Launch(spawnPos, targetPos, speed, lifetime, damage, skillId, 0);
+                if (fragment == null) continue; // 풀이 비었거나 스폰 실패 시 스킵
+
+                // 분열 발사체는 supportSkillId = 0으로 설정하여 재분열 방지, 원본의 crit 정보 유지
+                fragment.Launch(spawnPos, targetPos, speed, lifetime, damage, skillId, 0, critChance, critMultiplier);
 
                 // 파편에 원본 이펙트 복사
                 if (effectPrefab != null)

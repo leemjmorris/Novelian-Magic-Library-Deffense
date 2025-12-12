@@ -61,7 +61,7 @@ namespace Novelian.Combat
                 {
                     // 1발만 발사하는 경우 즉시 발사
                     Projectile projectile = pool.Spawn<Projectile>(spawnPos);
-                    projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                    projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
                     Debug.Log($"[Character] Fired 1 projectile {basicAttackData.skill_name} (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1})");
                 }
             }
@@ -78,16 +78,17 @@ namespace Novelian.Combat
                     UnityEngine.Object.Destroy(hitEffect, 2f);
                 }
 
-                // Apply damage
+                // Apply damage (치명타 적용)
+                var (finalDmg, isCrit) = DamageCalculator.CalculateCriticalDamage(FinalDamage, GetDisplayCritChance(), GetDisplayCritMultiplier());
                 if (target.GetTransform().CompareTag(Tag.Monster))
                 {
                     Monster monster = target.GetTransform().GetComponent<Monster>();
-                    if (monster != null) monster.TakeDamage(FinalDamage);
+                    if (monster != null) monster.TakeDamage(finalDmg, isCrit);
                 }
                 else if (target.GetTransform().CompareTag(Tag.BossMonster))
                 {
                     BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
-                    if (boss != null) boss.TakeDamage(FinalDamage);
+                    if (boss != null) boss.TakeDamage(finalDmg, isCrit);
                 }
             }
         }
@@ -119,7 +120,7 @@ namespace Novelian.Combat
                 float projectileSpeed = basicAttackData.projectile_speed > 0 ? basicAttackData.projectile_speed : 10f;
                 float lifetime = basicAttackData.skill_lifetime > 0 ? basicAttackData.skill_lifetime + 1f : 6f; // 퓨즈 시간 + 여유
 
-                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
                 Debug.Log($"[Character] Launched Dynamite projectile: speed={projectileSpeed}, fuseTime={basicAttackData.skill_lifetime}, damage={FinalDamage:F1}");
             }
             else
@@ -156,7 +157,7 @@ namespace Novelian.Combat
                 float projectileSpeed = basicAttackData.projectile_speed > 0 ? basicAttackData.projectile_speed : 20f;
                 float lifetime = basicAttackData.range / projectileSpeed + 1f; // 사거리까지 이동 시간 + 여유
 
-                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
                 Debug.Log($"[Character] Launched LegendaryStaff projectile: speed={projectileSpeed}, range={basicAttackData.range}, aoeRadius={basicAttackData.aoe_radius}, damage={FinalDamage:F1}");
             }
             else
@@ -187,7 +188,7 @@ namespace Novelian.Combat
                 Vector3 spreadTargetPos = spawnPos + spreadDirection * 1000f;
 
                 Projectile projectile = pool.Spawn<Projectile>(spawnPos);
-                projectile.Launch(spawnPos, spreadTargetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, FinalActiveDamage, activeSkillId, supportSkillId);
+                projectile.Launch(spawnPos, spreadTargetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, FinalActiveDamage, activeSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
             }
 
             Debug.Log($"[Character] Active Projectile: {activeSkillData.skill_name} x{projectileCount} (Damage: {FinalActiveDamage:F1})");
@@ -223,7 +224,7 @@ namespace Novelian.Combat
                     return;
                 }
 
-                projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId);
+                projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
 
                 // 마지막 발사가 아니면 대기 (CancellationToken 전달)
                 if (i < projectileCount - 1)

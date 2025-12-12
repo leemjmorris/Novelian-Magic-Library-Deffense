@@ -1128,7 +1128,20 @@ namespace Dispatch
         {
             if (targetImage == null) return;
 
-            UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(AddressableKey.Icon_Character).Completed += handle =>
+            string spriteKey = AddressableKey.Icon_Character;
+
+            // CharacterData에서 Path_ID로 개별 아이콘 키 조회
+            var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
+            if (characterData != null && characterData.Path_ID > 0)
+            {
+                var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
+                if (pathData != null && !string.IsNullOrEmpty(pathData.Addressable_Key))
+                {
+                    spriteKey = pathData.Addressable_Key;
+                }
+            }
+
+            UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
             {
                 if (handle.Status == UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)
                 {
