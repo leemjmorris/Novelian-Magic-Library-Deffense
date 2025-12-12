@@ -3,33 +3,25 @@ using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
-public class UserInfoPanel : MonoBehaviour
+/// <summary>
+/// 로비 화면의 프로필 이미지 표시
+/// ProfilePictureManager의 장착 이벤트를 구독하여 실시간 갱신
+/// </summary>
+public class LobbyProfileImage : MonoBehaviour
 {
-    [SerializeField] private Button closeButton;
-    [SerializeField] private GameObject panel1;
-    [SerializeField] private GameObject panel2;
-
-    [Header("Profile Picture")]
-    [SerializeField] private Button profileImageButton;
+    [Header("UI References")]
     [SerializeField] private Image profileImage;
-    [SerializeField] private ProfilePicturePanel profilePicturePanel;
+    [SerializeField] private Image frameImage;
 
     private bool isSubscribed = false;
 
     private void Start()
     {
-        if (profileImageButton != null)
-        {
-            profileImageButton.onClick.AddListener(OnProfileImageClicked);
-        }
-
-        // 프로필 매니저 이벤트 구독 시도
         TrySubscribeToManager();
     }
 
     private void OnEnable()
     {
-        // 활성화될 때마다 구독 시도 및 이미지 갱신
         TrySubscribeToManager();
         RefreshProfileImage();
     }
@@ -41,6 +33,7 @@ public class UserInfoPanel : MonoBehaviour
         if (ProfilePictureManager.Instance != null)
         {
             ProfilePictureManager.Instance.OnPictureEquipped += OnPictureEquipped;
+            ProfilePictureManager.Instance.OnFrameEquipped += OnFrameEquipped;
             isSubscribed = true;
             RefreshProfileImage();
         }
@@ -48,59 +41,22 @@ public class UserInfoPanel : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (profileImageButton != null)
-        {
-            profileImageButton.onClick.RemoveListener(OnProfileImageClicked);
-        }
-
         if (ProfilePictureManager.Instance != null && isSubscribed)
         {
             ProfilePictureManager.Instance.OnPictureEquipped -= OnPictureEquipped;
+            ProfilePictureManager.Instance.OnFrameEquipped -= OnFrameEquipped;
             isSubscribed = false;
         }
     }
 
-    public void OnCloseButton()
-    {
-        if (panel2 && panel2.activeSelf)
-        {
-            panel2.SetActive(false);
-        }
-        else if (panel1 && panel1.activeSelf)
-        {
-            panel1.SetActive(false);
-        }
-    }
-
-    public void ShowPanel2()
-    {
-        if (panel2)
-        {
-            panel2.SetActive(true);
-        }
-    }
-
-    /// <summary>
-    /// 프로필 이미지 클릭 시 사진/프레임 선택 패널 표시
-    /// </summary>
-    private void OnProfileImageClicked()
-    {
-        if (profilePicturePanel != null)
-        {
-            profilePicturePanel.ShowPanel();
-        }
-        else
-        {
-            Debug.LogWarning("[UserInfoPanel] ProfilePicturePanel이 연결되지 않았습니다.");
-        }
-    }
-
-    /// <summary>
-    /// 프로필 사진 장착 시 호출
-    /// </summary>
     private void OnPictureEquipped(int pictureId)
     {
         RefreshProfileImage();
+    }
+
+    private void OnFrameEquipped(int frameId)
+    {
+        RefreshFrameImage();
     }
 
     /// <summary>
@@ -109,7 +65,6 @@ public class UserInfoPanel : MonoBehaviour
     public void RefreshProfileImage()
     {
         if (profileImage == null) return;
-
         if (ProfilePictureManager.Instance == null) return;
 
         int equippedPictureId = ProfilePictureManager.Instance.GetEquippedPictureId();
@@ -120,8 +75,20 @@ public class UserInfoPanel : MonoBehaviour
             return;
         }
 
-        // 캐릭터 아이콘 로드
         LoadProfileImage(equippedPictureId);
+    }
+
+    /// <summary>
+    /// 프레임 이미지 갱신
+    /// </summary>
+    public void RefreshFrameImage()
+    {
+        if (frameImage == null) return;
+        if (ProfilePictureManager.Instance == null) return;
+
+        int equippedFrameId = ProfilePictureManager.Instance.GetEquippedFrameId();
+
+        // TODO: 프레임 이미지 로드 구현
     }
 
     /// <summary>
@@ -131,7 +98,6 @@ public class UserInfoPanel : MonoBehaviour
     {
         string spriteKey = AddressableKey.Icon_Character;
 
-        // CharacterData에서 Path_ID로 개별 아이콘 키 조회
         if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
         {
             var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
@@ -150,10 +116,11 @@ public class UserInfoPanel : MonoBehaviour
             if (handle.Status == AsyncOperationStatus.Succeeded && profileImage != null)
             {
                 profileImage.sprite = handle.Result;
+                Debug.Log($"[LobbyProfileImage] 프로필 이미지 변경: {spriteKey}");
             }
             else
             {
-                Debug.LogWarning($"[UserInfoPanel] 프로필 이미지 로드 실패: {spriteKey}");
+                Debug.LogWarning($"[LobbyProfileImage] 프로필 이미지 로드 실패: {spriteKey}");
             }
         };
     }
