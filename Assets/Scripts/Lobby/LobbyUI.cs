@@ -158,6 +158,7 @@ public class LobbyUI : MonoBehaviour
         WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
+    
     public void OnInventoryButton()
     {
         // 메뉴 레이아웃이 열려있으면 먼저 닫기
@@ -175,6 +176,11 @@ public class LobbyUI : MonoBehaviour
         {
             lobbyWindow.SetActive(false);
         }
+    }
+
+    public void OnTrainingGroundButton()
+    {
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     /// <summary>

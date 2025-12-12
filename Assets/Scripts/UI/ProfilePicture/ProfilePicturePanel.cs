@@ -23,6 +23,10 @@ public class ProfilePicturePanel : MonoBehaviour
     [SerializeField] private GameObject pictureContentPanel;
     [SerializeField] private GameObject frameContentPanel;
 
+    [Header("Scroll Views")]
+    [SerializeField] private GameObject pictureScrollView;    // 사진 탭의 Scroll View
+    [SerializeField] private GameObject frameScrollView;      // 프레임 탭의 Scroll View2
+
     [Header("Prefabs")]
     [SerializeField] private GameObject pictureSlotPrefab;
     [SerializeField] private GameObject frameSlotPrefab;
@@ -122,7 +126,15 @@ public class ProfilePicturePanel : MonoBehaviour
         if (frameContentPanel != null)
             frameContentPanel.SetActive(false);
 
+        // ScrollView 전환
+        if (pictureScrollView != null)
+            pictureScrollView.SetActive(true);
+        if (frameScrollView != null)
+            frameScrollView.SetActive(false);
+
         // 선택 초기화
+        if (selectedSlot != null)
+            selectedSlot.SetSelected(false);
         selectedSlot = null;
         UpdateActionButtons();
     }
@@ -146,7 +158,15 @@ public class ProfilePicturePanel : MonoBehaviour
         if (frameContentPanel != null)
             frameContentPanel.SetActive(true);
 
+        // ScrollView 전환
+        if (pictureScrollView != null)
+            pictureScrollView.SetActive(false);
+        if (frameScrollView != null)
+            frameScrollView.SetActive(true);
+
         // 선택 초기화
+        if (selectedSlot != null)
+            selectedSlot.SetSelected(false);
         selectedSlot = null;
         UpdateActionButtons();
     }
@@ -342,23 +362,20 @@ public class ProfilePicturePanel : MonoBehaviour
 
     /// <summary>
     /// 액션 버튼 상태 업데이트
+    /// 장착하기/해제 버튼은 항상 활성화 상태 유지
     /// </summary>
     private void UpdateActionButtons()
     {
-        bool hasSelection = selectedSlot != null && !selectedSlot.IsLocked;
-        bool isCurrentlyEquipped = selectedSlot != null && selectedSlot.IsEquipped;
-
+        // 장착하기 버튼: 항상 활성화 (선택된 슬롯이 있으면 동작)
         if (equipButton != null)
         {
-            equipButton.interactable = hasSelection && !isCurrentlyEquipped;
+            equipButton.interactable = true;
         }
 
+        // 장착 해제 버튼: 항상 활성화
         if (unequipButton != null)
         {
-            // 현재 장착된 것이 있는지 확인
-            bool hasEquipped = ProfilePictureManager.Instance != null &&
-                               ProfilePictureManager.Instance.GetEquippedPictureId() != -1;
-            unequipButton.interactable = hasEquipped && isPictureTab;
+            unequipButton.interactable = true;
         }
     }
 

@@ -44,20 +44,36 @@ public class ProfilePictureSlot : MonoBehaviour
             slotButton = GetComponentInChildren<Button>();
     }
 
+    private bool isButtonSetup = false;
+
     private void Start()
     {
-        if (slotButton != null)
-        {
-            slotButton.onClick.AddListener(OnSlotClicked);
-        }
+        SetupButtonListener();
 
         // 초기 상태: 선택 해제
         SetSelected(false);
     }
 
+    /// <summary>
+    /// 버튼 리스너 설정 (중복 방지)
+    /// </summary>
+    private void SetupButtonListener()
+    {
+        if (isButtonSetup) return;
+
+        if (slotButton == null)
+            slotButton = GetComponentInChildren<Button>();
+
+        if (slotButton != null)
+        {
+            slotButton.onClick.AddListener(OnSlotClicked);
+            isButtonSetup = true;
+        }
+    }
+
     private void OnDestroy()
     {
-        if (slotButton != null)
+        if (slotButton != null && isButtonSetup)
         {
             slotButton.onClick.RemoveListener(OnSlotClicked);
         }
@@ -70,6 +86,9 @@ public class ProfilePictureSlot : MonoBehaviour
     {
         itemId = characterId;
         parentPanel = panel;
+
+        // 버튼 리스너 등록 (Start보다 먼저 호출될 수 있으므로)
+        SetupButtonListener();
 
         // 해금 상태 확인
         bool isUnlocked = ProfilePictureManager.Instance != null &&
@@ -86,6 +105,8 @@ public class ProfilePictureSlot : MonoBehaviour
 
         // 캐릭터 아이콘 로드
         LoadCharacterIcon(characterId);
+
+        Debug.Log($"[ProfilePictureSlot] InitPictureSlot: ID={characterId}, Locked={isLocked}, Button={slotButton != null}");
     }
 
     /// <summary>
