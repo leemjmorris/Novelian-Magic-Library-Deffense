@@ -360,6 +360,25 @@ public class FirebaseSaveManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 닉네임 저장
+    /// </summary>
+    public async UniTask SaveNicknameAsync(string userId, string nickname)
+    {
+        if (!isInitialized) return;
+
+        try
+        {
+            cachedUserData.nickname = nickname;
+            await databaseRef.Child(USERS_PATH).Child(userId).Child("nickname").SetValueAsync(nickname);
+            Debug.Log($"{LOG_PREFIX} 닉네임 저장 완료: {nickname}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 닉네임 저장 실패: {e.Message}");
+        }
+    }
+
     #endregion
 
     #region 데이터 변환 헬퍼
@@ -368,6 +387,7 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         var result = new Dictionary<string, object>
         {
+            { "nickname", data.nickname ?? "" },
             { "lastUpdated", data.lastUpdated },
             { "currencies", new Dictionary<string, object>
                 {
@@ -460,6 +480,10 @@ public class FirebaseSaveManager : MonoBehaviour
     private UserData ParseUserData(DataSnapshot snapshot)
     {
         var data = new UserData();
+
+        // nickname
+        if (snapshot.Child("nickname").Exists)
+            data.nickname = snapshot.Child("nickname").Value?.ToString() ?? "";
 
         // lastUpdated
         if (snapshot.Child("lastUpdated").Exists)
