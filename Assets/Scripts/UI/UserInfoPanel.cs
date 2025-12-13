@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using TMPro;
+using Cysharp.Threading.Tasks;
 
 public class UserInfoPanel : MonoBehaviour
 {
@@ -13,6 +15,10 @@ public class UserInfoPanel : MonoBehaviour
     [SerializeField] private Button profileImageButton;
     [SerializeField] private Image profileImage;
     [SerializeField] private ProfilePicturePanel profilePicturePanel;
+
+    [Header("Nickname")]
+    [SerializeField] private TMP_InputField nicknameInputField;
+    [SerializeField] private LobbyUI lobbyUI;
 
     private bool isSubscribed = false;
     private Sprite defaultProfileSprite; // 프리팹의 기본 이미지 저장
@@ -33,6 +39,12 @@ public class UserInfoPanel : MonoBehaviour
             profileImageButton.onClick.AddListener(OnProfileImageClicked);
         }
 
+        // 닉네임 입력 완료 이벤트 등록
+        if (nicknameInputField != null)
+        {
+            nicknameInputField.onEndEdit.AddListener(OnNicknameEndEdit);
+        }
+
         // 프로필 매니저 이벤트 구독 시도
         TrySubscribeToManager();
     }
@@ -42,6 +54,7 @@ public class UserInfoPanel : MonoBehaviour
         // 활성화될 때마다 구독 시도 및 이미지 갱신
         TrySubscribeToManager();
         RefreshProfileImage();
+        RefreshNickname();
     }
 
     private void TrySubscribeToManager()
@@ -63,6 +76,11 @@ public class UserInfoPanel : MonoBehaviour
             profileImageButton.onClick.RemoveListener(OnProfileImageClicked);
         }
 
+        if (nicknameInputField != null)
+        {
+            nicknameInputField.onEndEdit.RemoveListener(OnNicknameEndEdit);
+        }
+
         if (ProfilePictureManager.Instance != null && isSubscribed)
         {
             ProfilePictureManager.Instance.OnPictureEquipped -= OnPictureEquipped;
@@ -79,6 +97,12 @@ public class UserInfoPanel : MonoBehaviour
         else if (panel1 && panel1.activeSelf)
         {
             panel1.SetActive(false);
+
+            // 닫을 때 로비 화면 닉네임 갱신
+            if (lobbyUI != null)
+            {
+                lobbyUI.RefreshNickname();
+            }
         }
     }
 
@@ -171,4 +195,54 @@ public class UserInfoPanel : MonoBehaviour
             }
         };
     }
+
+    #region Nickname
+
+    /// <summary>
+    /// 저장된 닉네임을 InputField에 표시
+    /// </summary>
+    private void RefreshNickname()
+    {
+        if (nicknameInputField == null) return;
+
+        if (FirebaseSaveManager.Instance != null && FirebaseSaveManager.Instance.CachedData != null)
+        {
+            string nickname = FirebaseSaveManager.Instance.CachedData.nickname;
+            nicknameInputField.text = string.IsNullOrEmpty(nickname) ? "" : nickname;
+        }
+    }
+
+    /// <summary>
+    /// 닉네임 입력 완료 시 Firebase에 저장
+    /// </summary>
+    private void OnNicknameEndEdit(string newNickname)
+    {
+        if (string.IsNullOrEmpty(newNickname)) return;
+
+        SaveNicknameAsync(newNickname).Forget();
+    }
+
+    /// <summary>
+    /// 닉네임을 Firebase에 저장
+    /// </summary>
+    private async UniTaskVoid SaveNicknameAsync(string nickname)
+    {
+        if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance == null)
+        {
+            Debug.LogWarning("[UserInfoPanel] Firebase 매니저가 초기화되지 않았습니다.");
+            return;
+        }
+
+        string userId = FirebaseManager.Instance.CurrentUserId;
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogWarning("[UserInfoPanel] 로그인된 유저가 없습니다.");
+            return;
+        }
+
+        await FirebaseSaveManager.Instance.SaveNicknameAsync(userId, nickname);
+        Debug.Log($"[UserInfoPanel] 닉네임 저장 완료: {nickname}");
+    }
+
+    #endregion
 }

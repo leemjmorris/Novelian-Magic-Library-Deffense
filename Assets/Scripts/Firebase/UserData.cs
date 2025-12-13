@@ -9,6 +9,7 @@ namespace Firebase.Data
     [Serializable]
     public class UserData
     {
+        public string nickname;
         public string lastUpdated;
         public CurrencySaveData currencies;
         public ProgressionData progression;
@@ -20,6 +21,7 @@ namespace Firebase.Data
 
         public UserData()
         {
+            nickname = "";
             lastUpdated = DateTime.UtcNow.ToString("o");
             currencies = new CurrencySaveData();
             progression = new ProgressionData();

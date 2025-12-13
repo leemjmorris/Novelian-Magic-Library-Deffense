@@ -30,11 +30,15 @@ public class LobbyUI : MonoBehaviour
     [Header("Profile Panel")]
     [SerializeField] private GameObject profileDetailPanel; // 프로필 상세 패널 (버튼 누르면 열림)
 
+    [Header("User Nickname")]
+    [SerializeField] private TextMeshProUGUI nicknameText; // 로비 화면에 표시되는 닉네임 (UserText (1))
+
     private bool isDispatchCompleted = false; // 파견 완료 상태 캐싱
 
     private void OnEnable()
     {
         InitializeAP();
+        RefreshNickname();
 
         if (CurrencyManager.Instance != null)
         {
@@ -422,6 +426,25 @@ public class LobbyUI : MonoBehaviour
 
         // Step 7: 페이드 패널 비활성화
         FadeController.Instance.fadePanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// 로비 화면에 닉네임 표시
+    /// Firebase에서 캐시된 닉네임을 UserText (1)에 표시
+    /// </summary>
+    public void RefreshNickname()
+    {
+        if (nicknameText == null) return;
+
+        if (FirebaseSaveManager.Instance != null && FirebaseSaveManager.Instance.CachedData != null)
+        {
+            string nickname = FirebaseSaveManager.Instance.CachedData.nickname;
+            nicknameText.text = string.IsNullOrEmpty(nickname) ? "사서" : nickname;
+        }
+        else
+        {
+            nicknameText.text = "사서";
+        }
     }
 }
 
