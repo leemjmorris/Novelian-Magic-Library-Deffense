@@ -15,6 +15,16 @@ public class UserInfoPanel : MonoBehaviour
     [SerializeField] private ProfilePicturePanel profilePicturePanel;
 
     private bool isSubscribed = false;
+    private Sprite defaultProfileSprite; // 프리팹의 기본 이미지 저장
+
+    private void Awake()
+    {
+        // 프리팹의 기본 이미지 저장
+        if (profileImage != null)
+        {
+            defaultProfileSprite = profileImage.sprite;
+        }
+    }
 
     private void Start()
     {
@@ -116,7 +126,11 @@ public class UserInfoPanel : MonoBehaviour
 
         if (equippedPictureId == -1)
         {
-            // 장착된 사진 없음 - 기본 이미지 유지
+            // 장착된 사진 없음 - 프리팹의 기본 이미지로 복원
+            if (profileImage != null && defaultProfileSprite != null)
+            {
+                profileImage.sprite = defaultProfileSprite;
+            }
             return;
         }
 
