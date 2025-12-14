@@ -63,7 +63,8 @@ namespace Dispatch
             if (!System.DateTime.TryParse(state.endTime, out System.DateTime endTime))
                 return false;
 
-            return System.DateTime.UtcNow >= endTime;
+            // 로컬 시간으로 비교 (endTime이 로컬 시간대 포함하여 저장됨)
+            return System.DateTime.Now >= endTime;
         }
 
         /// <summary>
@@ -112,7 +113,8 @@ namespace Dispatch
             if (!System.DateTime.TryParse(state.endTime, out System.DateTime endTime))
                 return -1f;
 
-            System.TimeSpan remaining = endTime - System.DateTime.UtcNow;
+            // 로컬 시간으로 비교 (endTime이 로컬 시간대 포함하여 저장됨)
+            System.TimeSpan remaining = endTime - System.DateTime.Now;
             return Mathf.Max(0f, (float)remaining.TotalSeconds);
         }
 
