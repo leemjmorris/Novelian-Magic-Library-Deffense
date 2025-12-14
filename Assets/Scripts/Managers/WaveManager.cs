@@ -475,7 +475,8 @@ namespace NovelianMagicLibraryDefense.Managers
 
                     // JML: CSV 데이터로 몬스터 스탯 초기화 + MonsterEvents 주입
                     // (Addressables 로드 시 ScriptableObject 참조가 별도 인스턴스로 로드되는 문제 해결)
-                    monster.Initialize(levelData, monsterEvents);
+                    // Monster_ID 전달하여 상성(Genre) 시스템 지원
+                    monster.Initialize(levelData, waveData.Monster_ID, monsterEvents);
 
                     // 목적지 설정 (Wall 위치로)
                     if (wallTarget != null)

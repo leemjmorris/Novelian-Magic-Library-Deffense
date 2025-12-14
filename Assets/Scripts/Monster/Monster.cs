@@ -25,6 +25,14 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     public int Exp { get; private set; } = 11; // JML: Example exp amount
 
+    // 상성 시스템용 Genre
+    private Genre monsterGenre = Genre.Horror; // 기본값: Horror
+
+    /// <summary>
+    /// 몬스터 장르 반환 (상성 계산용)
+    /// </summary>
+    public Genre GetGenre() => monsterGenre;
+
     // 테스트용 무적 모드
     private bool isInvincible = false;
 
@@ -41,12 +49,25 @@ public class Monster : BaseEntity, ITargetable, IMovable
     /// CSV 데이터 기반으로 몬스터 스탯 초기화 (MonsterLevelData)
     /// OnSpawn() 후 WaveManager에서 호출
     /// </summary>
-    public void Initialize(MonsterLevelData levelData, MonsterEvents events = null)
+    /// <param name="levelData">몬스터 레벨 데이터</param>
+    /// <param name="monsterId">몬스터 ID (Genre 조회용)</param>
+    /// <param name="events">MonsterEvents (옵션)</param>
+    public void Initialize(MonsterLevelData levelData, int monsterId = 0, MonsterEvents events = null)
     {
         // MonsterEvents 주입 (Addressables 로드 시 ScriptableObject 참조 문제 해결)
         if (events != null)
         {
             monsterEvents = events;
+        }
+
+        // Monster ID로 Genre 조회 (상성 시스템)
+        if (monsterId > 0 && CSVLoader.Instance != null)
+        {
+            var monsterData = CSVLoader.Instance.GetData<MonsterData>(monsterId);
+            if (monsterData != null)
+            {
+                monsterGenre = monsterData.Genre;
+            }
         }
 
         if (levelData == null)

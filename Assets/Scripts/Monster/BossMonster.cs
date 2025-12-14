@@ -31,6 +31,53 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
 
     // JML: ITargetable implementation
     public float Weight { get; private set; } = 5f; // Example weight value
+
+    // 상성 시스템용 Genre
+    private Genre bossGenre = Genre.Horror; // 기본값: Horror
+
+    /// <summary>
+    /// 보스 장르 반환 (상성 계산용)
+    /// </summary>
+    public Genre GetGenre() => bossGenre;
+
+    /// <summary>
+    /// CSV 데이터 기반으로 보스 스탯 초기화
+    /// </summary>
+    /// <param name="levelData">몬스터 레벨 데이터</param>
+    /// <param name="monsterId">몬스터 ID (Genre 조회용)</param>
+    /// <param name="events">MonsterEvents (옵션)</param>
+    public void Initialize(MonsterLevelData levelData, int monsterId = 0, MonsterEvents events = null)
+    {
+        // MonsterEvents 주입
+        if (events != null)
+        {
+            monsterEvents = events;
+        }
+
+        // Monster ID로 Genre 조회 (상성 시스템)
+        if (monsterId > 0 && CSVLoader.Instance != null)
+        {
+            var monsterData = CSVLoader.Instance.GetData<MonsterData>(monsterId);
+            if (monsterData != null)
+            {
+                bossGenre = monsterData.Genre;
+            }
+        }
+
+        if (levelData == null)
+        {
+            Debug.LogWarning("[BossMonster] MonsterLevelData is null, using default stats");
+            return;
+        }
+
+        // BaseEntity의 maxHealth 설정
+        SetMaxHealth(levelData.HP);
+
+        // Boss 스탯 설정
+        damage = levelData.ATK;
+        moveSpeed = levelData.Move_Speed;
+        attackInterval = 1f / levelData.Attack_Speed;
+    }
     //--------------------------------
     private void OnEnable()
     {

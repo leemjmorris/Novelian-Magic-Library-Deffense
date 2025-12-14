@@ -24,13 +24,17 @@ namespace Novelian.Combat
         private GameObject areaEffectInstance;
         private CancellationTokenSource lifetimeCts;
 
+        // Genre system (상성 시스템)
+        private Genre attackerGenre = Genre.Horror;
+
         //LMJ : Initialize and arm the mine
-        public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float mineDamage, Vector3 position)
+        public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float mineDamage, Vector3 position, Genre genre = Genre.Horror)
         {
             skillData = data;
             skillPrefabs = prefabs;
             supportData = support;
             damage = mineDamage;
+            attackerGenre = genre;
 
             // Calculate lifetime and radius with support modifiers
             lifetime = data.skill_lifetime > 0 ? data.skill_lifetime : 30f; // Mines last longer
@@ -171,10 +175,11 @@ namespace Novelian.Combat
         //LMJ : Apply mine explosion effect to monster
         private void ApplyMineEffectToMonster(Monster monster, Collider col)
         {
-            // Apply damage
+            // Apply damage with genre affinity (상성 시스템)
             if (damage > 0)
             {
-                monster.TakeDamage(damage);
+                float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, monster.GetGenre());
+                monster.TakeDamage(damage * genreMultiplier);
             }
 
             // Apply CC effect (Stun/Slow)
@@ -200,10 +205,11 @@ namespace Novelian.Combat
         //LMJ : Apply mine explosion effect to boss
         private void ApplyMineEffectToBoss(BossMonster boss, Collider col)
         {
-            // Apply damage
+            // Apply damage with genre affinity (상성 시스템)
             if (damage > 0)
             {
-                boss.TakeDamage(damage);
+                float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, boss.GetGenre());
+                boss.TakeDamage(damage * genreMultiplier);
             }
 
             // Apply CC effect (Stun/Slow)
