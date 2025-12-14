@@ -388,6 +388,31 @@ namespace Novelian.Combat
 
         #endregion
 
+        #region Genre System (상성 시스템)
+
+        /// <summary>
+        /// 캐릭터 장르 반환 (상성 계산용)
+        /// CharacterData의 Genre를 CSVLoader에서 조회
+        /// </summary>
+        public Genre GetGenre()
+        {
+            int charId = GetCharacterId();
+            if (charId <= 0 || CSVLoader.Instance == null)
+            {
+                return Genre.Horror; // 기본값
+            }
+
+            var charData = CSVLoader.Instance.GetData<CharacterData>(charId);
+            if (charData == null)
+            {
+                return Genre.Horror; // 기본값
+            }
+
+            return charData.Genre;
+        }
+
+        #endregion
+
         #region Public Stat Getters (Issue #424 - ChaCard UI용)
 
         /// <summary>

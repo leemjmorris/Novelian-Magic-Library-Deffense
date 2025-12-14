@@ -114,6 +114,9 @@ namespace Novelian.Combat
         private float critChance = 5f;      // 기본 5%
         private float critMultiplier = 150f; // 기본 150%
 
+        // Genre system (상성 시스템)
+        private Genre attackerGenre = Genre.Horror; // 발사자 장르 (기본값: Horror)
+
         // Lifetime tracking
         private CancellationTokenSource lifetimeCts;
 
@@ -127,6 +130,13 @@ namespace Novelian.Combat
         public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, float damageAmount, int mainSkillId, int supportId)
         {
             Launch(spawnPos, targetPos, projectileSpeed, projectileLifetime, damageAmount, mainSkillId, supportId, 5f, 150f);
+        }
+
+        //LMJ : Launch projectile in Physics mode - full version with crit and genre support (치명타 + 상성 시스템)
+        public void Launch(Vector3 spawnPos, Vector3 targetPos, float projectileSpeed, float projectileLifetime, float damageAmount, int mainSkillId, int supportId, float criticalChance, float criticalMultiplier, Genre genre)
+        {
+            attackerGenre = genre;
+            Launch(spawnPos, targetPos, projectileSpeed, projectileLifetime, damageAmount, mainSkillId, supportId, criticalChance, criticalMultiplier);
         }
 
         //LMJ : Launch projectile in Physics mode - full version with crit support (치명타 시스템)
@@ -621,9 +631,12 @@ namespace Novelian.Combat
                     if (monster != null)
                     {
                         var (damageToApply, isCrit) = CalculateDamageToApply();
-                        monster.TakeDamage(damageToApply, isCrit);
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, monster.GetGenre());
+                        float finalDamage = damageToApply * genreMultiplier;
+                        monster.TakeDamage(finalDamage, isCrit);
                         hitCount++;
-                        Debug.Log($"[Projectile] Dynamite hit {monster.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
+                        Debug.Log($"[Projectile] Dynamite hit {monster.name}: damage={finalDamage:F1} (x{genreMultiplier}){(isCrit ? " CRIT!" : "")}");
                     }
                 }
                 else if (col.CompareTag(Tag.BossMonster))
@@ -632,9 +645,12 @@ namespace Novelian.Combat
                     if (boss != null)
                     {
                         var (damageToApply, isCrit) = CalculateDamageToApply();
-                        boss.TakeDamage(damageToApply, isCrit);
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, boss.GetGenre());
+                        float finalDamage = damageToApply * genreMultiplier;
+                        boss.TakeDamage(finalDamage, isCrit);
                         hitCount++;
-                        Debug.Log($"[Projectile] Dynamite hit {boss.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
+                        Debug.Log($"[Projectile] Dynamite hit {boss.name}: damage={finalDamage:F1} (x{genreMultiplier}){(isCrit ? " CRIT!" : "")}");
                     }
                 }
             }
@@ -704,12 +720,15 @@ namespace Novelian.Combat
 
                         legendaryStaffHitTargets.Add(instanceId);
                         var (damageToApply, isCrit) = CalculateDamageToApply();
-                        monster.TakeDamage(damageToApply, isCrit);
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, monster.GetGenre());
+                        float finalDamage = damageToApply * genreMultiplier;
+                        monster.TakeDamage(finalDamage, isCrit);
 
                         // 히트 이펙트 재생 (콜라이더 중심점)
                         SpawnHitEffectAtCollider(col);
 
-                        Debug.Log($"[Projectile] LegendaryStaff hit {monster.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
+                        Debug.Log($"[Projectile] LegendaryStaff hit {monster.name}: damage={finalDamage:F1} (x{genreMultiplier}){(isCrit ? " CRIT!" : "")}");
                     }
                 }
                 else if (col.CompareTag(Tag.BossMonster))
@@ -723,12 +742,15 @@ namespace Novelian.Combat
 
                         legendaryStaffHitTargets.Add(instanceId);
                         var (damageToApply, isCrit) = CalculateDamageToApply();
-                        boss.TakeDamage(damageToApply, isCrit);
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, boss.GetGenre());
+                        float finalDamage = damageToApply * genreMultiplier;
+                        boss.TakeDamage(finalDamage, isCrit);
 
                         // 히트 이펙트 재생 (콜라이더 중심점)
                         SpawnHitEffectAtCollider(col);
 
-                        Debug.Log($"[Projectile] LegendaryStaff hit {boss.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
+                        Debug.Log($"[Projectile] LegendaryStaff hit {boss.name}: damage={finalDamage:F1} (x{genreMultiplier}){(isCrit ? " CRIT!" : "")}");
                     }
                 }
             }
@@ -872,8 +894,11 @@ namespace Novelian.Combat
                     Monster monster = timeBombAttachTarget.GetComponent<Monster>();
                     if (monster != null)
                     {
-                        monster.TakeDamage(damageToApply, isCrit);
-                        Debug.Log($"[Projectile] TimeBomb hit {monster.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, monster.GetGenre());
+                        float finalDamage = damageToApply * genreMultiplier;
+                        monster.TakeDamage(finalDamage, isCrit);
+                        Debug.Log($"[Projectile] TimeBomb hit {monster.name}: damage={finalDamage:F1} (x{genreMultiplier}){(isCrit ? " CRIT!" : "")}");
                     }
                 }
                 else if (timeBombAttachTarget.CompareTag(Tag.BossMonster))
@@ -881,8 +906,11 @@ namespace Novelian.Combat
                     BossMonster boss = timeBombAttachTarget.GetComponent<BossMonster>();
                     if (boss != null)
                     {
-                        boss.TakeDamage(damageToApply, isCrit);
-                        Debug.Log($"[Projectile] TimeBomb hit {boss.name}: damage={damageToApply:F1}{(isCrit ? " CRIT!" : "")}");
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, boss.GetGenre());
+                        float finalDamage = damageToApply * genreMultiplier;
+                        boss.TakeDamage(finalDamage, isCrit);
+                        Debug.Log($"[Projectile] TimeBomb hit {boss.name}: damage={finalDamage:F1} (x{genreMultiplier}){(isCrit ? " CRIT!" : "")}");
                     }
                 }
             }
@@ -1083,7 +1111,10 @@ namespace Novelian.Combat
                             supportSkillData.low_hp_bonus_damage_mult);
                     }
 
-                    monster.TakeDamage(damageToApply, isCrit);
+                    // 상성 배율 적용
+                    float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, monster.GetGenre());
+                    float finalDamage = damageToApply * genreMultiplier;
+                    monster.TakeDamage(finalDamage, isCrit);
 
                     // Spawn hit effect at monster collider center (몸통 중심)
                     SpawnHitEffectAtCollider(other);
@@ -1233,7 +1264,10 @@ namespace Novelian.Combat
                             supportSkillData.low_hp_bonus_damage_mult);
                     }
 
-                    boss.TakeDamage(damageToApply, isCrit);
+                    // 상성 배율 적용
+                    float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, boss.GetGenre());
+                    float finalDamage = damageToApply * genreMultiplier;
+                    boss.TakeDamage(finalDamage, isCrit);
 
                     // Spawn hit effect at boss collider center (몸통 중심)
                     SpawnHitEffectAtCollider(other);
@@ -1695,6 +1729,9 @@ namespace Novelian.Combat
                 Object.Destroy(timeBombEffectInstance);
                 timeBombEffectInstance = null;
             }
+
+            // Reset genre state (상성 시스템)
+            attackerGenre = Genre.Horror;
 
             // Rigidbody 상태 복원 (시한폭탄에서 isKinematic을 true로 변경했을 수 있음)
             // 주의: isKinematic을 먼저 false로 설정해야 linearVelocity 설정 가능

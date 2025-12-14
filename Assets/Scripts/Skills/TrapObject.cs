@@ -29,13 +29,17 @@ namespace Novelian.Combat
         private HashSet<int> affectedTargets = new HashSet<int>(); // CC 중복 방지용
         private CancellationTokenSource lifetimeCts;
 
+        // Genre system (상성 시스템)
+        private Genre attackerGenre = Genre.Horror;
+
         //LMJ : Initialize and activate trap
-        public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float trapDamage, Vector3 position)
+        public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float trapDamage, Vector3 position, Genre genre = Genre.Horror)
         {
             skillData = data;
             skillPrefabs = prefabs;
             supportData = support;
             damage = trapDamage;
+            attackerGenre = genre;
 
             // Calculate lifetime and radius with support modifiers
             lifetime = data.skill_lifetime > 0 ? data.skill_lifetime : 10f;
@@ -162,11 +166,12 @@ namespace Novelian.Combat
         {
             int instanceId = monster.GetInstanceID();
 
-            // Apply damage (DOT damage per tick)
+            // Apply damage (DOT damage per tick, 상성 배율 적용)
             float damageToApply = skillData.dot_damage_per_tick > 0 ? skillData.dot_damage_per_tick : damage;
             if (damageToApply > 0)
             {
-                monster.TakeDamage(damageToApply);
+                float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, monster.GetGenre());
+                monster.TakeDamage(damageToApply * genreMultiplier);
             }
 
             // Apply CC effect (only once per target to prevent stacking)
@@ -195,11 +200,12 @@ namespace Novelian.Combat
         {
             int instanceId = boss.GetInstanceID();
 
-            // Apply damage (DOT damage per tick)
+            // Apply damage (DOT damage per tick, 상성 배율 적용)
             float damageToApply = skillData.dot_damage_per_tick > 0 ? skillData.dot_damage_per_tick : damage;
             if (damageToApply > 0)
             {
-                boss.TakeDamage(damageToApply);
+                float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, boss.GetGenre());
+                boss.TakeDamage(damageToApply * genreMultiplier);
             }
 
             // Apply CC effect (only once per target)
