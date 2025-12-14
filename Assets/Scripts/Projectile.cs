@@ -1116,6 +1116,12 @@ namespace Novelian.Combat
                     float finalDamage = damageToApply * genreMultiplier;
                     monster.TakeDamage(finalDamage, isCrit);
 
+                    // 상성 로그 (1.0이 아닐 때만)
+                    if (genreMultiplier != 1.0f)
+                    {
+                        Debug.Log($"[Projectile] 상성! {attackerGenre} vs {monster.GetGenre()} = x{genreMultiplier} (데미지: {damageToApply:F0} → {finalDamage:F0})");
+                    }
+
                     // Spawn hit effect at monster collider center (몸통 중심)
                     SpawnHitEffectAtCollider(other);
 
@@ -1268,6 +1274,12 @@ namespace Novelian.Combat
                     float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(attackerGenre, boss.GetGenre());
                     float finalDamage = damageToApply * genreMultiplier;
                     boss.TakeDamage(finalDamage, isCrit);
+
+                    // 상성 로그 (1.0이 아닐 때만)
+                    if (genreMultiplier != 1.0f)
+                    {
+                        Debug.Log($"[Projectile] 상성! {attackerGenre} vs {boss.GetGenre()} = x{genreMultiplier} (데미지: {damageToApply:F0} → {finalDamage:F0})");
+                    }
 
                     // Spawn hit effect at boss collider center (몸통 중심)
                     SpawnHitEffectAtCollider(other);
