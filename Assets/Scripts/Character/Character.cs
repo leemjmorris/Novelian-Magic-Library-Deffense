@@ -92,6 +92,26 @@ namespace Novelian.Combat
 
         #endregion
 
+        #region Debug / Gizmo Settings
+
+        [Header("Debug - AOE Gizmo (런타임 범위 표시)")]
+        [SerializeField, Tooltip("AOE 스킬 범위를 Gizmo로 표시")]
+        private bool showAOEGizmo = true;
+
+        [SerializeField, Tooltip("AOE Gizmo 색상")]
+        private Color aoeGizmoColor = new Color(1f, 0.5f, 0f, 0.3f); // 주황색 반투명
+
+        [SerializeField, Tooltip("AOE Gizmo 와이어 색상")]
+        private Color aoeGizmoWireColor = new Color(1f, 0.3f, 0f, 1f); // 주황색 불투명
+
+        // 런타임 AOE 정보 (UseAOESkillAsync에서 업데이트)
+        private Vector3 lastAOETargetPosition;
+        private float lastAOERadius;
+        private float aoeGizmoDisplayTime;
+        private const float AOE_GIZMO_DURATION = 2f; // Gizmo 표시 지속 시간
+
+        #endregion
+
         #region Private Fields
 
         // 캐싱된 스킬 데이터
@@ -100,7 +120,6 @@ namespace Novelian.Combat
         private SupportSkillData supportData;
         private MainSkillPrefabEntry basicAttackPrefabs;
         private MainSkillPrefabEntry activeSkillPrefabs;
-        private SupportSkillPrefabEntry supportPrefabs;
 
         // 스킬 레벨 데이터 (현재는 레벨 1 고정, 추후 레벨 시스템 추가 시 확장)
 #pragma warning disable CS0414 // 추후 레벨 시스템 구현 시 사용 예정
@@ -690,8 +709,7 @@ namespace Novelian.Combat
             // 장착
             supportSkillId = supportId;
             supportData = newSupportData;
-            var prefabDb = SkillPrefabDatabase.Instance;
-            supportPrefabs = prefabDb?.GetSupportSkillEntry(supportSkillId);
+            // Support prefabs are no longer needed - effect modifiers come from CSV data
 
             Debug.Log($"[Character] 서포트 스킬 장착 완료: {newSupportData.support_name} (ID: {supportId})");
             return true;
@@ -711,6 +729,69 @@ namespace Novelian.Combat
         /// JML: 서포트 스킬 장착 여부 (Issue #424)
         /// </summary>
         public bool HasSupportSkill() => supportSkillId > 0 && supportData != null;
+
+        #endregion
+
+        #region AOE Gizmo (Runtime Debug)
+
+        /// <summary>
+        /// AOE 스킬 사용 시 Gizmo 정보 업데이트 (UseAOESkillAsync에서 호출)
+        /// </summary>
+        public void UpdateAOEGizmoInfo(Vector3 targetPosition, float radius)
+        {
+            lastAOETargetPosition = targetPosition;
+            lastAOERadius = radius;
+            aoeGizmoDisplayTime = AOE_GIZMO_DURATION;
+        }
+
+        private void Update()
+        {
+            // AOE Gizmo 표시 시간 감소
+            if (aoeGizmoDisplayTime > 0)
+            {
+                aoeGizmoDisplayTime -= Time.deltaTime;
+            }
+        }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmos()
+        {
+            // AOE Gizmo 표시가 꺼져있거나 표시 시간이 지났으면 스킵
+            if (!showAOEGizmo || aoeGizmoDisplayTime <= 0 || lastAOERadius <= 0)
+                return;
+
+            // 페이드 아웃 효과
+            float alpha = Mathf.Clamp01(aoeGizmoDisplayTime / AOE_GIZMO_DURATION);
+
+            // 바닥에 원형 범위 표시
+            Vector3 gizmoPos = lastAOETargetPosition;
+            gizmoPos.y = 0.1f; // 바닥에서 살짝 위
+
+            // 채워진 원 (반투명)
+            Color fillColor = aoeGizmoColor;
+            fillColor.a *= alpha;
+            Gizmos.color = fillColor;
+
+            // UnityEditor.Handles를 사용하여 원 그리기
+            UnityEditor.Handles.color = fillColor;
+            UnityEditor.Handles.DrawSolidDisc(gizmoPos, Vector3.up, lastAOERadius);
+
+            // 와이어 원 (불투명)
+            Color wireColor = aoeGizmoWireColor;
+            wireColor.a *= alpha;
+            UnityEditor.Handles.color = wireColor;
+            UnityEditor.Handles.DrawWireDisc(gizmoPos, Vector3.up, lastAOERadius);
+
+            // 중앙 십자 표시
+            float crossSize = lastAOERadius * 0.1f;
+            Gizmos.color = wireColor;
+            Gizmos.DrawLine(gizmoPos + Vector3.left * crossSize, gizmoPos + Vector3.right * crossSize);
+            Gizmos.DrawLine(gizmoPos + Vector3.forward * crossSize, gizmoPos + Vector3.back * crossSize);
+
+            // 라벨 표시 (반경)
+            UnityEditor.Handles.Label(gizmoPos + Vector3.up * 0.5f, $"AOE: {lastAOERadius:F1}");
+        }
+#endif
 
         #endregion
     }

@@ -1,6 +1,7 @@
 //LMJ : Trap object that is placed on the field
 //      Continuously affects enemies within range for skill_lifetime duration
 //      Used by Trap type skills (3000807): 장미의가시, 슬랩스틱존, 현장보존, 트릭와이어, 피웅덩이, 깜짝카메라
+//      Uses MainSkillPrefabEntry interface (caller converts SkillEffectEntry to MainSkillPrefabEntry)
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -29,7 +30,7 @@ namespace Novelian.Combat
         private HashSet<int> affectedTargets = new HashSet<int>(); // CC 중복 방지용
         private CancellationTokenSource lifetimeCts;
 
-        //LMJ : Initialize and activate trap
+        //LMJ : Initialize and activate trap (legacy interface)
         public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float trapDamage, Vector3 position)
         {
             skillData = data;

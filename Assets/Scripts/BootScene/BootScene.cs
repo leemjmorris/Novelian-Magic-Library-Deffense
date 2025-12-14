@@ -92,7 +92,8 @@ public class BootScene : MonoBehaviour
             InitializeCharacterEnhancementManager(),
             InitializeCharacterOwnershipManager(),
             InitializeWarningUIManager(),
-            InitializeInputManager()
+            InitializeInputManager(),
+            InitializeSkillEffectDatabase() // LMJ: 스킬 이펙트 데이터베이스 초기화
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -293,6 +294,33 @@ public class BootScene : MonoBehaviour
         else
         {
             Debug.LogError($"✗ CSVLoader timeout after {timeoutSeconds}s! CSV data may not be loaded.");
+        }
+    }
+
+    /// <summary>
+    /// LMJ: Initialize SkillEffectDatabase (runs in parallel with other managers)
+    /// LMJ: CRITICAL: Must be loaded before GameScene to avoid sync load in Character.Awake()
+    /// </summary>
+    private async UniTask InitializeSkillEffectDatabase()
+    {
+        Log("Initializing SkillEffectDatabase...");
+
+        try
+        {
+            await SkillEffectDatabase.LoadInstanceAsync();
+
+            if (SkillEffectDatabase.Instance != null)
+            {
+                Log("✓ SkillEffectDatabase ready");
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ SkillEffectDatabase not found - skill effects may not work properly");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"✗ SkillEffectDatabase initialization failed: {e.Message}");
         }
     }
 

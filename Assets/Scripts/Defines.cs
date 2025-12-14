@@ -82,8 +82,7 @@ public static class AddressableKey
     public static readonly string Icon_RareBookmark = "RareBookmark";
     public static readonly string Icon_UniqueBookmark = "UniqueBookmark";
 
-    // 스킬 Prefab 데이터베이스
-    public static readonly string SkillPrefabDatabase = "SkillPrefabDatabase";
+    // SkillPrefabDatabase removed - migrated to SkillEffectDatabase
 
     // JML: 범용 프리팹 방식 - 단일 키 반환 (Issue #320)
     public static string GetCharacterKey(int characterId)
