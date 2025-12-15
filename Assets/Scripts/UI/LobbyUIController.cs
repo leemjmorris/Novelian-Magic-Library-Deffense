@@ -12,9 +12,49 @@ namespace NovelianMagicLibraryDefense.UI
     /// </summary>
     public class LobbyUIController : MonoBehaviour
     {
-         public void OnLobbyButton()
+        [Header("Dispatch Panels")]
+        [SerializeField] private Transform dispatchPanels; // DispatchPanels 참조
+        [SerializeField] private GameObject mapObject; // Map 오브젝트 참조
+
+        public void OnLobbyButton()
         {
+            // DispatchPanels 자식 중 열린 패널이 있으면 닫기만 하고 리턴
+            if (CloseDispatchPanels())
+            {
+                return;
+            }
+
+            // 열린 패널이 없으면 로비로 이동
             LoadSceneWithFadeOnly("LobbyScene").Forget();
+        }
+
+        /// <summary>
+        /// DispatchPanels의 자식 중 활성화된 패널을 모두 닫습니다.
+        /// </summary>
+        /// <returns>닫은 패널이 있으면 true, 없으면 false</returns>
+        private bool CloseDispatchPanels()
+        {
+            if (dispatchPanels == null) return false;
+
+            bool closedAny = false;
+            foreach (Transform child in dispatchPanels)
+            {
+                if (child.gameObject.activeSelf)
+                {
+                    child.gameObject.SetActive(false);
+                    closedAny = true;
+                    Debug.Log($"[LobbyUIController] {child.name} 패널 닫힘");
+                }
+            }
+
+            // 패널을 닫았으면 Map 다시 활성화
+            if (closedAny && mapObject != null)
+            {
+                mapObject.SetActive(true);
+                Debug.Log("[LobbyUIController] Map 활성화");
+            }
+
+            return closedAny;
         }
 
         public void OnBookMarkButton()
@@ -43,7 +83,7 @@ namespace NovelianMagicLibraryDefense.UI
             LoadSceneWithFadeOnly("LibraryManagementScene(LCB)").Forget();
         }
         public void OnDisPatchButton()
-    
+
         {
             LoadSceneWithFadeOnly("DispatchSystemScene").Forget();
         }
