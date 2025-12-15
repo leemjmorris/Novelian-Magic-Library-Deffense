@@ -15,10 +15,12 @@ public class PartySlot : MonoBehaviour
 
     public void Init(int charId)
     {
+        Debug.Log($"[PartySlot] Init() called with charId: {charId}");
         characterId = charId;
 
         if (characterId <= 0)
         {
+            Debug.LogWarning($"[PartySlot] Invalid characterId: {charId}, clearing slot");
             ClearSlot();
             return;
         }
@@ -37,6 +39,10 @@ public class PartySlot : MonoBehaviour
         {
             nameText.text = stringData?.Text ?? "???";
         }
+        else
+        {
+            Debug.LogWarning($"[PartySlot] nameText is null for character ID: {characterId}. Check prefab references!");
+        }
 
         // 캐릭터 레벨
         if (levelText != null)
@@ -47,6 +53,11 @@ public class PartySlot : MonoBehaviour
                 enhanceLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterId);
             }
             levelText.text = $"Lv.{enhanceLevel}";
+            Debug.Log($"[PartySlot] Set level text to 'Lv.{enhanceLevel}' for character ID: {characterId}");
+        }
+        else
+        {
+            Debug.LogWarning($"[PartySlot] levelText is null for character ID: {characterId}. Check prefab references!");
         }
 
         // 캐릭터 아이콘
@@ -58,7 +69,11 @@ public class PartySlot : MonoBehaviour
 
     private void LoadCharacterIcon(CharacterData characterData)
     {
-        if (characterIcon == null) return;
+        if (characterIcon == null)
+        {
+            Debug.LogWarning($"[PartySlot] characterIcon is null. Check prefab references!");
+            return;
+        }
 
         string spriteKey = AddressableKey.Icon_Character;
 
@@ -82,7 +97,11 @@ public class PartySlot : MonoBehaviour
 
     private void LoadGenreIcon(int genreId)
     {
-        if (genreIcon == null) return;
+        if (genreIcon == null)
+        {
+            Debug.LogWarning($"[PartySlot] genreIcon is null. Check prefab references!");
+            return;
+        }
 
         string genreKey = genreId switch
         {

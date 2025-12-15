@@ -40,10 +40,18 @@ public class PartySynergyInfoPanel : MonoBehaviour
         {
             slot1.Init(data.Req_Char_1_ID);
         }
+        else
+        {
+            Debug.LogWarning($"[PartySynergyInfoPanel] slot1 is null! Check prefab references for PartyID: {partyId}");
+        }
 
         if (slot2 != null)
         {
             slot2.Init(data.Req_Char_2_ID);
+        }
+        else
+        {
+            Debug.LogWarning($"[PartySynergyInfoPanel] slot2 is null! Check prefab references for PartyID: {partyId}");
         }
 
         // 강화 버튼은 일단 비활성화 (추후 연결)
