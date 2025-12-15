@@ -6,7 +6,7 @@ using System.Threading;
 namespace Dispatch
 {
     /// <summary>
-    /// 파견 시스템 UI 컨트롤러 (전투형/채집형 통합)
+    /// 파견 시스템 UI 컨트롤러 (전투형)
     /// 느낌표 패널 버튼을 클릭하면 SelectImage-M이 SelectImage-S 크기로 축소 애니메이션되고,
     /// 애니메이션 완료 후 선택하기 버튼이 활성화됩니다.
     /// 선택하기 버튼 클릭 시 Map 오브젝트가 비활성화되고 해당 파견 패널이 활성화됩니다.
@@ -19,7 +19,7 @@ namespace Dispatch
 
         [Header("Dispatch UI")]
         [SerializeField] private Button exclamationPanelButton;    // 느낌표 패널 버튼
-        [SerializeField] private RectTransform selectImageM;       // SelectImage-M (축소될 이미지, Scale X: 1.08 -> 1.0)
+        [SerializeField] private RectTransform selectImageM;       // Scale X: 1.08 -> 1.0
         [SerializeField] private Button selectButton;              // 선택하기 버튼 (SlelectButton)
         [SerializeField] private GameObject redDotImage;           // Red Dot 이미지 (파견 완료 알림)
 
@@ -29,6 +29,7 @@ namespace Dispatch
 
         [Header("Animation Settings")]
         [SerializeField] private float animationDuration = 1.0f;   // 애니메이션 지속 시간 (초)
+        [SerializeField] private float dispatchCheckInterval = 1f; // 파견 상태 확인 주기 (초)
 
         private Vector2 originalSizeM;  // SelectImage-M의 원본 크기 저장
         private bool isAnimationComplete = false;
@@ -93,8 +94,8 @@ namespace Dispatch
             // UI 초기화
             InitializeUI();
 
-            // 파견 완료 상태 확인 및 Red Dot 표시
-            CheckDispatchStateAndShowRedDot();
+            // 파견 완료 상태 주기적 확인 시작
+            InvokeRepeating(nameof(CheckDispatchStateAndShowRedDot), 0f, dispatchCheckInterval);
         }
 
         /// <summary>
@@ -139,58 +140,39 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 파견 완료 상태 확인 및 Red Dot 표시 (Firebase 기반)
+        /// 파견 완료 상태 확인 및 Red Dot 표시 (Firebase 기반, 주기적 호출)
         /// </summary>
         private void CheckDispatchStateAndShowRedDot()
         {
-            // Firebase 캐시 데이터에서 파견 상태 확인
-            var dispatchData = FirebaseSaveManager.Instance?.CachedData?.dispatch;
-            if (dispatchData == null)
-            {
-                Debug.Log($"{LogTag} Firebase 데이터 없음");
-                return;
-            }
+            if (redDotImage == null) return;
 
-            // dispatchType에 따라 해당 파견 상태 확인
-            Firebase.Data.DispatchStateData state = null;
-            if (dispatchSaveKey.Contains("Combat"))
-            {
-                state = dispatchData.combat;
-            }
-            else if (dispatchSaveKey.Contains("Gathering"))
-            {
-                state = dispatchData.gathering;
-            }
+            // DispatchStateHelper를 사용한 파견 완료 체크
+            bool isCompleted = dispatchSaveKey.Contains("Combat")
+                ? DispatchStateHelper.IsCombatDispatchCompleted()
+                : DispatchStateHelper.IsGatheringDispatchCompleted();
 
-            if (state == null || !state.isActive)
-            {
-                Debug.Log($"{LogTag} 파견 중이 아님");
-                return;
-            }
+            // 디버그: 상태 확인
+            var state = dispatchSaveKey.Contains("Combat")
+                ? DispatchStateHelper.GetCombatDispatchState()
+                : DispatchStateHelper.GetGatheringDispatchState();
 
-            // 종료 시간 파싱
-            if (!System.DateTime.TryParse(state.endTime, out System.DateTime endTime))
+            if (state != null)
             {
-                Debug.LogError($"{LogTag} 파견 종료 시간 파싱 실패");
-                return;
-            }
-
-            // 남은 시간 계산
-            System.TimeSpan remaining = endTime - System.DateTime.UtcNow;
-            float remainingTime = (float)remaining.TotalSeconds;
-
-            // 파견 완료 상태라면 Red Dot 활성화
-            if (remainingTime <= 0f)
-            {
-                if (redDotImage != null)
-                {
-                    redDotImage.SetActive(true);
-                    Debug.Log($"{LogTag} ✅ 파견 완료 - Map에 Red Dot 표시");
-                }
+                Debug.Log($"{LogTag} [체크] isActive={state.isActive}, endTime={state.endTime}, isCompleted={isCompleted}");
             }
             else
             {
-                Debug.Log($"{LogTag} 파견 진행 중 - 남은 시간: {remainingTime:F0}초");
+                Debug.Log($"{LogTag} [체크] state가 null입니다");
+            }
+
+            // 상태 변경 시에만 SetActive 호출
+            if (isCompleted != redDotImage.activeSelf)
+            {
+                redDotImage.SetActive(isCompleted);
+                if (isCompleted)
+                {
+                    Debug.Log($"{LogTag} ✅ 파견 완료 - Map에 Red Dot 표시");
+                }
             }
         }
 
@@ -414,6 +396,9 @@ namespace Dispatch
 
         private void OnDestroy()
         {
+            // 주기적 체크 중지
+            CancelInvoke(nameof(CheckDispatchStateAndShowRedDot));
+
             // 애니메이션 캔슬 토큰 정리
             cancellationTokenSource?.Cancel();
             cancellationTokenSource?.Dispose();
