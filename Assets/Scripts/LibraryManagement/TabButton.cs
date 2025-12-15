@@ -130,16 +130,13 @@ public class TabButton : MonoBehaviour
     {
         Debug.Log("Party Tab Clicked");
 
-        // characterTabButton.interactable = true;
-        // partyTabButton.interactable = false;
-        // teamSetupTabButton.interactable = true;
+        characterTabButton.interactable = true;
+        partyTabButton.interactable = false;
+        teamSetupTabButton.interactable = true;
 
-        // characterPanel.SetActive(false);
-        // partyPanel.SetActive(true);
-        // teamSetupPanel.SetActive(false);
-        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
-
-        
+        characterPanel.SetActive(false);
+        partyPanel.SetActive(true);
+        teamSetupPanel.SetActive(false);
     }
     
     private void OnTeamSetupTabClicked()
