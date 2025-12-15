@@ -9,12 +9,14 @@ namespace NovelianMagicLibraryDefense.UI
     /// <summary>
     /// Controls UI interactions in the Lobby scene
     /// Handles scene transitions from Lobby to Game
-    /// </summary>
-    public class LobbyUIController : MonoBehaviour
+    /// </summary> 
+    public class DispatchUIController : MonoBehaviour
     {
+
         [Header("Dispatch Panels")]
         [SerializeField] private Transform dispatchPanels; // DispatchPanels 참조
         [SerializeField] private GameObject mapObject; // Map 오브젝트 참조
+
 
         public void OnLobbyButton()
         {
@@ -25,7 +27,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             // 열린 패널이 없으면 로비로 이동
-            LoadSceneWithFadeOnly("LobbyScene").Forget();
+            LoadSceneWithFadeOnly(SceneName.LobbyScene).Forget();
         }
 
         /// <summary>
@@ -55,37 +57,6 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             return closedAny;
-        }
-
-        public void OnBookMarkButton()
-        {
-            LoadSceneWithFadeOnly("BookMarkCraftScene").Forget();
-        }
-
-        public void OnGameStartButton()
-        {
-            LoadSceneWithFadeOnly("StageScene").Forget();
-        }
-
-
-        public void OnBattleStartButton()
-        {
-            LoadSceneWithLoadingUI("GameScene").Forget();
-        }
-
-        public void OnInventoryButton()
-        {
-            LoadSceneWithFadeOnly("Inventory").Forget();
-        }
-
-        public void OnLibraryManagementButton()
-        {
-            LoadSceneWithFadeOnly("LibraryManagementScene(LCB)").Forget();
-        }
-        public void OnDisPatchButton()
-
-        {
-            LoadSceneWithFadeOnly("DispatchSystemScene").Forget();
         }
 
         /// <summary>

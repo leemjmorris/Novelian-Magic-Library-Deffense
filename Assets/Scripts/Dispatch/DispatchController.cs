@@ -156,15 +156,6 @@ namespace Dispatch
                 ? DispatchStateHelper.GetCombatDispatchState()
                 : DispatchStateHelper.GetGatheringDispatchState();
 
-            if (state != null)
-            {
-                Debug.Log($"{LogTag} [체크] isActive={state.isActive}, endTime={state.endTime}, isCompleted={isCompleted}");
-            }
-            else
-            {
-                Debug.Log($"{LogTag} [체크] state가 null입니다");
-            }
-
             // 상태 변경 시에만 SetActive 호출
             if (isCompleted != redDotImage.activeSelf)
             {
