@@ -10,6 +10,8 @@ public class PartySynergyInfoPanel : MonoBehaviour
     [Header("Character Slots")]
     [SerializeField] private PartySlot slot1;
     [SerializeField] private PartySlot slot2;
+    [SerializeField] private PartySlot slot3;
+    [SerializeField] private PartySlot slot4;
 
     [Header("Enhance Button")]
     [SerializeField] private Button enhanceButton;
@@ -35,23 +37,27 @@ public class PartySynergyInfoPanel : MonoBehaviour
             partyNameText.text = stringData?.Text ?? $"Party_{partyId}";
         }
 
-        // 캐릭터 슬롯 초기화
-        if (slot1 != null)
+        // 캐릭터 슬롯 초기화 (Party_Size에 따라)
+        int partySize = data.Party_Size;
+
+        if (slot1 != null && partySize >= 1)
         {
             slot1.Init(data.Req_Char_1_ID);
         }
-        else
-        {
-            Debug.LogWarning($"[PartySynergyInfoPanel] slot1 is null! Check prefab references for PartyID: {partyId}");
-        }
 
-        if (slot2 != null)
+        if (slot2 != null && partySize >= 2)
         {
             slot2.Init(data.Req_Char_2_ID);
         }
-        else
+
+        if (slot3 != null && partySize >= 3)
         {
-            Debug.LogWarning($"[PartySynergyInfoPanel] slot2 is null! Check prefab references for PartyID: {partyId}");
+            slot3.Init(data.Req_Char_3_ID);
+        }
+
+        if (slot4 != null && partySize >= 4)
+        {
+            slot4.Init(data.Req_Char_4_ID);
         }
 
         // 강화 버튼은 일단 비활성화 (추후 연결)

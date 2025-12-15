@@ -15,11 +15,17 @@ public class CharacterOwnershipManager : MonoBehaviour
     private static CharacterOwnershipManager instance;
     public static CharacterOwnershipManager Instance => instance;
 
+    [Header("테스트 설정")]
+    [SerializeField] private bool grantHorrorCharactersForTest = false;
+
     // 보유 캐릭터 ID 목록
     private HashSet<int> ownedCharacters = new HashSet<int>();
 
     // 초기 보유 캐릭터 ID
     private static readonly int[] INITIAL_CHARACTERS = { 22007, 24013, 25017 };
+
+    // 테스트용 공포 캐릭터 ID (파티 시너지 202003 테스트용)
+    private static readonly int[] HORROR_TEST_CHARACTERS = { 23009, 23010, 23011, 23012 };
 
     // 캐릭터 해금 이벤트 (UI 갱신용)
     public event Action<int> OnCharacterUnlocked;
@@ -43,6 +49,16 @@ public class CharacterOwnershipManager : MonoBehaviour
         foreach (int characterId in INITIAL_CHARACTERS)
         {
             ownedCharacters.Add(characterId);
+        }
+
+        // 테스트용 공포 캐릭터 지급 (Inspector에서 토글)
+        if (grantHorrorCharactersForTest)
+        {
+            foreach (int characterId in HORROR_TEST_CHARACTERS)
+            {
+                ownedCharacters.Add(characterId);
+            }
+            Debug.Log($"[CharacterOwnershipManager] 테스트용 공포 캐릭터 4명 지급 (파티 시너지 테스트용)");
         }
 
         Debug.Log($"[CharacterOwnershipManager] 초기화 완료. 보유 캐릭터: {ownedCharacters.Count}개");
