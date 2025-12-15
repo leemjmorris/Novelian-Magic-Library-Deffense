@@ -103,13 +103,14 @@ public class PartySlot : MonoBehaviour
             return;
         }
 
+        // Genre enum: 1=Horror, 2=Romance, 3=Adventure, 4=Comedy, 5=Mystery
         string genreKey = genreId switch
         {
-            1 => AddressableKey.Icon_Mystery,
-            2 => AddressableKey.IconAdventure,
-            3 => AddressableKey.IconRomance,
-            4 => AddressableKey.IconHorror,
-            5 => AddressableKey.IconComedy,
+            1 => AddressableKey.IconHorror,
+            2 => AddressableKey.IconRomance,
+            3 => AddressableKey.IconAdventure,
+            4 => AddressableKey.IconComedy,
+            5 => AddressableKey.Icon_Mystery,
             _ => AddressableKey.Icon_Mystery
         };
 

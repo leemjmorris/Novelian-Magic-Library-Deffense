@@ -406,6 +406,7 @@ GameObject:
   - component: {fileID: 729743815}
   - component: {fileID: 729743816}
   - component: {fileID: 729743817}
+  - component: {fileID: 729743818}
   m_Layer: 0
   m_Name: ManagerObj
   m_TagString: Untagged
@@ -545,6 +546,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f8d6c464959532489ad945c91f87612, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  grantGenreTestCharacters: 1
 --- !u!114 &729743814
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -596,6 +598,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dae70723a52cd5f4baa8e11653e13271, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &729743818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 729743801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5243fcaa40ebfb4592bf0d314c90aeb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &1456735814
@@ -720,6 +734,7 @@ MonoBehaviour:
   warningUIManager: {fileID: 329053012}
   loadingUIManager: {fileID: 729743811}
   inputManager: {fileID: 729743814}
+  partySynergyManager: {fileID: 729743818}
   minimumLoadTime: 1
   firebaseSaveManager: {fileID: 729743815}
 --- !u!4 &1862903903

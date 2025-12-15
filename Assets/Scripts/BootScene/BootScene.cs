@@ -29,6 +29,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private WarningUIManager warningUIManager; 
     [SerializeField] private LoadingUIManager loadingUIManager;
     [SerializeField] private InputManager inputManager;
+    [SerializeField] private PartySynergyManager partySynergyManager;
 
     [Header("Loading Progress")]
     [SerializeField] private float minimumLoadTime = 1.0f; // JML: Minimum time to show loading screen
@@ -92,7 +93,8 @@ public class BootScene : MonoBehaviour
             InitializeCharacterEnhancementManager(),
             InitializeCharacterOwnershipManager(),
             InitializeWarningUIManager(),
-            InitializeInputManager()
+            InitializeInputManager(),
+            InitializePartySynergyManager()
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -119,6 +121,30 @@ public class BootScene : MonoBehaviour
         else
         {
             Debug.LogError("✗ InputManager failed to initialize!");
+        }
+    }
+
+    private async UniTask InitializePartySynergyManager()
+    {
+        Log("Initializing PartySynergyManager...");
+
+        if (partySynergyManager == null)
+        {
+            Debug.LogError("✗ PartySynergyManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+
+        // JML: Wait for Awake to complete
+        await UniTask.WaitUntil(() => PartySynergyManager.Instance != null);
+        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start()
+
+        if (PartySynergyManager.Instance != null)
+        {
+            Log("✓ PartySynergyManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ PartySynergyManager failed to initialize!");
         }
     }
 
@@ -482,13 +508,6 @@ public class BootScene : MonoBehaviour
     private async UniTask LoadFirebaseDataAndApplyToManagers()
     {
         Log("--- Loading Firebase Data ---");
-
-        // FirebaseManager가 로그인되어 있는지 확인
-        if (FirebaseManager.Instance == null || !FirebaseManager.Instance.IsSignedIn)
-        {
-            Log("Firebase 로그인 안됨 - 데이터 로드 건너뜀");
-            return;
-        }
 
         // FirebaseSaveManager 초기화
         if (firebaseSaveManager != null)
