@@ -67,6 +67,9 @@ public static class AddressableKey
     public static readonly string SkillTypeTable = "SkillTypeTable";
     public static readonly string SkillCardTable = "SkillCardTable"; 
     public static readonly string LayoutPresetTable = "LayoutPresetTable";  // Issue #420    
+    public static readonly string PartySynergyTable = "PartySynergyTable";  // 파티 시너지 테이블
+    public static readonly string PartySynergyEnhancementTable = "PartySynergyEnhancementTable";  // 파티 시너지 강화 테이블
+    public static readonly string PartySynergyEffectTable = "PartySynergyEffectTable";
     
     // JML: Icon Addressable Keys
     public static readonly string Icon_Mystery = "Icon_Mystery";

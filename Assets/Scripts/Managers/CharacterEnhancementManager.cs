@@ -85,9 +85,14 @@ public class CharacterEnhancementManager : MonoBehaviour
     /// </summary>
     public void SetEnhancementsFromFirebase(Dictionary<string, int> enhancements)
     {
-        if (enhancements == null) return;
-
+        // 항상 기존 데이터 클리어 (계정 전환 시 이전 데이터 잔류 방지)
         characterEnhancementLevels.Clear();
+
+        if (enhancements == null)
+        {
+            Debug.Log("<color=#3EB489>[CharacterEnhancement]</color> Firebase 강화 데이터 없음 (새 계정)");
+            return;
+        }
         foreach (var kvp in enhancements)
         {
             if (int.TryParse(kvp.Key, out int characterId))

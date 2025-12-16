@@ -315,6 +315,9 @@ public class CharacterPlacementManager : MonoBehaviour
 
             // JML: 전역 스텟 버프 적용 (Issue #349)
             ApplyGlobalBuffsToCharacter(character);
+
+            // JML: 파티 시너지 버프 적용 (Issue #331)
+            ApplySynergyBuffToCharacter(character);
         }
 
         // Place in slot
@@ -828,6 +831,44 @@ public class CharacterPlacementManager : MonoBehaviour
         {
             character.ApplyStatBuff(buff.Key, buff.Value);
         }
+    }
+
+    /// <summary>
+    /// JML: 새로 소환된 캐릭터에 파티 시너지 버프 적용 (Issue #331)
+    /// PartySynergyManager에서 활성 시너지 확인 후 장르 버프 적용
+    /// </summary>
+    private void ApplySynergyBuffToCharacter(Novelian.Combat.Character character)
+    {
+        if (character == null) return;
+
+        if (PartySynergyManager.Instance == null)
+        {
+            Debug.LogWarning("[CharacterPlacementManager] PartySynergyManager.Instance is null");
+            return;
+        }
+
+        PartySynergyManager.Instance.ApplySynergyToCharacter(character);
+    }
+
+    /// <summary>
+    /// JML: 모든 배치된 캐릭터에 파티 시너지 적용 (게임 시작 시 호출)
+    /// </summary>
+    public void ApplySynergyToAllCharacters()
+    {
+        if (PartySynergyManager.Instance == null)
+        {
+            Debug.LogWarning("[CharacterPlacementManager] PartySynergyManager.Instance is null");
+            return;
+        }
+
+        var characters = GetAllCharacters();
+        if (characters.Count == 0)
+        {
+            Debug.Log("[CharacterPlacementManager] 배치된 캐릭터가 없습니다.");
+            return;
+        }
+
+        PartySynergyManager.Instance.ApplySynergyToCharacters(characters);
     }
 
     #endregion
