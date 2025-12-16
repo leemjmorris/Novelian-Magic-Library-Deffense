@@ -224,16 +224,25 @@ public class PartySynergyManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 시너지 레벨 설정
+    /// 시너지 레벨 설정 (async - Firebase 저장 완료 대기)
     /// </summary>
-    public void SetSynergyLevel(int partyId, int level)
+    public async UniTask SetSynergyLevelAsync(int partyId, int level)
     {
         int clampedLevel = Mathf.Clamp(level, 1, 5);
         synergyLevels[partyId] = clampedLevel;
         Debug.Log($"[PartySynergyManager] 시너지 레벨 설정: PartyID={partyId}, Level={clampedLevel}");
 
-        // Firebase 저장
-        SaveToFirebase(partyId, clampedLevel);
+        // Firebase 저장 (완료 대기)
+        await SaveToFirebaseAsync(partyId, clampedLevel);
+    }
+
+    /// <summary>
+    /// 시너지 레벨 설정 (동기 - Firebase 저장은 fire-and-forget)
+    /// 기존 호환성을 위해 유지
+    /// </summary>
+    public void SetSynergyLevel(int partyId, int level)
+    {
+        SetSynergyLevelAsync(partyId, level).Forget();
     }
 
     /// <summary>
@@ -269,24 +278,28 @@ public class PartySynergyManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Firebase에 시너지 레벨 저장
+    /// Firebase에 시너지 레벨 저장 (완료 대기)
     /// </summary>
-    private void SaveToFirebase(int partyId, int level)
+    private async UniTask SaveToFirebaseAsync(int partyId, int level)
     {
         if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
         {
+            Debug.LogWarning("[PartySynergy] FirebaseSaveManager not ready, skipping save");
             return;
         }
 
         if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
         {
+            Debug.LogWarning("[PartySynergy] No user logged in, skipping save");
             return;
         }
 
-        FirebaseSaveManager.Instance.SavePartySynergyAsync(
+        await FirebaseSaveManager.Instance.SavePartySynergyAsync(
             FirebaseManager.Instance.CurrentUserId,
             partyId,
             level
-        ).Forget();
+        );
+
+        Debug.Log($"<color=#3EB489>[PartySynergy]</color> Firebase 저장 완료: PartyID={partyId}, Level={level}");
     }
 }
