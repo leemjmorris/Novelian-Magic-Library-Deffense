@@ -8,16 +8,14 @@ public class PartySynergyInfoPanel : MonoBehaviour
     [SerializeField] private TextMeshProUGUI partyNameText;
 
     [Header("Character Slots")]
-    [SerializeField] private PartySlot slot1;
-    [SerializeField] private PartySlot slot2;
-    [SerializeField] private PartySlot slot3;
-    [SerializeField] private PartySlot slot4;
+    [SerializeField] private PartySlot[] characterSlots;
 
     [Header("Enhance Button")]
     [SerializeField] private Button enhanceButton;
 
     private int partyId;
     private PartySynergyData synergyData;
+    private PartySynergyEnhancementPanel enhancementPanel;
 
     public void Init(PartySynergyData data)
     {
@@ -37,36 +35,71 @@ public class PartySynergyInfoPanel : MonoBehaviour
             partyNameText.text = stringData?.Text ?? $"Party_{partyId}";
         }
 
-        // 캐릭터 슬롯 초기화 (Party_Size에 따라)
-        int partySize = data.Party_Size;
+        // 캐릭터 슬롯 초기화
+        InitializeCharacterSlots(data);
 
-        if (slot1 != null && partySize >= 1)
-        {
-            slot1.Init(data.Req_Char_1_ID);
-        }
-
-        if (slot2 != null && partySize >= 2)
-        {
-            slot2.Init(data.Req_Char_2_ID);
-        }
-
-        if (slot3 != null && partySize >= 3)
-        {
-            slot3.Init(data.Req_Char_3_ID);
-        }
-
-        if (slot4 != null && partySize >= 4)
-        {
-            slot4.Init(data.Req_Char_4_ID);
-        }
-
-        // 강화 버튼은 일단 비활성화 (추후 연결)
+        // 강화 버튼 활성화 조건: 파티 캐릭터 4명 모두 보유
         if (enhanceButton != null)
         {
-            enhanceButton.interactable = false;
+            bool hasAllCharacters = CheckHasAllPartyCharacters(data);
+            enhanceButton.interactable = hasAllCharacters;
+            enhanceButton.onClick.RemoveAllListeners();
+            enhanceButton.onClick.AddListener(OnEnhanceButtonClicked);
         }
 
         Debug.Log($"[PartySynergyInfoPanel] Initialized - PartyID: {partyId}, Name: {partyNameText?.text}");
+    }
+
+    private void InitializeCharacterSlots(PartySynergyData data)
+    {
+        if (characterSlots == null) return;
+
+        int[] charIds = { data.Req_Char_1_ID, data.Req_Char_2_ID, data.Req_Char_3_ID, data.Req_Char_4_ID };
+
+        for (int i = 0; i < characterSlots.Length && i < data.Party_Size; i++)
+        {
+            characterSlots[i]?.Init(charIds[i]);
+        }
+    }
+
+    private bool CheckHasAllPartyCharacters(PartySynergyData data)
+    {
+        if (CharacterOwnershipManager.Instance == null) return false;
+
+        int[] charIds = { data.Req_Char_1_ID, data.Req_Char_2_ID, data.Req_Char_3_ID, data.Req_Char_4_ID };
+
+        for (int i = 0; i < data.Party_Size; i++)
+        {
+            if (!CharacterOwnershipManager.Instance.IsOwned(charIds[i]))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Enhancement Panel 참조 설정 (PartyPanel에서 호출)
+    /// </summary>
+    public void SetEnhancementPanel(PartySynergyEnhancementPanel panel)
+    {
+        enhancementPanel = panel;
+    }
+
+    /// <summary>
+    /// 강화 버튼 클릭 시 호출
+    /// </summary>
+    private void OnEnhanceButtonClicked()
+    {
+        if (enhancementPanel == null)
+        {
+            Debug.LogWarning("[PartySynergyInfoPanel] EnhancementPanel is not set!");
+            return;
+        }
+
+        Debug.Log($"[PartySynergyInfoPanel] Enhance button clicked - PartyID: {partyId}");
+        enhancementPanel.Initialize(synergyData);
+        enhancementPanel.ShowPanel();
     }
 
     public int GetPartyId()

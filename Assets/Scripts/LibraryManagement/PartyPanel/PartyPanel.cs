@@ -15,6 +15,9 @@ public class PartyPanel : MonoBehaviour
     [Header("Containers")]
     [SerializeField] private Transform contentParent;
 
+    [Header("Enhancement Panel")]
+    [SerializeField] private PartySynergyEnhancementPanel enhancementPanel;
+
     private List<PartySynergyInfoPanel> synergyPanels = new List<PartySynergyInfoPanel>();
     private List<PartySynergyData> allSynergies = new List<PartySynergyData>();
     private bool isInitialized = false;
@@ -62,6 +65,7 @@ public class PartyPanel : MonoBehaviour
             if (panel != null)
             {
                 panel.Init(synergyData);
+                panel.SetEnhancementPanel(enhancementPanel);
                 synergyPanels.Add(panel);
             }
             else
