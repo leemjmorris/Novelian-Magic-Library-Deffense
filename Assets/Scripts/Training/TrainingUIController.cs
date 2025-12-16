@@ -56,6 +56,14 @@ namespace Novelian.Training
 
         #endregion
 
+        #region Serialized Fields - Settings Panels
+
+        [Header("Settings Panels (시작 시 숨김)")]
+        [SerializeField] private GameObject characterSettingRail;
+        [SerializeField] private GameObject bookMarkSettingRail;
+
+        #endregion
+
         #region Serialized Fields - Controls
 
         [Header("Dummy Control")]
@@ -259,12 +267,20 @@ namespace Novelian.Training
         {
             isRunning = true;
             UpdateStartStopButtonText();
+
+            // 설정 패널 숨김
+            if (characterSettingRail != null) characterSettingRail.SetActive(false);
+            if (bookMarkSettingRail != null) bookMarkSettingRail.SetActive(false);
         }
 
         private void OnTrainingStopped()
         {
             isRunning = false;
             UpdateStartStopButtonText();
+
+            // 설정 패널 표시
+            if (characterSettingRail != null) characterSettingRail.SetActive(true);
+            if (bookMarkSettingRail != null) bookMarkSettingRail.SetActive(true);
         }
 
         private void OnTrainingReset()
