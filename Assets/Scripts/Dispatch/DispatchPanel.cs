@@ -80,6 +80,17 @@ namespace Dispatch
         [SerializeField] private GameObject sliderObject;  // 슬라이더 오브젝트 (숨김 처리용)
         [SerializeField] private GameObject TipPanelObject;  // 팁표시 오브젝트 (숨김 처리용)
 
+        [Header("보상 정보 패널")]
+        [SerializeField] private GameObject infoPanel;  // 보상 정보 패널 (RewardInfoText 포함)
+        [SerializeField] private Button infoImageButton;  // 보상 정보 버튼 (InfoImage)
+
+        [Header("파견별 아이템 프리뷰 (각 파견의 대표 아이템 슬롯)")]
+        [SerializeField] private Image itemSlot1;  // 1번 파견 아이템 슬롯
+        [SerializeField] private Image itemSlot2;  // 2번 파견 아이템 슬롯
+        [SerializeField] private Image itemSlot3;  // 3번 파견 아이템 슬롯
+        [SerializeField] private Image itemSlot4;  // 4번 파견 아이템 슬롯
+        [SerializeField] private Image itemSlot5;  // 5번 파견 아이템 슬롯
+
         [Header("창고별 팁 텍스트 (5개)")]
         [SerializeField] private GameObject tipText1;  // 악몽의 창고 팁
         [SerializeField] private GameObject tipText2;  // 운명의 창고 팁
@@ -110,6 +121,9 @@ namespace Dispatch
         private float targetScrollPosition = 0f;
         private float scrollVelocity = 0f;
 
+        // 아이템 아이콘 캐시 (Item_ID → Sprite)
+        private Dictionary<int, Sprite> cachedItemIcons = new Dictionary<int, Sprite>();
+
         private void OnEnable()
         {
             // 저장된 파견 상태 복원
@@ -136,6 +150,9 @@ namespace Dispatch
 
             // 덱 캐릭터 로드
             LoadDeckCharacters();
+
+            // 모든 파견의 아이템 프리뷰 초기화 (아이콘 로드)
+            InitializeAllItemPreviews();
 
             // 패널 타입에 따라 첫 번째 장소 설정 (파견 중이 아닐 때만)
             if (!isDispatching)
@@ -245,6 +262,25 @@ namespace Dispatch
                 dispatchStartButton.onClick.AddListener(OnDispatchStartButtonClicked);
             }
 
+            // 보상 정보 버튼 이벤트 등록
+            if (infoImageButton != null)
+            {
+                infoImageButton.onClick.AddListener(OnInfoImageButtonClicked);
+            }
+
+            // InfoPanel 클릭 시 닫기 이벤트 등록
+            if (infoPanel != null)
+            {
+                var infoPanelButton = infoPanel.GetComponent<Button>();
+                if (infoPanelButton == null)
+                {
+                    infoPanelButton = infoPanel.AddComponent<Button>();
+                    // 버튼 시각적 효과 제거 (투명하게)
+                    infoPanelButton.transition = Selectable.Transition.None;
+                }
+                infoPanelButton.onClick.AddListener(OnInfoPanelClicked);
+            }
+
             // 스크롤 드래그 이벤트 등록
             if (buttonScrollRect != null)
             {
@@ -265,6 +301,31 @@ namespace Dispatch
                 endDragEntry.eventID = UnityEngine.EventSystems.EventTriggerType.EndDrag;
                 endDragEntry.callback.AddListener((data) => { OnEndDrag(); });
                 eventTrigger.triggers.Add(endDragEntry);
+            }
+        }
+
+        /// <summary>
+        /// 보상 정보 버튼 클릭 시 (InfoPanel 토글)
+        /// </summary>
+        private void OnInfoImageButtonClicked()
+        {
+            if (infoPanel != null)
+            {
+                bool isActive = infoPanel.activeSelf;
+                infoPanel.SetActive(!isActive);
+                AddLog(isActive ? "ℹ️ 보상 정보 패널 닫힘" : "ℹ️ 보상 정보 패널 열림");
+            }
+        }
+
+        /// <summary>
+        /// InfoPanel 클릭 시 닫기
+        /// </summary>
+        private void OnInfoPanelClicked()
+        {
+            if (infoPanel != null && infoPanel.activeSelf)
+            {
+                infoPanel.SetActive(false);
+                AddLog("ℹ️ 보상 정보 패널 닫힘 (패널 클릭)");
             }
         }
 
@@ -712,7 +773,7 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 보상 정보 표시
+        /// 보상 정보 표시 (텍스트만 - 아이콘은 InitializeAllItemPreviews에서 이미 로드됨)
         /// </summary>
         private void DisplayRewardInfo(DispatchRewardTableData rewardData)
         {
@@ -764,6 +825,186 @@ namespace Dispatch
             else
             {
                 rewardInfoText.text = "보상 정보 없음";
+            }
+        }
+
+        /// <summary>
+        /// 인덱스로 아이템 슬롯 가져오기 (단일 Image)
+        /// </summary>
+        private Image GetItemSlotByIndex(int index)
+        {
+            return index switch
+            {
+                0 => itemSlot1,
+                1 => itemSlot2,
+                2 => itemSlot3,
+                3 => itemSlot4,
+                4 => itemSlot5,
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// 모든 파견의 아이템 프리뷰 초기화 (시작 시 모든 장소의 대표 보상 아이콘 로드)
+        /// </summary>
+        private void InitializeAllItemPreviews()
+        {
+            // 패널 타입에 따라 5개 장소의 보상 정보를 로드
+            DispatchLocation[] locations;
+            if (panelDispatchType == DispatchType.Combat)
+            {
+                locations = new DispatchLocation[]
+                {
+                    DispatchLocation.NightmareWarehouse,
+                    DispatchLocation.FateWarehouse,
+                    DispatchLocation.LaughterWarehouse,
+                    DispatchLocation.TruthWarehouse,
+                    DispatchLocation.UnknownWarehouse
+                };
+            }
+            else
+            {
+                locations = new DispatchLocation[]
+                {
+                    DispatchLocation.MagicLibraryOrganization,
+                    DispatchLocation.MagicBarrierInspection,
+                    DispatchLocation.SpellbookCoverRestoration,
+                    DispatchLocation.SealStabilityCheck,
+                    DispatchLocation.MagicResiduePurification
+                };
+            }
+
+            // 각 파견별로 대표 아이템 아이콘 로드 (첫 번째 보상만)
+            for (int i = 0; i < locations.Length; i++)
+            {
+                Image slot = GetItemSlotByIndex(i);
+                if (slot == null) continue;
+
+                // 해당 장소의 보상 데이터 가져오기
+                var locationData = GetLocationData(locations[i]);
+                if (locationData == null)
+                {
+                    slot.gameObject.SetActive(false);
+                    continue;
+                }
+
+                // 기본 시간(4시간, Time_ID=5201)의 보상 데이터 사용
+                var rewardData = GetRewardData(locationData.Dispatch_Location_ID, 5201);
+                if (rewardData == null)
+                {
+                    slot.gameObject.SetActive(false);
+                    continue;
+                }
+
+                var rewardGroupData = CSVLoader.Instance.GetData<RewardGroupData>(rewardData.Reward_Group_ID);
+                if (rewardGroupData == null)
+                {
+                    slot.gameObject.SetActive(false);
+                    continue;
+                }
+
+                // 확률이 가장 높은 보상 찾기
+                int[] rewardIDs = new int[]
+                {
+                    rewardGroupData.Reward_1_ID,
+                    rewardGroupData.Reward_2_ID,
+                    rewardGroupData.Reward_3_ID,
+                    rewardGroupData.Reward_4_ID,
+                    rewardGroupData.Reward_5_ID
+                };
+
+                RewardData highestProbReward = null;
+                float highestProb = -1f;
+
+                foreach (var rewardID in rewardIDs)
+                {
+                    if (rewardID == 0) continue;
+                    var rewardCandidate = CSVLoader.Instance.GetData<RewardData>(rewardID);
+                    if (rewardCandidate != null && rewardCandidate.Probability > highestProb)
+                    {
+                        highestProb = rewardCandidate.Probability;
+                        highestProbReward = rewardCandidate;
+                    }
+                }
+
+                if (highestProbReward == null)
+                {
+                    slot.gameObject.SetActive(false);
+                    continue;
+                }
+
+                var reward = highestProbReward;
+
+                // 슬롯 활성화 및 아이콘 로드
+                slot.gameObject.SetActive(true);
+                LoadItemIcon(slot, reward.Item_ID).Forget();
+
+                AddLog($"✓ 파견 {i + 1} ({GetLocationName(locations[i])}) 아이템 프리뷰 초기화 완료");
+            }
+        }
+
+        /// <summary>
+        /// 아이템 아이콘 로드 (PathTable 경유)
+        /// Item_ID → IngredientData.Path_ID → PathData.Addressable_Key
+        /// 화폐(골드 등)는 고정 Addressable Key 사용
+        /// </summary>
+        private async UniTaskVoid LoadItemIcon(Image targetImage, int itemId)
+        {
+            if (targetImage == null) return;
+
+            // 캐시에 있으면 즉시 적용
+            if (cachedItemIcons.TryGetValue(itemId, out Sprite cachedIcon))
+            {
+                targetImage.sprite = cachedIcon;
+                return;
+            }
+
+            string iconKey;
+
+            // 화폐 아이템 처리 (골드: 1601, 다이아: 1602 등)
+            if (itemId == 1601)
+            {
+                iconKey = "ItemIcon_Coin_Gold";  // 골드 아이콘 Addressable Key
+            }
+            else if (itemId == 1602)
+            {
+                iconKey = "ItemIcon_Gem_Diamond_Blue";  // 다이아 아이콘 Addressable Key
+            }
+            else
+            {
+                // 일반 재료 아이템: IngredientData에서 Path_ID 조회
+                var ingredientData = CSVLoader.Instance.GetData<IngredientData>(itemId);
+                if (ingredientData == null || ingredientData.Path_ID <= 0)
+                {
+                    AddLog($"⚠️ IngredientData 없음 또는 Path_ID 없음: {itemId}");
+                    return;
+                }
+
+                // PathTable에서 Addressable_Key 조회
+                var pathData = CSVLoader.Instance.GetData<PathData>(ingredientData.Path_ID);
+                if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
+                {
+                    AddLog($"⚠️ PathData 없음 또는 키 없음: Path_ID={ingredientData.Path_ID}");
+                    return;
+                }
+
+                iconKey = pathData.Addressable_Key;
+            }
+
+            // Addressable에서 로드
+            try
+            {
+                var icon = await UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(iconKey).ToUniTask();
+                if (icon != null)
+                {
+                    cachedItemIcons[itemId] = icon;
+                    targetImage.sprite = icon;
+                    AddLog($"✓ 아이템 아이콘 로드 완료: {itemId} → {iconKey}");
+                }
+            }
+            catch (System.Exception e)
+            {
+                AddLog($"❌ 아이템 아이콘 로드 실패: {iconKey} - {e.Message}");
             }
         }
 
@@ -1470,6 +1711,16 @@ namespace Dispatch
 
             if (dispatchStartButton != null)
                 dispatchStartButton.onClick.RemoveListener(OnDispatchStartButtonClicked);
+
+            if (infoImageButton != null)
+                infoImageButton.onClick.RemoveListener(OnInfoImageButtonClicked);
+
+            if (infoPanel != null)
+            {
+                var infoPanelButton = infoPanel.GetComponent<Button>();
+                if (infoPanelButton != null)
+                    infoPanelButton.onClick.RemoveListener(OnInfoPanelClicked);
+            }
         }
 
         private void OnDisable()
