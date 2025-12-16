@@ -11,4 +11,5 @@ public class IngredientData
     public bool Inventory { get; set; }
     public int Max_Stack { get; set; }
     public int Max_Count { get; set; }
+    public int Path_ID { get; set; }  // CBL: PathTable 연동용
 }

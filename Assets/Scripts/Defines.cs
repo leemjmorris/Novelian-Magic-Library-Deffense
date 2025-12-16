@@ -138,6 +138,15 @@ public static class AddressableKey
     }
 
     /// <summary>
+    /// Ingredient_ID로 재료 아이콘 어드레서블 키 반환
+    /// 예: 10101 → "IngredientIcon_10101"
+    /// </summary>
+    public static string GetIngredientIconKey(int ingredientId)
+    {
+        return $"IngredientIcon_{ingredientId}";
+    }
+
+    /// <summary>
     /// JML: Monster_ID로 어드레서블 키 조회
     /// Monster_ID → MonsterData.Path_ID → PathData.Addressable_Key
     /// </summary>
