@@ -625,6 +625,13 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
 
                 Debug.Log("[StageManager] Start card selection completed");
+
+                // JML: 카드 선택 완료 후 파티 시너지 버프 적용
+                if (characterPlacementManager != null)
+                {
+                    characterPlacementManager.ApplySynergyToAllCharacters();
+                    Debug.Log("[StageManager] 파티 시너지 버프 적용 완료");
+                }
             }
             else
             {

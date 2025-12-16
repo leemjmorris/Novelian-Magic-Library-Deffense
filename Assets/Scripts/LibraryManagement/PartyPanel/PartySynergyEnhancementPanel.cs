@@ -343,9 +343,17 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
     #region Upgrade Button
 
     /// <summary>
-    /// 업그레이드 버튼 클릭 이벤트
+    /// 업그레이드 버튼 클릭 이벤트 (Unity Button용 래퍼)
     /// </summary>
     private void OnUpgradeButtonClicked()
+    {
+        OnUpgradeButtonClickedAsync().Forget();
+    }
+
+    /// <summary>
+    /// 업그레이드 버튼 클릭 이벤트 (async - Firebase 저장 완료 대기)
+    /// </summary>
+    private async UniTaskVoid OnUpgradeButtonClickedAsync()
     {
         // Issue 1: 연속 클릭 방지
         if (isUpgrading)
@@ -397,12 +405,12 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
             return;
         }
 
-        // 시너지 레벨 증가
+        // 시너지 레벨 증가 (Firebase 저장 완료 대기)
         int currentLevel = PartySynergyManager.Instance != null ? PartySynergyManager.Instance.GetSynergyLevel(currentSynergyData.Party_ID) : 1;
         int newLevel = currentLevel + 1;
         if (PartySynergyManager.Instance != null)
         {
-            PartySynergyManager.Instance.SetSynergyLevel(currentSynergyData.Party_ID, newLevel);
+            await PartySynergyManager.Instance.SetSynergyLevelAsync(currentSynergyData.Party_ID, newLevel);
         }
 
         Debug.Log($"[PartySynergyEnhancementPanel] Upgrade successful! Level: {currentLevel} -> {newLevel}");
