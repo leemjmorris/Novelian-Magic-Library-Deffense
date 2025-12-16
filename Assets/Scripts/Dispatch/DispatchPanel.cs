@@ -84,6 +84,9 @@ namespace Dispatch
         [SerializeField] private GameObject infoPanel;  // 보상 정보 패널 (RewardInfoText 포함)
         [SerializeField] private Button infoImageButton;  // 보상 정보 버튼 (InfoImage)
 
+        [Header("파견 횟수 표시")]
+        [SerializeField] private TextMeshProUGUI dispatchCountText;  // 파견 횟수 텍스트 (예: "0/1", "1/1")
+
         [Header("파견별 아이템 프리뷰 (각 파견의 대표 아이템 슬롯)")]
         [SerializeField] private Image itemSlot1;  // 1번 파견 아이템 슬롯
         [SerializeField] private Image itemSlot2;  // 2번 파견 아이템 슬롯
@@ -102,6 +105,13 @@ namespace Dispatch
         [SerializeField] private GameObject tipText8;  // 마도서 표지 복원 팁
         [SerializeField] private GameObject tipText9;  // 봉인구 안정성 확인 팁
         [SerializeField] private GameObject tipText10; // 마력 잔재 정화 팁
+
+        [Header("스크롤 방향 화살표")]
+        [SerializeField] private Image leftArrowImage;   // 왼쪽 화살표 (L-Image)
+        [SerializeField] private Image rightArrowImage;  // 오른쪽 화살표 (R-Image)
+        [SerializeField] private float arrowBlinkSpeed = 2f;  // 깜박임 속도
+        [SerializeField] private float arrowMoveDistance = 10f;  // 화살표 이동 거리
+        [SerializeField] private float arrowMoveSpeed = 3f;  // 화살표 이동 속도
 
         private int currentSelectedHours = 4;
         private int currentSelectedTimeID;
@@ -123,6 +133,11 @@ namespace Dispatch
 
         // 아이템 아이콘 캐시 (Item_ID → Sprite)
         private Dictionary<int, Sprite> cachedItemIcons = new Dictionary<int, Sprite>();
+
+        // 화살표 애니메이션용 변수
+        private Vector3 leftArrowOriginalPos;
+        private Vector3 rightArrowOriginalPos;
+        private float arrowAnimTime = 0f;
 
         private void OnEnable()
         {
@@ -154,6 +169,9 @@ namespace Dispatch
             // 모든 파견의 아이템 프리뷰 초기화 (아이콘 로드)
             InitializeAllItemPreviews();
 
+            // 파견 횟수 텍스트 업데이트
+            UpdateDispatchCountText();
+
             // 패널 타입에 따라 첫 번째 장소 설정 (파견 중이 아닐 때만)
             if (!isDispatching)
             {
@@ -165,6 +183,9 @@ namespace Dispatch
                 ShowTipText(initialLocation);
                 UpdateTimeDisplay(0);
             }
+
+            // 화살표 초기 위치 저장
+            InitializeArrows();
 
             AddLog("파견 테스트 패널 초기화 완료");
         }
@@ -202,6 +223,9 @@ namespace Dispatch
             {
                 CheckAndUpdateWarehouse();
             }
+
+            // 화살표 애니메이션 업데이트
+            UpdateArrowAnimation();
         }
 
         /// <summary>
@@ -528,6 +552,7 @@ namespace Dispatch
 
             // UI 업데이트
             UpdateDispatchUI();
+            UpdateDispatchCountText();  // 파견 횟수 텍스트 업데이트 (0/1 → 1/1)
 
             AddLog($"⏰ 테스트 모드: {reducedTime:F1}초 후 완료 예정 (원본: {currentSelectedHours}초, 감소 적용)");
             AddLog("==============================================\n");
@@ -693,6 +718,9 @@ namespace Dispatch
         {
             isDispatching = false;
             remainingTime = 0f;
+
+            // 파견 횟수 텍스트 업데이트 (1/1 → 0/1)
+            UpdateDispatchCountText();
 
             // 슬라이더 다시 표시
             if (sliderObject != null)
@@ -944,6 +972,16 @@ namespace Dispatch
         }
 
         /// <summary>
+        /// 파견 횟수 텍스트 업데이트 (파견 중: "1/1", 아닐 때: "0/1")
+        /// </summary>
+        private void UpdateDispatchCountText()
+        {
+            if (dispatchCountText == null) return;
+
+            dispatchCountText.text = isDispatching ? "1/1" : "0/1";
+        }
+
+        /// <summary>
         /// 아이템 아이콘 로드 (PathTable 경유)
         /// Item_ID → IngredientData.Path_ID → PathData.Addressable_Key
         /// 화폐(골드 등)는 고정 Addressable Key 사용
@@ -1140,6 +1178,104 @@ namespace Dispatch
             else
             {
                 AddLog("⚠️ DispatchManager가 없어 파견은 시작되지 않았습니다. (보상 로직만 테스트)");
+            }
+        }
+
+        /// <summary>
+        /// 화살표 초기화 (원래 위치 저장 및 초기 표시 설정)
+        /// </summary>
+        private void InitializeArrows()
+        {
+            if (leftArrowImage != null)
+            {
+                leftArrowOriginalPos = leftArrowImage.rectTransform.anchoredPosition;
+            }
+
+            if (rightArrowImage != null)
+            {
+                rightArrowOriginalPos = rightArrowImage.rectTransform.anchoredPosition;
+            }
+
+            // 초기 화살표 표시 업데이트
+            UpdateArrowVisibility();
+        }
+
+        /// <summary>
+        /// 화살표 표시/숨김 업데이트 (스크롤 위치에 따라)
+        /// </summary>
+        private void UpdateArrowVisibility()
+        {
+            if (buttonScrollRect == null) return;
+
+            // 파견 중에는 화살표 숨김
+            if (isDispatching)
+            {
+                if (leftArrowImage != null) leftArrowImage.gameObject.SetActive(false);
+                if (rightArrowImage != null) rightArrowImage.gameObject.SetActive(false);
+                return;
+            }
+
+            float scrollPos = buttonScrollRect.horizontalNormalizedPosition;
+
+            // 맨 왼쪽(0)이면 왼쪽 화살표 숨김, 오른쪽 화살표만 표시
+            // 맨 오른쪽(1)이면 오른쪽 화살표 숨김, 왼쪽 화살표만 표시
+            // 중간이면 양쪽 다 표시
+
+            bool isAtLeftEnd = scrollPos <= 0.01f;
+            bool isAtRightEnd = scrollPos >= 0.99f;
+
+            if (leftArrowImage != null)
+            {
+                leftArrowImage.gameObject.SetActive(!isAtLeftEnd);
+            }
+
+            if (rightArrowImage != null)
+            {
+                rightArrowImage.gameObject.SetActive(!isAtRightEnd);
+            }
+        }
+
+        /// <summary>
+        /// 화살표 애니메이션 업데이트 (깜박임 + 좌우 이동)
+        /// </summary>
+        private void UpdateArrowAnimation()
+        {
+            // 화살표 표시 상태 업데이트
+            UpdateArrowVisibility();
+
+            // 파견 중에는 애니메이션 중지
+            if (isDispatching) return;
+
+            arrowAnimTime += Time.deltaTime;
+
+            // 깜박임 효과 (알파값 변화: 0.3 ~ 1.0)
+            float alpha = Mathf.Lerp(0.3f, 1f, (Mathf.Sin(arrowAnimTime * arrowBlinkSpeed * Mathf.PI) + 1f) / 2f);
+
+            // 이동 효과 (좌우로 움직임)
+            float moveOffset = Mathf.Sin(arrowAnimTime * arrowMoveSpeed) * arrowMoveDistance;
+
+            // 왼쪽 화살표 애니메이션 (왼쪽으로 이동)
+            if (leftArrowImage != null && leftArrowImage.gameObject.activeSelf)
+            {
+                Color leftColor = leftArrowImage.color;
+                leftColor.a = alpha;
+                leftArrowImage.color = leftColor;
+
+                Vector2 leftPos = leftArrowOriginalPos;
+                leftPos.x -= moveOffset; // 왼쪽으로 이동
+                leftArrowImage.rectTransform.anchoredPosition = leftPos;
+            }
+
+            // 오른쪽 화살표 애니메이션 (오른쪽으로 이동)
+            if (rightArrowImage != null && rightArrowImage.gameObject.activeSelf)
+            {
+                Color rightColor = rightArrowImage.color;
+                rightColor.a = alpha;
+                rightArrowImage.color = rightColor;
+
+                Vector2 rightPos = rightArrowOriginalPos;
+                rightPos.x += moveOffset; // 오른쪽으로 이동
+                rightArrowImage.rectTransform.anchoredPosition = rightPos;
             }
         }
 
