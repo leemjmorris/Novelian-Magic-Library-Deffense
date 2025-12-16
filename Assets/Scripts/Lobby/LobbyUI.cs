@@ -33,6 +33,9 @@ public class LobbyUI : MonoBehaviour
     [Header("User Nickname")]
     [SerializeField] private TextMeshProUGUI nicknameText; // 로비 화면에 표시되는 닉네임 (UserText (1))
 
+    [Header("Shop Panel")]
+    [SerializeField] private GameObject shopPanel; // 상점 패널
+
 
     private void OnEnable()
     {
@@ -220,7 +223,10 @@ public class LobbyUI : MonoBehaviour
 
     public void OnShopButton()
     {
-        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+        if (shopPanel != null)
+        {
+            shopPanel.SetActive(true);
+        }
     }
 
     public void OnSpecialDealButton()
