@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
@@ -6,9 +7,12 @@ public class IngredientManager : MonoBehaviour
 {
     private static IngredientManager instance;
     public static IngredientManager Instance => instance;
-    
+
     //JML: Key: Item_ID, Value: Count
     private Dictionary<int, int> Ingredients;
+
+    // 재료 변경 이벤트 (ingredientId, newAmount)
+    public event Action<int, int> OnIngredientChanged;
 
     private void Awake()
     {
@@ -87,6 +91,7 @@ public class IngredientManager : MonoBehaviour
         Debug.Log($"{addedIngredientName} {count}개 획득! (보유: {Ingredients[id]}/{maxCount})");
 
         SaveSingleIngredientToFirebase(id);
+        OnIngredientChanged?.Invoke(id, Ingredients[id]);
     }
 
     public bool RemoveIngredient(int id, int count)
@@ -98,10 +103,12 @@ public class IngredientManager : MonoBehaviour
         }
 
         Ingredients[id] -= count;
+        int newAmount = Ingredients[id];
         if (Ingredients[id] == 0)
             Ingredients.Remove(id);
 
         SaveSingleIngredientToFirebase(id);
+        OnIngredientChanged?.Invoke(id, newAmount);
         return true;
     }
 
