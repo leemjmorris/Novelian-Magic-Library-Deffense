@@ -9,6 +9,10 @@ namespace Novelian.Training
     using System.Collections.Generic;
     using Novelian.Combat;
     using NovelianMagicLibraryDefense.Managers;
+    using System;
+#if UNITY_EDITOR
+    using UnityEditor;
+#endif
 
     /// <summary>
     /// 훈련소 전체 제어
@@ -28,7 +32,7 @@ namespace Novelian.Training
         private Transform[] dummySpawnPoints;
 
         [Header("Prefabs")]
-        [SerializeField, Tooltip("허수아비 프리팹 (임시 Capsule)")]
+        [SerializeField, Tooltip("허수아비 프리팹")]
         private GameObject dummyPrefab;
 
         [Header("References")]
@@ -48,13 +52,16 @@ namespace Novelian.Training
         private int selectedCharacterId = 0;
         private int selectedGrade = 1;
         private int selectedEnhancement = 0;
-        private int selectedMainSkillBookmark = 0;
-        private int selectedSupportSkillBookmark = 0;
-        private int selectedStatBookmark = 0;
+        private int selectedMainSkillBookmarkId = 0;
+        private int selectedSupportSkillBookmarkId = 0;
+        private int selectedStatBookmarkId = 0;
         private int dummyCount = 1;
 
-        // 캐릭터 프리팹 핸들
-        private AsyncOperationHandle<GameObject> characterHandle;
+        // 캐릭터 데이터 캐시
+        private List<CharacterData> characterDataList = new List<CharacterData>();
+
+        // Addressables로 로드된 캐릭터 프리팹 캐시 (prefabKey → GameObject)
+        private Dictionary<string, GameObject> loadedCharacterPrefabs = new Dictionary<string, GameObject>();
 
         #endregion
 
@@ -70,27 +77,239 @@ namespace Novelian.Training
 
         public bool IsRunning => isRunning;
         public int DummyCount => dummyCount;
+        public Character CurrentCharacter => currentCharacter;
+        public List<CharacterData> CharacterDataList => characterDataList;
+        public int SelectedCharacterId => selectedCharacterId;
+        public int SelectedGrade => selectedGrade;
+        public int SelectedEnhancement => selectedEnhancement;
 
         #endregion
 
         #region Lifecycle
 
-        private void Awake()
+        private async void Start()
         {
-            // DPSCalculator가 없으면 자동 생성
-            if (dpsCalculator == null)
-            {
-                dpsCalculator = gameObject.AddComponent<DPSCalculator>();
-            }
+            // CSVLoader 초기화 대기
+            await WaitForCSVLoaderAsync();
+
+            // 캐릭터 프리팹 미리 로드 (Addressables)
+            await PreloadCharacterPrefabs();
+
+            // 캐릭터 데이터 캐시
+            LoadCharacterDataCache();
         }
 
         private void OnDestroy()
         {
-            // 캐릭터 프리팹 핸들 해제
-            if (characterHandle.IsValid())
+            // 정리
+            if (currentCharacter != null)
             {
-                Addressables.Release(characterHandle);
+                Destroy(currentCharacter.gameObject);
             }
+            DespawnDummies();
+        }
+
+        /// <summary>
+        /// CSVLoader 초기화 대기
+        /// </summary>
+        private async UniTask WaitForCSVLoaderAsync()
+        {
+            while (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
+            {
+                await UniTask.Delay(100);
+            }
+        }
+
+        /// <summary>
+        /// 모든 캐릭터 프리팹을 미리 로드
+        /// Editor: AssetDatabase 사용 (Addressables 빌드 불필요)
+        /// Runtime: Addressables 사용
+        /// CharacterTable → PathTable → "Prefab_" + Addressable_Key
+        /// </summary>
+        private async UniTask PreloadCharacterPrefabs()
+        {
+            Debug.Log("[TrainingManager] 캐릭터 프리팹 로드 시작...");
+
+            var characterTable = CSVLoader.Instance?.GetTable<CharacterData>();
+            if (characterTable == null || characterTable.Count == 0)
+            {
+                Debug.LogError("[TrainingManager] CharacterTable 로드 실패");
+                return;
+            }
+
+            var allCharacters = characterTable.GetAll();
+            int loadedCount = 0;
+            int failedCount = 0;
+
+            for (int i = 0; i < allCharacters.Count; i++)
+            {
+                var characterData = allCharacters[i];
+
+                // PathTable에서 Addressable_Key 조회
+                var pathData = CSVLoader.Instance?.GetData<PathData>(characterData.Path_ID);
+                if (pathData == null)
+                {
+                    Debug.LogWarning($"[TrainingManager] PathData를 찾을 수 없음: Path_ID={characterData.Path_ID}");
+                    failedCount++;
+                    continue;
+                }
+
+                // "Prefab_" + Addressable_Key 로 프리팹 키 생성
+                string prefabKey = $"Prefab_{pathData.Addressable_Key}";
+
+                // 이미 로드된 프리팹은 스킵
+                if (loadedCharacterPrefabs.ContainsKey(prefabKey))
+                {
+                    continue;
+                }
+
+                GameObject prefab = null;
+
+#if UNITY_EDITOR
+                // Editor 모드: AssetDatabase로 직접 로드 (Addressables 빌드 불필요)
+                prefab = LoadPrefabFromAssetDatabase(pathData.Addressable_Key);
+                if (prefab != null)
+                {
+                    loadedCharacterPrefabs[prefabKey] = prefab;
+                    loadedCount++;
+                    Debug.Log($"[TrainingManager] 프리팹 로드 완료 (AssetDatabase): {prefabKey}");
+                }
+                else
+                {
+                    Debug.LogError($"[TrainingManager] 프리팹 로드 실패 (AssetDatabase) '{prefabKey}'");
+                    failedCount++;
+                }
+#else
+                // Runtime: Addressables 사용
+                try
+                {
+                    prefab = await Addressables.LoadAssetAsync<GameObject>(prefabKey).Task;
+                    loadedCharacterPrefabs[prefabKey] = prefab;
+                    loadedCount++;
+                    Debug.Log($"[TrainingManager] 프리팹 로드 완료 (Addressables): {prefabKey}");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[TrainingManager] 프리팹 로드 실패 (Addressables) '{prefabKey}': {e.Message}");
+                    failedCount++;
+                }
+#endif
+            }
+
+            Debug.Log($"[TrainingManager] 캐릭터 프리팹 로드 완료. 성공: {loadedCount}, 실패: {failedCount}");
+            await UniTask.CompletedTask;
+        }
+
+#if UNITY_EDITOR
+        // Addressable_Key → 실제 프리팹 파일명 매핑 (불일치하는 경우)
+        private static readonly Dictionary<string, string> keyToFileNameMap = new Dictionary<string, string>
+        {
+            { "Serin", "Serene" },
+            { "Ki", "Key" }
+        };
+
+        /// <summary>
+        /// Editor 모드에서 AssetDatabase를 통해 프리팹 로드
+        /// </summary>
+        private GameObject LoadPrefabFromAssetDatabase(string addressableKey)
+        {
+            // 키-파일명 매핑이 있으면 변환
+            string fileName = addressableKey;
+            if (keyToFileNameMap.TryGetValue(addressableKey, out string mappedName))
+            {
+                fileName = mappedName;
+            }
+
+            // Character Prefabs 폴더에서 검색
+            string prefabPath = $"Assets/Character Prefabs/{fileName}.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+
+            if (prefab != null)
+            {
+                return prefab;
+            }
+
+            // 원본 키로도 시도
+            if (fileName != addressableKey)
+            {
+                prefabPath = $"Assets/Character Prefabs/{addressableKey}.prefab";
+                prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                if (prefab != null)
+                {
+                    return prefab;
+                }
+            }
+
+            // 못 찾으면 프로젝트 전체에서 검색
+            string[] guids = AssetDatabase.FindAssets($"t:Prefab {fileName}");
+            for (int i = 0; i < guids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                if (path.EndsWith($"{fileName}.prefab") || path.EndsWith($"{addressableKey}.prefab"))
+                {
+                    prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    if (prefab != null)
+                    {
+                        Debug.Log($"[TrainingManager] 프리팹 발견: {path}");
+                        return prefab;
+                    }
+                }
+            }
+
+            return null;
+        }
+#endif
+
+        /// <summary>
+        /// 캐릭터 데이터 캐시 로드
+        /// </summary>
+        private void LoadCharacterDataCache()
+        {
+            var characterTable = CSVLoader.Instance?.GetTable<CharacterData>();
+            if (characterTable == null)
+            {
+                Debug.LogError("[TrainingManager] CharacterTable 로드 실패");
+                return;
+            }
+
+            characterDataList.Clear();
+
+            var allCharacters = characterTable.GetAll();
+            for (int i = 0; i < allCharacters.Count; i++)
+            {
+                characterDataList.Add(allCharacters[i]);
+            }
+
+            Debug.Log($"[TrainingManager] 캐릭터 데이터 {characterDataList.Count}개 캐시 완료");
+
+            // 첫 번째 캐릭터를 기본 선택
+            if (characterDataList.Count > 0)
+            {
+                selectedCharacterId = characterDataList[0].Character_ID;
+            }
+        }
+
+        /// <summary>
+        /// Character_ID로 프리팹 키 조회
+        /// Character_ID → CharacterData.Path_ID → PathData.Addressable_Key → "Prefab_" + key
+        /// </summary>
+        private string GetCharacterPrefabKey(int characterId)
+        {
+            var characterData = CSVLoader.Instance?.GetData<CharacterData>(characterId);
+            if (characterData == null)
+            {
+                Debug.LogError($"[TrainingManager] CharacterData를 찾을 수 없음: {characterId}");
+                return null;
+            }
+
+            var pathData = CSVLoader.Instance?.GetData<PathData>(characterData.Path_ID);
+            if (pathData == null)
+            {
+                Debug.LogError($"[TrainingManager] PathData를 찾을 수 없음: Path_ID={characterData.Path_ID}");
+                return null;
+            }
+
+            return $"Prefab_{pathData.Addressable_Key}";
         }
 
         #endregion
@@ -125,30 +344,30 @@ namespace Novelian.Training
         }
 
         /// <summary>
-        /// 메인 스킬 책갈피 선택
+        /// 메인 스킬 책갈피 선택 (BookmarkSkillTable의 Skill_ID)
         /// </summary>
-        public void SetMainSkillBookmark(int bookmarkId)
+        public void SetMainSkillBookmark(int skillId)
         {
-            selectedMainSkillBookmark = bookmarkId;
-            Debug.Log($"[TrainingManager] 메인 스킬 책갈피 설정: {bookmarkId}");
+            selectedMainSkillBookmarkId = skillId;
+            Debug.Log($"[TrainingManager] 메인 스킬 책갈피 설정: {skillId}");
         }
 
         /// <summary>
-        /// 보조 스킬 책갈피 선택
+        /// 보조 스킬 책갈피 선택 (SupportSkillTable의 support_id)
         /// </summary>
-        public void SetSupportSkillBookmark(int bookmarkId)
+        public void SetSupportSkillBookmark(int supportSkillId)
         {
-            selectedSupportSkillBookmark = bookmarkId;
-            Debug.Log($"[TrainingManager] 보조 스킬 책갈피 설정: {bookmarkId}");
+            selectedSupportSkillBookmarkId = supportSkillId;
+            Debug.Log($"[TrainingManager] 보조 스킬 책갈피 설정: {supportSkillId}");
         }
 
         /// <summary>
-        /// 스탯 책갈피 선택
+        /// 스탯 책갈피 선택 (BookmarkOptionTable의 Option_ID)
         /// </summary>
-        public void SetStatBookmark(int bookmarkId)
+        public void SetStatBookmark(int optionId)
         {
-            selectedStatBookmark = bookmarkId;
-            Debug.Log($"[TrainingManager] 스탯 책갈피 설정: {bookmarkId}");
+            selectedStatBookmarkId = optionId;
+            Debug.Log($"[TrainingManager] 스탯 책갈피 설정: {optionId}");
         }
 
         /// <summary>
@@ -258,7 +477,7 @@ namespace Novelian.Training
         #region Private Methods
 
         /// <summary>
-        /// 캐릭터 스폰 (Addressables 사용)
+        /// 캐릭터 스폰 (Addressables로 로드된 프리팹 사용)
         /// </summary>
         private async UniTask SpawnCharacterAsync()
         {
@@ -275,60 +494,220 @@ namespace Novelian.Training
                 return;
             }
 
-            // CSV에서 캐릭터 데이터 로드
-            var characterData = CSVLoader.Instance?.GetData<CharacterData>(selectedCharacterId);
-            if (characterData == null)
+            // 프리팹 키 조회
+            string prefabKey = GetCharacterPrefabKey(selectedCharacterId);
+            if (string.IsNullOrEmpty(prefabKey))
             {
-                Debug.LogError($"[TrainingManager] CharacterData를 찾을 수 없음: {selectedCharacterId}");
+                Debug.LogError($"[TrainingManager] 프리팹 키를 찾을 수 없음: characterId={selectedCharacterId}");
                 return;
             }
 
-            // Addressables에서 프리팹 로드
-            string prefabPath = characterData.Path_ID.ToString();
-            try
+            // 캐시된 프리팹 조회
+            if (!loadedCharacterPrefabs.TryGetValue(prefabKey, out GameObject prefab) || prefab == null)
             {
-                // 이전 핸들 해제
-                if (characterHandle.IsValid())
+                Debug.LogError($"[TrainingManager] 캐릭터 프리팹이 로드되지 않음: {prefabKey}");
+                return;
+            }
+
+            // 스폰 위치
+            Vector3 spawnPos = characterSpawnPoint != null ? characterSpawnPoint.position : Vector3.zero;
+            Quaternion spawnRot = characterSpawnPoint != null ? characterSpawnPoint.rotation : Quaternion.identity;
+
+            // 프리팹 인스턴스화
+            GameObject charObj = Instantiate(prefab, spawnPos, spawnRot);
+            currentCharacter = charObj.GetComponent<Character>();
+
+            if (currentCharacter == null)
+            {
+                Debug.LogError($"[TrainingManager] 프리팹에 Character 컴포넌트가 없음");
+                Destroy(charObj);
+                return;
+            }
+
+            // 자동 공격 비활성화 (Initialize 전에)
+            currentCharacter.SetAutoAttackEnabled(false);
+
+            // 캐릭터 초기화
+            currentCharacter.Initialize(selectedCharacterId);
+
+            // 성급 적용 (1성이 기본, 2/3성으로 업그레이드)
+            ApplyStarTier(currentCharacter, selectedGrade);
+
+            // 강화 단계 적용
+            ApplyEnhancement(currentCharacter, selectedEnhancement);
+
+            // 메인 스킬 책갈피 적용
+            if (selectedMainSkillBookmarkId > 0)
+            {
+                ApplyMainSkillBookmark(currentCharacter, selectedMainSkillBookmarkId);
+            }
+
+            // 보조 스킬 책갈피 적용
+            if (selectedSupportSkillBookmarkId > 0)
+            {
+                currentCharacter.EquipSupportSkill(selectedSupportSkillBookmarkId);
+            }
+
+            // 스탯 책갈피 적용
+            if (selectedStatBookmarkId > 0)
+            {
+                ApplyStatBookmark(currentCharacter, selectedStatBookmarkId);
+            }
+
+            // 자동 공격 활성화
+            currentCharacter.SetAutoAttackEnabled(true);
+
+            var characterData = CSVLoader.Instance?.GetData<CharacterData>(selectedCharacterId);
+            Debug.Log($"[TrainingManager] 캐릭터 스폰 완료: ID={selectedCharacterId}, 성급={selectedGrade}, 강화={selectedEnhancement}");
+
+            // CSVLoader 비동기 대기용 (형식 맞추기)
+            await UniTask.CompletedTask;
+        }
+
+        /// <summary>
+        /// 성급 적용 (1성 기본, 2/3성으로 업그레이드)
+        /// </summary>
+        private void ApplyStarTier(Character character, int targetGrade)
+        {
+            // 1성이 기본이므로, targetGrade까지 업그레이드
+            for (int i = 1; i < targetGrade; i++)
+            {
+                if (!character.UpgradeStarTier())
                 {
-                    Addressables.Release(characterHandle);
-                }
-
-                characterHandle = Addressables.LoadAssetAsync<GameObject>(prefabPath);
-                await characterHandle.ToUniTask();
-
-                if (characterHandle.Status != AsyncOperationStatus.Succeeded)
-                {
-                    Debug.LogError($"[TrainingManager] 캐릭터 프리팹 로드 실패: {prefabPath}");
-                    return;
-                }
-
-                // 스폰
-                Vector3 spawnPos = characterSpawnPoint != null ? characterSpawnPoint.position : Vector3.zero;
-                GameObject charObj = Instantiate(characterHandle.Result, spawnPos, Quaternion.identity);
-                currentCharacter = charObj.GetComponent<Character>();
-
-                if (currentCharacter != null)
-                {
-                    // 자동 공격 비활성화 (Initialize 전에)
-                    currentCharacter.SetAutoAttackEnabled(false);
-
-                    // 캐릭터 초기화
-                    currentCharacter.Initialize(selectedCharacterId);
-
-                    // TODO: 성급, 강화, 책갈피 적용
-                    // currentCharacter.SetGrade(selectedGrade);
-                    // currentCharacter.SetEnhancement(selectedEnhancement);
-                    // ...
-
-                    // 자동 공격 활성화
-                    currentCharacter.SetAutoAttackEnabled(true);
-
-                    Debug.Log($"[TrainingManager] 캐릭터 스폰 완료: {characterData.Character_Name_ID}");
+                    break;
                 }
             }
-            catch (System.Exception e)
+            Debug.Log($"[TrainingManager] 성급 적용: {targetGrade}성");
+        }
+
+        /// <summary>
+        /// 강화 단계 적용 (CharacterEnhancementTable 기반)
+        /// </summary>
+        private void ApplyEnhancement(Character character, int enhancementLevel)
+        {
+            if (enhancementLevel <= 0) return;
+
+            // CharacterEnhancementTable에서 해당 캐릭터의 강화 데이터 조회
+            var enhancementTable = CSVLoader.Instance?.GetTable<CharacterEnhancementData>();
+            if (enhancementTable == null)
             {
-                Debug.LogError($"[TrainingManager] 캐릭터 스폰 실패: {e.Message}");
+                Debug.LogWarning("[TrainingManager] CharacterEnhancementTable 로드 실패");
+                return;
+            }
+
+            // 캐릭터 ID로 강화 데이터 찾기
+            CharacterEnhancementData enhancementData = null;
+            var allEnhancements = enhancementTable.GetAll();
+            for (int i = 0; i < allEnhancements.Count; i++)
+            {
+                if (allEnhancements[i].Character_ID == selectedCharacterId)
+                {
+                    enhancementData = allEnhancements[i];
+                    break;
+                }
+            }
+
+            if (enhancementData == null)
+            {
+                Debug.LogWarning($"[TrainingManager] 캐릭터 {selectedCharacterId}의 강화 데이터를 찾을 수 없음");
+                return;
+            }
+
+            // 강화 레벨별 스탯 증가 적용
+            // Pw_Level1~10은 각 강화 단계의 스탯 증가량(%)을 나타냄
+            float totalBonus = 0f;
+            for (int i = 1; i <= enhancementLevel; i++)
+            {
+                float levelBonus = GetEnhancementBonus(enhancementData, i);
+                totalBonus += levelBonus;
+            }
+
+            // 데미지 버프로 적용 (% 단위)
+            if (totalBonus > 0)
+            {
+                character.ApplyStatBuff(StatType.Damage, totalBonus / 100f);
+                Debug.Log($"[TrainingManager] 강화 {enhancementLevel}단계 적용: +{totalBonus}%");
+            }
+        }
+
+        /// <summary>
+        /// 강화 데이터에서 특정 레벨의 보너스 값 추출
+        /// </summary>
+        private float GetEnhancementBonus(CharacterEnhancementData data, int level)
+        {
+            return level switch
+            {
+                1 => data.Pw_Level1,
+                2 => data.Pw_Level2,
+                3 => data.Pw_Level3,
+                4 => data.Pw_Level4,
+                5 => data.Pw_Level5,
+                6 => data.Pw_Level6,
+                7 => data.Pw_Level7,
+                8 => data.Pw_Level8,
+                9 => data.Pw_Level9,
+                10 => data.Pw_Level10,
+                _ => 0f
+            };
+        }
+
+        /// <summary>
+        /// 메인 스킬 책갈피 적용 (액티브 스킬로 설정)
+        /// </summary>
+        private void ApplyMainSkillBookmark(Character character, int skillId)
+        {
+            // MainSkillTable에서 스킬 확인
+            var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(skillId);
+            if (mainSkillData == null)
+            {
+                Debug.LogWarning($"[TrainingManager] MainSkillData를 찾을 수 없음: {skillId}");
+                return;
+            }
+
+            // 액티브 스킬로 설정
+            character.SetSkillIds(character.GetBasicAttackSkillId(), skillId, character.GetSupportSkillId());
+            Debug.Log($"[TrainingManager] 메인 스킬 책갈피 적용: {mainSkillData.skill_name}");
+        }
+
+        /// <summary>
+        /// 스탯 책갈피 적용 (BookmarkOptionTable 기반)
+        /// </summary>
+        private void ApplyStatBookmark(Character character, int optionId)
+        {
+            var optionData = CSVLoader.Instance?.GetData<BookmarkOptionData>(optionId);
+            if (optionData == null)
+            {
+                Debug.LogWarning($"[TrainingManager] BookmarkOptionData를 찾을 수 없음: {optionId}");
+                return;
+            }
+
+            // OptionType에 따라 스탯 적용
+            float value = optionData.Option_Value;
+
+            switch (optionData.Option_Type)
+            {
+                case OptionType.AttackPower:
+                    character.ApplyStatBuff(StatType.Damage, value);
+                    break;
+                case OptionType.AttackSpeed:
+                    character.ApplyStatBuff(StatType.AttackSpeed, value);
+                    break;
+                case OptionType.CritMultiplier:
+                    character.ApplyStatBuff(StatType.CritMultiplier, value);
+                    break;
+                case OptionType.CritChance:
+                    character.ApplyStatBuff(StatType.CritChance, value);
+                    break;
+                case OptionType.CritDamage:
+                    character.ApplyStatBuff(StatType.CritMultiplier, value);
+                    break;
+                case OptionType.BossDamage:
+                    // 보스 데미지는 별도 처리 필요 (현재는 일반 데미지로 적용)
+                    character.ApplyStatBuff(StatType.Damage, value);
+                    break;
+                default:
+                    Debug.Log($"[TrainingManager] 스탯 책갈피 적용: OptionType={optionData.Option_Type}, Value={value}");
+                    break;
             }
         }
 

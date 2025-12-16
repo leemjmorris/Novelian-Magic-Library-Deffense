@@ -6,6 +6,8 @@ namespace Novelian.Training
     using UnityEngine.UI;
     using TMPro;
     using System.Collections.Generic;
+    using Cysharp.Threading.Tasks;
+    using Novelian.Combat;
 
     /// <summary>
     /// 훈련소 UI 컨트롤러 (UGUI)
@@ -80,6 +82,11 @@ namespace Novelian.Training
         private DPSCalculator dpsCalculator;
         private bool isRunning = false;
 
+        // 드롭다운 데이터 캐시
+        private List<CharacterData> characterDataList = new List<CharacterData>();
+        private List<MainSkillData> mainSkillDataList = new List<MainSkillData>();
+        private List<BookmarkOptionData> statOptionDataList = new List<BookmarkOptionData>();
+
         #endregion
 
         #region Lifecycle
@@ -115,11 +122,74 @@ namespace Novelian.Training
             }
         }
 
-        private void Start()
+        private async void Start()
         {
+            // CSVLoader 초기화 대기
+            await WaitForCSVLoaderAsync();
+
+            // 드롭다운 데이터 로드
+            await LoadDropdownDataAsync();
+
+            // 드롭다운 UI 초기화
             InitializeDropdowns();
             UpdateDummyCountDisplay();
             UpdateDamageInfoDisplay();
+        }
+
+        /// <summary>
+        /// CSVLoader 초기화 대기
+        /// </summary>
+        private async UniTask WaitForCSVLoaderAsync()
+        {
+            while (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
+            {
+                await UniTask.Delay(100);
+            }
+        }
+
+        /// <summary>
+        /// 드롭다운 데이터 로드
+        /// </summary>
+        private async UniTask LoadDropdownDataAsync()
+        {
+            // 캐릭터 데이터 로드
+            var characterTable = CSVLoader.Instance?.GetTable<CharacterData>();
+            if (characterTable != null)
+            {
+                characterDataList.Clear();
+                var allCharacters = characterTable.GetAll();
+                for (int i = 0; i < allCharacters.Count; i++)
+                {
+                    characterDataList.Add(allCharacters[i]);
+                }
+            }
+
+            // 메인 스킬 데이터 로드 (스킬 책갈피용)
+            var mainSkillTable = CSVLoader.Instance?.GetTable<MainSkillData>();
+            if (mainSkillTable != null)
+            {
+                mainSkillDataList.Clear();
+                var allSkills = mainSkillTable.GetAll();
+                for (int i = 0; i < allSkills.Count; i++)
+                {
+                    mainSkillDataList.Add(allSkills[i]);
+                }
+            }
+
+            // 스탯 옵션 데이터 로드
+            var optionTable = CSVLoader.Instance?.GetTable<BookmarkOptionData>();
+            if (optionTable != null)
+            {
+                statOptionDataList.Clear();
+                var allOptions = optionTable.GetAll();
+                for (int i = 0; i < allOptions.Count; i++)
+                {
+                    statOptionDataList.Add(allOptions[i]);
+                }
+            }
+
+            await UniTask.CompletedTask;
+            Debug.Log($"[TrainingUIController] 드롭다운 데이터 로드 완료: 캐릭터={characterDataList.Count}, 스킬={mainSkillDataList.Count}, 스탯옵션={statOptionDataList.Count}");
         }
 
         #endregion
@@ -128,6 +198,26 @@ namespace Novelian.Training
 
         private void InitializeDropdowns()
         {
+            // 캐릭터 드롭다운
+            if (characterDropdown != null)
+            {
+                characterDropdown.ClearOptions();
+                var characterOptions = new List<string>();
+                for (int i = 0; i < characterDataList.Count; i++)
+                {
+                    // Character_Name_ID로 StringTable에서 이름 조회 (간략화: ID 사용)
+                    string name = GetCharacterDisplayName(characterDataList[i]);
+                    characterOptions.Add(name);
+                }
+                characterDropdown.AddOptions(characterOptions);
+                if (characterOptions.Count > 0)
+                {
+                    characterDropdown.value = 0;
+                    // 첫 번째 캐릭터 선택
+                    trainingManager?.SetCharacter(characterDataList[0].Character_ID);
+                }
+            }
+
             // 등급 드롭다운 (1성~3성)
             if (gradeDropdown != null)
             {
@@ -149,8 +239,79 @@ namespace Novelian.Training
                 enhancementDropdown.value = 0;
             }
 
-            // 캐릭터, 책갈피 드롭다운은 외부에서 설정
+            // 메인 스킬 책갈피 드롭다운
+            if (mainSkillBookmarkDropdown != null)
+            {
+                mainSkillBookmarkDropdown.ClearOptions();
+                var skillOptions = new List<string> { "없음" };
+                for (int i = 0; i < mainSkillDataList.Count; i++)
+                {
+                    if (!string.IsNullOrEmpty(mainSkillDataList[i].skill_name))
+                    {
+                        skillOptions.Add(mainSkillDataList[i].skill_name);
+                    }
+                }
+                mainSkillBookmarkDropdown.AddOptions(skillOptions);
+                mainSkillBookmarkDropdown.value = 0;
+            }
+
+            // 보조 스킬 책갈피 드롭다운 (현재는 "없음"만)
+            if (supportSkillBookmarkDropdown != null)
+            {
+                supportSkillBookmarkDropdown.ClearOptions();
+                supportSkillBookmarkDropdown.AddOptions(new List<string> { "없음" });
+                supportSkillBookmarkDropdown.value = 0;
+            }
+
+            // 스탯 책갈피 드롭다운
+            if (statBookmarkDropdown != null)
+            {
+                statBookmarkDropdown.ClearOptions();
+                var statOptions = new List<string> { "없음" };
+                for (int i = 0; i < statOptionDataList.Count; i++)
+                {
+                    string optionName = GetOptionDisplayName(statOptionDataList[i]);
+                    statOptions.Add(optionName);
+                }
+                statBookmarkDropdown.AddOptions(statOptions);
+                statBookmarkDropdown.value = 0;
+            }
+
             Debug.Log("[TrainingUIController] 드롭다운 초기화 완료");
+        }
+
+        /// <summary>
+        /// 캐릭터 표시 이름 생성
+        /// </summary>
+        private string GetCharacterDisplayName(CharacterData data)
+        {
+            // StringTable에서 이름 조회 시도
+            var stringData = CSVLoader.Instance?.GetData<StringTable>(data.Character_Name_ID);
+            if (stringData != null && !string.IsNullOrEmpty(stringData.Text))
+            {
+                return stringData.Text;
+            }
+            // 없으면 ID 표시
+            return $"캐릭터 {data.Character_ID}";
+        }
+
+        /// <summary>
+        /// 스탯 옵션 표시 이름 생성
+        /// </summary>
+        private string GetOptionDisplayName(BookmarkOptionData data)
+        {
+            string typeName = data.Option_Type switch
+            {
+                OptionType.AttackPower => "공격력",
+                OptionType.AttackSpeed => "공격속도",
+                OptionType.CritChance => "치명타 확률",
+                OptionType.CritMultiplier => "치명타 배율",
+                OptionType.CritDamage => "치명타 피해",
+                OptionType.BossDamage => "보스 피해",
+                OptionType.CooldownReduction => "쿨타임 감소",
+                _ => $"옵션{(int)data.Option_Type}"
+            };
+            return $"{typeName} +{data.Option_Value * 100f:F0}%";
         }
 
         #endregion
@@ -209,9 +370,11 @@ namespace Novelian.Training
         /// </summary>
         public void OnCharacterDropdownChanged(int index)
         {
-            // TODO: 실제 캐릭터 ID 매핑
-            trainingManager?.SetCharacter(index + 1);
-            UpdateDamageInfoDisplay();
+            if (index >= 0 && index < characterDataList.Count)
+            {
+                trainingManager?.SetCharacter(characterDataList[index].Character_ID);
+                UpdateDamageInfoDisplay();
+            }
         }
 
         /// <summary>
@@ -237,7 +400,20 @@ namespace Novelian.Training
         /// </summary>
         public void OnMainSkillBookmarkDropdownChanged(int index)
         {
-            trainingManager?.SetMainSkillBookmark(index);
+            // index 0 = "없음"
+            if (index <= 0)
+            {
+                trainingManager?.SetMainSkillBookmark(0);
+            }
+            else
+            {
+                // 실제 스킬 인덱스는 index - 1 (없음 제외)
+                int skillIndex = index - 1;
+                if (skillIndex >= 0 && skillIndex < mainSkillDataList.Count)
+                {
+                    trainingManager?.SetMainSkillBookmark(mainSkillDataList[skillIndex].skill_id);
+                }
+            }
             UpdateDamageInfoDisplay();
         }
 
@@ -246,7 +422,8 @@ namespace Novelian.Training
         /// </summary>
         public void OnSupportSkillBookmarkDropdownChanged(int index)
         {
-            trainingManager?.SetSupportSkillBookmark(index);
+            // 현재는 "없음"만 있음
+            trainingManager?.SetSupportSkillBookmark(0);
             UpdateDamageInfoDisplay();
         }
 
@@ -255,7 +432,19 @@ namespace Novelian.Training
         /// </summary>
         public void OnStatBookmarkDropdownChanged(int index)
         {
-            trainingManager?.SetStatBookmark(index);
+            // index 0 = "없음"
+            if (index <= 0)
+            {
+                trainingManager?.SetStatBookmark(0);
+            }
+            else
+            {
+                int optionIndex = index - 1;
+                if (optionIndex >= 0 && optionIndex < statOptionDataList.Count)
+                {
+                    trainingManager?.SetStatBookmark(statOptionDataList[optionIndex].Option_ID);
+                }
+            }
             UpdateDamageInfoDisplay();
         }
 
@@ -313,15 +502,71 @@ namespace Novelian.Training
         /// </summary>
         private void UpdateDamageInfoDisplay()
         {
-            // TODO: TrainingManager에서 계산된 값 가져오기
-            // 현재는 임시 값 표시
+            if (trainingManager == null) return;
 
-            if (baseDamageText != null) baseDamageText.text = "50";
+            // 현재 선택된 캐릭터 데이터 조회
+            var characterData = CSVLoader.Instance?.GetData<CharacterData>(trainingManager.SelectedCharacterId);
+            if (characterData == null)
+            {
+                SetDefaultDamageInfo();
+                return;
+            }
+
+            // 기본 스킬 데이터 조회
+            var skillData = CSVLoader.Instance?.GetData<MainSkillData>(characterData.Base_Skill_ID);
+            if (skillData == null)
+            {
+                SetDefaultDamageInfo();
+                return;
+            }
+
+            // 기본 데미지
+            float baseDamage = skillData.base_damage;
+
+            // 성급 보너스 계산 (1성=1.0, 2성=1.2, 3성=1.5)
+            float gradeMultiplier = trainingManager.SelectedGrade switch
+            {
+                1 => 1.0f,
+                2 => 1.2f,
+                3 => 1.5f,
+                _ => 1.0f
+            };
+
+            // 강화 보너스 계산 (임시: 강화 레벨당 5%)
+            float enhancementBonus = trainingManager.SelectedEnhancement * 0.05f;
+
+            // 총 보너스
+            float totalBonus = (gradeMultiplier - 1.0f) + enhancementBonus;
+
+            // 최종 데미지
+            float finalDamage = baseDamage * (1f + totalBonus);
+
+            // 공격 속도
+            float attackSpeed = skillData.cooldown > 0 ? 1f / skillData.cooldown : 1f;
+
+            // 예상 DPS
+            float expectedDPS = finalDamage * attackSpeed;
+
+            // UI 업데이트
+            if (baseDamageText != null) baseDamageText.text = FormatNumber(baseDamage);
+            if (totalBonusText != null) totalBonusText.text = $"+{totalBonus * 100f:F0}%";
+            if (finalDamageText != null) finalDamageText.text = FormatNumber(finalDamage);
+            if (mainSkillNameText != null) mainSkillNameText.text = skillData.skill_name ?? "-";
+            if (attackSpeedPreviewText != null) attackSpeedPreviewText.text = $"{attackSpeed:F2}";
+            if (expectedDPSText != null) expectedDPSText.text = FormatNumber(expectedDPS);
+        }
+
+        /// <summary>
+        /// 기본 데미지 정보 설정
+        /// </summary>
+        private void SetDefaultDamageInfo()
+        {
+            if (baseDamageText != null) baseDamageText.text = "-";
             if (totalBonusText != null) totalBonusText.text = "+0%";
-            if (finalDamageText != null) finalDamageText.text = "50";
+            if (finalDamageText != null) finalDamageText.text = "-";
             if (mainSkillNameText != null) mainSkillNameText.text = "-";
-            if (attackSpeedPreviewText != null) attackSpeedPreviewText.text = "1.0";
-            if (expectedDPSText != null) expectedDPSText.text = "50";
+            if (attackSpeedPreviewText != null) attackSpeedPreviewText.text = "-";
+            if (expectedDPSText != null) expectedDPSText.text = "-";
         }
 
         /// <summary>
