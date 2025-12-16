@@ -379,6 +379,34 @@ public class FirebaseSaveManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 파티 시너지 레벨 저장
+    /// </summary>
+    public async UniTask SavePartySynergyAsync(string userId, int partyId, int level)
+    {
+        if (!isInitialized) return;
+
+        try
+        {
+            if (cachedUserData.partySynergies == null)
+            {
+                cachedUserData.partySynergies = new PartySynergySaveData();
+            }
+
+            cachedUserData.partySynergies.levels[partyId.ToString()] = level;
+
+            await databaseRef.Child(USERS_PATH).Child(userId)
+                .Child("partySynergies").Child("levels").Child(partyId.ToString())
+                .SetValueAsync(level);
+
+            Debug.Log($"{LOG_PREFIX} 파티 시너지 저장 완료 (PartyID: {partyId}, Lv: {level})");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 파티 시너지 저장 실패: {e.Message}");
+        }
+    }
+
     #endregion
 
     #region 데이터 변환 헬퍼
@@ -443,6 +471,11 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "endTime", data.dispatch.gathering.endTime }
                         }
                     }
+                }
+            },
+            { "partySynergies", new Dictionary<string, object>
+                {
+                    { "levels", data.partySynergies?.levels ?? new Dictionary<string, int>() }
                 }
             }
         };
@@ -589,6 +622,20 @@ public class FirebaseSaveManager : MonoBehaviour
         {
             data.dispatch.combat = ParseDispatchState(dispatchSnap.Child("combat"));
             data.dispatch.gathering = ParseDispatchState(dispatchSnap.Child("gathering"));
+        }
+
+        // partySynergies
+        var partySynergiesSnap = snapshot.Child("partySynergies");
+        if (partySynergiesSnap.Exists)
+        {
+            var levelsSnap = partySynergiesSnap.Child("levels");
+            if (levelsSnap.Exists)
+            {
+                foreach (var child in levelsSnap.Children)
+                {
+                    data.partySynergies.levels[child.Key] = GetIntValue(child);
+                }
+            }
         }
 
         return data;
