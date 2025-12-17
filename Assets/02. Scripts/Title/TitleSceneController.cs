@@ -37,9 +37,13 @@ public class TitleSceneController : MonoBehaviour
     private Image pressTextImage;
     private Image titleTextImage;
     private Vector2 titleOriginalPosition;
-    private Sequence titleFloatSequence;
     private Sequence pressTextSequence;
     private Material titleMaterial;
+    private Tweener titleFloatTween;
+    private Tweener titleFadeTween;
+    private Tweener glowTween;
+    private Tweener pressTextFadeTween;
+    private Tweener pressTextScaleTween;
     private static readonly int GlowIntensityID = Shader.PropertyToID("_GlowIntensity");
 
     private async void Start()
@@ -51,8 +55,13 @@ public class TitleSceneController : MonoBehaviour
 
     private void OnDestroy()
     {
-        titleFloatSequence?.Kill();
+        // 모든 Tween 정리
+        titleFloatTween?.Kill();
+        titleFadeTween?.Kill();
+        glowTween?.Kill();
         pressTextSequence?.Kill();
+        pressTextFadeTween?.Kill();
+        pressTextScaleTween?.Kill();
 
         // Material 인스턴스 정리
         if (titleMaterial != null)
@@ -101,10 +110,10 @@ public class TitleSceneController : MonoBehaviour
         if (titleTextImage != null && titleText != null)
         {
             // 페이드인
-            titleTextImage.DOFade(1f, titleFadeInDuration).SetEase(Ease.OutQuad);
+            titleFadeTween = titleTextImage.DOFade(1f, titleFadeInDuration).SetEase(Ease.OutQuad);
 
             // 플로팅 (위아래로 떠다니는 효과) - Yoyo 루프로 자연스럽게
-            titleText.DOAnchorPosY(titleOriginalPosition.y + titleFloatDistance, titleFloatDuration)
+            titleFloatTween = titleText.DOAnchorPosY(titleOriginalPosition.y + titleFloatDistance, titleFloatDuration)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo);
 
@@ -117,7 +126,7 @@ public class TitleSceneController : MonoBehaviour
 
                 // Glow Intensity 애니메이션
                 titleMaterial.SetFloat(GlowIntensityID, glowMinIntensity);
-                DOTween.To(
+                glowTween = DOTween.To(
                     () => titleMaterial.GetFloat(GlowIntensityID),
                     x => titleMaterial.SetFloat(GlowIntensityID, x),
                     glowMaxIntensity,
@@ -149,14 +158,14 @@ public class TitleSceneController : MonoBehaviour
         var rectTransform = pressText.GetComponent<RectTransform>();
 
         // 깜빡임 (페이드 인/아웃 반복)
-        pressTextImage.DOFade(0.3f, pressTextFadeDuration)
+        pressTextFadeTween = pressTextImage.DOFade(0.3f, pressTextFadeDuration)
             .SetEase(Ease.InOutSine)
             .SetLoops(-1, LoopType.Yoyo);
 
         // 펄스 (스케일 반복)
         if (rectTransform != null)
         {
-            rectTransform.DOScale(pressTextPulseScale, pressTextPulseDuration)
+            pressTextScaleTween = rectTransform.DOScale(pressTextPulseScale, pressTextPulseDuration)
                 .SetEase(Ease.InOutSine)
                 .SetLoops(-1, LoopType.Yoyo);
         }
