@@ -286,10 +286,17 @@ namespace Dispatch
                 dispatchStartButton.onClick.AddListener(OnDispatchStartButtonClicked);
             }
 
-            // 보상 정보 버튼 이벤트 등록
-            if (infoImageButton != null)
+            // 보상 정보 버튼 이벤트 등록 (각 버튼별로 해당 파견 정보 표시)
+            if (infoImageButton != null && infoImageButton.Length > 0)
             {
-                infoImageButton[0].onClick.AddListener(OnInfoImageButtonClicked);
+                for (int i = 0; i < infoImageButton.Length; i++)
+                {
+                    if (infoImageButton[i] != null)
+                    {
+                        int index = i; // 클로저 캡처용
+                        infoImageButton[i].onClick.AddListener(() => OnInfoImageButtonClicked(index));
+                    }
+                }
             }
 
             // InfoPanel 클릭 시 닫기 이벤트 등록
@@ -506,16 +513,21 @@ namespace Dispatch
         }
 
         /// <summary>
-        /// 보상 정보 버튼 클릭 시 (InfoPanel 토글)
+        /// 보상 정보 버튼 클릭 시 (해당 파견의 보상 정보 표시)
         /// </summary>
-        private void OnInfoImageButtonClicked()
+        private void OnInfoImageButtonClicked(int buttonIndex)
         {
-            if (infoPanel != null)
-            {
-                bool isActive = infoPanel.activeSelf;
-                infoPanel.SetActive(!isActive);
-                AddLog(isActive ? "ℹ️ 보상 정보 패널 닫힘" : "ℹ️ 보상 정보 패널 열림");
-            }
+            if (infoPanel == null) return;
+
+            // 버튼 인덱스에 해당하는 파견 장소 결정
+            DispatchLocation location = GetLocationBySlotIndex(buttonIndex);
+
+            // 해당 장소의 보상 정보로 패널 업데이트
+            UpdateRewardInfoForLocation(location);
+
+            // 보상 정보 패널 표시
+            infoPanel.SetActive(true);
+            AddLog($"ℹ️ 버튼 {buttonIndex + 1} 클릭 - {GetLocationName(location)} 보상 정보 표시");
         }
 
         /// <summary>
@@ -2031,8 +2043,16 @@ namespace Dispatch
             if (dispatchStartButton != null)
                 dispatchStartButton.onClick.RemoveListener(OnDispatchStartButtonClicked);
 
-            if (infoImageButton != null)
-                infoImageButton[0].onClick.RemoveListener(OnInfoImageButtonClicked);
+            if (infoImageButton != null && infoImageButton.Length > 0)
+            {
+                for (int i = 0; i < infoImageButton.Length; i++)
+                {
+                    if (infoImageButton[i] != null)
+                    {
+                        infoImageButton[i].onClick.RemoveAllListeners();
+                    }
+                }
+            }
 
             if (infoPanel != null)
             {
