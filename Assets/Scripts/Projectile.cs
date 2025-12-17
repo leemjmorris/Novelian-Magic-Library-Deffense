@@ -50,7 +50,6 @@ namespace Novelian.Combat
         // Support skill data for status effects (CSV-based)
         private int supportSkillId;
         private SupportSkillData supportSkillData;
-        private SupportSkillPrefabEntry supportPrefabs;
 
         // Chain state tracking
         private int currentChainCount = 0;
@@ -195,10 +194,10 @@ namespace Novelian.Combat
 
             // JML: Launch 로그 제거
 
-            // Spawn effect prefab as child if skillData is provided
-            if (skillPrefabs != null && skillPrefabs.projectilePrefab != null)
+            // Spawn effect as INDEPENDENT object (not child) - 이펙트는 Projectile despawn과 무관하게 재생 완료
+            if (mainSkillId > 0)
             {
-                // Clear any existing child effects
+                // Clear any existing child effects (legacy cleanup)
                 foreach (Transform child in transform)
                 {
                     if (child.gameObject != null)
@@ -207,10 +206,8 @@ namespace Novelian.Combat
                     }
                 }
 
-                // Spawn new effect as child
-                GameObject effectInstance = Object.Instantiate(skillPrefabs.projectilePrefab, transform);
-                effectInstance.transform.localPosition = Vector3.zero;
-                effectInstance.transform.localRotation = Quaternion.LookRotation(fixedDirection);
+                // 독립 이펙트 스폰 (SkillEffectManager 사용)
+                SpawnIndependentEffectAsync(mainSkillId, fixedDirection).Forget();
             }
 
             // Initialize Chain state (only on first launch, not re-launch)
@@ -299,7 +296,7 @@ namespace Novelian.Combat
             TrackLifetimeAsync(lifetimeCts.Token).Forget();
         }
 
-        //LMJ : Load skill data from CSV and PrefabDatabase
+        //LMJ : Load skill data from CSV and SkillEffectDatabase (fully migrated - no legacy fallback)
         private void LoadSkillData(int mainSkillId, int supportId)
         {
             skillId = mainSkillId;
@@ -307,7 +304,6 @@ namespace Novelian.Combat
             skillData = null;
             skillPrefabs = null;
             supportSkillData = null;
-            supportPrefabs = null;
 
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
@@ -315,26 +311,38 @@ namespace Novelian.Combat
                 return;
             }
 
-            var prefabDb = SkillPrefabDatabase.Instance;
-
-            // Load main skill data
+            // Load main skill data from CSV
             if (mainSkillId > 0)
             {
                 skillData = CSVLoader.Instance.GetData<MainSkillData>(mainSkillId);
                 if (skillData != null)
                 {
-                    skillPrefabs = prefabDb?.GetMainSkillEntry(mainSkillId);
+                    // Use new SkillEffectDatabase exclusively
+                    var effectDb = SkillEffectDatabase.Instance;
+                    var effectEntry = effectDb?.GetEntry(mainSkillId);
+                    if (effectEntry != null && effectEntry.HasMainEffect())
+                    {
+                        // Convert SkillEffectEntry to MainSkillPrefabEntry for compatibility
+                        skillPrefabs = new MainSkillPrefabEntry
+                        {
+                            skillId = mainSkillId,
+                            skillName = effectEntry.skillName,
+                            projectilePrefab = effectEntry.mainEffectPrefab,
+                            hitEffectPrefab = effectEntry.hitEffectPrefab,
+                            castEffectPrefab = effectEntry.castEffectPrefab,
+                            trailEffectPrefab = effectEntry.trailEffectPrefab,
+                            areaEffectPrefab = effectEntry.areaEffectPrefab
+                        };
+                    }
+                    // No fallback - if not in SkillEffectDatabase, skillPrefabs remains null
                 }
             }
 
-            // Load support skill data
+            // Load support skill data from CSV (support prefabs handled separately)
             if (supportId > 0)
             {
                 supportSkillData = CSVLoader.Instance.GetData<SupportSkillData>(supportId);
-                if (supportSkillData != null)
-                {
-                    supportPrefabs = prefabDb?.GetSupportSkillEntry(supportId);
-                }
+                // Support prefabs are optional - effect modifiers come from CSV data
             }
         }
 
@@ -1134,11 +1142,7 @@ namespace Novelian.Combat
                     // Process Chain (체이닝: DamageCalculator 사용)
                     if (supportSkillData != null && supportSkillData.GetStatusEffectType() == StatusEffectType.Chain && currentChainCount < maxChainCount)
                     {
-                        // Spawn chain effect
-                        if (supportPrefabs?.chainEffectPrefab != null && currentChainCount > 0)
-                        {
-                            SpawnChainEffect(startPosition, other.transform.position);
-                        }
+                        // Chain effect spawning removed - no longer using supportPrefabs
 
                         // Find next target
                         ITargetable nextTarget = FindNextChainTarget(other.transform.position, chainHitTargets, monster);
@@ -1293,10 +1297,7 @@ namespace Novelian.Combat
                     // Process Chain (체이닝: DamageCalculator 사용)
                     if (supportSkillData != null && supportSkillData.GetStatusEffectType() == StatusEffectType.Chain && currentChainCount < maxChainCount)
                     {
-                        if (supportPrefabs?.chainEffectPrefab != null && currentChainCount > 0)
-                        {
-                            SpawnChainEffect(startPosition, other.transform.position);
-                        }
+                        // Chain effect spawning removed - no longer using supportPrefabs
 
                         ITargetable nextTarget = FindNextChainTarget(other.transform.position, chainHitTargets, boss);
 
@@ -1400,10 +1401,10 @@ namespace Novelian.Combat
         {
             if (monster == null) return;
 
-            // Get effect prefabs from database
-            GameObject ccEffectPrefab = supportPrefabs?.ccEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
-            GameObject dotEffectPrefab = supportPrefabs?.dotEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
-            GameObject markEffectPrefab = supportPrefabs?.markEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
+            // Get effect prefabs from skill data (supportPrefabs removed - using skillPrefabs only)
+            GameObject ccEffectPrefab = skillPrefabs?.hitEffectPrefab;
+            GameObject dotEffectPrefab = skillPrefabs?.hitEffectPrefab;
+            GameObject markEffectPrefab = skillPrefabs?.hitEffectPrefab;
 
             // 1. MainSkillData 자체 효과 적용 (스킬 테이블에 정의된 CC/DOT/표식)
             if (skillData != null)
@@ -1456,9 +1457,10 @@ namespace Novelian.Combat
         {
             if (boss == null) return;
 
-            GameObject ccEffectPrefab = supportPrefabs?.ccEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
-            GameObject dotEffectPrefab = supportPrefabs?.dotEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
-            GameObject markEffectPrefab = supportPrefabs?.markEffectPrefab ?? skillPrefabs?.hitEffectPrefab;
+            // Get effect prefabs from skill data (supportPrefabs removed - using skillPrefabs only)
+            GameObject ccEffectPrefab = skillPrefabs?.hitEffectPrefab;
+            GameObject dotEffectPrefab = skillPrefabs?.hitEffectPrefab;
+            GameObject markEffectPrefab = skillPrefabs?.hitEffectPrefab;
 
             // 1. MainSkillData 자체 효과 적용 (스킬 테이블에 정의된 CC/DOT/표식)
             if (skillData != null)
@@ -1505,25 +1507,7 @@ namespace Novelian.Combat
             }
         }
 
-        //LMJ : Spawn chain effect visual between two positions
-        private void SpawnChainEffect(Vector3 startPos, Vector3 endPos)
-        {
-            if (supportPrefabs == null || supportPrefabs.chainEffectPrefab == null) return;
-
-            Vector3 midPos = (startPos + endPos) / 2f;
-            GameObject chainEffect = Instantiate(supportPrefabs.chainEffectPrefab, midPos, Quaternion.identity);
-
-            Vector3 direction = (endPos - startPos).normalized;
-            if (direction != Vector3.zero)
-            {
-                chainEffect.transform.rotation = Quaternion.LookRotation(direction);
-            }
-
-            float distance = Vector3.Distance(startPos, endPos);
-            chainEffect.transform.localScale = new Vector3(1f, 1f, distance);
-
-            Destroy(chainEffect, 1f);
-        }
+        // SpawnChainEffect removed - supportPrefabs no longer used
 
         //LMJ : Find next target for chain effect
         private ITargetable FindNextChainTarget(Vector3 currentPosition, System.Collections.Generic.HashSet<ITargetable> hitTargets, ITargetable excludeTarget = null)
@@ -1689,7 +1673,6 @@ namespace Novelian.Combat
             skillPrefabs = null;
             supportSkillId = 0;
             supportSkillData = null;
-            supportPrefabs = null;
 
             // Reset chain state
             currentChainCount = 0;
@@ -1770,5 +1753,59 @@ namespace Novelian.Combat
             lifetimeCts?.Cancel();
             lifetimeCts?.Dispose();
         }
+
+        #region Independent Effect Spawn
+
+        // 현재 이펙트 인스턴스 추적 (선택적)
+        private GameObject _currentEffectInstance;
+
+        /// <summary>
+        /// 독립 이펙트 스폰 (Projectile과 분리된 라이프사이클)
+        /// 이펙트는 Projectile이 despawn되어도 재생 완료까지 유지됨
+        /// </summary>
+        private async UniTaskVoid SpawnIndependentEffectAsync(int skillId, Vector3 direction)
+        {
+            // SkillEffectManager 확인
+            var effectManager = SkillEffectManager.Instance;
+            if (effectManager == null)
+            {
+                // Fallback: 기존 방식으로 자식 이펙트 생성
+                SpawnChildEffectFallback(direction);
+                return;
+            }
+
+            try
+            {
+                // 독립 이펙트 스폰 (Projectile을 따라감)
+                _currentEffectInstance = await effectManager.SpawnProjectileEffect(
+                    skillId,
+                    transform,
+                    direction
+                );
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[Projectile] Failed to spawn independent effect: {ex.Message}");
+                // Fallback: 기존 방식으로 자식 이펙트 생성
+                SpawnChildEffectFallback(direction);
+            }
+        }
+
+        /// <summary>
+        /// Fallback: 기존 방식으로 자식 이펙트 생성
+        /// SkillEffectManager가 없거나 실패한 경우 사용
+        /// </summary>
+        private void SpawnChildEffectFallback(Vector3 direction)
+        {
+            if (skillPrefabs != null && skillPrefabs.projectilePrefab != null)
+            {
+                GameObject effectInstance = Object.Instantiate(skillPrefabs.projectilePrefab, transform);
+                effectInstance.transform.localPosition = Vector3.zero;
+                effectInstance.transform.localRotation = Quaternion.LookRotation(direction);
+                Debug.Log($"[Projectile] Fallback: effect spawned as child");
+            }
+        }
+
+        #endregion
     }
 }

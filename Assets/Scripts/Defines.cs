@@ -85,8 +85,7 @@ public static class AddressableKey
     public static readonly string Icon_RareBookmark = "RareBookmark";
     public static readonly string Icon_UniqueBookmark = "UniqueBookmark";
 
-    // 스킬 Prefab 데이터베이스
-    public static readonly string SkillPrefabDatabase = "SkillPrefabDatabase";
+    // SkillPrefabDatabase removed - migrated to SkillEffectDatabase
 
     /// <summary>
     /// JML: [Obsolete] 이 메서드는 더 이상 사용하지 않음 (Issue #447)

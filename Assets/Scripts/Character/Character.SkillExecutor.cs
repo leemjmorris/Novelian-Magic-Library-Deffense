@@ -262,7 +262,13 @@ namespace Novelian.Combat
         //      AOE, DOT, Debuff, Trap, Mine, InstantSingle 스킬 처리
         private async UniTaskVoid UseAOESkillAsync(ITargetable target, MainSkillData skillData, MainSkillPrefabEntry prefabs, float damage, float range, float projectileSpeed)
         {
-            if (skillData == null) return;
+            Debug.Log($"[Character] UseAOESkillAsync CALLED - skillData={skillData?.skill_name ?? "NULL"}, prefabs={(prefabs != null ? "EXISTS" : "NULL")}, damage={damage}, range={range}");
+
+            if (skillData == null)
+            {
+                Debug.LogWarning("[Character] UseAOESkillAsync: skillData is NULL, returning early");
+                return;
+            }
 
             // Allow skill types that use AOE-style effects (범위 이펙트가 필요한 스킬 타입들)
             var skillType = skillData.GetSkillType();
@@ -272,7 +278,14 @@ namespace Novelian.Combat
                             || skillType == SkillAssetType.Trap
                             || skillType == SkillAssetType.Mine
                             || skillType == SkillAssetType.InstantSingle;
-            if (!isValidType) return;
+
+            Debug.Log($"[Character] UseAOESkillAsync: skillType={skillType}, isValidType={isValidType}");
+
+            if (!isValidType)
+            {
+                Debug.LogWarning($"[Character] UseAOESkillAsync: Invalid skill type {skillType}, returning early");
+                return;
+            }
 
             GameObject castEffect = null;
             GameObject meteorEffect = null;
@@ -325,6 +338,11 @@ namespace Novelian.Combat
                     impactPos = new Vector3(targetPos.x, 0f, targetPos.z);
                 }
 
+                Debug.Log($"[Character] AOE impactPos calculated: {impactPos}, aoeRadius={aoeRadius}");
+
+                // 3.5 런타임 AOE Gizmo 업데이트 (디버그용)
+                UpdateAOEGizmoInfo(impactPos, aoeRadius);
+
                 // 4. Meteor Effect (only if projectile_speed > 0, otherwise instant AOE)
                 if (skillData.projectile_speed > 0 && projectileEffectPrefab != null)
                 {
@@ -357,18 +375,78 @@ namespace Novelian.Combat
                     }
                 }
 
-                // 5. Hit Effect - AOE 범위에 맞춰 스케일 조절
+                // 5. Hit Effect - SkillEffectManager 또는 SkillEffectDatabase에서 이펙트 로드
                 // (표식/CC 스킬은 각 타겟에 개별 적용하므로 중앙 이펙트 생략)
                 bool skipCentralEffect = skillData.HasMarkEffect || skillData.HasCCEffect;
-                if (hitEffectPrefab != null && !skipCentralEffect)
-                {
-                    hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, impactPos, Quaternion.identity);
+                bool effectFromManager = false; // SkillEffectManager로 생성된 이펙트인지 추적
 
-                    // 기본 이펙트 크기를 25 단위로 가정하고 aoeRadius에 비례하여 스케일 조절
-                    // aoe_radius 150 → 스케일 6, aoe_radius 400 → 스케일 16
-                    float baseEffectSize = 25f;
-                    float scaleFactor = aoeRadius / baseEffectSize;
-                    hitEffect.transform.localScale = Vector3.one * scaleFactor;
+                Debug.Log($"[Character] AOE Effect Loading - skillId={skillData.skill_id}, skipCentral={skipCentralEffect}");
+
+                if (!skipCentralEffect)
+                {
+                    GameObject effectPrefabToUse = null;
+
+                    // 1. SkillEffectManager를 통한 독립 이펙트 스폰 시도
+                    var effectManager = SkillEffectManager.Instance;
+                    Debug.Log($"[Character] SkillEffectManager.Instance = {(effectManager != null ? "EXISTS" : "NULL")}");
+
+                    if (effectManager != null)
+                    {
+                        hitEffect = await effectManager.PlayEffectAtPosition(skillData.skill_id, impactPos);
+
+                        if (hitEffect != null)
+                        {
+                            effectFromManager = true;
+                            // SkillEffectManager 이펙트는 스케일 조정 불필요 (Database에서 설정된 스케일 사용)
+                            Debug.Log($"[Character] AOE effect spawned via SkillEffectManager: skill={skillData.skill_id}, effect={hitEffect.name}");
+                        }
+                        else
+                        {
+                            Debug.Log($"[Character] SkillEffectManager returned null for skill {skillData.skill_id}");
+                        }
+                    }
+
+                    // 2. SkillEffectManager가 없거나 이펙트가 없으면 SkillEffectDatabase에서 직접 로드
+                    if (hitEffect == null)
+                    {
+                        var effectDb = SkillEffectDatabase.Instance;
+                        Debug.Log($"[Character] SkillEffectDatabase.Instance = {(effectDb != null ? "EXISTS" : "NULL")}");
+
+                        if (effectDb != null)
+                        {
+                            effectPrefabToUse = effectDb.GetMainEffect(skillData.skill_id);
+                            Debug.Log($"[Character] SkillEffectDatabase.GetMainEffect({skillData.skill_id}) = {(effectPrefabToUse != null ? effectPrefabToUse.name : "NULL")}");
+                        }
+
+                        // 3. Database에도 없으면 prefabs에서 로드
+                        if (effectPrefabToUse == null)
+                        {
+                            effectPrefabToUse = hitEffectPrefab;
+                            Debug.Log($"[Character] Fallback to hitEffectPrefab = {(effectPrefabToUse != null ? effectPrefabToUse.name : "NULL")}");
+                        }
+
+                        // 이펙트 스폰
+                        if (effectPrefabToUse != null)
+                        {
+                            hitEffect = UnityEngine.Object.Instantiate(effectPrefabToUse, impactPos, Quaternion.identity);
+
+                            // 이펙트 스케일 = aoe_radius / baseEffectRadius
+                            // baseEffectRadius: 이펙트 프리팹이 scale=1일 때의 시각적 반경
+                            float effectScale = 1f;
+                            var effectEntry = effectDb?.GetEntry(skillData.skill_id);
+                            if (effectEntry != null && effectEntry.baseEffectRadius > 0)
+                            {
+                                effectScale = aoeRadius / effectEntry.baseEffectRadius;
+                            }
+                            hitEffect.transform.localScale = Vector3.one * effectScale;
+
+                            Debug.Log($"[Character] AOE effect spawned: skill={skillData.skill_id}, effect={hitEffect.name}, scale={effectScale:F2} (aoe={aoeRadius}/base={effectEntry?.baseEffectRadius ?? 1}), pos={impactPos}");
+                        }
+                        else
+                        {
+                            Debug.LogWarning($"[Character] No effect prefab found for AOE skill {skillData.skill_id} - ALL FALLBACKS FAILED!");
+                        }
+                    }
                 }
 
                 // 6. AOE damage - aoeRadius는 위에서 이미 계산됨
@@ -423,13 +501,30 @@ namespace Novelian.Combat
                 }
 
                 // Cleanup
+                // meteorEffect는 수동 정리 (아직 SkillEffectManager 적용 안 됨)
                 if (meteorEffect != null)
                 {
                     UnityEngine.Object.Destroy(meteorEffect, 0.1f);
                 }
-                if (hitEffect != null)
+
+                // hitEffect 정리
+                // SkillEffectManager로 스폰된 경우: AutoDespawnEffectAsync에서 자동 정리됨
+                // Fallback으로 직접 생성된 경우: 수동 정리 필요
+                if (hitEffect != null && !effectFromManager)
                 {
-                    UnityEngine.Object.Destroy(hitEffect, 2f);
+                    // ParticleSystem 기반 이펙트의 경우 duration 계산
+                    float effectDuration = 3f; // 기본 3초
+                    var particleSystems = hitEffect.GetComponentsInChildren<ParticleSystem>();
+                    if (particleSystems.Length > 0)
+                    {
+                        foreach (var ps in particleSystems)
+                        {
+                            float psDuration = ps.main.duration + ps.main.startLifetime.constantMax;
+                            if (psDuration > effectDuration) effectDuration = psDuration;
+                        }
+                    }
+                    UnityEngine.Object.Destroy(hitEffect, effectDuration);
+                    Debug.Log($"[Character] AOE fallback effect scheduled for destroy in {effectDuration}s");
                 }
             }
             catch (System.OperationCanceledException)

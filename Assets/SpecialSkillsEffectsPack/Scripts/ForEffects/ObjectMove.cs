@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,6 +16,11 @@ public class ObjectMove : MonoBehaviour
     public float MaxLength;
     public float DestroyTime2;
     float m_scalefactor;
+
+    /// <summary>
+    /// 충돌 시 발생하는 이벤트 (래퍼에서 구독)
+    /// </summary>
+    public event Action<RaycastHit> OnHit;
 
     private void Start()
     {
@@ -45,6 +51,9 @@ public class ObjectMove : MonoBehaviour
 
     void HitObj(RaycastHit hit)
     {
+        // 래퍼에 충돌 이벤트 전달
+        OnHit?.Invoke(hit);
+
         m_makedObject = Instantiate(m_hitObject, hit.point, Quaternion.LookRotation(hit.normal)).gameObject;
         Destroy(m_makedObject, DestroyTime2);
     }
