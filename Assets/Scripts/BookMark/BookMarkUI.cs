@@ -19,6 +19,9 @@ public class BookMarkUI : MonoBehaviour
     // JML: 책갈피 등급 아이콘 캐시 (즉시 로딩용)
     private Dictionary<Grade, Sprite> cachedBookmarkIcons = new Dictionary<Grade, Sprite>();
 
+    // CBL: 재료 아이콘 캐시 (Ingredient_ID → Sprite)
+    private Dictionary<int, Sprite> cachedIngredientIcons = new Dictionary<int, Sprite>();
+
     [Header("Choice Panel")]
     [SerializeField] private GameObject choicePanel;
     [SerializeField] private Button selectionStatButton;
@@ -42,10 +45,8 @@ public class BookMarkUI : MonoBehaviour
     [SerializeField] private GameObject craftPanel;
     [SerializeField] private GameObject statCraftPanel;
     [SerializeField] private Image statCraftBookmarkIcon;  // JML: 제작할 책갈피 등급 아이콘
-    [SerializeField] private TextMeshProUGUI statMetrial1NameText;
     [SerializeField] private Image statMetrial1IconImage;
     [SerializeField] private TextMeshProUGUI statMetrial1CountText;
-    [SerializeField] private TextMeshProUGUI statMetrial2NameText;
     [SerializeField] private Image statMetrial2IconImage;
     [SerializeField] private TextMeshProUGUI statMetrial2CountText;
     [SerializeField] private TextMeshProUGUI statSuccessRateText;
@@ -57,13 +58,10 @@ public class BookMarkUI : MonoBehaviour
     [Header("Skill Craft Panel")]
     [SerializeField] private GameObject skillCraftPanel;
     [SerializeField] private Image skillCraftBookmarkIcon;  // JML: 제작할 책갈피 등급 아이콘
-    [SerializeField] private TextMeshProUGUI skillMetrial1NameText;
     [SerializeField] private Image skillMetrial1IconImage;
     [SerializeField] private TextMeshProUGUI skillMetrial1CountText;
-    [SerializeField] private TextMeshProUGUI skillMetrial2NameText;
     [SerializeField] private Image skillMetrial2IconImage;
     [SerializeField] private TextMeshProUGUI skillMetrial2CountText;
-    [SerializeField] private TextMeshProUGUI skillMetrial3NameText;
     [SerializeField] private Image skillMetrial3IconImage;
     [SerializeField] private TextMeshProUGUI skillMetrial3CountText;
     [SerializeField] private TextMeshProUGUI skillSuccessRateText;
@@ -260,48 +258,30 @@ public class BookMarkUI : MonoBehaviour
 
     private void UpdateStatCraftPanelUI(BookmarkCraftData recipe)
     {
-        // JML: Material 1
+        // CBL: Material 1
         if (recipe.Material_1_ID > 0)
         {
-            var material1Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_1_ID);
-            statMetrial1NameText.text = material1Data != null ? CSVLoader.Instance.GetData<StringTable>(material1Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
-
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_1_ID);
             int requiredCount = recipe.Material_1_Count;
 
-            if (inventoryCount < requiredCount)
-            {
-                statMetrial1CountText.color = Color.red;
-            }
-            else
-            {
-                statMetrial1CountText.color = Color.white;
-            }
+            statMetrial1CountText.color = inventoryCount < requiredCount ? Color.red : Color.white;
+            statMetrial1CountText.text = $"{inventoryCount}  / {requiredCount}";
 
-            var material1Count = $"{inventoryCount}  / {requiredCount}";
-            statMetrial1CountText.text = material1Count;
+            // CBL: 재료 1 아이콘 로드
+            SetIngredientIcon(statMetrial1IconImage, recipe.Material_1_ID).Forget();
         }
 
-        // JML: Material 2
+        // CBL: Material 2
         if (recipe.Material_2_ID > 0)
         {
-            var material2Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_2_ID);
-            statMetrial2NameText.text = material2Data != null ? CSVLoader.Instance.GetData<StringTable>(material2Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
-
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_2_ID);
             int requiredCount = recipe.Material_2_Count;
 
-            if (inventoryCount < requiredCount)
-            {
-                statMetrial2CountText.color = Color.red;
-            }
-            else
-            {
-                statMetrial2CountText.color = Color.white;
-            }
+            statMetrial2CountText.color = inventoryCount < requiredCount ? Color.red : Color.white;
+            statMetrial2CountText.text = $"{inventoryCount}  / {requiredCount}";
 
-            var material2Count = $"{inventoryCount}  / {requiredCount}";
-            statMetrial2CountText.text = material2Count;
+            // CBL: 재료 2 아이콘 로드
+            SetIngredientIcon(statMetrial2IconImage, recipe.Material_2_ID).Forget();
         }
 
         // JML: Success rates
@@ -342,69 +322,43 @@ public class BookMarkUI : MonoBehaviour
     #region Skill Craft Panel
     private void UpdateSkillCraftPanelUI(BookmarkCraftData recipe)
     {
-        // JML: Material 1
+        // CBL: Material 1
         if (recipe.Material_1_ID > 0)
         {
-            var material1Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_1_ID);
-            skillMetrial1NameText.text = material1Data != null ? CSVLoader.Instance.GetData<StringTable>(material1Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
-
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_1_ID);
             int requiredCount = recipe.Material_1_Count;
 
-            if (inventoryCount < requiredCount)
-            {
-                skillMetrial1CountText.color = Color.red;
-            }
-            else
-            {
-                skillMetrial1CountText.color = Color.white;
-            }
+            skillMetrial1CountText.color = inventoryCount < requiredCount ? Color.red : Color.white;
+            skillMetrial1CountText.text = $"{inventoryCount}  / {requiredCount}";
 
-            var material1Count = $"{inventoryCount}  / {requiredCount}";
-            skillMetrial1CountText.text = material1Count;
+            // CBL: 재료 1 아이콘 로드
+            SetIngredientIcon(skillMetrial1IconImage, recipe.Material_1_ID).Forget();
         }
 
-        // JML: Material 2
+        // CBL: Material 2
         if (recipe.Material_2_ID > 0)
         {
-            var material2Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_2_ID);
-            skillMetrial2NameText.text = material2Data != null ? CSVLoader.Instance.GetData<StringTable>(material2Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
-
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_2_ID);
             int requiredCount = recipe.Material_2_Count;
 
-            if (inventoryCount < requiredCount)
-            {
-                skillMetrial2CountText.color = Color.red;
-            }
-            else
-            {
-                skillMetrial2CountText.color = Color.white;
-            }
+            skillMetrial2CountText.color = inventoryCount < requiredCount ? Color.red : Color.white;
+            skillMetrial2CountText.text = $"{inventoryCount}  / {requiredCount}";
 
-            var material2Count = $"{inventoryCount}  / {requiredCount}";
-            skillMetrial2CountText.text = material2Count;
+            // CBL: 재료 2 아이콘 로드
+            SetIngredientIcon(skillMetrial2IconImage, recipe.Material_2_ID).Forget();
         }
 
+        // CBL: Material 3
         if (recipe.Material_3_ID > 0)
         {
-            var material3Data = CSVLoader.Instance.GetData<IngredientData>(recipe.Material_3_ID);
-            skillMetrial3NameText.text = material3Data != null ? CSVLoader.Instance.GetData<StringTable>(material3Data.Ingredient_Name_ID)?.Text ?? "알 수 없음" : "알 수 없음";
-
             int inventoryCount = IngredientManager.Instance.GetIngredientCount(recipe.Material_3_ID);
             int requiredCount = recipe.Material_3_Count;
 
-            if (inventoryCount < requiredCount)
-            {
-                skillMetrial3CountText.color = Color.red;
-            }
-            else
-            {
-                skillMetrial3CountText.color = Color.white;
-            }
+            skillMetrial3CountText.color = inventoryCount < requiredCount ? Color.red : Color.white;
+            skillMetrial3CountText.text = $"{inventoryCount}  / {requiredCount}";
 
-            var material3Count = $"{inventoryCount}  / {requiredCount}";
-            skillMetrial3CountText.text = material3Count;
+            // CBL: 재료 3 아이콘 로드
+            SetIngredientIcon(skillMetrial3IconImage, recipe.Material_3_ID).Forget();
         }
 
         // JML: Success rates
@@ -588,7 +542,67 @@ public class BookMarkUI : MonoBehaviour
                 cachedBookmarkIcons[grade] = icon;
             }
         }
+    }
 
+    /// <summary>
+    /// CBL: 재료 아이콘 로드 (캐시 우선, 없으면 PathTable → Addressable 로드)
+    /// Ingredient_ID → IngredientData.Path_ID → PathData.Addressable_Key
+    /// </summary>
+    private async UniTask<Sprite> LoadIngredientIcon(int ingredientId)
+    {
+        // 캐시에 있으면 즉시 반환
+        if (cachedIngredientIcons.TryGetValue(ingredientId, out Sprite cachedIcon))
+        {
+            return cachedIcon;
+        }
+
+        // CBL: IngredientData에서 Path_ID 조회
+        var ingredientData = CSVLoader.Instance.GetData<IngredientData>(ingredientId);
+        if (ingredientData == null || ingredientData.Path_ID <= 0)
+        {
+            Debug.LogWarning($"[BookMarkUI] IngredientData 없음 또는 Path_ID 없음: {ingredientId}");
+            return null;
+        }
+
+        // CBL: PathTable에서 Addressable_Key 조회
+        var pathData = CSVLoader.Instance.GetData<PathData>(ingredientData.Path_ID);
+        if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
+        {
+            Debug.LogWarning($"[BookMarkUI] PathData 없음 또는 키 없음: Path_ID={ingredientData.Path_ID}");
+            return null;
+        }
+
+        // CBL: Addressable에서 로드
+        string iconKey = pathData.Addressable_Key;
+        try
+        {
+            var icon = await UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Sprite>(iconKey).ToUniTask();
+            if (icon != null)
+            {
+                cachedIngredientIcons[ingredientId] = icon;
+                return icon;
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[BookMarkUI] 재료 아이콘 로드 실패: {iconKey} - {e.Message}");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// CBL: 재료 아이콘 이미지에 적용 (비동기)
+    /// </summary>
+    private async UniTaskVoid SetIngredientIcon(Image targetImage, int ingredientId)
+    {
+        if (targetImage == null || ingredientId <= 0) return;
+
+        var icon = await LoadIngredientIcon(ingredientId);
+        if (icon != null)
+        {
+            targetImage.sprite = icon;
+        }
     }
 
     /// <summary>
