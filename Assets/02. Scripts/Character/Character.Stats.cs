@@ -280,45 +280,48 @@ namespace Novelian.Combat
         /// </summary>
         private void ApplyStatBookmark(BookMark bookmark)
         {
+            // OptionValue는 소수 (0.02 = 2%), modifier는 정수 퍼센트 (2 = 2%)
+            float percentValue = bookmark.OptionValue * 100f;
+
             switch (bookmark.OptionType)
             {
                 case 1: // 공격력 증가
-                    damageModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 공격력 +{bookmark.OptionValue * 100f:F0}% (총 {damageModifier * 100f:F0}%)");
+                    damageModifier += percentValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 공격력 +{percentValue:F0}% (총 {damageModifier:F0}%)");
                     break;
                 case 2: // 공격 속도 증가
-                    attackSpeedModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 공격속도 +{bookmark.OptionValue * 100f:F0}% (총 {attackSpeedModifier * 100f:F0}%)");
+                    attackSpeedModifier += percentValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 공격속도 +{percentValue:F0}% (총 {attackSpeedModifier:F0}%)");
                     break;
                 case 3: // 치명타 배율 증가
-                    critMultiplierModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 치명타 배율 +{bookmark.OptionValue * 100f:F0}% (총 {critMultiplierModifier * 100f:F0}%)");
+                    critMultiplierModifier += percentValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 치명타 배율 +{percentValue:F0}% (총 {critMultiplierModifier:F0}%)");
                     break;
                 case 4: // 치명타 확률 증가
-                    critChanceModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 치명타 확률 +{bookmark.OptionValue * 100f:F0}% (총 {critChanceModifier * 100f:F0}%)");
+                    critChanceModifier += percentValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 치명타 확률 +{percentValue:F0}% (총 {critChanceModifier:F0}%)");
                     break;
                 case 5: // 치명타 피해 증가 (배율에 누적)
-                    critMultiplierModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 치명타 피해 +{bookmark.OptionValue * 100f:F0}% (총 {critMultiplierModifier * 100f:F0}%)");
+                    critMultiplierModifier += percentValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 치명타 피해 +{percentValue:F0}% (총 {critMultiplierModifier:F0}%)");
                     break;
                 case 6: // 속성 강화 (GenreType별)
                     ApplyGenreModifier(bookmark);
                     break;
                 case 7: // 쿨타임 감소
-                    cooldownModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 쿨타임 -{bookmark.OptionValue * 100f:F0}% (총 {cooldownModifier * 100f:F0}%)");
+                    cooldownModifier += percentValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 쿨타임 -{percentValue:F0}% (총 {cooldownModifier:F0}%)");
                     break;
                 case 8: // 시전 속도 감소
-                    castTimeModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 시전속도 -{bookmark.OptionValue * 100f:F0}% (총 {castTimeModifier * 100f:F0}%)");
+                    castTimeModifier += percentValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 시전속도 -{percentValue:F0}% (총 {castTimeModifier:F0}%)");
                     break;
                 // case 9: 제거됨 (발사체 속도)
                 // case 10, 11, 12: RewardHelper에서 처리 (아이템/골드/파견시간)
                 // case 13, 14, 15: 보류 (적 디버프)
                 case 16: // 보스 데미지 증가
-                    bossDamageModifier += bookmark.OptionValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 보스 데미지 +{bookmark.OptionValue * 100f:F0}% (총 {bossDamageModifier * 100f:F0}%)");
+                    bossDamageModifier += percentValue;
+                    Debug.Log($"[Character] 스탯 책갈피: 보스 데미지 +{percentValue:F0}% (총 {bossDamageModifier:F0}%)");
                     break;
                 default:
                     // 10, 11, 12는 RewardHelper에서 처리하므로 경고 안 함
@@ -347,22 +350,27 @@ namespace Novelian.Combat
         }
 
         /// <summary>
-        /// JML: BookMark의 Option_Name_ID 또는 BookmarkDataID로 GenreType 결정
+        /// JML: BookMark의 Option_Name_ID로 GenreType 결정
+        /// BookmarkTable → BookmarkOptionTable → Option_Name_ID 순서로 조회
         /// </summary>
         private GenreType GetGenreFromBookmark(BookMark bookmark)
         {
-            // CSV에서 Option_Name_ID 조회
-            var optionData = CSVLoader.Instance?.GetData<BookmarkOptionData>(bookmark.BookmarkDataID);
-            if (optionData == null) return GenreType.Horror; // 기본값
+            // 1. BookmarkTable에서 책갈피 데이터 조회
+            var bookmarkData = CSVLoader.Instance?.GetData<BookmarkData>(bookmark.BookmarkDataID);
+            if (bookmarkData == null) return GenreType.Horror;
 
-            // Option_Name_ID로 속성 구분
+            // 2. BookmarkOptionTable에서 옵션 데이터 조회
+            var optionData = CSVLoader.Instance?.GetData<BookmarkOptionData>(bookmarkData.Option_ID);
+            if (optionData == null) return GenreType.Horror;
+
+            // 3. Option_Name_ID로 속성 구분 (StringTable 기준)
             return optionData.Option_Name_ID switch
             {
-                80340420 => GenreType.Romance,   // 로맨스 속성 강화
-                80340421 => GenreType.Adventure, // 모험 속성 강화
-                80340422 => GenreType.Comedy,    // 코미디 속성 강화
-                80340423 => GenreType.Mystery,   // 추리 속성 강화
-                80340424 => GenreType.Horror,    // 공포 속성 강화
+                80340382 => GenreType.Romance,   // 로맨스 속성 강화
+                80340383 => GenreType.Adventure, // 모험 속성 강화
+                80340384 => GenreType.Comedy,    // 코미디 속성 강화
+                80340385 => GenreType.Mystery,   // 추리 속성 강화
+                80340386 => GenreType.Horror,    // 공포 속성 강화
                 _ => GenreType.Horror
             };
         }
