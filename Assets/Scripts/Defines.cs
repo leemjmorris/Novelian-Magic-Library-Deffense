@@ -268,7 +268,8 @@ public enum UseType
 {
     BookmarkCraft = 1,
     UserLevelUp = 2,
-    ProductPurchase = 3
+    ProductPurchase = 3,
+    CharacterEssence = 4    // 캐릭터 정수 (가챠 중복 시 지급)
 }
 
 public enum BookmarkType
