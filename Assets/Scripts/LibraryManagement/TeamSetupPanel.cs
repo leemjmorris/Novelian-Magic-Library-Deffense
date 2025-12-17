@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -11,6 +12,15 @@ public class TeamSetupPanel : MonoBehaviour
     [Header("Tabs")]
     [SerializeField] private GameObject partyTab;
     [SerializeField] private GameObject characterTab;
+
+    [Header("Tab Buttons")]
+    [SerializeField] private Button partySynergyButton;
+    [SerializeField] private Button characterSelectionButton;
+
+    [Header("Active Synergy Display")]
+    [SerializeField] private GameObject activeSynergyPanel;
+    [SerializeField] private TextMeshProUGUI activeSynergyTitleText;  // "파티 시너지" 고정
+    [SerializeField] private TextMeshProUGUI activeSynergyText;        // "제목\n\n설명" 형식
 
     [Header("Prefabs")]
     [SerializeField] private GameObject characterSlotPrefab;
@@ -27,11 +37,21 @@ public class TeamSetupPanel : MonoBehaviour
     [SerializeField] private GameObject raycastPanel;
 
     private List<DeckCharacterSlot> characterSlots = new List<DeckCharacterSlot>();
+    private List<PartySynergyData> allSynergies = new List<PartySynergyData>();
     private int selectedDeckSlotIndex = -1; // 현재 선택된 덱 슬롯
     private bool isInitialized = false;
 
     private void Start()
     {
+        // 탭 버튼 리스너 등록
+        if (partySynergyButton != null)
+            partySynergyButton.onClick.AddListener(OnTabPartySynergyButtonClicked);
+        if (characterSelectionButton != null)
+            characterSelectionButton.onClick.AddListener(OnTabCharacterButtonClicked);
+
+        // 시너지 데이터 로드
+        LoadSynergyData();
+
         // 덱 슬롯 인덱스 설정
         for (int i = 0; i < deckSlots.Count; i++)
         {
@@ -67,6 +87,7 @@ public class TeamSetupPanel : MonoBehaviour
         // Start에서 첫 복원 실행
         RestoreDeckFromManager();
         RefreshAllSlots();
+        RefreshActiveSynergies();
     }
 
     private void OnEnable()
@@ -79,6 +100,9 @@ public class TeamSetupPanel : MonoBehaviour
 
         // 모든 슬롯 정보 갱신
         RefreshAllSlots();
+
+        // 시너지 상태 갱신
+        RefreshActiveSynergies();
     }
 
     /// <summary>
@@ -211,6 +235,9 @@ public class TeamSetupPanel : MonoBehaviour
         selectedDeckSlotIndex = -1;
 
         Debug.Log($"[TeamSetupPanel] 캐릭터 ID {characterId} 설정 완료. 현재 덱: {GetSetDeckCount()}/4");
+
+        // 덱 변경 시 시너지 즉시 갱신
+        RefreshActiveSynergies();
     }
 
     /// <summary>
@@ -245,8 +272,42 @@ public class TeamSetupPanel : MonoBehaviour
     /// </summary>
     public void OnTabCharacterButtonClicked()
     {
-        partyTab.SetActive(false);
-        characterTab.SetActive(true);
+        if (partyTab != null)
+            partyTab.SetActive(false);
+        if (characterTab != null)
+            characterTab.SetActive(true);
+        if (activeSynergyPanel != null)
+            activeSynergyPanel.SetActive(false);
+
+        // 버튼 상태 업데이트
+        if (partySynergyButton != null)
+            partySynergyButton.interactable = true;
+        if (characterSelectionButton != null)
+            characterSelectionButton.interactable = false;
+
+        Debug.Log("[TeamSetupPanel] 캐릭터 선택 탭 활성화");
+    }
+
+    /// <summary>
+    /// 파티 시너지 탭 버튼 클릭
+    /// </summary>
+    public void OnTabPartySynergyButtonClicked()
+    {
+        if (partyTab != null)
+            partyTab.SetActive(true);
+        if (characterTab != null)
+            characterTab.SetActive(false);
+
+        // 버튼 상태 업데이트
+        if (partySynergyButton != null)
+            partySynergyButton.interactable = false;
+        if (characterSelectionButton != null)
+            characterSelectionButton.interactable = true;
+
+        // 활성 시너지 새로고침
+        RefreshActiveSynergies();
+
+        Debug.Log("[TeamSetupPanel] 파티 시너지 탭 활성화");
     }
 
     #region Deck Unset Panel
@@ -311,6 +372,9 @@ public class TeamSetupPanel : MonoBehaviour
 
         // 패널 숨기기
         HideDeckUnsetPanel();
+
+        // 덱 변경 시 시너지 즉시 갱신
+        RefreshActiveSynergies();
     }
 
     /// <summary>
@@ -421,5 +485,199 @@ public class TeamSetupPanel : MonoBehaviour
     public bool IsDeckValid()
     {
         return GetSetDeckCount() >= 3;
+    }
+
+    #region Active Synergy Display
+
+    /// <summary>
+    /// 시너지 데이터 로드
+    /// </summary>
+    private void LoadSynergyData()
+    {
+        if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
+        {
+            Debug.LogWarning("[TeamSetupPanel] CSVLoader가 초기화되지 않았습니다.");
+            return;
+        }
+
+        var synergyTable = CSVLoader.Instance.GetTable<PartySynergyData>();
+        if (synergyTable == null)
+        {
+            Debug.LogWarning("[TeamSetupPanel] PartySynergyTable이 null입니다.");
+            return;
+        }
+
+        allSynergies = synergyTable.GetAll()
+            .Where(s => s.Party_Name_ID != 0)
+            .OrderBy(s => s.Party_ID)
+            .ToList();
+
+        Debug.Log($"[TeamSetupPanel] 시너지 데이터 로드 완료: {allSynergies.Count}개");
+    }
+
+    /// <summary>
+    /// 현재 덱 기준 활성 시너지 새로고침
+    /// </summary>
+    private void RefreshActiveSynergies()
+    {
+        var activeSynergies = GetActiveSynergies();
+
+        if (activeSynergies.Count == 0)
+        {
+            DisplayNoActiveSynergy();
+        }
+        else
+        {
+            // 첫 번째 활성 시너지 표시
+            DisplayActiveSynergy(activeSynergies[0]);
+        }
+    }
+
+    /// <summary>
+    /// 현재 덱 기준 활성화된 시너지 목록 반환
+    /// </summary>
+    private List<PartySynergyData> GetActiveSynergies()
+    {
+        var activeSynergies = new List<PartySynergyData>();
+
+        if (DeckManager.Instance == null)
+        {
+            Debug.LogWarning("[TeamSetupPanel] DeckManager.Instance is null");
+            return activeSynergies;
+        }
+
+        // 현재 UI 덱 슬롯에서 캐릭터 ID 가져오기
+        var deckCharacterIds = new List<int>();
+        foreach (var slot in deckSlots)
+        {
+            if (slot.IsSet && slot.CharacterId > 0)
+            {
+                deckCharacterIds.Add(slot.CharacterId);
+            }
+        }
+
+        if (deckCharacterIds.Count < 4)
+        {
+            Debug.Log($"[TeamSetupPanel] 덱에 캐릭터가 {deckCharacterIds.Count}명뿐입니다. 시너지 활성화에는 4명 필요.");
+            return activeSynergies;
+        }
+
+        var deckSet = new HashSet<int>(deckCharacterIds);
+
+        foreach (var synergy in allSynergies)
+        {
+            bool isActive = deckSet.Contains(synergy.Req_Char_1_ID)
+                         && deckSet.Contains(synergy.Req_Char_2_ID)
+                         && deckSet.Contains(synergy.Req_Char_3_ID)
+                         && deckSet.Contains(synergy.Req_Char_4_ID);
+
+            if (isActive)
+            {
+                activeSynergies.Add(synergy);
+                Debug.Log($"[TeamSetupPanel] 시너지 활성화됨! Party_ID: {synergy.Party_ID}");
+            }
+        }
+
+        return activeSynergies;
+    }
+
+    /// <summary>
+    /// 활성 시너지 없음 표시 (텍스트만 갱신, 패널 표시는 탭에서 관리)
+    /// </summary>
+    private void DisplayNoActiveSynergy()
+    {
+        if (activeSynergyTitleText != null)
+            activeSynergyTitleText.text = "파티 시너지";
+        if (activeSynergyText != null)
+            activeSynergyText.text = "활성화된 시너지 없음\n\n4명의 캐릭터를 같은 파티로 편성하세요";
+
+        Debug.Log("[TeamSetupPanel] 활성화된 시너지 없음");
+    }
+
+    /// <summary>
+    /// 활성 시너지 표시 (텍스트만 갱신, 패널 표시는 탭에서 관리)
+    /// </summary>
+    private void DisplayActiveSynergy(PartySynergyData synergy)
+    {
+        // 제목 (고정)
+        if (activeSynergyTitleText != null)
+            activeSynergyTitleText.text = "파티 시너지";
+
+        // 시너지 이름 + 효과 설명 (제목\n\n설명 형식)
+        if (activeSynergyText != null)
+        {
+            // 시너지 이름
+            var nameString = CSVLoader.Instance.GetData<StringTable>(synergy.Party_Name_ID);
+            string synergyName = nameString?.Text ?? $"시너지_{synergy.Party_ID}";
+
+            // 효과 설명 (Lv1 기준)
+            var (effectId, effectValue) = GetEffectByLevel(synergy, 1);
+            string effectDescription = GetEffectDescription(effectId, effectValue);
+
+            activeSynergyText.text = $"{synergyName}\n\n{effectDescription}";
+        }
+
+        Debug.Log($"[TeamSetupPanel] 시너지 표시: {activeSynergyText?.text}");
+    }
+
+    /// <summary>
+    /// 레벨에 따른 효과 ID와 값 반환 (확장성 고려)
+    /// </summary>
+    private (int effectId, float effectValue) GetEffectByLevel(PartySynergyData data, int level = 1)
+    {
+        return level switch
+        {
+            1 => (data.Effect_1_ID, data.Effect_1_Value),
+            2 => (data.Effect_2_ID, data.Effect_2_Value),
+            3 => (data.Effect_3_ID, data.Effect_3_Value),
+            4 => (data.Effect_4_ID, data.Effect_4_Value),
+            5 => (data.Effect_5_ID, data.Effect_5_Value),
+            _ => (data.Effect_1_ID, data.Effect_1_Value)
+        };
+    }
+
+    /// <summary>
+    /// 효과 설명 텍스트 생성
+    /// </summary>
+    private string GetEffectDescription(int effectId, float effectValue)
+    {
+        var effectData = CSVLoader.Instance.GetData<PartySynergyEffectData>(effectId);
+        if (effectData == null)
+        {
+            Debug.LogWarning($"[TeamSetupPanel] PartySynergyEffectData not found for ID: {effectId}");
+            return $"효과 {effectId}: {effectValue}";
+        }
+
+        var descriptionString = CSVLoader.Instance.GetData<StringTable>(effectData.Party_Effect_Description_ID);
+        if (descriptionString == null)
+        {
+            Debug.LogWarning($"[TeamSetupPanel] StringTable not found for ID: {effectData.Party_Effect_Description_ID}");
+            return $"효과: {effectValue}";
+        }
+
+        // 효과값 포맷팅 (정수면 소수점 제거)
+        string valueText = effectValue % 1 == 0 ? ((int)effectValue).ToString() : effectValue.ToString("F1");
+
+        // 플레이스홀더 {0}이 있으면 대체, 없으면 그대로 반환
+        string description = descriptionString.Text;
+        if (description.Contains("{0}"))
+        {
+            return string.Format(description, valueText);
+        }
+        else
+        {
+            return $"{description} {valueText}";
+        }
+    }
+
+    #endregion
+
+    private void OnDestroy()
+    {
+        // 버튼 리스너 해제
+        if (partySynergyButton != null)
+            partySynergyButton.onClick.RemoveListener(OnTabPartySynergyButtonClicked);
+        if (characterSelectionButton != null)
+            characterSelectionButton.onClick.RemoveListener(OnTabCharacterButtonClicked);
     }
 }

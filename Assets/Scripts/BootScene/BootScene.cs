@@ -29,6 +29,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private WarningUIManager warningUIManager; 
     [SerializeField] private LoadingUIManager loadingUIManager;
     [SerializeField] private InputManager inputManager;
+    [SerializeField] private PartySynergyManager partySynergyManager;
 
     [Header("Loading Progress")]
     [SerializeField] private float minimumLoadTime = 1.0f; // JML: Minimum time to show loading screen
@@ -93,6 +94,7 @@ public class BootScene : MonoBehaviour
             InitializeCharacterOwnershipManager(),
             InitializeWarningUIManager(),
             InitializeInputManager(),
+            InitializePartySynergyManager()
             InitializeSkillEffectDatabase() // LMJ: 스킬 이펙트 데이터베이스 초기화
         );
 
@@ -120,6 +122,30 @@ public class BootScene : MonoBehaviour
         else
         {
             Debug.LogError("✗ InputManager failed to initialize!");
+        }
+    }
+
+    private async UniTask InitializePartySynergyManager()
+    {
+        Log("Initializing PartySynergyManager...");
+
+        if (partySynergyManager == null)
+        {
+            Debug.LogError("✗ PartySynergyManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+
+        // JML: Wait for Awake to complete
+        await UniTask.WaitUntil(() => PartySynergyManager.Instance != null);
+        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start()
+
+        if (PartySynergyManager.Instance != null)
+        {
+            Log("✓ PartySynergyManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ PartySynergyManager failed to initialize!");
         }
     }
 
@@ -511,13 +537,6 @@ public class BootScene : MonoBehaviour
     {
         Log("--- Loading Firebase Data ---");
 
-        // FirebaseManager가 로그인되어 있는지 확인
-        if (FirebaseManager.Instance == null || !FirebaseManager.Instance.IsSignedIn)
-        {
-            Log("Firebase 로그인 안됨 - 데이터 로드 건너뜀");
-            return;
-        }
-
         // FirebaseSaveManager 초기화
         if (firebaseSaveManager != null)
         {
@@ -602,6 +621,13 @@ public class BootScene : MonoBehaviour
         {
             BookMarkManager.Instance.SetBookmarksFromFirebase(userData.bookmarks);
             Log("✓ BookMarkManager 데이터 적용");
+        }
+
+        // 8. 파티 시너지 레벨 적용 (PartySynergyManager)
+        if (PartySynergyManager.Instance != null && userData.partySynergies != null)
+        {
+            PartySynergyManager.Instance.SetSynergyLevelsFromFirebase(userData.partySynergies.levels);
+            Log("✓ PartySynergyManager 데이터 적용");
         }
 
         // 파견 데이터는 FirebaseSaveManager.CachedData에서 직접 참조하므로 별도 적용 불필요

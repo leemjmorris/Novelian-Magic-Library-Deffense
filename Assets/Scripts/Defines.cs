@@ -67,6 +67,9 @@ public static class AddressableKey
     public static readonly string SkillTypeTable = "SkillTypeTable";
     public static readonly string SkillCardTable = "SkillCardTable"; 
     public static readonly string LayoutPresetTable = "LayoutPresetTable";  // Issue #420    
+    public static readonly string PartySynergyTable = "PartySynergyTable";  // 파티 시너지 테이블
+    public static readonly string PartySynergyEnhancementTable = "PartySynergyEnhancementTable";  // 파티 시너지 강화 테이블
+    public static readonly string PartySynergyEffectTable = "PartySynergyEffectTable";
     
     // JML: Icon Addressable Keys
     public static readonly string Icon_Mystery = "Icon_Mystery";
@@ -84,10 +87,46 @@ public static class AddressableKey
 
     // SkillPrefabDatabase removed - migrated to SkillEffectDatabase
 
-    // JML: 범용 프리팹 방식 - 단일 키 반환 (Issue #320)
+    /// <summary>
+    /// JML: [Obsolete] 이 메서드는 더 이상 사용하지 않음 (Issue #447)
+    /// 개별 캐릭터 프리팹 시스템으로 변경됨.
+    /// CharacterPlacementManager.GetCharacterPrefabKey() 사용 권장.
+    /// Character_ID → CharacterData.Path_ID → PathData.Addressable_Key → "Prefab_" + key
+    /// </summary>
+    [System.Obsolete("Use CharacterPlacementManager.GetCharacterPrefabKey() instead. Individual character prefabs are now loaded via PathTable.")]
     public static string GetCharacterKey(int characterId)
     {
-        return "Character";  // 모든 캐릭터가 동일한 프리팹 사용
+        UnityEngine.Debug.LogWarning($"[AddressableKey] GetCharacterKey({characterId}) is deprecated. Use PathTable lookup with 'Prefab_' prefix instead.");
+        return "Character";  // 구 버전 호환성을 위해 유지 (사용하지 말 것)
+    }
+
+    /// <summary>
+    /// JML: Character_ID로 프리팹 Addressable 키 조회 (Issue #447)
+    /// Character_ID → CharacterData.Path_ID → PathData.Addressable_Key → "Prefab_" + key
+    /// </summary>
+    public static string GetCharacterPrefabKey(int characterId)
+    {
+        if (CSVLoader.Instance == null)
+        {
+            UnityEngine.Debug.LogError("[AddressableKey] CSVLoader.Instance is null");
+            return null;
+        }
+
+        var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
+        if (characterData == null)
+        {
+            UnityEngine.Debug.LogError($"[AddressableKey] CharacterData not found for ID: {characterId}");
+            return null;
+        }
+
+        var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
+        if (pathData == null)
+        {
+            UnityEngine.Debug.LogError($"[AddressableKey] PathData not found for Path_ID: {characterData.Path_ID}");
+            return null;
+        }
+
+        return $"Prefab_{pathData.Addressable_Key}";
     }
 
     public static string GetCardSpriteKey(int characterId)
@@ -98,6 +137,15 @@ public static class AddressableKey
     public static string GetItemIconKey(int itemId)
     {
         return $"ItemIcon_{itemId}";
+    }
+
+    /// <summary>
+    /// Ingredient_ID로 재료 아이콘 어드레서블 키 반환
+    /// 예: 10101 → "IngredientIcon_10101"
+    /// </summary>
+    public static string GetIngredientIconKey(int ingredientId)
+    {
+        return $"IngredientIcon_{ingredientId}";
     }
 
     /// <summary>

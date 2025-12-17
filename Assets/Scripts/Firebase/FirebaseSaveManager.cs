@@ -360,6 +360,53 @@ public class FirebaseSaveManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 닉네임 저장
+    /// </summary>
+    public async UniTask SaveNicknameAsync(string userId, string nickname)
+    {
+        if (!isInitialized) return;
+
+        try
+        {
+            cachedUserData.nickname = nickname;
+            await databaseRef.Child(USERS_PATH).Child(userId).Child("nickname").SetValueAsync(nickname);
+            Debug.Log($"{LOG_PREFIX} 닉네임 저장 완료: {nickname}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 닉네임 저장 실패: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 파티 시너지 레벨 저장
+    /// </summary>
+    public async UniTask SavePartySynergyAsync(string userId, int partyId, int level)
+    {
+        if (!isInitialized) return;
+
+        try
+        {
+            if (cachedUserData.partySynergies == null)
+            {
+                cachedUserData.partySynergies = new PartySynergySaveData();
+            }
+
+            cachedUserData.partySynergies.levels[partyId.ToString()] = level;
+
+            await databaseRef.Child(USERS_PATH).Child(userId)
+                .Child("partySynergies").Child("levels").Child(partyId.ToString())
+                .SetValueAsync(level);
+
+            Debug.Log($"{LOG_PREFIX} 파티 시너지 저장 완료 (PartyID: {partyId}, Lv: {level})");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 파티 시너지 저장 실패: {e.Message}");
+        }
+    }
+
     #endregion
 
     #region 데이터 변환 헬퍼
@@ -368,6 +415,7 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         var result = new Dictionary<string, object>
         {
+            { "nickname", data.nickname ?? "" },
             { "lastUpdated", data.lastUpdated },
             { "currencies", new Dictionary<string, object>
                 {
@@ -424,6 +472,11 @@ public class FirebaseSaveManager : MonoBehaviour
                         }
                     }
                 }
+            },
+            { "partySynergies", new Dictionary<string, object>
+                {
+                    { "levels", data.partySynergies?.levels ?? new Dictionary<string, int>() }
+                }
             }
         };
 
@@ -460,6 +513,10 @@ public class FirebaseSaveManager : MonoBehaviour
     private UserData ParseUserData(DataSnapshot snapshot)
     {
         var data = new UserData();
+
+        // nickname
+        if (snapshot.Child("nickname").Exists)
+            data.nickname = snapshot.Child("nickname").Value?.ToString() ?? "";
 
         // lastUpdated
         if (snapshot.Child("lastUpdated").Exists)
@@ -565,6 +622,20 @@ public class FirebaseSaveManager : MonoBehaviour
         {
             data.dispatch.combat = ParseDispatchState(dispatchSnap.Child("combat"));
             data.dispatch.gathering = ParseDispatchState(dispatchSnap.Child("gathering"));
+        }
+
+        // partySynergies
+        var partySynergiesSnap = snapshot.Child("partySynergies");
+        if (partySynergiesSnap.Exists)
+        {
+            var levelsSnap = partySynergiesSnap.Child("levels");
+            if (levelsSnap.Exists)
+            {
+                foreach (var child in levelsSnap.Children)
+                {
+                    data.partySynergies.levels[child.Key] = GetIntValue(child);
+                }
+            }
         }
 
         return data;

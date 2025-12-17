@@ -71,25 +71,67 @@ public class CharacterPlacementManager : MonoBehaviour
         await PreloadCharacterPrefabs();
     }
 
-    //JML: 범용 프리팹 1개 로드 (Issue #320)
+    //JML: 모든 캐릭터 프리팹 로드 (Issue #447 - 개별 캐릭터 프리팹 시스템)
+    //     CharacterTable → PathTable → "Prefab_" + Addressable_Key 로 프리팹 로드
     private async UniTask PreloadCharacterPrefabs()
     {
-        Debug.Log("[CharacterPlacementManager] Preloading character prefab...");
+        Debug.Log("[CharacterPlacementManager] Preloading all character prefabs...");
 
-        string characterKey = "Character";  // 단일 프리팹 키
-
-        try
+        // CSVLoader 초기화 대기
+        while (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
         {
-            GameObject prefab = await Addressables.LoadAssetAsync<GameObject>(characterKey).Task;
-            loadedCharacterPrefabs[characterKey] = prefab;
-            Debug.Log($"[CharacterPlacementManager] Loaded character prefab: {characterKey}");
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[CharacterPlacementManager] Failed to load '{characterKey}': {e.Message}");
+            Debug.Log("[CharacterPlacementManager] Waiting for CSVLoader to initialize...");
+            await UniTask.Delay(100);
         }
 
-        Debug.Log("[CharacterPlacementManager] Character prefab preload complete");
+        // CharacterTable에서 모든 캐릭터 데이터 조회
+        var characterTable = CSVLoader.Instance.GetTable<CharacterData>();
+        if (characterTable == null || characterTable.Count == 0)
+        {
+            Debug.LogError("[CharacterPlacementManager] No character data found in CharacterTable!");
+            isPreloadComplete = true;
+            return;
+        }
+
+        var allCharacterData = characterTable.GetAll();
+        int loadedCount = 0;
+        int failedCount = 0;
+
+        foreach (var characterData in allCharacterData)
+        {
+            // PathTable에서 Addressable_Key 조회
+            var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
+            if (pathData == null)
+            {
+                Debug.LogWarning($"[CharacterPlacementManager] PathData not found for Path_ID: {characterData.Path_ID}");
+                failedCount++;
+                continue;
+            }
+
+            // "Prefab_" + Addressable_Key 로 프리팹 키 생성
+            string prefabKey = $"Prefab_{pathData.Addressable_Key}";
+
+            // 이미 로드된 프리팹은 스킵
+            if (loadedCharacterPrefabs.ContainsKey(prefabKey))
+            {
+                continue;
+            }
+
+            try
+            {
+                GameObject prefab = await Addressables.LoadAssetAsync<GameObject>(prefabKey).Task;
+                loadedCharacterPrefabs[prefabKey] = prefab;
+                loadedCount++;
+                Debug.Log($"[CharacterPlacementManager] Loaded: {prefabKey} (Character_ID: {characterData.Character_ID})");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[CharacterPlacementManager] Failed to load '{prefabKey}': {e.Message}");
+                failedCount++;
+            }
+        }
+
+        Debug.Log($"[CharacterPlacementManager] Character prefab preload complete. Loaded: {loadedCount}, Failed: {failedCount}");
         isPreloadComplete = true;
     }
 
@@ -226,14 +268,21 @@ public class CharacterPlacementManager : MonoBehaviour
 
     //JML: Place character in random empty slot by CharacterID (called from CardSelectionManager)
     //     Returns true if spawn successful, false if no empty slots
+    //     Issue #447: PathTable 조회로 개별 캐릭터 프리팹 로드
     public bool SpawnCharacterById(int characterId)
     {
-        string characterKey = AddressableKey.GetCharacterKey(characterId);
+        // Character_ID → Path_ID → Addressable_Key → "Prefab_" + key
+        string prefabKey = GetCharacterPrefabKey(characterId);
+        if (string.IsNullOrEmpty(prefabKey))
+        {
+            Debug.LogError($"[CharacterPlacementManager] Failed to get prefab key for Character_ID: {characterId}");
+            return false;
+        }
 
         // Check if prefab is loaded
-        if (!loadedCharacterPrefabs.ContainsKey(characterKey))
+        if (!loadedCharacterPrefabs.ContainsKey(prefabKey))
         {
-            Debug.LogError($"[CharacterPlacementManager] Character prefab '{characterKey}' (ID: {characterId}) is not loaded!");
+            Debug.LogError($"[CharacterPlacementManager] Character prefab '{prefabKey}' (ID: {characterId}) is not loaded!");
             return false;
         }
 
@@ -248,10 +297,10 @@ public class CharacterPlacementManager : MonoBehaviour
         // Instantiate character prefab
         Vector3 spawnPosition = targetSlot.GetWorldPosition();
         Quaternion spawnRotation = GetCharacterRotation(targetSlot);
-        Debug.Log($"[CharacterPlacementManager] Spawning character at slot {targetSlot.GetSlotIndex()}, position: {spawnPosition}");
+        Debug.Log($"[CharacterPlacementManager] Spawning character '{prefabKey}' at slot {targetSlot.GetSlotIndex()}, position: {spawnPosition}");
 
         GameObject characterObj = Instantiate(
-            loadedCharacterPrefabs[characterKey],
+            loadedCharacterPrefabs[prefabKey],
             spawnPosition,
             spawnRotation,
             gridParent
@@ -266,13 +315,45 @@ public class CharacterPlacementManager : MonoBehaviour
 
             // JML: 전역 스텟 버프 적용 (Issue #349)
             ApplyGlobalBuffsToCharacter(character);
+
+            // JML: 파티 시너지 버프 적용 (Issue #331)
+            ApplySynergyBuffToCharacter(character);
         }
 
         // Place in slot
         targetSlot.PlaceCharacter(characterObj);
 
-        Debug.Log($"[CharacterPlacementManager] Character ID {characterId} spawned at slot {targetSlot.GetSlotIndex()}");
+        Debug.Log($"[CharacterPlacementManager] Character ID {characterId} ({prefabKey}) spawned at slot {targetSlot.GetSlotIndex()}");
         return true;
+    }
+
+    /// <summary>
+    /// JML: Character_ID로 프리팹 키 조회 (Issue #447)
+    /// Character_ID → CharacterData.Path_ID → PathData.Addressable_Key → "Prefab_" + key
+    /// </summary>
+    private string GetCharacterPrefabKey(int characterId)
+    {
+        if (CSVLoader.Instance == null)
+        {
+            Debug.LogError("[CharacterPlacementManager] CSVLoader.Instance is null");
+            return null;
+        }
+
+        var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
+        if (characterData == null)
+        {
+            Debug.LogError($"[CharacterPlacementManager] CharacterData not found for ID: {characterId}");
+            return null;
+        }
+
+        var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
+        if (pathData == null)
+        {
+            Debug.LogError($"[CharacterPlacementManager] PathData not found for Path_ID: {characterData.Path_ID}");
+            return null;
+        }
+
+        return $"Prefab_{pathData.Addressable_Key}";
     }
 
     //JML: Check if there are any empty slots available (양방향 방어: 두 그리드 모두 체크)
@@ -750,6 +831,44 @@ public class CharacterPlacementManager : MonoBehaviour
         {
             character.ApplyStatBuff(buff.Key, buff.Value);
         }
+    }
+
+    /// <summary>
+    /// JML: 새로 소환된 캐릭터에 파티 시너지 버프 적용 (Issue #331)
+    /// PartySynergyManager에서 활성 시너지 확인 후 장르 버프 적용
+    /// </summary>
+    private void ApplySynergyBuffToCharacter(Novelian.Combat.Character character)
+    {
+        if (character == null) return;
+
+        if (PartySynergyManager.Instance == null)
+        {
+            Debug.LogWarning("[CharacterPlacementManager] PartySynergyManager.Instance is null");
+            return;
+        }
+
+        PartySynergyManager.Instance.ApplySynergyToCharacter(character);
+    }
+
+    /// <summary>
+    /// JML: 모든 배치된 캐릭터에 파티 시너지 적용 (게임 시작 시 호출)
+    /// </summary>
+    public void ApplySynergyToAllCharacters()
+    {
+        if (PartySynergyManager.Instance == null)
+        {
+            Debug.LogWarning("[CharacterPlacementManager] PartySynergyManager.Instance is null");
+            return;
+        }
+
+        var characters = GetAllCharacters();
+        if (characters.Count == 0)
+        {
+            Debug.Log("[CharacterPlacementManager] 배치된 캐릭터가 없습니다.");
+            return;
+        }
+
+        PartySynergyManager.Instance.ApplySynergyToCharacters(characters);
     }
 
     #endregion

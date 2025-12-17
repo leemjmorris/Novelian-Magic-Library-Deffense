@@ -10,6 +10,45 @@ using UnityEngine;
 /// </summary>
 public static class DamageCalculator
 {
+    #region 상성 시스템 (Genre Affinity)
+
+    /// <summary>
+    /// 상성 매트릭스 [공격자, 방어자]
+    /// 순서: Horror(0), Romance(1), Adventure(2), Comedy(3), Mystery(4)
+    /// 시계방향 순환: 로맨스 → 공포 → 모험 → 추리 → 코믹 → 로맨스
+    /// 상성(시계방향): 1.2x, 역상성(반시계): 0.6x, 중립: 1.0x
+    /// </summary>
+    private static readonly float[,] GenreAffinityMatrix = new float[5, 5]
+    {
+        //                Horror  Romance Adventure Comedy  Mystery
+        /* Horror    */ { 1.0f,   0.6f,   1.2f,     1.0f,   1.0f },
+        /* Romance   */ { 1.2f,   1.0f,   0.6f,     1.0f,   1.0f },
+        /* Adventure */ { 0.6f,   1.0f,   1.0f,     1.0f,   1.2f },
+        /* Comedy    */ { 1.0f,   1.2f,   1.0f,     1.0f,   0.6f },
+        /* Mystery   */ { 1.0f,   1.0f,   0.6f,     1.2f,   1.0f }
+    };
+
+    /// <summary>
+    /// 상성 데미지 배율 계산
+    /// </summary>
+    /// <param name="attackerGenre">공격자(캐릭터) 장르</param>
+    /// <param name="defenderGenre">방어자(몬스터) 장르</param>
+    /// <returns>데미지 배율 (1.2x, 1.0x, 0.6x)</returns>
+    public static float CalculateGenreMultiplier(Genre attackerGenre, Genre defenderGenre)
+    {
+        // Genre enum: Horror=1, Romance=2, Adventure=3, Comedy=4, Mystery=5
+        // 인덱스 0-4로 변환
+        int attackerIdx = (int)attackerGenre - 1;
+        int defenderIdx = (int)defenderGenre - 1;
+
+        // 범위 체크 (잘못된 값이면 중립 반환)
+        if (attackerIdx < 0 || attackerIdx > 4 || defenderIdx < 0 || defenderIdx > 4)
+            return 1.0f;
+
+        return GenreAffinityMatrix[attackerIdx, defenderIdx];
+    }
+
+    #endregion
     /// <summary>
     /// 단일 타격 데미지 계산
     /// 공식: (기본 데미지) × (레벨 배율) × (보조 스킬 배율)

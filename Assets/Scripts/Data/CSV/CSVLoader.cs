@@ -62,6 +62,11 @@ public class CSVLoader : MonoBehaviour
         { AddressableKey.DispatchTimeTable, "Dispatch/DispatchTimeTable.csv" },
         { AddressableKey.DispatchRewardTable, "Dispatch/DispatchRewardTable.csv" },
 
+        // Party 폴더
+        { AddressableKey.PartySynergyTable, "Party/PartySynergyTable.csv" },
+        { AddressableKey.PartySynergyEnhancementTable, "Party/PartySynergyEnhancementTable.csv" },
+        { AddressableKey.PartySynergyEffectTable, "Party/PartySynergyEffectTable.csv" },
+
         // 루트 폴더 (하위 폴더 없음)
         { AddressableKey.GradeTable, "GradeTable.csv" },
         { AddressableKey.CurrencyTable, "CurrencyTable.csv" },
@@ -127,6 +132,11 @@ public class CSVLoader : MonoBehaviour
                 RegisterTableAsync<DispatchRewardTableData>(AddressableKey.DispatchRewardTable, x => x.Dispatch_Reward_ID),
                 RegisterTableAsync<PathData>(AddressableKey.PathTable, x => x.Addressable_ID),
                 RegisterTableAsync<LayoutPresetData>(AddressableKey.LayoutPresetTable, x => x.Layout_ID),  // Issue #420
+
+                // 파티 시너지 테이블
+                RegisterTableAsync<PartySynergyData>(AddressableKey.PartySynergyTable, x => x.Party_ID),
+                RegisterTableAsync<PartySynergyEnhancementData>(AddressableKey.PartySynergyEnhancementTable, x => x.Party_Lv_ID),
+                RegisterTableAsync<PartySynergyEffectData>(AddressableKey.PartySynergyEffectTable, x => x.Party_Effect_ID),
 
                 // 스킬 테이블 (3행 헤더 형식) - Skill 폴더
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
@@ -347,6 +357,10 @@ public class CSVLoader : MonoBehaviour
             // Create and load CsvTable
             var table = new CsvTable<T>(idSelector);
             csvText = System.Text.RegularExpressions.Regex.Replace(csvText, @",N/A(?=[,\r\n]|$)", ",0");
+            // 연속된 쉼표 사이의 빈 값을 0으로 변환 (int 필드용)
+            csvText = System.Text.RegularExpressions.Regex.Replace(csvText, @",,", ",0,");
+            // 한번 더 실행 (연속된 빈 값 처리)
+            csvText = System.Text.RegularExpressions.Regex.Replace(csvText, @",,", ",0,");
             table.LoadFromText(csvText);
 
             Debug.Log($"[CSVLoader] Table loaded: {addressableKey} ({table.Count} rows)");

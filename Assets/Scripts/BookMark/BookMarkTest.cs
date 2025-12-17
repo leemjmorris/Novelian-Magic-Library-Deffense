@@ -13,7 +13,17 @@ public class BookMarkTest : MonoBehaviour
 
     private void OnAddClick()
     {
-        // 강화 시스템 재료 추가 (장르별 정수) - 새로운 ID
+        // ==================== 북마크 제작 재료 (Use_Type 1) ====================
+        IngredientManager.Instance.AddIngredient(10101, 100); // 희미한 마력의 종이
+        IngredientManager.Instance.AddIngredient(10102, 100); // 응축된 마력의 종이
+        IngredientManager.Instance.AddIngredient(10103, 100); // 비범한 마력의 종이
+        IngredientManager.Instance.AddIngredient(10104, 100); // 고대 마력의 종이
+        IngredientManager.Instance.AddIngredient(10105, 100); // 신성한 마력의 종이
+        IngredientManager.Instance.AddIngredient(10106, 100); // 잉크
+        IngredientManager.Instance.AddIngredient(10114, 100); // 룬석
+
+        // ==================== 캐릭터 강화 재료 (Use_Type 2) ====================
+        // 장르별 정수
         IngredientManager.Instance.AddIngredient(10207, 1000); // 장르 정수 1
         IngredientManager.Instance.AddIngredient(10208, 1000); // 장르 정수 2
         IngredientManager.Instance.AddIngredient(10209, 1000); // 장르 정수 3
@@ -43,16 +53,16 @@ public class BookMarkTest : MonoBehaviour
         IngredientManager.Instance.AddIngredient(10233, 500); // 키의 정수
         IngredientManager.Instance.AddIngredient(10234, 500); // 베리타의 정수
 
-        // 북마크 제작 재료 - 새로운 ID (마력의 종이)
-        IngredientManager.Instance.AddIngredient(10101, 100); // 희미한 마력의 종이
-        IngredientManager.Instance.AddIngredient(10102, 100); // 응축된 마력의 종이
-        IngredientManager.Instance.AddIngredient(10103, 100); // 비범한 마력의 종이
-        IngredientManager.Instance.AddIngredient(10104, 100); // 고대 마력의 종이
-        IngredientManager.Instance.AddIngredient(10105, 100); // 신성한 마력의 종이
-        IngredientManager.Instance.AddIngredient(10106, 100); // 잉크
-        IngredientManager.Instance.AddIngredient(10114, 100); // 룬석
+        // ==================== 파티 시너지 강화 재료 (Use_Type 3) ====================
+        IngredientManager.Instance.AddIngredient(10313, 100); // 파티 시너지 강화 재료
 
-        CurrencyManager.Instance.AddGold(10000000); // 1000만 골드
-        Debug.Log("모든 강화 재료 지급 완료! 보유 골드: " + CurrencyManager.Instance.Gold);
+        // ==================== 재화 ====================
+        CurrencyManager.Instance.AddGold(10000000);                                      // 골드 (1000만)
+        CurrencyManager.Instance.AddCurrency(CurrencyManager.EXP_ID, 1000);              // 경험치
+        CurrencyManager.Instance.AddCurrency(CurrencyManager.APPLICATION_ID, 1000);     // 지원서
+        CurrencyManager.Instance.AddCurrency(CurrencyManager.RECOMMENDATION_ID, 1000);  // 추천서
+        CurrencyManager.Instance.AddCurrency(CurrencyManager.MAGIC_STONE_ID, 1000);     // 마석            // AP (최대 30)
+
+        Debug.Log("모든 재료 및 재화 지급 완료!");
     }
 }

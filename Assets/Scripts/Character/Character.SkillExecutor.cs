@@ -61,7 +61,7 @@ namespace Novelian.Combat
                 {
                     // 1발만 발사하는 경우 즉시 발사
                     Projectile projectile = pool.Spawn<Projectile>(spawnPos);
-                    projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
+                    projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier(), GetGenre());
                     Debug.Log($"[Character] Fired 1 projectile {basicAttackData.skill_name} (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1})");
                 }
             }
@@ -83,12 +83,22 @@ namespace Novelian.Combat
                 if (target.GetTransform().CompareTag(Tag.Monster))
                 {
                     Monster monster = target.GetTransform().GetComponent<Monster>();
-                    if (monster != null) monster.TakeDamage(finalDmg, isCrit);
+                    if (monster != null)
+                    {
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), monster.GetGenre());
+                        monster.TakeDamage(finalDmg * genreMultiplier, isCrit);
+                    }
                 }
                 else if (target.GetTransform().CompareTag(Tag.BossMonster))
                 {
                     BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
-                    if (boss != null) boss.TakeDamage(finalDmg, isCrit);
+                    if (boss != null)
+                    {
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), boss.GetGenre());
+                        boss.TakeDamage(finalDmg * genreMultiplier, isCrit);
+                    }
                 }
             }
         }
@@ -120,7 +130,7 @@ namespace Novelian.Combat
                 float projectileSpeed = basicAttackData.projectile_speed > 0 ? basicAttackData.projectile_speed : 10f;
                 float lifetime = basicAttackData.skill_lifetime > 0 ? basicAttackData.skill_lifetime + 1f : 6f; // 퓨즈 시간 + 여유
 
-                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
+                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier(), GetGenre());
                 Debug.Log($"[Character] Launched Dynamite projectile: speed={projectileSpeed}, fuseTime={basicAttackData.skill_lifetime}, damage={FinalDamage:F1}");
             }
             else
@@ -157,7 +167,7 @@ namespace Novelian.Combat
                 float projectileSpeed = basicAttackData.projectile_speed > 0 ? basicAttackData.projectile_speed : 20f;
                 float lifetime = basicAttackData.range / projectileSpeed + 1f; // 사거리까지 이동 시간 + 여유
 
-                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
+                projectile.Launch(spawnPos, targetPos, projectileSpeed, lifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier(), GetGenre());
                 Debug.Log($"[Character] Launched LegendaryStaff projectile: speed={projectileSpeed}, range={basicAttackData.range}, aoeRadius={basicAttackData.aoe_radius}, damage={FinalDamage:F1}");
             }
             else
@@ -188,7 +198,7 @@ namespace Novelian.Combat
                 Vector3 spreadTargetPos = spawnPos + spreadDirection * 1000f;
 
                 Projectile projectile = pool.Spawn<Projectile>(spawnPos);
-                projectile.Launch(spawnPos, spreadTargetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, FinalActiveDamage, activeSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
+                projectile.Launch(spawnPos, spreadTargetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, FinalActiveDamage, activeSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier(), GetGenre());
             }
 
             Debug.Log($"[Character] Active Projectile: {activeSkillData.skill_name} x{projectileCount} (Damage: {FinalActiveDamage:F1})");
@@ -224,7 +234,7 @@ namespace Novelian.Combat
                     return;
                 }
 
-                projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier());
+                projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier(), GetGenre());
 
                 // 마지막 발사가 아니면 대기 (CancellationToken 전달)
                 if (i < projectileCount - 1)
@@ -464,7 +474,20 @@ namespace Novelian.Combat
                     // 데미지 적용 (디버프 스킬은 데미지 0일 수 있음)
                     if (damageToApply > 0)
                     {
-                        hitTarget.TakeDamage(damageToApply);
+                        // 상성 배율 적용
+                        Genre defenderGenre = Genre.Horror;
+                        if (hit.CompareTag(Tag.Monster))
+                        {
+                            Monster monster = hit.GetComponent<Monster>();
+                            if (monster != null) defenderGenre = monster.GetGenre();
+                        }
+                        else if (hit.CompareTag(Tag.BossMonster))
+                        {
+                            BossMonster boss = hit.GetComponent<BossMonster>();
+                            if (boss != null) defenderGenre = boss.GetGenre();
+                        }
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), defenderGenre);
+                        hitTarget.TakeDamage(damageToApply * genreMultiplier);
                     }
 
                     // MainSkillData 자체 효과 적용 (CC/DOT/표식/디버프)
@@ -704,8 +727,20 @@ namespace Novelian.Combat
                                 ApplyStatusEffect(chainTargets[i]);
                             }
 
-                            // Apply damage
-                            chainTargets[i].TakeDamage(currentDamage);
+                            // Apply damage (상성 배율 적용)
+                            Genre defenderGenre = Genre.Horror;
+                            if (chainTargets[i].GetTransform().CompareTag(Tag.Monster))
+                            {
+                                Monster monster = chainTargets[i].GetTransform().GetComponent<Monster>();
+                                if (monster != null) defenderGenre = monster.GetGenre();
+                            }
+                            else if (chainTargets[i].GetTransform().CompareTag(Tag.BossMonster))
+                            {
+                                BossMonster boss = chainTargets[i].GetTransform().GetComponent<BossMonster>();
+                                if (boss != null) defenderGenre = boss.GetGenre();
+                            }
+                            float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), defenderGenre);
+                            chainTargets[i].TakeDamage(currentDamage * genreMultiplier);
 
                             // 틱마다 히트 이펙트 재생 (타겟 위치에 새로 생성)
                             // Wall 통과 처리 포함
@@ -924,10 +959,10 @@ namespace Novelian.Combat
                 placementPos.y = 0f;
             }
 
-            // Create trap object
+            // Create trap object with attacker genre (상성 시스템)
             GameObject trapObj = new GameObject($"Trap_{skillData.skill_name}");
             TrapObject trap = trapObj.AddComponent<TrapObject>();
-            trap.Initialize(skillData, prefabs, supportData, damage, placementPos);
+            trap.Initialize(skillData, prefabs, supportData, damage, placementPos, GetGenre());
 
             Debug.Log($"[Character] Placed Trap: {skillData.skill_name} at {placementPos}");
         }
@@ -951,10 +986,10 @@ namespace Novelian.Combat
                 placementPos.y = 0f;
             }
 
-            // Create mine object
+            // Create mine object with attacker genre (상성 시스템)
             GameObject mineObj = new GameObject($"Mine_{skillData.skill_name}");
             MineObject mine = mineObj.AddComponent<MineObject>();
-            mine.Initialize(skillData, prefabs, supportData, damage, placementPos);
+            mine.Initialize(skillData, prefabs, supportData, damage, placementPos, GetGenre());
 
             Debug.Log($"[Character] Placed Mine: {skillData.skill_name} at {placementPos}");
         }
@@ -982,7 +1017,9 @@ namespace Novelian.Combat
                 BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                 if (boss != null)
                 {
-                    boss.TakeDamage(FinalDamage);
+                    // 상성 배율 적용
+                    float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), boss.GetGenre());
+                    boss.TakeDamage(FinalDamage * genreMultiplier);
 
                     // Spawn hit effect at boss center
                     if (hitEffectPrefab != null)
@@ -1021,8 +1058,9 @@ namespace Novelian.Combat
                     }
                     else
                     {
-                        // HP too high: apply normal damage
-                        monster.TakeDamage(FinalDamage);
+                        // HP too high: apply normal damage (상성 배율 적용)
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), monster.GetGenre());
+                        monster.TakeDamage(FinalDamage * genreMultiplier);
 
                         // Spawn hit effect at monster center
                         if (hitEffectPrefab != null)
@@ -1063,8 +1101,9 @@ namespace Novelian.Combat
                         }
                         else
                         {
-                            // 10% 초과면 일반 데미지
-                            monster.TakeDamage(FinalActiveDamage);
+                            // 10% 초과면 일반 데미지 (상성 배율 적용)
+                            float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), monster.GetGenre());
+                            monster.TakeDamage(FinalActiveDamage * genreMultiplier);
                         }
                     }
                 }
@@ -1074,7 +1113,9 @@ namespace Novelian.Combat
                     BossMonster boss = hits[i].GetComponent<BossMonster>();
                     if (boss != null && boss.IsAlive())
                     {
-                        boss.TakeDamage(FinalActiveDamage);
+                        // 상성 배율 적용
+                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), boss.GetGenre());
+                        boss.TakeDamage(FinalActiveDamage * genreMultiplier);
                     }
                 }
             }

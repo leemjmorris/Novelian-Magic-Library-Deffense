@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 캐릭터 강화 UI 패널
@@ -136,9 +137,17 @@ public class EnhancementPanel : MonoBehaviour
     }
 
     /// <summary>
-    /// 승급 버튼 클릭 이벤트
+    /// 승급 버튼 클릭 이벤트 (Unity Button용 래퍼)
     /// </summary>
     public void OnUpgradeButtonClicked()
+    {
+        OnUpgradeButtonClickedAsync().Forget();
+    }
+
+    /// <summary>
+    /// 승급 버튼 클릭 이벤트 (async - Firebase 저장 완료 대기)
+    /// </summary>
+    private async UniTaskVoid OnUpgradeButtonClickedAsync()
     {
         if (CharacterEnhancementManager.Instance == null)
         {
@@ -154,8 +163,18 @@ public class EnhancementPanel : MonoBehaviour
             return;
         }
 
-        // 강화 실행
-        if (CharacterEnhancementManager.Instance.TryEnhance(characterID))
+        // 버튼 비활성화 (중복 클릭 방지)
+        if (upgradeButton != null)
+            upgradeButton.interactable = false;
+
+        // 강화 실행 (Firebase 저장 완료 대기)
+        bool success = await CharacterEnhancementManager.Instance.TryEnhanceAsync(characterID);
+
+        // 버튼 다시 활성화
+        if (upgradeButton != null)
+            upgradeButton.interactable = true;
+
+        if (success)
         {
             CharacterData charData = CSVLoader.Instance.GetData<CharacterData>(characterID);
             string charName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";

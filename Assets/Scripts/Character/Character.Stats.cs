@@ -388,6 +388,58 @@ namespace Novelian.Combat
 
         #endregion
 
+        #region Genre System (상성 시스템)
+
+        /// <summary>
+        /// 캐릭터 장르 반환 (상성 계산용)
+        /// CharacterData의 Genre를 CSVLoader에서 조회
+        /// </summary>
+        public Genre GetGenre()
+        {
+            int charId = GetCharacterId();
+            if (charId <= 0 || CSVLoader.Instance == null)
+            {
+                return Genre.Horror; // 기본값
+            }
+
+            var charData = CSVLoader.Instance.GetData<CharacterData>(charId);
+            if (charData == null)
+            {
+                return Genre.Horror; // 기본값
+            }
+
+            return charData.Genre;
+        }
+
+        /// <summary>
+        /// 파티 시너지 장르 버프 적용
+        /// PartySynergyManager에서 호출
+        /// </summary>
+        /// <param name="genre">강화할 장르</param>
+        /// <param name="value">버프 값 (0.05 = 5%)</param>
+        public void ApplyGenreSynergyBuff(Genre genre, float value)
+        {
+            // Genre → GenreType 변환 (같은 값이므로 직접 캐스팅)
+            GenreType genreType = (GenreType)(int)genre;
+
+            if (!genreModifiers.ContainsKey(genreType))
+                genreModifiers[genreType] = 0f;
+
+            genreModifiers[genreType] += value;
+            Debug.Log($"[Character] 파티 시너지: {genreType} 속성 강화 +{value * 100f:F0}% (총 {genreModifiers[genreType] * 100f:F0}%)");
+        }
+
+        /// <summary>
+        /// 특정 장르에 대한 현재 modifier 값 반환 (디버그용)
+        /// </summary>
+        public float GetGenreModifier(Genre genre)
+        {
+            GenreType genreType = (GenreType)(int)genre;
+            return genreModifiers.TryGetValue(genreType, out float value) ? value : 0f;
+        }
+
+        #endregion
+
         #region Public Stat Getters (Issue #424 - ChaCard UI용)
 
         /// <summary>

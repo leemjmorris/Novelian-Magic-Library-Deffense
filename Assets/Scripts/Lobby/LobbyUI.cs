@@ -30,11 +30,14 @@ public class LobbyUI : MonoBehaviour
     [Header("Profile Panel")]
     [SerializeField] private GameObject profileDetailPanel; // 프로필 상세 패널 (버튼 누르면 열림)
 
-    private bool isDispatchCompleted = false; // 파견 완료 상태 캐싱
+    [Header("User Nickname")]
+    [SerializeField] private TextMeshProUGUI nicknameText; // 로비 화면에 표시되는 닉네임 (UserText (1))
+
 
     private void OnEnable()
     {
         InitializeAP();
+        RefreshNickname();
 
         if (CurrencyManager.Instance != null)
         {
@@ -46,9 +49,6 @@ public class LobbyUI : MonoBehaviour
         {
             menuLayout.SetActive(true);
         }
-
-        // 파견 완료 플래그 초기화
-        isDispatchCompleted = false;
 
         // 파견 완료 상태 주기적 확인 시작
         InvokeRepeating(nameof(CheckDispatchState), 0f, dispatchCheckInterval);
@@ -158,6 +158,7 @@ public class LobbyUI : MonoBehaviour
         WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
+    
     public void OnInventoryButton()
     {
         // 메뉴 레이아웃이 열려있으면 먼저 닫기
@@ -175,6 +176,11 @@ public class LobbyUI : MonoBehaviour
         {
             lobbyWindow.SetActive(false);
         }
+    }
+
+    public void OnTrainingGroundButton()
+    {
+        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
     }
 
     /// <summary>
@@ -270,40 +276,25 @@ public class LobbyUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 파견 완료 상태 확인 및 Red Dot 표시 (최적화: 완료되면 더 이상 체크 안 함)
+    /// 파견 완료 상태 확인 및 Red Dot 표시
     /// DispatchStateHelper 유틸리티 클래스 사용
     /// </summary>
     private void CheckDispatchState()
     {
-        // Red Dot이 할당되지 않았으면 무시
         if (dispatchRedDot == null)
         {
             return;
         }
 
-        // 이미 파견 완료 상태라면 더 이상 체크하지 않음 (최적화)
-        if (isDispatchCompleted)
-        {
-            return;
-        }
-
-        // DispatchStateHelper를 사용한 간단한 파견 완료 체크
+        // DispatchStateHelper를 사용한 파견 완료 체크
         bool isCompleted = DispatchStateHelper.IsDispatchCompleted();
 
-        if (isCompleted)
+        if (isCompleted != dispatchRedDot.activeSelf)
         {
-            // 파견 완료 상태라면 Red Dot 활성화 후 체크 중지
-            dispatchRedDot.SetActive(true);
-            isDispatchCompleted = true; // 플래그 설정으로 더 이상 체크 안 함
-            CancelInvoke(nameof(CheckDispatchState)); // 주기적 확인 중지
-            Debug.Log("[LobbyUI] ✅ 파견 완료 - 로비에 Red Dot 표시 (체크 중지)");
-        }
-        else
-        {
-            // 파견 중이거나 저장된 상태가 없으면 Red Dot 비활성화
-            if (dispatchRedDot.activeSelf)
+            dispatchRedDot.SetActive(isCompleted);
+            if (isCompleted)
             {
-                dispatchRedDot.SetActive(false);
+                Debug.Log("[LobbyUI] ✅ 파견 완료 - 로비에 Red Dot 표시");
             }
         }
     }
@@ -416,6 +407,25 @@ public class LobbyUI : MonoBehaviour
 
         // Step 7: 페이드 패널 비활성화
         FadeController.Instance.fadePanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// 로비 화면에 닉네임 표시
+    /// Firebase에서 캐시된 닉네임을 UserText (1)에 표시
+    /// </summary>
+    public void RefreshNickname()
+    {
+        if (nicknameText == null) return;
+
+        if (FirebaseSaveManager.Instance != null && FirebaseSaveManager.Instance.CachedData != null)
+        {
+            string nickname = FirebaseSaveManager.Instance.CachedData.nickname;
+            nicknameText.text = string.IsNullOrEmpty(nickname) ? "Guest" : nickname;
+        }
+        else
+        {
+            nicknameText.text = "Guest";
+        }
     }
 }
 

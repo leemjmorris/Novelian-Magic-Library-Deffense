@@ -9,6 +9,7 @@ namespace Firebase.Data
     [Serializable]
     public class UserData
     {
+        public string nickname;
         public string lastUpdated;
         public CurrencySaveData currencies;
         public ProgressionData progression;
@@ -17,9 +18,11 @@ namespace Firebase.Data
         public Dictionary<string, int> ingredients;
         public BookmarkSaveData bookmarks;
         public DispatchData dispatch;
+        public PartySynergySaveData partySynergies;
 
         public UserData()
         {
+            nickname = "";
             lastUpdated = DateTime.UtcNow.ToString("o");
             currencies = new CurrencySaveData();
             progression = new ProgressionData();
@@ -28,6 +31,7 @@ namespace Firebase.Data
             ingredients = new Dictionary<string, int>();
             bookmarks = new BookmarkSaveData();
             dispatch = new DispatchData();
+            partySynergies = new PartySynergySaveData();
         }
 
         /// <summary>
@@ -207,6 +211,17 @@ namespace Firebase.Data
             hours = 0;
             startTime = "";
             endTime = "";
+        }
+    }
+
+    [Serializable]
+    public class PartySynergySaveData
+    {
+        public Dictionary<string, int> levels; // Party_ID → Level
+
+        public PartySynergySaveData()
+        {
+            levels = new Dictionary<string, int>();
         }
     }
 }

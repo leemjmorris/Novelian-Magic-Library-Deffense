@@ -28,7 +28,14 @@ namespace Novelian.Combat
                 // DamageCalculator 사용
                 float baseDamage = DamageCalculator.CalculateSingleDamage(basicAttackData.base_damage, levelMult, supportMult);
                 // 캐릭터 변형 적용
-                return baseDamage * (1f + damageModifier / 100f);
+                float withModifier = baseDamage * (1f + damageModifier / 100f);
+                // 파티 시너지 버프 적용 (캐릭터 장르 기반)
+                float genreMod = GetGenreModifier(GetGenre());
+                if (genreMod > 0)
+                {
+                    Debug.Log($"[Character] FinalDamage: base={withModifier:F1}, genre={GetGenre()}, genreMod={genreMod:F2}, final={withModifier * (1f + genreMod):F1}");
+                }
+                return withModifier * (1f + genreMod);
             }
         }
 
@@ -87,7 +94,10 @@ namespace Novelian.Combat
                 // DamageCalculator로 단일 데미지 계산
                 float baseDamage = DamageCalculator.CalculateSingleDamage(activeSkillData.base_damage, levelMult, supportMult);
                 // 캐릭터 변형 적용
-                return baseDamage * (1f + damageModifier / 100f);
+                float withModifier = baseDamage * (1f + damageModifier / 100f);
+                // 파티 시너지 버프 적용 (캐릭터 장르 기반)
+                float genreMod = GetGenreModifier(GetGenre());
+                return withModifier * (1f + genreMod);
             }
         }
 
