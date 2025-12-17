@@ -135,8 +135,9 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
 
         if (bookMark.Type == BookmarkType.Stat)
         {
-            string optionName = GetOptionTypeName(bookMark.OptionType);
-            return $"등급: {gradeName}\n{optionName} +{bookMark.OptionValue}%";
+            string optionName = GetOptionNameFromCSV(bookMark);
+            float displayPercent = bookMark.OptionValue * 100f;
+            return $"등급: {gradeName}\n{optionName} +{displayPercent}%";
         }
         else // Skill
         {
@@ -176,17 +177,20 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// JML: 옵션 타입 이름 반환
-    /// TODO: 나중에 CSV 테이블에서 가져오도록 변경
+    /// JML: CSV에서 옵션 이름 가져오기 (BookmarkTable → BookmarkOptionTable → StringTable 연동)
     /// </summary>
-    private string GetOptionTypeName(int optionType)
+    private string GetOptionNameFromCSV(BookMark bookMark)
     {
-        switch (optionType)
-        {
-            case 1: return "공격력";
-            case 2: return "방어력";
-            case 3: return "체력";
-            default: return "알 수 없음";
-        }
+        // 1. BookmarkTable에서 책갈피 데이터 조회 (BookmarkDataID = Bookmark_ID)
+        var bookmarkData = CSVLoader.Instance?.GetData<BookmarkData>(bookMark.BookmarkDataID);
+        if (bookmarkData == null) return "알 수 없음";
+
+        // 2. BookmarkOptionTable에서 옵션 데이터 조회 (Option_ID)
+        var optionData = CSVLoader.Instance?.GetData<BookmarkOptionData>(bookmarkData.Option_ID);
+        if (optionData == null) return "알 수 없음";
+
+        // 3. StringTable에서 옵션 이름 조회 (Option_Name_ID)
+        var stringData = CSVLoader.Instance?.GetData<StringTable>(optionData.Option_Name_ID);
+        return stringData?.Text ?? "알 수 없음";
     }
 }
