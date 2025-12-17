@@ -113,6 +113,18 @@ namespace Dispatch
         [SerializeField] private float arrowMoveDistance = 10f;  // 화살표 이동 거리
         [SerializeField] private float arrowMoveSpeed = 3f;  // 화살표 이동 속도
 
+        [Header("맵 선택 확대 애니메이션")]
+        [SerializeField] private ScaleAnimator combatScaleAnimator1;
+        [SerializeField] private ScaleAnimator combatScaleAnimator2;
+        [SerializeField] private ScaleAnimator combatScaleAnimator3;
+        [SerializeField] private ScaleAnimator combatScaleAnimator4;
+        [SerializeField] private ScaleAnimator combatScaleAnimator5;
+        [SerializeField] private ScaleAnimator collectionScaleAnimator1;
+        [SerializeField] private ScaleAnimator collectionScaleAnimator2;
+        [SerializeField] private ScaleAnimator collectionScaleAnimator3;
+        [SerializeField] private ScaleAnimator collectionScaleAnimator4;
+        [SerializeField] private ScaleAnimator collectionScaleAnimator5;
+
         private int currentSelectedHours = 4;
         private int currentSelectedTimeID;
         private List<DispatchTimeTableData> availableTimes;
@@ -182,6 +194,9 @@ namespace Dispatch
                 currentSelectedLocation = initialLocation;
                 ShowTipText(initialLocation);
                 UpdateTimeDisplay(0);
+
+                // 초기 선택 애니메이션 적용 (즉시 적용)
+                ApplySelectionAnimationImmediate(initialLocation);
             }
 
             // 화살표 초기 위치 저장
@@ -694,11 +709,106 @@ namespace Dispatch
 
             AddLog($"📍 선택된 장소: {GetLocationName(location)}");
 
+            // 선택 확대 애니메이션 적용
+            ApplySelectionAnimation(location);
+
             // 해당 창고의 팁 텍스트 표시
             ShowTipText(location);
 
             // UI 업데이트 (보상 정보만 표시)
             UpdateTimeDisplay(Mathf.RoundToInt(timeSlider.value));
+        }
+
+        /// <summary>
+        /// 선택된 맵에 확대 애니메이션 적용
+        /// </summary>
+        private void ApplySelectionAnimation(DispatchLocation selectedLocation)
+        {
+            if (panelDispatchType == DispatchType.Combat)
+            {
+                // 전투형 애니메이터 배열
+                ScaleAnimator[] animators = { combatScaleAnimator1, combatScaleAnimator2, combatScaleAnimator3, combatScaleAnimator4, combatScaleAnimator5 };
+                DispatchLocation[] locations = { DispatchLocation.NightmareWarehouse, DispatchLocation.FateWarehouse, DispatchLocation.LaughterWarehouse, DispatchLocation.TruthWarehouse, DispatchLocation.UnknownWarehouse };
+
+                for (int i = 0; i < animators.Length; i++)
+                {
+                    if (animators[i] == null) continue;
+
+                    if (locations[i] == selectedLocation)
+                    {
+                        animators[i].PlaySelect();
+                    }
+                    else
+                    {
+                        animators[i].PlayDeselect();
+                    }
+                }
+            }
+            else
+            {
+                // 채집형 애니메이터 배열
+                ScaleAnimator[] animators = { collectionScaleAnimator1, collectionScaleAnimator2, collectionScaleAnimator3, collectionScaleAnimator4, collectionScaleAnimator5 };
+                DispatchLocation[] locations = { DispatchLocation.MagicLibraryOrganization, DispatchLocation.MagicBarrierInspection, DispatchLocation.SpellbookCoverRestoration, DispatchLocation.SealStabilityCheck, DispatchLocation.MagicResiduePurification };
+
+                for (int i = 0; i < animators.Length; i++)
+                {
+                    if (animators[i] == null) continue;
+
+                    if (locations[i] == selectedLocation)
+                    {
+                        animators[i].PlaySelect();
+                    }
+                    else
+                    {
+                        animators[i].PlayDeselect();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 선택된 맵에 확대 애니메이션 즉시 적용 (초기화용)
+        /// </summary>
+        private void ApplySelectionAnimationImmediate(DispatchLocation selectedLocation)
+        {
+            if (panelDispatchType == DispatchType.Combat)
+            {
+                ScaleAnimator[] animators = { combatScaleAnimator1, combatScaleAnimator2, combatScaleAnimator3, combatScaleAnimator4, combatScaleAnimator5 };
+                DispatchLocation[] locations = { DispatchLocation.NightmareWarehouse, DispatchLocation.FateWarehouse, DispatchLocation.LaughterWarehouse, DispatchLocation.TruthWarehouse, DispatchLocation.UnknownWarehouse };
+
+                for (int i = 0; i < animators.Length; i++)
+                {
+                    if (animators[i] == null) continue;
+
+                    if (locations[i] == selectedLocation)
+                    {
+                        animators[i].SetSelectedImmediate();
+                    }
+                    else
+                    {
+                        animators[i].SetDeselectedImmediate();
+                    }
+                }
+            }
+            else
+            {
+                ScaleAnimator[] animators = { collectionScaleAnimator1, collectionScaleAnimator2, collectionScaleAnimator3, collectionScaleAnimator4, collectionScaleAnimator5 };
+                DispatchLocation[] locations = { DispatchLocation.MagicLibraryOrganization, DispatchLocation.MagicBarrierInspection, DispatchLocation.SpellbookCoverRestoration, DispatchLocation.SealStabilityCheck, DispatchLocation.MagicResiduePurification };
+
+                for (int i = 0; i < animators.Length; i++)
+                {
+                    if (animators[i] == null) continue;
+
+                    if (locations[i] == selectedLocation)
+                    {
+                        animators[i].SetSelectedImmediate();
+                    }
+                    else
+                    {
+                        animators[i].SetDeselectedImmediate();
+                    }
+                }
+            }
         }
 
         /// <summary>

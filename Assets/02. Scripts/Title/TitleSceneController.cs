@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 
 /// <summary>
 /// TitleScene UI 컨트롤러
@@ -15,13 +17,158 @@ public class TitleSceneController : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private GameObject loginPanel;
     [SerializeField] private GameObject pressText;
+    [SerializeField] private RectTransform titleText;
+
+    [Header("Animation Settings")]
+    [SerializeField] private float titleFloatDistance = 20f;
+    [SerializeField] private float titleFloatDuration = 2f;
+    [SerializeField] private float titleFadeInDuration = 1f;
+    [SerializeField] private float pressTextFadeDuration = 1f;
+    [SerializeField] private float pressTextPulseScale = 1.1f;
+    [SerializeField] private float pressTextPulseDuration = 0.8f;
+
+    [Header("Glow Settings")]
+    [SerializeField] private float glowMinIntensity = 0.5f;
+    [SerializeField] private float glowMaxIntensity = 1.5f;
+    [SerializeField] private float glowDuration = 1.5f;
 
     private bool isProcessing;
     private bool isLoginButtonsShown;
+    private Image pressTextImage;
+    private Image titleTextImage;
+    private Vector2 titleOriginalPosition;
+    private Sequence pressTextSequence;
+    private Material titleMaterial;
+    private Tweener titleFloatTween;
+    private Tweener titleFadeTween;
+    private Tweener glowTween;
+    private Tweener pressTextFadeTween;
+    private Tweener pressTextScaleTween;
+    private static readonly int GlowIntensityID = Shader.PropertyToID("_GlowIntensity");
 
     private async void Start()
     {
+        InitializeAnimations();
+        PlayTitleAnimations();
         await InitializeFirebaseAsync();
+    }
+
+    private void OnDestroy()
+    {
+        // 모든 Tween 정리
+        titleFloatTween?.Kill();
+        titleFadeTween?.Kill();
+        glowTween?.Kill();
+        pressTextSequence?.Kill();
+        pressTextFadeTween?.Kill();
+        pressTextScaleTween?.Kill();
+
+        // Material 인스턴스 정리
+        if (titleMaterial != null)
+        {
+            Destroy(titleMaterial);
+        }
+    }
+
+    /// <summary>
+    /// 애니메이션 초기화
+    /// </summary>
+    private void InitializeAnimations()
+    {
+        if (titleText != null)
+        {
+            titleTextImage = titleText.GetComponent<Image>();
+            titleOriginalPosition = titleText.anchoredPosition;
+
+            if (titleTextImage != null)
+            {
+                var color = titleTextImage.color;
+                color.a = 0f;
+                titleTextImage.color = color;
+            }
+        }
+
+        if (pressText != null)
+        {
+            pressTextImage = pressText.GetComponent<Image>();
+
+            if (pressTextImage != null)
+            {
+                var color = pressTextImage.color;
+                color.a = 0f;
+                pressTextImage.color = color;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 타이틀 애니메이션 재생
+    /// </summary>
+    private void PlayTitleAnimations()
+    {
+        // TitleText 페이드인 + 플로팅 애니메이션
+        if (titleTextImage != null && titleText != null)
+        {
+            // 페이드인
+            titleFadeTween = titleTextImage.DOFade(1f, titleFadeInDuration).SetEase(Ease.OutQuad);
+
+            // 플로팅 (위아래로 떠다니는 효과) - Yoyo 루프로 자연스럽게
+            titleFloatTween = titleText.DOAnchorPosY(titleOriginalPosition.y + titleFloatDistance, titleFloatDuration)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+
+            // Glow 애니메이션 (Material이 UIGlow Shader를 사용하는 경우)
+            if (titleTextImage.material != null && titleTextImage.material.HasProperty(GlowIntensityID))
+            {
+                // Material 인스턴스 생성 (원본 변경 방지)
+                titleMaterial = Instantiate(titleTextImage.material);
+                titleTextImage.material = titleMaterial;
+
+                // Glow Intensity 애니메이션
+                titleMaterial.SetFloat(GlowIntensityID, glowMinIntensity);
+                glowTween = DOTween.To(
+                    () => titleMaterial.GetFloat(GlowIntensityID),
+                    x => titleMaterial.SetFloat(GlowIntensityID, x),
+                    glowMaxIntensity,
+                    glowDuration
+                ).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo);
+            }
+        }
+
+        // PressText 페이드인 후 깜빡임 + 펄스 애니메이션
+        if (pressTextImage != null && pressText != null)
+        {
+            pressTextSequence = DOTween.Sequence();
+
+            // 1초 후 페이드인 시작
+            pressTextSequence
+                .AppendInterval(titleFadeInDuration)
+                .Append(pressTextImage.DOFade(1f, pressTextFadeDuration).SetEase(Ease.OutQuad))
+                .AppendCallback(() => StartPressTextLoopAnimation());
+        }
+    }
+
+    /// <summary>
+    /// PressText 루프 애니메이션 (깜빡임 + 펄스)
+    /// </summary>
+    private void StartPressTextLoopAnimation()
+    {
+        if (pressTextImage == null || pressText == null) return;
+
+        var rectTransform = pressText.GetComponent<RectTransform>();
+
+        // 깜빡임 (페이드 인/아웃 반복)
+        pressTextFadeTween = pressTextImage.DOFade(0.3f, pressTextFadeDuration)
+            .SetEase(Ease.InOutSine)
+            .SetLoops(-1, LoopType.Yoyo);
+
+        // 펄스 (스케일 반복)
+        if (rectTransform != null)
+        {
+            pressTextScaleTween = rectTransform.DOScale(pressTextPulseScale, pressTextPulseDuration)
+                .SetEase(Ease.InOutSine)
+                .SetLoops(-1, LoopType.Yoyo);
+        }
     }
 
     /// <summary>
