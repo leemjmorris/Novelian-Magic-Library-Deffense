@@ -1,6 +1,8 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.AddressableAssets;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 파티 시너지 강화 패널
@@ -32,13 +34,86 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
     [SerializeField] private TextMeshProUGUI nextLevelText;
     [SerializeField] private TextMeshProUGUI nextEffectText;
 
+    [Header("Upgrade Button")]
+    [SerializeField] private Button upgradeButton;
+    [SerializeField] private Image materialIcon;
+    [SerializeField] private TextMeshProUGUI materialCountText;
+    [SerializeField] private TextMeshProUGUI goldText;
+
     private PartySynergyData currentSynergyData;
+    private PartySynergyEnhancementData currentEnhancementData;
+
+    // Issue 1: 연속 클릭 방지 플래그
+    private bool isUpgrading = false;
+
+    // Issue 2: Addressables 메모리 관리
+    private UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<Sprite> currentIconHandle;
+    private bool hasLoadedIcon = false;
 
     private void Awake()
     {
         if (closeButton != null)
         {
             closeButton.onClick.AddListener(OnCloseButtonClicked);
+        }
+
+        if (upgradeButton != null)
+        {
+            upgradeButton.onClick.AddListener(OnUpgradeButtonClicked);
+        }
+    }
+
+    private void OnEnable()
+    {
+        // Issue 4: 재화/재료 변경 이벤트 구독
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
+        }
+        if (IngredientManager.Instance != null)
+        {
+            IngredientManager.Instance.OnIngredientChanged += OnIngredientChanged;
+        }
+    }
+
+    private void OnDisable()
+    {
+        // Issue 4: 이벤트 구독 해제
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCurrencyChanged -= OnCurrencyChanged;
+        }
+        if (IngredientManager.Instance != null)
+        {
+            IngredientManager.Instance.OnIngredientChanged -= OnIngredientChanged;
+        }
+    }
+
+    /// <summary>
+    /// 재화 변경 시 UI 갱신
+    /// </summary>
+    private void OnCurrencyChanged(int currencyId, int newAmount)
+    {
+        // 골드 변경 시에만 갱신
+        if (currencyId == CurrencyManager.GOLD_ID && currentSynergyData != null && currentEnhancementData != null)
+        {
+            UpdateGoldInfo(currentEnhancementData);
+            int currentLevel = PartySynergyManager.Instance != null ? PartySynergyManager.Instance.GetSynergyLevel(currentSynergyData.Party_ID) : 1;
+            UpdateButtonInteractable(currentSynergyData, currentLevel);
+        }
+    }
+
+    /// <summary>
+    /// 재료 변경 시 UI 갱신
+    /// </summary>
+    private void OnIngredientChanged(int ingredientId, int newAmount)
+    {
+        // 현재 필요한 재료가 변경된 경우에만 갱신
+        if (currentSynergyData != null && currentEnhancementData != null && currentEnhancementData.Material_ID == ingredientId)
+        {
+            UpdateMaterialInfo(currentEnhancementData);
+            int currentLevel = PartySynergyManager.Instance != null ? PartySynergyManager.Instance.GetSynergyLevel(currentSynergyData.Party_ID) : 1;
+            UpdateButtonInteractable(currentSynergyData, currentLevel);
         }
     }
 
@@ -66,9 +141,12 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
         InitializeCharacterSlots(data);
 
         // 시너지 레벨 정보 업데이트
-        int currentSynergyLevel = PartySynergyManager.Instance?.GetSynergyLevel() ?? 1;
+        int currentSynergyLevel = PartySynergyManager.Instance?.GetSynergyLevel(data.Party_ID) ?? 1;
         UpdateRequiredLevelText(data, currentSynergyLevel);
         UpdateSynergyLevelInfo(data, currentSynergyLevel);
+
+        // 업그레이드 버튼 정보 업데이트
+        UpdateUpgradeButton(data, currentSynergyLevel);
 
         Debug.Log($"[PartySynergyEnhancementPanel] Initialized - PartyID: {data.Party_ID}, PartySize: {data.Party_Size}");
     }
@@ -262,11 +340,322 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
         return currentSynergyData;
     }
 
+    #region Upgrade Button
+
+    /// <summary>
+    /// 업그레이드 버튼 클릭 이벤트 (Unity Button용 래퍼)
+    /// </summary>
+    private void OnUpgradeButtonClicked()
+    {
+        OnUpgradeButtonClickedAsync().Forget();
+    }
+
+    /// <summary>
+    /// 업그레이드 버튼 클릭 이벤트 (async - Firebase 저장 완료 대기)
+    /// </summary>
+    private async UniTaskVoid OnUpgradeButtonClickedAsync()
+    {
+        // Issue 1: 연속 클릭 방지
+        if (isUpgrading)
+        {
+            Debug.Log("[PartySynergyEnhancementPanel] Upgrade already in progress");
+            return;
+        }
+
+        if (currentSynergyData == null || currentEnhancementData == null)
+        {
+            Debug.LogWarning("[PartySynergyEnhancementPanel] No enhancement data available");
+            return;
+        }
+
+        // 강화 시작 - 버튼 즉시 비활성화
+        isUpgrading = true;
+        if (upgradeButton != null)
+        {
+            upgradeButton.interactable = false;
+        }
+
+        // 재료 소모
+        int materialId = currentEnhancementData.Material_ID;
+        int materialCount = currentEnhancementData.Material_Count;
+        bool materialSuccess = IngredientManager.Instance != null && IngredientManager.Instance.RemoveIngredient(materialId, materialCount);
+
+        if (!materialSuccess)
+        {
+            Debug.LogWarning("[PartySynergyEnhancementPanel] Failed to consume materials");
+            isUpgrading = false;
+            RefreshUI(); // 버튼 상태 복원
+            return;
+        }
+
+        // 골드 소모
+        int goldCount = currentEnhancementData.Gold_Count;
+        bool goldSuccess = CurrencyManager.Instance != null && CurrencyManager.Instance.SpendCurrency(CurrencyManager.GOLD_ID, goldCount);
+
+        if (!goldSuccess)
+        {
+            // 재료 롤백 (골드 소모 실패 시)
+            if (IngredientManager.Instance != null)
+            {
+                IngredientManager.Instance.AddIngredient(materialId, materialCount);
+            }
+            Debug.LogWarning("[PartySynergyEnhancementPanel] Failed to consume gold");
+            isUpgrading = false;
+            RefreshUI(); // 버튼 상태 복원
+            return;
+        }
+
+        // 시너지 레벨 증가 (Firebase 저장 완료 대기)
+        int currentLevel = PartySynergyManager.Instance != null ? PartySynergyManager.Instance.GetSynergyLevel(currentSynergyData.Party_ID) : 1;
+        int newLevel = currentLevel + 1;
+        if (PartySynergyManager.Instance != null)
+        {
+            await PartySynergyManager.Instance.SetSynergyLevelAsync(currentSynergyData.Party_ID, newLevel);
+        }
+
+        Debug.Log($"[PartySynergyEnhancementPanel] Upgrade successful! Level: {currentLevel} -> {newLevel}");
+
+        // UI 갱신 후 플래그 해제
+        RefreshUI();
+        isUpgrading = false;
+    }
+
+    /// <summary>
+    /// UI 갱신 (강화 후)
+    /// </summary>
+    private void RefreshUI()
+    {
+        if (currentSynergyData == null) return;
+
+        int currentLevel = PartySynergyManager.Instance?.GetSynergyLevel(currentSynergyData.Party_ID) ?? 1;
+
+        // 필요 캐릭터 레벨 업데이트
+        UpdateRequiredLevelText(currentSynergyData, currentLevel);
+
+        // 시너지 레벨 정보 업데이트
+        UpdateSynergyLevelInfo(currentSynergyData, currentLevel);
+
+        // 업그레이드 버튼 정보 업데이트
+        UpdateUpgradeButton(currentSynergyData, currentLevel);
+    }
+
+    /// <summary>
+    /// 업그레이드 버튼 정보 업데이트
+    /// </summary>
+    private void UpdateUpgradeButton(PartySynergyData data, int currentLevel)
+    {
+        // 다음 업그레이드 ID 가져오기
+        int nextUpgradeId = GetNextUpgradeId(data, currentLevel);
+
+        // 최대 레벨이면 버튼 비활성화
+        if (nextUpgradeId == 0)
+        {
+            if (upgradeButton != null)
+            {
+                upgradeButton.interactable = false;
+            }
+            if (materialIcon != null)
+            {
+                materialIcon.enabled = false;
+            }
+            if (materialCountText != null)
+            {
+                materialCountText.text = "MAX";
+            }
+            if (goldText != null)
+            {
+                goldText.text = "";
+            }
+            return;
+        }
+
+        // 강화 데이터 조회
+        currentEnhancementData = CSVLoader.Instance?.GetData<PartySynergyEnhancementData>(nextUpgradeId);
+        if (currentEnhancementData == null)
+        {
+            Debug.LogWarning($"[PartySynergyEnhancementPanel] Enhancement data not found for ID: {nextUpgradeId}");
+            return;
+        }
+
+        // 재료 정보 업데이트
+        UpdateMaterialInfo(currentEnhancementData);
+
+        // 골드 정보 업데이트
+        UpdateGoldInfo(currentEnhancementData);
+
+        // 버튼 활성화 조건 체크
+        UpdateButtonInteractable(data, currentLevel);
+    }
+
+    /// <summary>
+    /// 재료 아이콘 및 수량 정보 업데이트
+    /// </summary>
+    private void UpdateMaterialInfo(PartySynergyEnhancementData enhancementData)
+    {
+        int materialId = enhancementData.Material_ID;
+        int requiredCount = enhancementData.Material_Count;
+
+        // 보유 수량 조회
+        int ownedCount = IngredientManager.Instance?.GetIngredientCount(materialId) ?? 0;
+
+        // 재료 아이콘 로드
+        LoadMaterialIcon(materialId).Forget();
+
+        // 수량 텍스트 설정
+        if (materialCountText != null)
+        {
+            bool hasEnough = ownedCount >= requiredCount;
+            if (hasEnough)
+            {
+                materialCountText.text = $"{ownedCount}/{requiredCount}";
+            }
+            else
+            {
+                materialCountText.text = $"<color=red>{ownedCount}/{requiredCount}</color>";
+            }
+        }
+    }
+
+    /// <summary>
+    /// 재료 아이콘 로드 (비동기)
+    /// </summary>
+    private async UniTaskVoid LoadMaterialIcon(int materialId)
+    {
+        if (materialIcon == null) return;
+
+        // Issue 2: 이전에 로드한 아이콘 해제
+        ReleaseCurrentIcon();
+
+        // IngredientData에서 Path_ID 가져오기
+        var ingredientData = CSVLoader.Instance?.GetData<IngredientData>(materialId);
+        if (ingredientData == null || ingredientData.Path_ID == 0)
+        {
+            materialIcon.enabled = false;
+            return;
+        }
+
+        // PathData에서 Addressable_Key 가져오기
+        var pathData = CSVLoader.Instance?.GetData<PathData>(ingredientData.Path_ID);
+        if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key))
+        {
+            materialIcon.enabled = false;
+            return;
+        }
+
+        string iconPath = pathData.Addressable_Key;
+
+        try
+        {
+            // 키가 존재하는지 확인
+            var locationsHandle = Addressables.LoadResourceLocationsAsync(iconPath);
+            var locations = await locationsHandle.Task;
+
+            if (locations != null && locations.Count > 0)
+            {
+                // Issue 2: 핸들을 저장하여 나중에 해제할 수 있도록 함
+                currentIconHandle = Addressables.LoadAssetAsync<Sprite>(iconPath);
+                Sprite icon = await currentIconHandle.Task;
+
+                if (icon != null && materialIcon != null)
+                {
+                    materialIcon.sprite = icon;
+                    materialIcon.enabled = true;
+                    hasLoadedIcon = true;
+                }
+            }
+            else
+            {
+                materialIcon.enabled = false;
+            }
+
+            Addressables.Release(locationsHandle);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[PartySynergyEnhancementPanel] Failed to load material icon: {iconPath}\n{e.Message}");
+            materialIcon.enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// Issue 2: 현재 로드된 아이콘 해제
+    /// </summary>
+    private void ReleaseCurrentIcon()
+    {
+        if (hasLoadedIcon && currentIconHandle.IsValid())
+        {
+            Addressables.Release(currentIconHandle);
+            hasLoadedIcon = false;
+        }
+    }
+
+    /// <summary>
+    /// 골드 비용 정보 업데이트
+    /// </summary>
+    private void UpdateGoldInfo(PartySynergyEnhancementData enhancementData)
+    {
+        int requiredGold = enhancementData.Gold_Count;
+
+        // 보유 골드 조회
+        int ownedGold = CurrencyManager.Instance?.GetCurrency(CurrencyManager.GOLD_ID) ?? 0;
+
+        if (goldText != null)
+        {
+            bool hasEnough = ownedGold >= requiredGold;
+            if (hasEnough)
+            {
+                goldText.text = $"{requiredGold} G";
+            }
+            else
+            {
+                goldText.text = $"<color=red>{requiredGold} G</color>";
+            }
+        }
+    }
+
+    /// <summary>
+    /// 버튼 활성화 조건 체크
+    /// </summary>
+    private void UpdateButtonInteractable(PartySynergyData data, int currentLevel)
+    {
+        if (upgradeButton == null || currentEnhancementData == null) return;
+
+        // 조건 1: 캐릭터 레벨 충족
+        int requiredLevel = currentEnhancementData.Need_Party_Characters_Lv % 100;
+        bool meetsLevelRequirement = CheckAllCharactersMeetLevel(data, requiredLevel);
+
+        // 조건 2: 재료 충족
+        int materialId = currentEnhancementData.Material_ID;
+        int requiredMaterial = currentEnhancementData.Material_Count;
+        int ownedMaterial = IngredientManager.Instance?.GetIngredientCount(materialId) ?? 0;
+        bool hasMaterial = ownedMaterial >= requiredMaterial;
+
+        // 조건 3: 골드 충족
+        int requiredGold = currentEnhancementData.Gold_Count;
+        int ownedGold = CurrencyManager.Instance?.GetCurrency(CurrencyManager.GOLD_ID) ?? 0;
+        bool hasGold = ownedGold >= requiredGold;
+
+        // 모든 조건 충족 시 버튼 활성화
+        upgradeButton.interactable = meetsLevelRequirement && hasMaterial && hasGold;
+
+        Debug.Log($"[PartySynergyEnhancementPanel] Upgrade button: Level={meetsLevelRequirement}, Material={hasMaterial}, Gold={hasGold}");
+    }
+
+    #endregion
+
     private void OnDestroy()
     {
         if (closeButton != null)
         {
             closeButton.onClick.RemoveListener(OnCloseButtonClicked);
         }
+
+        if (upgradeButton != null)
+        {
+            upgradeButton.onClick.RemoveListener(OnUpgradeButtonClicked);
+        }
+
+        // Issue 2: 아이콘 메모리 해제
+        ReleaseCurrentIcon();
     }
 }

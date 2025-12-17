@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -23,6 +24,11 @@ public class ObjectMoveDestroy : MonoBehaviour
     float time;
     bool ishit;
     float m_scalefactor;
+
+    /// <summary>
+    /// 충돌 시 발생하는 이벤트 (래퍼에서 구독)
+    /// </summary>
+    public event Action<RaycastHit> OnHit;
 
     private void Start()
     {
@@ -74,6 +80,10 @@ public class ObjectMoveDestroy : MonoBehaviour
             if (hit.transform.tag != mtag)
                 return;
         ishit = true;
+
+        // 래퍼에 충돌 이벤트 전달
+        OnHit?.Invoke(hit);
+
         if(m_gameObjectTail)
             m_gameObjectTail.transform.parent = null;
         MakeHitObject(hit);

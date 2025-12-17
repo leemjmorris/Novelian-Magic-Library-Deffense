@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>훈련소 콘텐츠 UI 프로토타입</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        /* 모바일 프레임 (9:16 비율) */
+        .mobile-frame {
+            width: 360px;
+            height: 700px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            border: 3px solid #333;
+            position: relative;
+        }
+
+        /* 상단 헤더 */
+        .header {
+            padding: 8px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.4);
+            border-bottom: 1px solid #4a4a6a;
+        }
+
+        .header h1 {
+            font-size: 15px;
+            color: #ffd700;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 게임 뷰 영역 */
+        .game-view {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+        }
+
+        .game-view.active {
+            display: flex;
+            flex: 1;
+        }
+
+        /* 전투 영역 */
+        .battle-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 20px;
+        }
+
+        /* 캐릭터 표시 */
+        .character-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .character-model {
+            width: 60px;
+            height: 80px;
+            background: linear-gradient(180deg, #6a5acd 0%, #483d8b 100%);
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: characterAttack 1s infinite;
+        }
+
+        .character-model::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            width: 35px;
+            height: 35px;
+            background: #ffe4c4;
+            border-radius: 50%;
+        }
+
+        .character-model::after {
+            content: '⚔';
+            font-size: 20px;
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        @keyframes characterAttack {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+        }
+
+        .character-name {
+            font-size: 10px;
+            color: #ffd700;
+            text-align: center;
+        }
+
+        /* 투사체 */
+        .projectile {
+            width: 20px;
+            height: 8px;
+            background: linear-gradient(90deg, #ff6b6b, #ffd700);
+            border-radius: 4px;
+            animation: projectileMove 0.5s infinite;
+            box-shadow: 0 0 10px #ffd700;
+        }
+
+        @keyframes projectileMove {
+            0% { transform: translateX(-50px); opacity: 1; }
+            100% { transform: translateX(50px); opacity: 0; }
+        }
+
+        /* 허수아비 표시 영역 */
+        .dummy-display {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            max-width: 150px;
+        }
+
+        .dummy {
+            width: 36px;
+            height: 50px;
+            background: linear-gradient(180deg, #8b4513 0%, #654321 100%);
+            border-radius: 6px 6px 3px 3px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dummy::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            width: 24px;
+            height: 24px;
+            background: #deb887;
+            border-radius: 50%;
+        }
+
+        .dummy::after {
+            content: '∞';
+            position: absolute;
+            bottom: -16px;
+            font-size: 10px;
+            color: #ffd700;
+        }
+
+        /* 하단 컨트롤 패널 */
+        .control-panel {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 12px;
+            border-top: 1px solid #4a4a6a;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .control-panel.running {
+            flex: none;
+            justify-content: flex-start;
+        }
+
+        /* 실행 중 상태 표시 */
+        .running-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 5px;
+            background: rgba(76, 175, 80, 0.2);
+            border-radius: 6px;
+            margin-bottom: 6px;
+        }
+
+        .running-indicator.active {
+            display: flex;
+        }
+
+        .running-indicator .dot {
+            width: 6px;
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .running-indicator .text {
+            color: #4CAF50;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        /* 세팅 영역 */
+        .settings-area {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .settings-area.hidden {
+            display: none;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .setting-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .setting-group.full-width {
+            flex: none;
+            width: 100%;
+        }
+
+        .setting-group label {
+            font-size: 9px;
+            color: #aaa;
+            font-weight: 500;
+        }
+
+        .setting-group select {
+            padding: 5px 8px;
+            font-size: 11px;
+            border: 1px solid #4a4a6a;
+            border-radius: 4px;
+            background: #2a2a4a;
+            color: #fff;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .setting-group select:focus {
+            outline: none;
+            border-color: #ffd700;
+        }
+
+        /* 섹션 타이틀 */
+        .section-title {
+            font-size: 9px;
+            color: #ffd700;
+            font-weight: 600;
+            margin: 2px 0;
+            padding-bottom: 2px;
+            border-bottom: 1px solid #4a4a6a;
+        }
+
+        /* 통합 정보 패널 */
+        .unified-info-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #4a4a6a;
+            border-radius: 6px;
+            padding: 8px;
+            margin-bottom: 6px;
+        }
+
+        .info-section {
+            margin-bottom: 6px;
+        }
+
+        .info-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-section.realtime {
+            padding-top: 6px;
+            border-top: 1px dashed #4a4a6a;
+        }
+
+        .info-section .section-title {
+            font-size: 9px;
+            color: #ffd700;
+            font-weight: 600;
+            margin-bottom: 4px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+
+        .unified-info-panel .info-item {
+            text-align: center;
+            padding: 5px 3px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            border: 1px solid transparent;
+        }
+
+        .unified-info-panel .info-item.highlight {
+            border-color: #ffd700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .unified-info-panel .info-item .label {
+            font-size: 8px;
+            color: #aaa;
+            margin-bottom: 2px;
+        }
+
+        .unified-info-panel .info-item .value {
+            font-size: 11px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .unified-info-panel .info-item .value.damage {
+            color: #ff6b6b;
+        }
+
+        .unified-info-panel .info-item .value.bonus {
+            color: #4ecdc4;
+        }
+
+        .unified-info-panel .info-item .value.dps {
+            color: #ffd700;
+        }
+
+        .unified-info-panel .info-item .value.skill {
+            color: #a78bfa;
+            font-size: 9px;
+        }
+
+        .unified-info-panel .info-item .unit {
+            font-size: 7px;
+            color: #888;
+        }
+
+        /* 허수아비 수량 조절 */
+        .dummy-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            margin-bottom: 6px;
+        }
+
+        .dummy-control label {
+            font-size: 11px;
+            color: #ffd700;
+            font-weight: 600;
+        }
+
+        .dummy-control button {
+            width: 26px;
+            height: 26px;
+            font-size: 15px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .dummy-control .btn-minus {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .dummy-control .btn-minus:active {
+            background: #c0392b;
+        }
+
+        .dummy-control .btn-plus {
+            background: #27ae60;
+            color: #fff;
+        }
+
+        .dummy-control .btn-plus:active {
+            background: #229954;
+        }
+
+        .dummy-control .count {
+            font-size: 14px;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+            color: #fff;
+        }
+
+        /* 버튼 영역 */
+        .button-area {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            font-size: 12px;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-start {
+            background: linear-gradient(180deg, #4CAF50 0%, #388E3C 100%);
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-start:active {
+            transform: scale(0.98);
+        }
+
+        .btn-stop {
+            background: linear-gradient(180deg, #f44336 0%, #d32f2f 100%);
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(244, 67, 54, 0.4);
+            display: none;
+        }
+
+        .btn-stop:active {
+            transform: scale(0.98);
+        }
+
+        .btn-reset {
+            background: linear-gradient(180deg, #9e9e9e 0%, #757575 100%);
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(158, 158, 158, 0.4);
+        }
+
+        .btn-reset:active {
+            transform: scale(0.98);
+        }
+
+        /* 스크롤바 숨기기 */
+        .control-panel::-webkit-scrollbar {
+            display: none;
+        }
+
+        .control-panel {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-frame">
+        <!-- 상단 헤더 -->
+        <div class="header">
+            <h1>훈련소</h1>
+        </div>
+
+        <!-- 게임 뷰 영역 -->
+        <div class="game-view" id="gameView">
+            <div class="battle-area">
+                <!-- 캐릭터 -->
+                <div class="character-display">
+                    <div class="character-model"></div>
+                    <div class="character-name" id="displayCharacterName">로맨스 사서 1</div>
+                </div>
+
+                <!-- 투사체 -->
+                <div class="projectile"></div>
+
+                <!-- 허수아비들 -->
+                <div class="dummy-display" id="dummyDisplay">
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 컨트롤 패널 -->
+        <div class="control-panel" id="controlPanel">
+            <!-- 실행 중 표시 -->
+            <div class="running-indicator" id="runningIndicator">
+                <div class="dot"></div>
+                <span class="text">자동 공격 실행 중...</span>
+            </div>
+
+            <!-- 세팅 영역 (시작 시 숨김) -->
+            <div class="settings-area" id="settingsArea">
+                <!-- 캐릭터 설정 -->
+                <div class="section-title">캐릭터 설정</div>
+
+                <!-- 1행: 캐릭터 선택 -->
+                <div class="setting-group full-width">
+                    <label>캐릭터 선택</label>
+                    <select id="characterSelect" onchange="updateSkillDamage()">
+                        <option value="021001" data-name="로맨스 사서 1" data-base-damage="50" data-cooldown="1">로맨스 사서 1</option>
+                        <option value="021002" data-name="로맨스 사서 2" data-base-damage="55" data-cooldown="1">로맨스 사서 2</option>
+                        <option value="022005" data-name="코미디 사서 1" data-base-damage="45" data-cooldown="0.8">코미디 사서 1</option>
+                        <option value="023009" data-name="모험 사서 1" data-base-damage="60" data-cooldown="1.2">모험 사서 1</option>
+                        <option value="024013" data-name="추리 사서 1" data-base-damage="70" data-cooldown="1.5">추리 사서 1</option>
+                        <option value="025017" data-name="공포 사서 1" data-base-damage="80" data-cooldown="1.8">공포 사서 1</option>
+                    </select>
+                </div>
+
+                <!-- 2행: 등급 + 강화 -->
+                <div class="settings-row">
+                    <div class="setting-group">
+                        <label>등급 (성급)</label>
+                        <select id="gradeSelect" onchange="updateSkillDamage()">
+                            <option value="1">1성</option>
+                            <option value="2">2성</option>
+                            <option value="3">3성</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label>강화 단계</label>
+                        <select id="enhancementSelect" onchange="updateSkillDamage()">
+                            <option value="0">0단계</option>
+                            <option value="1">1단계</option>
+                            <option value="2">2단계</option>
+                            <option value="3">3단계</option>
+                            <option value="4">4단계</option>
+                            <option value="5">5단계</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 책갈피 설정 -->
+                <div class="section-title">책갈피 설정</div>
+
+                <!-- 3행: 메인 스킬 책갈피 -->
+                <div class="setting-group full-width">
+                    <label>메인 스킬 책갈피</label>
+                    <select id="mainSkillBookmarkSelect" onchange="updateSkillDamage()">
+                        <option value="" data-damage-bonus="0" data-skill-name="">없음</option>
+                        <option value="39002" data-damage-bonus="0" data-skill-name="큐피드의화살">큐피드의화살 (단일 유도)</option>
+                        <option value="39003" data-damage-bonus="0" data-skill-name="질투의불꽃">질투의불꽃 (범위)</option>
+                        <option value="39011" data-damage-bonus="0" data-skill-name="바나나연쇄">바나나연쇄 (연쇄)</option>
+                        <option value="39021" data-damage-bonus="0" data-skill-name="부메랑던지기">부메랑던지기 (왕복)</option>
+                        <option value="39028" data-damage-bonus="0" data-skill-name="다이너마이트">다이너마이트 (폭발)</option>
+                    </select>
+                </div>
+
+                <!-- 4행: 보조 스킬 책갈피 -->
+                <div class="setting-group full-width">
+                    <label>보조 스킬 책갈피</label>
+                    <select id="supportSkillBookmarkSelect" onchange="updateSkillDamage()">
+                        <option value="" data-damage-bonus="0">없음</option>
+                        <option value="1" data-damage-bonus="0">연쇄 공격 (3회 튕김)</option>
+                        <option value="2" data-damage-bonus="0">관통 (5회 관통)</option>
+                        <option value="3" data-damage-bonus="10">DOT 부여 (+10% 지속피해)</option>
+                        <option value="4" data-damage-bonus="20">표식 부여 (+20% 피해증가)</option>
+                        <option value="5" data-damage-bonus="0">슬로우 부여 (30% 감속)</option>
+                        <option value="6" data-damage-bonus="0">스턴 부여 (1초 기절)</option>
+                    </select>
+                </div>
+
+                <!-- 5행: 스탯 책갈피 -->
+                <div class="setting-group full-width">
+                    <label>스탯 책갈피</label>
+                    <select id="statBookmarkSelect" onchange="updateSkillDamage()">
+                        <option value="" data-damage-bonus="0">없음</option>
+                        <option value="1" data-damage-bonus="10">공격력 +10%</option>
+                        <option value="2" data-damage-bonus="0">공격속도 +15%</option>
+                        <option value="3" data-damage-bonus="0">치명타 확률 +5%</option>
+                        <option value="4" data-damage-bonus="0">치명타 피해 +20%</option>
+                        <option value="5" data-damage-bonus="5">사거리 +15% (공격력 +5%)</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- 통합 정보 패널 (예상 + 실시간) -->
+            <div class="unified-info-panel">
+                <div class="info-section">
+                    <div class="section-title">데미지 정보</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="label">기본 데미지</div>
+                            <div class="value"><span id="baseSkillDamage">50</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">총 보정</div>
+                            <div class="value bonus"><span id="totalBonus">+0%</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">최종 데미지</div>
+                            <div class="value damage"><span id="finalSkillDamage">50</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">메인 스킬</div>
+                            <div class="value skill"><span id="mainSkillName">-</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">공격속도</div>
+                            <div class="value"><span id="attackSpeedPreview">1.0</span><span class="unit">회/s</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">예상 DPS</div>
+                            <div class="value dps"><span id="expectedDPS">50</span><span class="unit">/s</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-section realtime">
+                    <div class="section-title">실시간 측정</div>
+                    <div class="info-grid">
+                        <div class="info-item highlight">
+                            <div class="label">실시간 DPS</div>
+                            <div class="value dps"><span id="dpsValue">0</span><span class="unit">/s</span></div>
+                        </div>
+                        <div class="info-item highlight">
+                            <div class="label">누적 데미지</div>
+                            <div class="value damage"><span id="totalDamageValue">0</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">공격속도</div>
+                            <div class="value"><span id="attackSpeedValue">1.0</span><span class="unit">회/s</span></div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">경과 시간</div>
+                            <div class="value"><span id="elapsedTime">0.0</span><span class="unit">s</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 허수아비 수량 조절 -->
+            <div class="dummy-control">
+                <label>허수아비</label>
+                <button class="btn-minus" onclick="changeDummyCount(-1)">-</button>
+                <span class="count" id="dummyCount">1</span>
+                <button class="btn-plus" onclick="changeDummyCount(1)">+</button>
+            </div>
+
+            <!-- 버튼 영역 (최하단) -->
+            <div class="button-area">
+                <button class="btn btn-start" id="btnStart" onclick="toggleAttack()">시작</button>
+                <button class="btn btn-stop" id="btnStop" onclick="toggleAttack()">종료</button>
+                <button class="btn btn-reset" onclick="resetStats()">리셋</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 상태 관리
+        let isRunning = false;
+        let dummyCount = 1;
+        let totalDamage = 0;
+        let startTime = null;
+        let dpsInterval = null;
+
+        // 성급별 데미지 보정 (%)
+        const gradeMultiplier = {
+            1: 0,
+            2: 15,
+            3: 35
+        };
+
+        // 강화 단계별 데미지 보정 (%)
+        const enhancementMultiplier = {
+            0: 0,
+            1: 5,
+            2: 10,
+            3: 18,
+            4: 28,
+            5: 40
+        };
+
+        // 스킬 데미지 업데이트
+        function updateSkillDamage() {
+            const characterSelect = document.getElementById('characterSelect');
+            const gradeSelect = document.getElementById('gradeSelect');
+            const enhancementSelect = document.getElementById('enhancementSelect');
+            const mainSkillBookmarkSelect = document.getElementById('mainSkillBookmarkSelect');
+            const supportSkillBookmarkSelect = document.getElementById('supportSkillBookmarkSelect');
+            const statBookmarkSelect = document.getElementById('statBookmarkSelect');
+
+            // 캐릭터 기본 스탯
+            const selectedCharacter = characterSelect.options[characterSelect.selectedIndex];
+            const baseDamage = parseInt(selectedCharacter.dataset.baseDamage) || 50;
+            const baseCooldown = parseFloat(selectedCharacter.dataset.cooldown) || 1;
+            const characterName = selectedCharacter.dataset.name || '캐릭터';
+
+            // 성급/강화 보정
+            const grade = parseInt(gradeSelect.value);
+            const enhancement = parseInt(enhancementSelect.value);
+            const gradeBonus = gradeMultiplier[grade] || 0;
+            const enhancementBonus = enhancementMultiplier[enhancement] || 0;
+
+            // 책갈피 보정
+            const selectedSupport = supportSkillBookmarkSelect.options[supportSkillBookmarkSelect.selectedIndex];
+            const supportBonus = parseInt(selectedSupport.dataset.damageBonus) || 0;
+
+            const selectedStat = statBookmarkSelect.options[statBookmarkSelect.selectedIndex];
+            const statBonus = parseInt(selectedStat.dataset.damageBonus) || 0;
+
+            // 메인 스킬 책갈피
+            const selectedMainSkill = mainSkillBookmarkSelect.options[mainSkillBookmarkSelect.selectedIndex];
+            const mainSkillName = selectedMainSkill.dataset.skillName || '-';
+
+            // 총 보정
+            const totalBonusPercent = gradeBonus + enhancementBonus + supportBonus + statBonus;
+
+            // 최종 데미지 계산
+            const finalDamage = Math.floor(baseDamage * (1 + totalBonusPercent / 100));
+
+            // 공격속도 계산 (스탯 책갈피에 공속 보너스 있으면 적용)
+            let attackSpeed = 1 / baseCooldown;
+            if (statBookmarkSelect.value === '2') {
+                attackSpeed *= 1.15; // 공속 +15%
+            }
+
+            // 예상 DPS
+            const expectedDPS = Math.floor(finalDamage * attackSpeed);
+
+            // UI 업데이트
+            document.getElementById('baseSkillDamage').textContent = baseDamage;
+            document.getElementById('totalBonus').textContent = '+' + totalBonusPercent + '%';
+            document.getElementById('finalSkillDamage').textContent = finalDamage;
+            document.getElementById('attackSpeedPreview').textContent = attackSpeed.toFixed(2) + '/s';
+            document.getElementById('mainSkillName').textContent = mainSkillName || '-';
+            document.getElementById('expectedDPS').textContent = expectedDPS;
+
+            // 캐릭터 이름 업데이트 (실행 화면용)
+            document.getElementById('displayCharacterName').textContent = characterName;
+        }
+
+        // 허수아비 수량 변경
+        function changeDummyCount(delta) {
+            dummyCount = Math.max(1, Math.min(10, dummyCount + delta));
+            document.getElementById('dummyCount').textContent = dummyCount;
+            renderDummies();
+        }
+
+        // 허수아비 렌더링
+        function renderDummies() {
+            const container = document.getElementById('dummyDisplay');
+            container.innerHTML = '';
+            for (let i = 0; i < dummyCount; i++) {
+                const dummy = document.createElement('div');
+                dummy.className = 'dummy';
+                container.appendChild(dummy);
+            }
+        }
+
+        // 숫자 포맷
+        function formatNumber(num) {
+            if (num >= 100000000) {
+                return (num / 100000000).toFixed(1) + '억';
+            } else if (num >= 10000) {
+                return (num / 10000).toFixed(1) + '만';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + '천';
+            }
+            return Math.floor(num).toLocaleString();
+        }
+
+        // 시작/종료 토글
+        function toggleAttack() {
+            isRunning = !isRunning;
+
+            const btnStart = document.getElementById('btnStart');
+            const btnStop = document.getElementById('btnStop');
+            const settingsArea = document.getElementById('settingsArea');
+            const runningIndicator = document.getElementById('runningIndicator');
+            const gameView = document.getElementById('gameView');
+            const controlPanel = document.getElementById('controlPanel');
+
+            if (isRunning) {
+                // 시작 상태
+                btnStart.style.display = 'none';
+                btnStop.style.display = 'block';
+                settingsArea.classList.add('hidden');
+                runningIndicator.classList.add('active');
+                gameView.classList.add('active');
+                controlPanel.classList.add('running');
+
+                // 허수아비 렌더링
+                renderDummies();
+
+                // DPS 측정 시작
+                if (!startTime) startTime = Date.now();
+                startDPSSimulation();
+            } else {
+                // 종료 (일시정지) 상태
+                btnStart.style.display = 'block';
+                btnStop.style.display = 'none';
+                settingsArea.classList.remove('hidden');
+                runningIndicator.classList.remove('active');
+                gameView.classList.remove('active');
+                controlPanel.classList.remove('running');
+
+                // DPS 시뮬레이션 중지
+                stopDPSSimulation();
+            }
+        }
+
+        // DPS 시뮬레이션
+        function startDPSSimulation() {
+            const finalDamage = parseInt(document.getElementById('finalSkillDamage').textContent) || 50;
+            const attackSpeedText = document.getElementById('attackSpeedPreview').textContent;
+            const attackSpeed = parseFloat(attackSpeedText) || 1;
+
+            dpsInterval = setInterval(() => {
+                // 설정된 최종 데미지 기반으로 계산
+                const damageVariation = finalDamage * (0.9 + Math.random() * 0.2);
+                totalDamage += damageVariation * dummyCount;
+
+                // 실시간 DPS 계산
+                const elapsedSeconds = (Date.now() - startTime) / 1000;
+                const dps = Math.floor(totalDamage / elapsedSeconds);
+
+                // UI 업데이트
+                document.getElementById('dpsValue').textContent = formatNumber(dps);
+                document.getElementById('totalDamageValue').textContent = formatNumber(totalDamage);
+                document.getElementById('attackSpeedValue').textContent = attackSpeed.toFixed(2);
+                document.getElementById('elapsedTime').textContent = elapsedSeconds.toFixed(1);
+
+            }, 100);
+        }
+
+        function stopDPSSimulation() {
+            if (dpsInterval) {
+                clearInterval(dpsInterval);
+                dpsInterval = null;
+            }
+        }
+
+        // 리셋
+        function resetStats() {
+            totalDamage = 0;
+            startTime = null;
+
+            document.getElementById('dpsValue').textContent = '0';
+            document.getElementById('totalDamageValue').textContent = '0';
+            document.getElementById('attackSpeedValue').textContent = '1.0';
+            document.getElementById('elapsedTime').textContent = '0.0';
+
+            // 실행 중이면 다시 시작
+            if (isRunning) {
+                startTime = Date.now();
+            }
+        }
+
+        // 초기화
+        renderDummies();
+        updateSkillDamage();
+    </script>
+</body>
+</html>

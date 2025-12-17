@@ -198,8 +198,9 @@ public class CharacterEnhancementManager : MonoBehaviour
 
     /// <summary>
     /// 강화 실행 (재료 소모 + 레벨 증가)
+    /// Firebase 저장 완료를 기다림 (데이터 손실 방지)
     /// </summary>
-    public bool TryEnhance(int characterId)
+    public async Cysharp.Threading.Tasks.UniTask<bool> TryEnhanceAsync(int characterId)
     {
         // 강화 가능 여부 확인
         if (!CanEnhance(characterId, out string failReason))
@@ -242,28 +243,36 @@ public class CharacterEnhancementManager : MonoBehaviour
         string enhancedCharName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";
         Debug.Log($"[Enhancement Success] {enhancedCharName} Lv.{currentLevel} → Lv.{currentLevel + 1}");
 
-        // Firebase에 저장
-        SaveEnhancementToFirebase(characterId, currentLevel + 1);
+        // Firebase에 저장 (완료 대기)
+        await SaveEnhancementToFirebaseAsync(characterId, currentLevel + 1);
 
         return true;
     }
 
     /// <summary>
-    /// 특정 캐릭터의 강화 레벨을 Firebase에 저장
+    /// 특정 캐릭터의 강화 레벨을 Firebase에 저장 (완료 대기)
     /// </summary>
-    private void SaveEnhancementToFirebase(int characterId, int level)
+    private async Cysharp.Threading.Tasks.UniTask SaveEnhancementToFirebaseAsync(int characterId, int level)
     {
         if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
+        {
+            Debug.LogWarning("[CharacterEnhancement] FirebaseSaveManager not ready, skipping save");
             return;
+        }
 
         if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
+        {
+            Debug.LogWarning("[CharacterEnhancement] No user logged in, skipping save");
             return;
+        }
 
-        FirebaseSaveManager.Instance.SaveCharacterEnhancementAsync(
+        await FirebaseSaveManager.Instance.SaveCharacterEnhancementAsync(
             FirebaseManager.Instance.CurrentUserId,
             characterId,
             level
-        ).Forget();
+        );
+
+        Debug.Log($"<color=#3EB489>[CharacterEnhancement]</color> Firebase 저장 완료: Character {characterId} → Lv.{level}");
     }
 
     /// <summary>

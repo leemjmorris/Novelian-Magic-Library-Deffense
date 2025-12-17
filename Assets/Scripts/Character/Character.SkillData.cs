@@ -28,7 +28,14 @@ namespace Novelian.Combat
                 // DamageCalculator 사용
                 float baseDamage = DamageCalculator.CalculateSingleDamage(basicAttackData.base_damage, levelMult, supportMult);
                 // 캐릭터 변형 적용
-                return baseDamage * (1f + damageModifier / 100f);
+                float withModifier = baseDamage * (1f + damageModifier / 100f);
+                // 파티 시너지 버프 적용 (캐릭터 장르 기반)
+                float genreMod = GetGenreModifier(GetGenre());
+                if (genreMod > 0)
+                {
+                    Debug.Log($"[Character] FinalDamage: base={withModifier:F1}, genre={GetGenre()}, genreMod={genreMod:F2}, final={withModifier * (1f + genreMod):F1}");
+                }
+                return withModifier * (1f + genreMod);
             }
         }
 
@@ -87,7 +94,10 @@ namespace Novelian.Combat
                 // DamageCalculator로 단일 데미지 계산
                 float baseDamage = DamageCalculator.CalculateSingleDamage(activeSkillData.base_damage, levelMult, supportMult);
                 // 캐릭터 변형 적용
-                return baseDamage * (1f + damageModifier / 100f);
+                float withModifier = baseDamage * (1f + damageModifier / 100f);
+                // 파티 시너지 버프 적용 (캐릭터 장르 기반)
+                float genreMod = GetGenreModifier(GetGenre());
+                return withModifier * (1f + genreMod);
             }
         }
 
@@ -151,7 +161,7 @@ namespace Novelian.Combat
 
         #region Skill Data Loading
 
-        //LMJ : Load skill data from CSV and PrefabDatabase
+        //LMJ : Load skill data from CSV and SkillEffectDatabase (fully migrated - no legacy fallback)
         private void LoadSkillData()
         {
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
@@ -160,7 +170,8 @@ namespace Novelian.Combat
                 return;
             }
 
-            var prefabDb = SkillPrefabDatabase.Instance;
+            // Use new SkillEffectDatabase exclusively
+            var effectDb = SkillEffectDatabase.Instance;
 
             // Basic Attack Skill
             if (basicAttackSkillId > 0)
@@ -168,7 +179,12 @@ namespace Novelian.Combat
                 basicAttackData = CSVLoader.Instance.GetData<MainSkillData>(basicAttackSkillId);
                 if (basicAttackData != null)
                 {
-                    basicAttackPrefabs = prefabDb?.GetMainSkillEntry(basicAttackSkillId);
+                    var effectEntry = effectDb?.GetEntry(basicAttackSkillId);
+                    if (effectEntry != null && effectEntry.HasMainEffect())
+                    {
+                        basicAttackPrefabs = ConvertToMainSkillPrefabEntry(effectEntry);
+                    }
+                    // No fallback - if not in SkillEffectDatabase, prefabs remain null
                     Debug.Log($"[Character] Loaded basic attack: {basicAttackData.skill_name} (ID: {basicAttackSkillId})");
                 }
                 else
@@ -183,7 +199,12 @@ namespace Novelian.Combat
                 activeSkillData = CSVLoader.Instance.GetData<MainSkillData>(activeSkillId);
                 if (activeSkillData != null)
                 {
-                    activeSkillPrefabs = prefabDb?.GetMainSkillEntry(activeSkillId);
+                    var effectEntry = effectDb?.GetEntry(activeSkillId);
+                    if (effectEntry != null && effectEntry.HasMainEffect())
+                    {
+                        activeSkillPrefabs = ConvertToMainSkillPrefabEntry(effectEntry);
+                    }
+                    // No fallback - if not in SkillEffectDatabase, prefabs remain null
                     Debug.Log($"[Character] Loaded active skill: {activeSkillData.skill_name} (ID: {activeSkillId})");
                 }
                 else
@@ -205,7 +226,7 @@ namespace Novelian.Combat
                         Debug.LogWarning($"[Character] 서포트 스킬 '{supportData.support_name}'은(는) 메인 스킬 '{basicAttackData?.skill_name}'과 호환되지 않습니다! 서포트 효과가 제한됩니다.");
                     }
 
-                    supportPrefabs = prefabDb?.GetSupportSkillEntry(supportSkillId);
+                    // Support prefabs no longer used - effect modifiers come from CSV data
                     Debug.Log($"[Character] Loaded support skill: {supportData.support_name} (ID: {supportSkillId}, speed_mult: {supportData.speed_mult}, damage_mult: {supportData.damage_mult}, compatible: {isCompatible})");
                 }
                 else
@@ -217,9 +238,26 @@ namespace Novelian.Combat
             {
                 // 서포트 스킬이 없을 때 초기화
                 supportData = null;
-                supportPrefabs = null;
                 Debug.Log("[Character] No support skill selected (supportData = null)");
             }
+        }
+
+        /// <summary>
+        /// SkillEffectEntry를 기존 MainSkillPrefabEntry로 변환 (호환성 유지)
+        /// </summary>
+        private MainSkillPrefabEntry ConvertToMainSkillPrefabEntry(SkillEffectEntry entry)
+        {
+            if (entry == null) return null;
+            return new MainSkillPrefabEntry
+            {
+                skillId = entry.skillId,
+                skillName = entry.skillName,
+                projectilePrefab = entry.mainEffectPrefab,
+                hitEffectPrefab = entry.hitEffectPrefab,
+                castEffectPrefab = entry.castEffectPrefab,
+                trailEffectPrefab = entry.trailEffectPrefab,
+                areaEffectPrefab = entry.areaEffectPrefab
+            };
         }
 
         /// <summary>

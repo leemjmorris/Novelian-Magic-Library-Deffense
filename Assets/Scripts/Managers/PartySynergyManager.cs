@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Cysharp.Threading.Tasks;
 using Novelian.Combat;
 using UnityEngine;
 
@@ -25,7 +26,9 @@ public class PartySynergyManager : MonoBehaviour
 
     // 현재 활성 시너지
     private PartySynergyData activeSynergy;
-    private int synergyLevel = 1; // 1~5 (업그레이드 레벨, 추후 구현)
+
+    // 시너지별 레벨 관리 (Party_ID → Level)
+    private Dictionary<int, int> synergyLevels = new Dictionary<int, int>();
 
     // 시너지 적용 여부 추적 (중복 방지)
     private bool isSynergyApplied = false;
@@ -111,7 +114,9 @@ public class PartySynergyManager : MonoBehaviour
             return (0, 0f);
         }
 
-        return synergyLevel switch
+        int level = GetSynergyLevel(activeSynergy.Party_ID);
+
+        return level switch
         {
             1 => (activeSynergy.Effect_1_ID, activeSynergy.Effect_1_Value),
             2 => (activeSynergy.Effect_2_ID, activeSynergy.Effect_2_Value),
@@ -219,19 +224,82 @@ public class PartySynergyManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 시너지 레벨 설정 (추후 업그레이드 시스템용)
+    /// 시너지 레벨 설정 (async - Firebase 저장 완료 대기)
     /// </summary>
-    public void SetSynergyLevel(int level)
+    public async UniTask SetSynergyLevelAsync(int partyId, int level)
     {
-        synergyLevel = Mathf.Clamp(level, 1, 5);
-        Debug.Log($"[PartySynergyManager] 시너지 레벨 설정: {synergyLevel}");
+        int clampedLevel = Mathf.Clamp(level, 1, 5);
+        synergyLevels[partyId] = clampedLevel;
+        Debug.Log($"[PartySynergyManager] 시너지 레벨 설정: PartyID={partyId}, Level={clampedLevel}");
+
+        // Firebase 저장 (완료 대기)
+        await SaveToFirebaseAsync(partyId, clampedLevel);
     }
 
     /// <summary>
-    /// 현재 시너지 레벨 반환
+    /// 시너지 레벨 설정 (동기 - Firebase 저장은 fire-and-forget)
+    /// 기존 호환성을 위해 유지
     /// </summary>
-    public int GetSynergyLevel()
+    public void SetSynergyLevel(int partyId, int level)
     {
-        return synergyLevel;
+        SetSynergyLevelAsync(partyId, level).Forget();
+    }
+
+    /// <summary>
+    /// 시너지 레벨 반환
+    /// </summary>
+    public int GetSynergyLevel(int partyId)
+    {
+        if (synergyLevels.TryGetValue(partyId, out int level))
+        {
+            return level;
+        }
+        return 1; // 기본값
+    }
+
+    /// <summary>
+    /// Firebase에서 로드한 시너지 레벨 데이터 설정
+    /// </summary>
+    public void SetSynergyLevelsFromFirebase(Dictionary<string, int> data)
+    {
+        synergyLevels.Clear();
+
+        if (data == null) return;
+
+        foreach (var kvp in data)
+        {
+            if (int.TryParse(kvp.Key, out int partyId))
+            {
+                synergyLevels[partyId] = kvp.Value;
+            }
+        }
+
+        Debug.Log($"[PartySynergyManager] Firebase에서 시너지 레벨 로드 완료: {synergyLevels.Count}개");
+    }
+
+    /// <summary>
+    /// Firebase에 시너지 레벨 저장 (완료 대기)
+    /// </summary>
+    private async UniTask SaveToFirebaseAsync(int partyId, int level)
+    {
+        if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
+        {
+            Debug.LogWarning("[PartySynergy] FirebaseSaveManager not ready, skipping save");
+            return;
+        }
+
+        if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
+        {
+            Debug.LogWarning("[PartySynergy] No user logged in, skipping save");
+            return;
+        }
+
+        await FirebaseSaveManager.Instance.SavePartySynergyAsync(
+            FirebaseManager.Instance.CurrentUserId,
+            partyId,
+            level
+        );
+
+        Debug.Log($"<color=#3EB489>[PartySynergy]</color> Firebase 저장 완료: PartyID={partyId}, Level={level}");
     }
 }

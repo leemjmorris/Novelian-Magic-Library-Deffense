@@ -421,6 +421,49 @@ namespace NovelianMagicLibraryDefense.Managers
         #region Key-Based Pooling (JML)
 
         /// <summary>
+        /// 키 기반 풀 생성 (직접 프리팹 전달)
+        /// SkillEffectManager 등에서 동적으로 생성한 래퍼 프리팹 사용
+        /// </summary>
+        public bool CreatePoolByKey<T>(string key, GameObject prefab, int defaultCapacity = 10, int maxSize = 100)
+            where T : Component, IPoolable
+        {
+            if (keyBasedPools.ContainsKey(key))
+            {
+                Debug.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' already exists.");
+                return true;
+            }
+
+            if (prefab == null)
+            {
+                Debug.LogError($"[ObjectPoolManager] Prefab is null for key '{key}'.");
+                return false;
+            }
+
+            if (prefab.GetComponent<T>() == null)
+            {
+                Debug.LogError($"[ObjectPoolManager] Prefab '{key}' does not have component of type {typeof(T).Name}");
+                return false;
+            }
+
+            keyBasedPrefabs[key] = prefab;
+            keyBasedActiveObjects[key] = new HashSet<Component>();
+
+            var pool = new ObjectPool<T>(
+                createFunc: () => CreateKeyBasedPooledObject<T>(key),
+                actionOnGet: obj => OnGetFromKeyBasedPool(key, obj),
+                actionOnRelease: obj => OnReleaseToKeyBasedPool(key, obj),
+                actionOnDestroy: obj => OnDestroyKeyBasedPoolObject(key, obj),
+                collectionCheck: true,
+                defaultCapacity: defaultCapacity,
+                maxSize: maxSize
+            );
+
+            keyBasedPools[key] = pool;
+            Debug.Log($"[ObjectPoolManager] Key-based pool created (prefab): {key}");
+            return true;
+        }
+
+        /// <summary>
         /// JML: 키 기반 풀 생성 (Addressable)
         /// </summary>
         public async UniTask<bool> CreatePoolByKeyAsync<T>(string key, int defaultCapacity = 10, int maxSize = 100)
