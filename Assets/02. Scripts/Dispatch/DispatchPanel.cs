@@ -931,7 +931,7 @@ namespace Dispatch
                     continue;
                 }
 
-                // 확률이 가장 높은 보상 찾기
+                // 등급이 가장 높은 보상 찾기 (높은 등급 = 희귀 아이템을 프리뷰로 표시)
                 int[] rewardIDs = new int[]
                 {
                     rewardGroupData.Reward_1_ID,
@@ -941,27 +941,33 @@ namespace Dispatch
                     rewardGroupData.Reward_5_ID
                 };
 
-                RewardData highestProbReward = null;
-                float highestProb = -1f;
+                RewardData highestGradeReward = null;
+                int highestGrade = -1;
 
                 foreach (var rewardID in rewardIDs)
                 {
                     if (rewardID == 0) continue;
                     var rewardCandidate = CSVLoader.Instance.GetData<RewardData>(rewardID);
-                    if (rewardCandidate != null && rewardCandidate.Probability > highestProb)
+                    if (rewardCandidate == null) continue;
+
+                    // 아이템의 등급 조회
+                    var ingredientData = CSVLoader.Instance.GetData<IngredientData>(rewardCandidate.Item_ID);
+                    int gradeId = ingredientData?.Grade_ID ?? 0;
+
+                    if (gradeId > highestGrade)
                     {
-                        highestProb = rewardCandidate.Probability;
-                        highestProbReward = rewardCandidate;
+                        highestGrade = gradeId;
+                        highestGradeReward = rewardCandidate;
                     }
                 }
 
-                if (highestProbReward == null)
+                if (highestGradeReward == null)
                 {
                     slot.gameObject.SetActive(false);
                     continue;
                 }
 
-                var reward = highestProbReward;
+                var reward = highestGradeReward;
 
                 // 슬롯 활성화 및 아이콘 로드
                 slot.gameObject.SetActive(true);
