@@ -82,7 +82,7 @@ namespace Dispatch
 
         [Header("보상 정보 패널")]
         [SerializeField] private GameObject infoPanel;  // 보상 정보 패널 (RewardInfoText 포함)
-        [SerializeField] private Button infoImageButton;  // 보상 정보 버튼 (InfoImage)
+        [SerializeField] private Button[] infoImageButton;  // 보상 정보 버튼 (InfoImage)
 
         [Header("파견 횟수 표시")]
         [SerializeField] private TextMeshProUGUI dispatchCountText;  // 파견 횟수 텍스트 (예: "0/1", "1/1")
@@ -289,7 +289,7 @@ namespace Dispatch
             // 보상 정보 버튼 이벤트 등록
             if (infoImageButton != null)
             {
-                infoImageButton.onClick.AddListener(OnInfoImageButtonClicked);
+                infoImageButton[0].onClick.AddListener(OnInfoImageButtonClicked);
             }
 
             // InfoPanel 클릭 시 닫기 이벤트 등록
@@ -326,6 +326,183 @@ namespace Dispatch
                 endDragEntry.callback.AddListener((data) => { OnEndDrag(); });
                 eventTrigger.triggers.Add(endDragEntry);
             }
+
+            // 아이템 슬롯 버튼 이벤트 등록 (각 슬롯 클릭 시 해당 파견의 보상 정보 패널 표시)
+            SetupItemSlotButtons();
+        }
+
+        /// <summary>
+        /// 아이템 슬롯에 버튼 컴포넌트 추가 및 이벤트 등록
+        /// </summary>
+        private void SetupItemSlotButtons()
+        {
+            Debug.Log($"[DispatchPanel] SetupItemSlotButtons 호출됨!");
+
+            Image[] itemSlots = { itemSlot1, itemSlot2, itemSlot3, itemSlot4, itemSlot5 };
+
+            Debug.Log($"[DispatchPanel] itemSlot1={itemSlot1}, itemSlot2={itemSlot2}, itemSlot3={itemSlot3}, itemSlot4={itemSlot4}, itemSlot5={itemSlot5}");
+
+            for (int i = 0; i < itemSlots.Length; i++)
+            {
+                if (itemSlots[i] == null)
+                {
+                    Debug.LogWarning($"[DispatchPanel] ItemSlot{i + 1}이 null입니다! Inspector에서 연결해주세요.");
+                    continue;
+                }
+
+                // ItemSlotClickHandler를 사용하여 클릭 이벤트 등록 (ScrollRect 내부에서도 안정적으로 작동)
+                var clickHandler = itemSlots[i].GetComponent<ItemSlotClickHandler>();
+                if (clickHandler == null)
+                {
+                    clickHandler = itemSlots[i].gameObject.AddComponent<ItemSlotClickHandler>();
+                    Debug.Log($"[DispatchPanel] ItemSlot{i + 1}에 ItemSlotClickHandler 컴포넌트 추가됨");
+                }
+
+                clickHandler.SlotIndex = i;
+
+                // 기존 이벤트 제거 후 새로 등록
+                clickHandler.OnSlotClicked -= OnItemSlotClicked;
+                clickHandler.OnSlotClicked += OnItemSlotClicked;
+
+                Debug.Log($"[DispatchPanel] ItemSlot{i + 1} ItemSlotClickHandler 등록 완료");
+            }
+        }
+
+        /// <summary>
+        /// 아이템 슬롯 클릭 시 해당 파견의 보상 정보 패널 표시
+        /// </summary>
+        private void OnItemSlotClicked(int slotIndex)
+        {
+            Debug.Log($"[DispatchPanel] OnItemSlotClicked 호출됨! slotIndex={slotIndex}");
+
+            // 슬롯 인덱스에 해당하는 파견 장소 결정
+            DispatchLocation location = GetLocationBySlotIndex(slotIndex);
+            Debug.Log($"[DispatchPanel] 파견 장소: {location}");
+
+            // 해당 장소의 보상 정보로 패널 업데이트
+            UpdateRewardInfoForLocation(location);
+
+            // 보상 정보 패널 표시
+            if (infoPanel != null)
+            {
+                infoPanel.SetActive(true);
+                AddLog($"ℹ️ 아이템 슬롯 {slotIndex + 1} 클릭 - {GetLocationName(location)} 보상 정보 표시");
+            }
+            else
+            {
+                Debug.LogWarning("[DispatchPanel] infoPanel이 null입니다!");
+            }
+        }
+
+        /// <summary>
+        /// 슬롯 인덱스로 파견 장소 반환
+        /// </summary>
+        private DispatchLocation GetLocationBySlotIndex(int slotIndex)
+        {
+            if (panelDispatchType == DispatchType.Combat)
+            {
+                return slotIndex switch
+                {
+                    0 => DispatchLocation.NightmareWarehouse,
+                    1 => DispatchLocation.FateWarehouse,
+                    2 => DispatchLocation.LaughterWarehouse,
+                    3 => DispatchLocation.TruthWarehouse,
+                    4 => DispatchLocation.UnknownWarehouse,
+                    _ => DispatchLocation.NightmareWarehouse
+                };
+            }
+            else
+            {
+                return slotIndex switch
+                {
+                    0 => DispatchLocation.MagicLibraryOrganization,
+                    1 => DispatchLocation.MagicBarrierInspection,
+                    2 => DispatchLocation.SpellbookCoverRestoration,
+                    3 => DispatchLocation.SealStabilityCheck,
+                    4 => DispatchLocation.MagicResiduePurification,
+                    _ => DispatchLocation.MagicLibraryOrganization
+                };
+            }
+        }
+
+        /// <summary>
+        /// 특정 파견 장소의 보상 정보로 패널 업데이트
+        /// </summary>
+        private void UpdateRewardInfoForLocation(DispatchLocation location)
+        {
+            if (rewardInfoText == null) return;
+
+            var locationData = GetLocationData(location);
+            if (locationData == null)
+            {
+                rewardInfoText.text = "보상 정보를 불러올 수 없습니다.";
+                return;
+            }
+
+            // 기본 시간(4시간, Time_ID=5201)의 보상 데이터 사용
+            var rewardTableData = GetRewardData(locationData.Dispatch_Location_ID, 5201);
+            if (rewardTableData == null)
+            {
+                rewardInfoText.text = "보상 정보를 불러올 수 없습니다.";
+                return;
+            }
+
+            // 보상 정보 표시
+            DisplayRewardInfoForLocation(location, rewardTableData, 1f);
+        }
+
+        /// <summary>
+        /// 특정 장소의 보상 정보 텍스트 생성 및 표시
+        /// </summary>
+        private void DisplayRewardInfoForLocation(DispatchLocation location, DispatchRewardTableData rewardTableData, float rewardMultiplier)
+        {
+            if (rewardInfoText == null || rewardTableData == null) return;
+
+            var rewardGroupData = CSVLoader.Instance.GetData<RewardGroupData>(rewardTableData.Reward_Group_ID);
+            if (rewardGroupData == null)
+            {
+                rewardInfoText.text = "보상 그룹 정보를 찾을 수 없습니다.";
+                return;
+            }
+
+            string locationName = GetLocationName(location);
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            sb.AppendLine($"<b>{locationName}</b>");
+            sb.AppendLine("<color=#AAAAAA>───────────────</color>");
+            sb.AppendLine("<b>예상 보상:</b>");
+
+            int[] rewardIDs = new int[]
+            {
+                rewardGroupData.Reward_1_ID,
+                rewardGroupData.Reward_2_ID,
+                rewardGroupData.Reward_3_ID,
+                rewardGroupData.Reward_4_ID,
+                rewardGroupData.Reward_5_ID
+            };
+
+            foreach (var rewardID in rewardIDs)
+            {
+                if (rewardID == 0) continue;
+
+                var rewardData = CSVLoader.Instance.GetData<RewardData>(rewardID);
+                if (rewardData == null) continue;
+
+                string itemName = GetItemName(rewardData.Item_ID);
+                int minCount = Mathf.RoundToInt(rewardData.Min_Count * rewardMultiplier);
+                int maxCount = Mathf.RoundToInt(rewardData.Max_Count * rewardMultiplier);
+
+                if (rewardData.Is_Fixed)
+                {
+                    sb.AppendLine($"• {itemName} {minCount}~{maxCount}개");
+                }
+                else
+                {
+                    int probability = Mathf.RoundToInt(rewardData.Probability * 100f);
+                    sb.AppendLine($"• <color=#FFD700>[{probability}%]</color> {itemName} {minCount}~{maxCount}개");
+                }
+            }
+
+            rewardInfoText.text = sb.ToString();
         }
 
         /// <summary>
@@ -1855,7 +2032,7 @@ namespace Dispatch
                 dispatchStartButton.onClick.RemoveListener(OnDispatchStartButtonClicked);
 
             if (infoImageButton != null)
-                infoImageButton.onClick.RemoveListener(OnInfoImageButtonClicked);
+                infoImageButton[0].onClick.RemoveListener(OnInfoImageButtonClicked);
 
             if (infoPanel != null)
             {
