@@ -87,6 +87,12 @@ public class GachaPanelController : MonoBehaviour
         UpdateButtonStates();
     }
 
+    private void OnDisable()
+    {
+        // 가챠 패널 비활성화 시 모든 결과 패널 및 슬롯 초기화
+        ResetAllPanels();
+    }
+
     private void OnDestroy()
     {
         if (gachaX1Button != null)
@@ -105,21 +111,55 @@ public class GachaPanelController : MonoBehaviour
     #region Button Handlers
 
     /// <summary>
-    /// 1회 뽑기 버튼 클릭
+    /// 1회 뽑기 버튼 클릭 - 싱글 패널 표시 후 뽑기 실행
     /// </summary>
     public void OnGachaX1Button()
     {
         if (isProcessing) return;
+
+        // 탭 전환: 싱글 패널 표시, x10 패널 숨김
+        ShowSinglePanelTab();
+
         PerformSinglePullAsync().Forget();
     }
 
     /// <summary>
-    /// 10회 뽑기 버튼 클릭
+    /// 10회 뽑기 버튼 클릭 - x10 패널 표시 후 뽑기 실행
     /// </summary>
     public void OnGachaX10Button()
     {
         if (isProcessing) return;
+
+        // 탭 전환: x10 패널 표시, 싱글 패널 숨김
+        ShowTenPanelTab();
+
         PerformTenPullAsync().Forget();
+    }
+
+    /// <summary>
+    /// 싱글 패널 탭으로 전환 (x10 패널 숨김)
+    /// </summary>
+    private void ShowSinglePanelTab()
+    {
+        // x10 패널 닫고 슬롯 초기화
+        if (tenSummonPanel != null && tenSummonPanel.activeSelf)
+        {
+            ResetTenSlots();
+            tenSummonPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// x10 패널 탭으로 전환 (싱글 패널 숨김)
+    /// </summary>
+    private void ShowTenPanelTab()
+    {
+        // 싱글 패널 닫고 슬롯 초기화
+        if (singleSummonPanel != null && singleSummonPanel.activeSelf)
+        {
+            ResetSingleSlot();
+            singleSummonPanel.SetActive(false);
+        }
     }
 
     #endregion
@@ -359,6 +399,7 @@ public class GachaPanelController : MonoBehaviour
     {
         if (singleSummonPanel != null)
         {
+            ResetSingleSlot();
             singleSummonPanel.SetActive(false);
         }
     }
@@ -370,8 +411,55 @@ public class GachaPanelController : MonoBehaviour
     {
         if (tenSummonPanel != null)
         {
+            ResetTenSlots();
             tenSummonPanel.SetActive(false);
         }
+    }
+
+    /// <summary>
+    /// 싱글 슬롯 초기화
+    /// </summary>
+    private void ResetSingleSlot()
+    {
+        if (singleSlot != null)
+        {
+            singleSlot.Clear();
+            singleSlot.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 10개 슬롯 모두 초기화
+    /// </summary>
+    private void ResetTenSlots()
+    {
+        if (tenSlots == null) return;
+
+        foreach (var slot in tenSlots)
+        {
+            if (slot != null)
+            {
+                slot.Clear();
+                slot.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 전체 패널 초기화 (가챠 패널 비활성화 시 호출)
+    /// </summary>
+    private void ResetAllPanels()
+    {
+        ResetSingleSlot();
+        ResetTenSlots();
+
+        if (singleSummonPanel != null)
+            singleSummonPanel.SetActive(false);
+
+        if (tenSummonPanel != null)
+            tenSummonPanel.SetActive(false);
+
+        isProcessing = false;
     }
 
     #endregion
