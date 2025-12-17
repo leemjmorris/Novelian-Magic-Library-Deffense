@@ -33,8 +33,8 @@ namespace Novelian.Combat
         // Genre system (상성 시스템)
         private Genre attackerGenre = Genre.Horror;
 
-        //LMJ : Initialize and activate trap (legacy interface)
-        public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float trapDamage, Vector3 position)
+        //LMJ : Initialize and activate trap
+        public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float trapDamage, Vector3 position, Genre genre)
         {
             skillData = data;
             skillPrefabs = prefabs;

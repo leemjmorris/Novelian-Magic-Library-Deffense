@@ -94,7 +94,7 @@ public class BootScene : MonoBehaviour
             InitializeCharacterOwnershipManager(),
             InitializeWarningUIManager(),
             InitializeInputManager(),
-            InitializePartySynergyManager()
+            InitializePartySynergyManager(),
             InitializeSkillEffectDatabase() // LMJ: 스킬 이펙트 데이터베이스 초기화
         );
 

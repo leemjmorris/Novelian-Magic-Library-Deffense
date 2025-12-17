@@ -31,10 +31,10 @@ public class PartyPanel : MonoBehaviour
 
         Debug.Log("[PartyPanel] CSVLoader ready - Getting PartySynergyTable...");
 
-        await InitializeSynergyList();
+        InitializeSynergyList();
     }
 
-    private async UniTask InitializeSynergyList()
+    private void InitializeSynergyList()
     {
         // 기존 패널들 제거
         ClearSynergyPanels();
