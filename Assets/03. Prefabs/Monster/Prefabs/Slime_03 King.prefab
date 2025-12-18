@@ -292,6 +292,14 @@ MonoBehaviour:
   monsterMove: {fileID: 1789037886120842941}
   rb: {fileID: 448216740427038238}
   collider3D: {fileID: 3891008216280913882}
+  renderers:
+  - {fileID: 2348533616728591503}
+  - {fileID: 7021556488524243105}
+  ragdollDuration: 5
+  dissolveDuration: 2
+  deathKnockbackForce: 8
+  dustParticlePrefab: {fileID: 0}
+  dissolveSettings: {fileID: 11400000, guid: f2353f89a7bbdbf4fa23df2d7bc3f92f, type: 2}
   moveSpeed: 10
   damage: 10
   attackInterval: 0.7
@@ -534,6 +542,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7f9934f54349dc2489d80b0298740ae5, type: 3}
+--- !u!23 &7021556488524243105 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: 7f9934f54349dc2489d80b0298740ae5, type: 3}
+  m_PrefabInstance: {fileID: 8552337674477845541}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &8159036741002222542 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 7f9934f54349dc2489d80b0298740ae5, type: 3}

@@ -67,6 +67,9 @@ public class CSVLoader : MonoBehaviour
         { AddressableKey.PartySynergyEnhancementTable, "Party/PartySynergyEnhancementTable.csv" },
         { AddressableKey.PartySynergyEffectTable, "Party/PartySynergyEffectTable.csv" },
 
+        // BossDungeon 폴더 (Issue #476)
+        { AddressableKey.BossDungeonTable, "BossDungeon/BossDungeonTable.csv" },
+
         // 루트 폴더 (하위 폴더 없음)
         { AddressableKey.GradeTable, "GradeTable.csv" },
         { AddressableKey.CurrencyTable, "CurrencyTable.csv" },
@@ -137,6 +140,9 @@ public class CSVLoader : MonoBehaviour
                 RegisterTableAsync<PartySynergyData>(AddressableKey.PartySynergyTable, x => x.Party_ID),
                 RegisterTableAsync<PartySynergyEnhancementData>(AddressableKey.PartySynergyEnhancementTable, x => x.Party_Lv_ID),
                 RegisterTableAsync<PartySynergyEffectData>(AddressableKey.PartySynergyEffectTable, x => x.Party_Effect_ID),
+
+                // 도전던전 테이블 (Issue #476)
+                RegisterTableAsync<BossDungeonData>(AddressableKey.BossDungeonTable, x => x.Dungeon_ID),
 
                 // 스킬 테이블 (3행 헤더 형식) - Skill 폴더
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
@@ -456,6 +462,9 @@ public class CSVLoader : MonoBehaviour
                 RegisterTableAsync<DispatchLocationData>(AddressableKey.DispatchLocationTable, x => x.Dispatch_Location_ID),
                 RegisterTableAsync<DispatchTimeTableData>(AddressableKey.DispatchTimeTable, x => x.Dispatch_Time_ID),
                 RegisterTableAsync<DispatchRewardTableData>(AddressableKey.DispatchRewardTable, x => x.Dispatch_Reward_ID),
+
+                // 도전던전 테이블 (Issue #476)
+                RegisterTableAsync<BossDungeonData>(AddressableKey.BossDungeonTable, x => x.Dungeon_ID),
 
                 // 스킬 테이블 (3행 헤더) - Skill 폴더
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),

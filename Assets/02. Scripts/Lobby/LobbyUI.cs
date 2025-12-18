@@ -36,6 +36,8 @@ public class LobbyUI : MonoBehaviour
     [Header("Shop Panel")]
     [SerializeField] private GameObject shopPanel; // 상점 패널
 
+    [Header("Boss Dungeon Panel (Issue #476)")]
+    [SerializeField] private GameObject bossDungeonSelectPanel; // 도전던전 선택 패널
 
     private void OnEnable()
     {
@@ -315,9 +317,42 @@ public class LobbyUI : MonoBehaviour
         LoadSceneWithFadeOnly(SceneName.LibraryManagementScene).Forget();
     }
 
+    /// <summary>
+    /// Issue #476 - 도전던전 버튼 클릭 시 BossDungeonSelectPanel 활성화
+    /// </summary>
     public void OnChallengeDungeonButton()
     {
-        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+        // 메뉴 레이아웃이 열려있으면 먼저 닫기
+        if (menuLayout != null && menuLayout.activeSelf)
+        {
+            menuLayout.SetActive(false);
+        }
+
+        // 도전던전 선택 패널 열기
+        if (bossDungeonSelectPanel != null)
+        {
+            bossDungeonSelectPanel.SetActive(true);
+        }
+        if (lobbyWindow != null)
+        {
+            lobbyWindow.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// Issue #476 - 도전던전 선택 패널에서 홈 버튼 클릭 시 호출
+    /// 로비 메인 화면으로 복귀
+    /// </summary>
+    public void OnBossDungeonHomeButton()
+    {
+        if (bossDungeonSelectPanel != null)
+        {
+            bossDungeonSelectPanel.SetActive(false);
+        }
+        if (lobbyWindow != null)
+        {
+            lobbyWindow.SetActive(true);
+        }
     }
 
     /// <summary>

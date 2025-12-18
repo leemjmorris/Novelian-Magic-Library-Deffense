@@ -17,5 +17,10 @@ public class MonsterData
     public int Effect_ID { get; set; }
     public int Path_ID { get; set; }
     public int Description_ID { get; set; }
-    
+    public int Is_Boss { get; set; }
+
+    /// <summary>
+    /// 보스 몬스터 여부 확인
+    /// </summary>
+    public bool IsBoss => Is_Boss == 1;
 }

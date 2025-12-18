@@ -33,9 +33,15 @@ public class GachaPanelController : MonoBehaviour
     [Header("Close Buttons")]
     [SerializeField] private Button singlePanelCloseButton;
     [SerializeField] private Button tenPanelCloseButton;
+    [SerializeField] private Button resultPanelCloseButton;  // Gacha Result Panel 닫기 버튼
 
     [Header("Animation Settings")]
     [SerializeField] private float slotRevealDelay = 0.15f;
+
+    [Header("Fade Effect")]
+    [SerializeField] private GameObject resultPanel;        // Gacha Result Panel
+    [SerializeField] private CanvasGroup coverImage;        // Image (커버 이미지, CanvasGroup 필요)
+    [SerializeField] private float fadeDuration = 0.8f;     // 페이드 아웃 시간
 
     // 뽑기 비용
     private const int PULL_COST_APPLICATION = 1;      // 지원서 1개당 1회
@@ -70,6 +76,12 @@ public class GachaPanelController : MonoBehaviour
         if (tenPanelCloseButton != null)
             tenPanelCloseButton.onClick.AddListener(CloseTenPanel);
 
+        if (resultPanelCloseButton != null)
+        {
+            resultPanelCloseButton.onClick.AddListener(CloseResultPanel);
+            resultPanelCloseButton.gameObject.SetActive(false);  // 초기에는 비활성화
+        }
+
         // 결과 패널 초기 비활성화
         if (singleSummonPanel != null)
             singleSummonPanel.SetActive(false);
@@ -87,6 +99,12 @@ public class GachaPanelController : MonoBehaviour
         UpdateButtonStates();
     }
 
+    private void OnDisable()
+    {
+        // 가챠 패널 비활성화 시 모든 결과 패널 및 슬롯 초기화
+        ResetAllPanels();
+    }
+
     private void OnDestroy()
     {
         if (gachaX1Button != null)
@@ -100,26 +118,63 @@ public class GachaPanelController : MonoBehaviour
 
         if (tenPanelCloseButton != null)
             tenPanelCloseButton.onClick.RemoveListener(CloseTenPanel);
+
+        if (resultPanelCloseButton != null)
+            resultPanelCloseButton.onClick.RemoveListener(CloseResultPanel);
     }
 
     #region Button Handlers
 
     /// <summary>
-    /// 1회 뽑기 버튼 클릭
+    /// 1회 뽑기 버튼 클릭 - 싱글 패널 표시 후 뽑기 실행
     /// </summary>
     public void OnGachaX1Button()
     {
         if (isProcessing) return;
+
+        // 탭 전환: 싱글 패널 표시, x10 패널 숨김
+        ShowSinglePanelTab();
+
         PerformSinglePullAsync().Forget();
     }
 
     /// <summary>
-    /// 10회 뽑기 버튼 클릭
+    /// 10회 뽑기 버튼 클릭 - x10 패널 표시 후 뽑기 실행
     /// </summary>
     public void OnGachaX10Button()
     {
         if (isProcessing) return;
+
+        // 탭 전환: x10 패널 표시, 싱글 패널 숨김
+        ShowTenPanelTab();
+
         PerformTenPullAsync().Forget();
+    }
+
+    /// <summary>
+    /// 싱글 패널 탭으로 전환 (x10 패널 숨김)
+    /// </summary>
+    private void ShowSinglePanelTab()
+    {
+        // x10 패널 닫고 슬롯 초기화
+        if (tenSummonPanel != null && tenSummonPanel.activeSelf)
+        {
+            ResetTenSlots();
+            tenSummonPanel.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// x10 패널 탭으로 전환 (싱글 패널 숨김)
+    /// </summary>
+    private void ShowTenPanelTab()
+    {
+        // 싱글 패널 닫고 슬롯 초기화
+        if (singleSummonPanel != null && singleSummonPanel.activeSelf)
+        {
+            ResetSingleSlot();
+            singleSummonPanel.SetActive(false);
+        }
     }
 
     #endregion
@@ -287,8 +342,8 @@ public class GachaPanelController : MonoBehaviour
         // 슬롯 초기화
         singleSlot.gameObject.SetActive(false);
 
-        // 패널 열기
-        singleSummonPanel.SetActive(true);
+        // 페이드 연출 후 패널 열기
+        await PlayFadeTransition(true);
 
         // 잠시 대기 후 슬롯 표시
         await UniTask.Delay(100);
@@ -296,6 +351,9 @@ public class GachaPanelController : MonoBehaviour
         // 결과 표시
         await singleSlot.Initialize(result);
         singleSlot.gameObject.SetActive(true);
+
+        // 연출 완료 - 닫기 버튼 표시
+        ShowResultCloseButton();
 
         Debug.Log($"[Gacha] 1회 뽑기 결과: {result.GetCharacterName()} (신규: {result.IsNew})");
     }
@@ -318,8 +376,8 @@ public class GachaPanelController : MonoBehaviour
                 slot.gameObject.SetActive(false);
         }
 
-        // 패널 열기
-        tenSummonPanel.SetActive(true);
+        // 페이드 연출 후 패널 열기
+        await PlayFadeTransition(false);
 
         // 잠시 대기
         await UniTask.Delay(100);
@@ -336,6 +394,9 @@ public class GachaPanelController : MonoBehaviour
                 await UniTask.Delay((int)(slotRevealDelay * 1000));
             }
         }
+
+        // 연출 완료 - 닫기 버튼 표시
+        ShowResultCloseButton();
 
         // 결과 로그
         int newCount = 0;
@@ -359,6 +420,7 @@ public class GachaPanelController : MonoBehaviour
     {
         if (singleSummonPanel != null)
         {
+            ResetSingleSlot();
             singleSummonPanel.SetActive(false);
         }
     }
@@ -370,8 +432,152 @@ public class GachaPanelController : MonoBehaviour
     {
         if (tenSummonPanel != null)
         {
+            ResetTenSlots();
             tenSummonPanel.SetActive(false);
         }
+    }
+
+    /// <summary>
+    /// 결과 패널 전체 닫기 (Close 버튼용)
+    /// </summary>
+    public void CloseResultPanel()
+    {
+        ResetAllPanels();
+        UpdateCostText();
+        UpdateButtonStates();
+    }
+
+    /// <summary>
+    /// 결과 패널 닫기 버튼 표시
+    /// </summary>
+    private void ShowResultCloseButton()
+    {
+        if (resultPanelCloseButton != null)
+            resultPanelCloseButton.gameObject.SetActive(true);
+    }
+
+    /// <summary>
+    /// 결과 패널 닫기 버튼 숨김
+    /// </summary>
+    private void HideResultCloseButton()
+    {
+        if (resultPanelCloseButton != null)
+            resultPanelCloseButton.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// 페이드 연출 시작 (커버 이미지 표시 → 페이드 아웃 → 결과 패널 표시)
+    /// </summary>
+    private async UniTask PlayFadeTransition(bool isSinglePull)
+    {
+        // 0. 닫기 버튼 숨기기
+        HideResultCloseButton();
+
+        // 1. Result Panel 활성화
+        if (resultPanel != null)
+            resultPanel.SetActive(true);
+
+        // 2. 커버 이미지 활성화 및 알파 1로 설정
+        if (coverImage != null)
+        {
+            coverImage.gameObject.SetActive(true);
+            coverImage.alpha = 1f;
+        }
+
+        // 3. 결과 패널은 아직 숨김
+        if (singleSummonPanel != null)
+            singleSummonPanel.SetActive(false);
+        if (tenSummonPanel != null)
+            tenSummonPanel.SetActive(false);
+
+        // 4. 잠시 대기 (연출 시작 전)
+        await UniTask.Delay(200);
+
+        // 5. 페이드 아웃 (알파 1 → 0)
+        if (coverImage != null)
+        {
+            float elapsed = 0f;
+            while (elapsed < fadeDuration)
+            {
+                elapsed += Time.deltaTime;
+                coverImage.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeDuration);
+                await UniTask.Yield();
+            }
+            coverImage.alpha = 0f;
+            coverImage.gameObject.SetActive(false);
+        }
+
+        // 6. 결과 패널 활성화
+        if (isSinglePull)
+        {
+            if (singleSummonPanel != null)
+                singleSummonPanel.SetActive(true);
+        }
+        else
+        {
+            if (tenSummonPanel != null)
+                tenSummonPanel.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// 싱글 슬롯 초기화
+    /// </summary>
+    private void ResetSingleSlot()
+    {
+        if (singleSlot != null)
+        {
+            singleSlot.Clear();
+            singleSlot.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 10개 슬롯 모두 초기화
+    /// </summary>
+    private void ResetTenSlots()
+    {
+        if (tenSlots == null) return;
+
+        foreach (var slot in tenSlots)
+        {
+            if (slot != null)
+            {
+                slot.Clear();
+                slot.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 전체 패널 초기화 (가챠 패널 비활성화 시 호출)
+    /// </summary>
+    private void ResetAllPanels()
+    {
+        ResetSingleSlot();
+        ResetTenSlots();
+
+        if (singleSummonPanel != null)
+            singleSummonPanel.SetActive(false);
+
+        if (tenSummonPanel != null)
+            tenSummonPanel.SetActive(false);
+
+        // 커버 이미지 초기화 (다음 연출을 위해 알파 1로 리셋)
+        if (coverImage != null)
+        {
+            coverImage.alpha = 1f;
+            coverImage.gameObject.SetActive(true);
+        }
+
+        // 결과 패널 비활성화
+        if (resultPanel != null)
+            resultPanel.SetActive(false);
+
+        // 닫기 버튼 숨김
+        HideResultCloseButton();
+
+        isProcessing = false;
     }
 
     #endregion
