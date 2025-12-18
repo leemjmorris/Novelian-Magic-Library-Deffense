@@ -276,6 +276,15 @@ public class SkillEffectDatabase : ScriptableObject
         return entry?.useAssetMovement ?? false;
     }
 
+    /// <summary>
+    /// 이펙트 지속시간 조회 (AOE DOT에 사용)
+    /// </summary>
+    public float GetEffectDuration(int skillId)
+    {
+        var entry = GetEntry(skillId);
+        return entry?.effectDuration ?? 0f;
+    }
+
     #endregion
 
     #region Support Skill Query Methods

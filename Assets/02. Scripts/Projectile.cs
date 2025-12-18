@@ -100,6 +100,11 @@ namespace Novelian.Combat
         private Transform timeBombAttachTarget = null; // 부착된 몬스터 Transform
         private GameObject timeBombEffectInstance = null; // 몬스터에 부착된 이펙트
 
+        // Homing state tracking (유도 시스템)
+        private bool isHoming = false;
+        private ITargetable homingTarget = null;
+        private float homingTurnSpeed = 5f; // 방향 전환 속도 (초당 각도 비율)
+
         // Movement state
         private Vector3 fixedDirection;
         private float speed;
@@ -288,6 +293,18 @@ namespace Novelian.Combat
                 Debug.Log($"[Projectile] TimeBomb initialized: fuseTime={timeBombFuseTime}s");
             }
 
+            // Initialize Homing state (유도 시스템 - CSV의 is_homing이 true인 스킬)
+            if (skillData != null && skillData.is_homing)
+            {
+                isHoming = true;
+                // 가장 가까운 적을 타겟으로 설정
+                homingTarget = FindNearestEnemy(targetPos);
+                if (homingTarget != null)
+                {
+                    Debug.Log($"[Projectile] Homing initialized: target={homingTarget.GetPosition()}");
+                }
+            }
+
             // Cancel previous lifetime token
             lifetimeCts?.Cancel();
             lifetimeCts = new CancellationTokenSource();
@@ -323,6 +340,7 @@ namespace Novelian.Combat
                     if (effectEntry != null && effectEntry.HasMainEffect())
                     {
                         // Convert SkillEffectEntry to MainSkillPrefabEntry for compatibility
+                        // Include scale values for each effect type
                         skillPrefabs = new MainSkillPrefabEntry
                         {
                             skillId = mainSkillId,
@@ -331,7 +349,13 @@ namespace Novelian.Combat
                             hitEffectPrefab = effectEntry.hitEffectPrefab,
                             castEffectPrefab = effectEntry.castEffectPrefab,
                             trailEffectPrefab = effectEntry.trailEffectPrefab,
-                            areaEffectPrefab = effectEntry.areaEffectPrefab
+                            areaEffectPrefab = effectEntry.areaEffectPrefab,
+                            // Copy scale values
+                            mainEffectScale = effectEntry.scaleOverride,
+                            hitEffectScale = effectEntry.hitEffectScale,
+                            castEffectScale = effectEntry.castEffectScale,
+                            trailEffectScale = effectEntry.trailEffectScale,
+                            areaEffectScale = effectEntry.areaEffectScale
                         };
                     }
                     // No fallback - if not in SkillEffectDatabase, skillPrefabs remains null
@@ -438,6 +462,13 @@ namespace Novelian.Combat
             if (isTimeBomb)
             {
                 UpdateTimeBombMovement();
+                return;
+            }
+
+            // 유도 투사체 처리 (is_homing)
+            if (isHoming)
+            {
+                UpdateHomingMovement();
                 return;
             }
 
@@ -615,14 +646,22 @@ namespace Novelian.Combat
             Vector3 explosionPos = transform.position;
             Debug.Log($"[Projectile] Dynamite exploding at {explosionPos}, radius={dynamiteAoeRadius}");
 
-            // 폭발 이펙트 재생 (적절한 크기로)
-            GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
-            if (hitEffectPrefab != null)
+            // 폭발 이펙트 재생 (SkillEffectManager를 통해 스폰 - 에셋 원본 그대로 사용)
+            var effectManager = SkillEffectManager.Instance;
+            if (effectManager != null && skillId > 0)
             {
-                GameObject explosionEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, explosionPos, Quaternion.identity);
-                // 폭발 이펙트는 기본 크기 사용 (너무 크거나 작지 않게)
-                explosionEffect.transform.localScale = Vector3.one * 1.5f;
-                UnityEngine.Object.Destroy(explosionEffect, 2f);
+                effectManager.SpawnHitEffect(skillId, explosionPos);
+            }
+            else
+            {
+                // Fallback: SkillEffectManager가 없으면 직접 스폰 (에셋 원본 스케일 유지)
+                GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
+                if (hitEffectPrefab != null)
+                {
+                    GameObject explosionEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, explosionPos, Quaternion.identity);
+                    // 에셋 원본 스케일 유지 (override 제거)
+                    UnityEngine.Object.Destroy(explosionEffect, 2f);
+                }
             }
 
             // AOE 범위 내 모든 적에게 데미지
@@ -816,6 +855,48 @@ namespace Novelian.Combat
             }
         }
 
+        //LMJ : Homing projectile movement - tracks target and adjusts direction
+        private void UpdateHomingMovement()
+        {
+            // 타겟 유효성 체크 및 재탐색
+            UpdateHomingTarget();
+
+            // 이동 방향 계산
+            Vector3 desiredDirection = fixedDirection;
+
+            if (homingTarget != null && homingTarget.IsAlive())
+            {
+                // 타겟을 향한 방향 계산
+                Vector3 toTarget = homingTarget.GetPosition() - transform.position;
+                toTarget.y = 0f; // Y축은 무시하고 수평면에서만 유도
+
+                if (toTarget.sqrMagnitude > 0.01f)
+                {
+                    desiredDirection = toTarget.normalized;
+
+                    // 부드러운 방향 전환 (Slerp 사용)
+                    fixedDirection = Vector3.Slerp(fixedDirection, desiredDirection, homingTurnSpeed * Time.fixedDeltaTime);
+                    fixedDirection.Normalize();
+                }
+            }
+
+            // 이동 적용
+            if (rb != null)
+            {
+                rb.linearVelocity = fixedDirection * speed;
+            }
+            else
+            {
+                transform.position += fixedDirection * speed * Time.fixedDeltaTime;
+            }
+
+            // 회전 업데이트
+            if (fixedDirection != Vector3.zero)
+            {
+                transform.rotation = Quaternion.LookRotation(fixedDirection);
+            }
+        }
+
         //LMJ : Time Bomb attach to monster
         private void AttachTimeBombToMonster(Transform monsterTransform)
         {
@@ -845,14 +926,23 @@ namespace Novelian.Combat
                 child.gameObject.SetActive(false);
             }
 
-            // 몬스터에 부착할 이펙트 생성
-            GameObject projectileEffectPrefab = skillPrefabs?.projectilePrefab;
-            if (projectileEffectPrefab != null)
+            // 몬스터에 부착할 이펙트 생성 (SkillEffectManager를 통해 스폰)
+            Vector3 attachPos = monsterTransform.position + Vector3.up * 1.5f;
+            var effectManager = SkillEffectManager.Instance;
+            if (effectManager != null && skillId > 0)
             {
-                Vector3 attachPos = monsterTransform.position + Vector3.up * 1.5f;
-                timeBombEffectInstance = Object.Instantiate(projectileEffectPrefab, attachPos, Quaternion.identity);
-                // 이펙트는 폭발 시 제거됨
+                timeBombEffectInstance = effectManager.SpawnMainEffect(skillId, attachPos);
             }
+            else
+            {
+                // Fallback: SkillEffectManager가 없으면 직접 스폰
+                GameObject projectileEffectPrefab = skillPrefabs?.projectilePrefab;
+                if (projectileEffectPrefab != null)
+                {
+                    timeBombEffectInstance = Object.Instantiate(projectileEffectPrefab, attachPos, Quaternion.identity);
+                }
+            }
+            // 이펙트는 폭발 시 제거됨
 
             Debug.Log($"[Projectile] TimeBomb attached to {monsterTransform.name}, fuseTime={timeBombFuseTime:F1}s");
         }
@@ -868,21 +958,30 @@ namespace Novelian.Combat
                 ? timeBombAttachTarget.position
                 : transform.position;
 
-            Debug.Log($"[Projectile] TimeBomb exploding at {explosionPos}, skillPrefabs={(skillPrefabs != null ? "OK" : "NULL")}");
+            Debug.Log($"[Projectile] TimeBomb exploding at {explosionPos}");
 
-            // 폭발 이펙트 재생 (hitEffect)
-            GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
-            Debug.Log($"[Projectile] TimeBomb hitEffectPrefab={(hitEffectPrefab != null ? hitEffectPrefab.name : "NULL")}");
-
-            if (hitEffectPrefab != null)
+            // 폭발 이펙트 재생 (SkillEffectManager를 통해 스폰 - 에셋 원본 그대로 사용)
+            var effectManager = SkillEffectManager.Instance;
+            if (effectManager != null && skillId > 0)
             {
-                GameObject explosionEffect = Object.Instantiate(hitEffectPrefab, explosionPos, Quaternion.identity);
-                Object.Destroy(explosionEffect, 2f);
-                Debug.Log($"[Projectile] TimeBomb explosion effect spawned at {explosionPos}");
+                effectManager.SpawnHitEffect(skillId, explosionPos);
+                Debug.Log($"[Projectile] TimeBomb explosion effect spawned via SkillEffectManager at {explosionPos}");
             }
             else
             {
-                Debug.LogWarning($"[Projectile] TimeBomb hitEffectPrefab is null! skillId={skillId}");
+                // Fallback: SkillEffectManager가 없으면 직접 스폰 (에셋 원본 스케일 유지)
+                GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
+                if (hitEffectPrefab != null)
+                {
+                    GameObject explosionEffect = Object.Instantiate(hitEffectPrefab, explosionPos, Quaternion.identity);
+                    // 에셋 원본 스케일 유지 (override 제거)
+                    Object.Destroy(explosionEffect, 2f);
+                    Debug.Log($"[Projectile] TimeBomb explosion effect spawned (fallback) at {explosionPos} (asset native)");
+                }
+                else
+                {
+                    Debug.LogWarning($"[Projectile] TimeBomb hitEffectPrefab is null! skillId={skillId}");
+                }
             }
 
             // 부착된 이펙트 제거
@@ -928,15 +1027,27 @@ namespace Novelian.Combat
         }
 
         //LMJ : Spawn hit effect at collider center (몬스터 몸통 중심에 이펙트 생성)
+        // SkillEffectManager를 통해 스폰 - 에셋 원본 그대로 사용
         private void SpawnHitEffectAtCollider(Collider col)
         {
-            if (col == null) return;
-            GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
-            if (hitEffectPrefab != null)
+            if (col == null || skillId <= 0) return;
+
+            var effectManager = SkillEffectManager.Instance;
+            if (effectManager != null)
             {
-                Vector3 hitPos = col.bounds.center;
-                GameObject hitEffect = Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
-                Object.Destroy(hitEffect, 2f);
+                effectManager.SpawnHitEffectAtCollider(skillId, col);
+            }
+            else
+            {
+                // Fallback: SkillEffectManager가 없으면 직접 스폰 (에셋 원본 스케일 유지)
+                GameObject hitEffectPrefab = skillPrefabs?.hitEffectPrefab;
+                if (hitEffectPrefab != null)
+                {
+                    Vector3 hitPos = col.bounds.center;
+                    GameObject hitEffect = Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                    // 에셋 원본 스케일 유지 (override 제거)
+                    Object.Destroy(hitEffect, 2f);
+                }
             }
         }
 
@@ -1550,6 +1661,46 @@ namespace Novelian.Combat
             return closestTarget;
         }
 
+        //LMJ : Find nearest enemy for homing projectile (유도 투사체)
+        private ITargetable FindNearestEnemy(Vector3 targetPos)
+        {
+            // 먼저 타겟 위치 근처의 적을 찾음
+            float searchRadius = 20f;
+            Collider[] hits = Physics.OverlapSphere(targetPos, searchRadius);
+
+            ITargetable closestTarget = null;
+            float closestDistance = float.MaxValue;
+
+            foreach (var hit in hits)
+            {
+                if (!hit.CompareTag(Tag.Monster) && !hit.CompareTag(Tag.BossMonster))
+                    continue;
+
+                ITargetable target = hit.GetComponent<ITargetable>();
+                if (target == null || !target.IsAlive())
+                    continue;
+
+                float distance = Vector3.Distance(transform.position, target.GetPosition());
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestTarget = target;
+                }
+            }
+
+            return closestTarget;
+        }
+
+        //LMJ : Update homing target (타겟 재탐색)
+        private void UpdateHomingTarget()
+        {
+            // 현재 타겟이 유효하지 않으면 새 타겟 탐색
+            if (homingTarget == null || !homingTarget.IsAlive())
+            {
+                homingTarget = FindNearestEnemy(transform.position);
+            }
+        }
+
         //LMJ : Spawn fragment projectiles in fan pattern on hit (파편화 40002)
         // 원본 진행 방향을 기준으로 부채꼴 형태로 발사
         // 몬스터 콜라이더 크기에 따라 동적으로 스폰 위치 계산
@@ -1724,6 +1875,10 @@ namespace Novelian.Combat
                 Object.Destroy(timeBombEffectInstance);
                 timeBombEffectInstance = null;
             }
+
+            // Reset homing state (유도 시스템)
+            isHoming = false;
+            homingTarget = null;
 
             // Reset genre state (상성 시스템)
             attackerGenre = Genre.Horror;

@@ -26,6 +26,13 @@ public class ObjectMoveDestroy : MonoBehaviour
     float m_scalefactor;
 
     /// <summary>
+    /// Hit Object에 적용할 스케일 (-1이면 전역값 사용)
+    /// SkillEffectManager에서 설정
+    /// </summary>
+    [HideInInspector]
+    public float hitObjectScale = -1f;
+
+    /// <summary>
     /// 충돌 시 발생하는 이벤트 (래퍼에서 구독)
     /// </summary>
     public event Action<RaycastHit> OnHit;
@@ -62,7 +69,10 @@ public class ObjectMoveDestroy : MonoBehaviour
             return;
         m_makedObject = Instantiate(m_hitObject, hit.point, Quaternion.LookRotation(hit.normal)).gameObject;
         m_makedObject.transform.parent = transform.parent;
-        m_makedObject.transform.localScale = new Vector3(1, 1, 1);
+
+        // hitObjectScale이 설정되어 있으면 해당 값 사용, 아니면 전역 스케일 사용
+        float scale = hitObjectScale >= 0f ? hitObjectScale : m_scalefactor;
+        m_makedObject.transform.localScale = Vector3.one * scale;
     }
 
     void MakeHitObject(Transform point)
@@ -71,7 +81,10 @@ public class ObjectMoveDestroy : MonoBehaviour
             return;
         m_makedObject = Instantiate(m_hitObject, point.transform.position, point.rotation).gameObject;
         m_makedObject.transform.parent = transform.parent;
-        m_makedObject.transform.localScale = new Vector3(1, 1, 1);
+
+        // hitObjectScale이 설정되어 있으면 해당 값 사용, 아니면 전역 스케일 사용
+        float scale = hitObjectScale >= 0f ? hitObjectScale : m_scalefactor;
+        m_makedObject.transform.localScale = Vector3.one * scale;
     }
 
     void HitObj(RaycastHit hit)

@@ -104,6 +104,18 @@ namespace Novelian.Combat
             {
                 ApplyDOT(target, skillData.dot_damage_per_tick, skillData.dot_duration, skillData.dot_tick_interval);
             }
+            // AOE 스킬의 skill_lifetime 기반 DOT (CSV에 DOT가 없지만 skill_lifetime이 있는 경우)
+            else if (skillData.IsAOESkill && skillData.skill_lifetime > 0 && skillData.base_damage > 0)
+            {
+                // DOT 지속시간 = skill_lifetime (이펙트 지속시간)
+                // DOT 틱 간격 = 1초 (고정)
+                // DOT 틱 데미지 = 기본 데미지의 10%
+                float dotTickInterval = 1f;
+                float dotDamagePerTick = skillData.base_damage * 0.1f;
+
+                ApplyDOT(target, dotDamagePerTick, skillData.skill_lifetime, dotTickInterval);
+                Debug.Log($"[Character] AOE skill_lifetime 기반 DOT 적용: {skillData.skill_name}, duration={skillData.skill_lifetime}s, tickDamage={dotDamagePerTick}");
+            }
 
             // 표식 효과 적용 (데미지 증폭)
             if (skillData.HasMarkEffect)
@@ -111,11 +123,19 @@ namespace Novelian.Combat
                 ApplyMark(target, skillData.mark_damage_mult, skillData.mark_duration);
             }
 
-            // 디버프 효과 적용
+            // 디버프 효과 적용 (debuff_value_mult 배율 적용)
             if (skillData.HasDebuffEffect)
             {
                 var debuffType = skillData.GetDeBuffType();
-                ApplyDebuff(target, debuffType, skillData.base_debuff_value, skillData.cc_duration);
+                float debuffValue = skillData.base_debuff_value;
+
+                // 서포트 스킬의 debuff_value_mult 배율 적용 (40023 약화 등)
+                if (supportData != null && supportData.debuff_value_mult > 0)
+                {
+                    debuffValue *= supportData.debuff_value_mult;
+                }
+
+                ApplyDebuff(target, debuffType, debuffValue, skillData.cc_duration);
             }
         }
 

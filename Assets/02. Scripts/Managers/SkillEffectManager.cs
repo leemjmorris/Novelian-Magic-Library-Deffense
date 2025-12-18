@@ -237,27 +237,47 @@ public class SkillEffectManager : BaseManager
     }
 
     /// <summary>
-    /// 피격 이펙트 스폰
+    /// 피격 이펙트 스폰 (모든 히트 이펙트는 이 메서드를 통해 스폰)
+    /// 에셋 원본 그대로 사용 - 스케일/속도 override 없음
     /// </summary>
-    public GameObject SpawnHitEffect(int skillId, Vector3 position)
+    public GameObject SpawnHitEffect(int skillId, Vector3 position, Quaternion rotation = default)
     {
         var entry = database?.GetEntry(skillId);
         if (entry?.hitEffectPrefab == null) return null;
 
-        var effect = Instantiate(entry.hitEffectPrefab, position, Quaternion.identity);
+        if (rotation == default) rotation = Quaternion.identity;
+        var effect = Instantiate(entry.hitEffectPrefab, position, rotation);
+        effect.name = $"HitEffect_{skillId}_{Time.frameCount}";
 
-        // 자동 삭제
+        // 에셋 원본 스케일 유지 (override 제거)
+
+        // 에셋 자체 PlayOnAwake 또는 스크립트에 의존 (강제 재생 제거)
+
+        // 에셋 자체 DestroyObject 스크립트에 의존 (자동 삭제)
+        // DestroyObject가 없는 에셋은 fallback으로 3초 후 삭제
         var destroyer = effect.GetComponent<DestroyObject>();
         if (destroyer == null)
         {
-            Destroy(effect, 3f); // 기본 3초 후 삭제
+            Destroy(effect, 3f);
         }
 
+        Debug.Log($"[SkillEffectManager] SpawnHitEffect: skill={skillId}, pos={position} (asset native)");
         return effect;
     }
 
     /// <summary>
-    /// 시전 이펙트 스폰
+    /// 피격 이펙트 스폰 (Collider 중심점에 스폰)
+    /// </summary>
+    public GameObject SpawnHitEffectAtCollider(int skillId, Collider collider)
+    {
+        if (collider == null) return null;
+        Vector3 hitPos = collider.bounds.center;
+        return SpawnHitEffect(skillId, hitPos);
+    }
+
+    /// <summary>
+    /// 시전 이펙트 스폰 (모든 시전 이펙트는 이 메서드를 통해 스폰)
+    /// 에셋 원본 그대로 사용 - 스케일/속도 override 없음
     /// </summary>
     public GameObject SpawnCastEffect(int skillId, Vector3 position, Transform parent = null)
     {
@@ -265,19 +285,49 @@ public class SkillEffectManager : BaseManager
         if (entry?.castEffectPrefab == null) return null;
 
         var effect = Instantiate(entry.castEffectPrefab, position, Quaternion.identity);
+        effect.name = $"CastEffect_{skillId}_{Time.frameCount}";
+
+        // 에셋 원본 스케일 유지 (override 제거)
+
+        // 에셋 자체 PlayOnAwake 또는 스크립트에 의존 (강제 재생 제거)
+
         if (parent != null)
         {
             effect.transform.SetParent(parent);
             effect.transform.localPosition = Vector3.zero;
         }
 
-        // 자동 삭제
+        // 에셋 자체 DestroyObject 스크립트에 의존 (자동 삭제)
         var destroyer = effect.GetComponent<DestroyObject>();
         if (destroyer == null)
         {
             Destroy(effect, 3f);
         }
 
+        Debug.Log($"[SkillEffectManager] SpawnCastEffect: skill={skillId}, pos={position} (asset native)");
+        return effect;
+    }
+
+    /// <summary>
+    /// 메인 이펙트 직접 스폰 (프리팹 직접 Instantiate가 필요한 경우)
+    /// 에셋 원본 그대로 사용 - 스케일/속도/hitObjectScale override 없음
+    /// </summary>
+    public GameObject SpawnMainEffect(int skillId, Vector3 position, Quaternion rotation = default)
+    {
+        var entry = database?.GetEntry(skillId);
+        if (entry?.mainEffectPrefab == null) return null;
+
+        if (rotation == default) rotation = Quaternion.identity;
+        var effect = Instantiate(entry.mainEffectPrefab, position, rotation);
+        effect.name = $"MainEffect_{skillId}_{Time.frameCount}";
+
+        // 에셋 원본 스케일 유지 (override 제거)
+
+        // 에셋 자체 PlayOnAwake 또는 스크립트에 의존 (강제 재생 제거)
+
+        // 에셋 자체 ObjectMoveDestroy의 hitObjectScale 사용 (override 제거)
+
+        Debug.Log($"[SkillEffectManager] SpawnMainEffect: skill={skillId}, pos={position} (asset native)");
         return effect;
     }
 
@@ -394,13 +444,14 @@ public class SkillEffectManager : BaseManager
 
     /// <summary>
     /// 독립 이펙트 스폰 (Projectile/스킬 로직과 분리)
-    /// 이펙트는 자체 duration 동안 재생 완료 후 자동 회수
+    /// 에셋 원본 그대로 사용 - 스케일/속도/hitObjectScale override 없음
+    /// 이펙트는 에셋 자체 스크립트(DestroyObject/ObjectMoveDestroy)에 의해 관리됨
     /// </summary>
     /// <param name="skillId">스킬 ID</param>
     /// <param name="position">스폰 위치</param>
     /// <param name="rotation">스폰 회전</param>
     /// <param name="followTarget">따라갈 Transform (선택)</param>
-    /// <param name="useAssetMovement">에셋 자체 이동 로직 사용 여부</param>
+    /// <param name="useAssetMovement">에셋 자체 이동 로직 사용 여부 (기본 true)</param>
     /// <returns>스폰된 이펙트 GameObject</returns>
     public async UniTask<GameObject> SpawnIndependentEffect(
         int skillId,
@@ -420,15 +471,13 @@ public class SkillEffectManager : BaseManager
         var effectInstance = Instantiate(entry.mainEffectPrefab, position, rotation);
         effectInstance.name = $"SkillEffect_{skillId}_{Time.frameCount}";
 
-        // 스케일 적용
-        float scale = database.GetEffectScale(skillId);
-        effectInstance.transform.localScale = Vector3.one * scale;
+        // 에셋 원본 스케일 유지 (override 제거)
 
-        // 에셋 자체 이동 로직 비활성화 (필요시)
-        if (!useAssetMovement)
-        {
-            DisableAssetMovement(effectInstance);
-        }
+        Debug.Log($"[SkillEffectManager] SpawnIndependentEffect: skill={skillId}, position={position}, prefab={entry.mainEffectPrefab.name} (asset native)");
+
+        // 에셋 자체 PlayOnAwake 또는 스크립트에 의존 (강제 재생 제거)
+
+        // 에셋 자체 ObjectMoveDestroy의 hitObjectScale 사용 (override 제거)
 
         // FollowTarget 컴포넌트 추가 (따라가기 필요시)
         if (followTarget != null)
@@ -437,11 +486,15 @@ public class SkillEffectManager : BaseManager
             follower.Initialize(followTarget);
         }
 
-        // 자동 회수 설정 (ParticleSystem duration 기반)
-        float effectDuration = CalculateEffectDuration(effectInstance);
-        AutoDespawnEffectAsync(effectInstance, effectDuration).Forget();
-
-        Debug.Log($"[SkillEffectManager] Independent effect spawned: skill={skillId}, duration={effectDuration:F1}s, follow={followTarget?.name ?? "none"}");
+        // 에셋 자체 DestroyObject/ObjectMoveDestroy 스크립트에 의존
+        // Fallback: 에셋에 자동 삭제 스크립트가 없으면 ParticleSystem duration 기반으로 삭제
+        var destroyer = effectInstance.GetComponent<DestroyObject>();
+        var moveDestroy = effectInstance.GetComponentInChildren<ObjectMoveDestroy>();
+        if (destroyer == null && moveDestroy == null)
+        {
+            float effectDuration = CalculateEffectDuration(effectInstance);
+            AutoDespawnEffectAsync(effectInstance, effectDuration).Forget();
+        }
 
         await UniTask.CompletedTask;
         return effectInstance;
@@ -449,28 +502,30 @@ public class SkillEffectManager : BaseManager
 
     /// <summary>
     /// 순수 시각 이펙트 재생 (데미지 없음, 독립 실행)
-    /// 스킬 로직과 완전 분리되어 재생 완료까지 유지됨
+    /// 에셋 원본 그대로 사용
     /// </summary>
     public async UniTask<GameObject> PlayVisualEffect(
         int skillId,
         Vector3 position,
         Quaternion rotation)
     {
-        return await SpawnIndependentEffect(skillId, position, rotation, null, false);
+        return await SpawnIndependentEffect(skillId, position, rotation, null, true);
     }
 
     /// <summary>
     /// 위치 기반 이펙트 재생 (AOE, 즉발 스킬용)
+    /// 에셋 원본 그대로 사용
     /// </summary>
     public async UniTask<GameObject> PlayEffectAtPosition(
         int skillId,
         Vector3 position)
     {
-        return await SpawnIndependentEffect(skillId, position, Quaternion.identity, null, false);
+        return await SpawnIndependentEffect(skillId, position, Quaternion.identity, null, true);
     }
 
     /// <summary>
     /// 타겟 따라가는 이펙트 재생 (버프, 상태이상 아이콘용)
+    /// 에셋 원본 그대로 사용
     /// </summary>
     public async UniTask<GameObject> PlayEffectOnTarget(
         int skillId,
@@ -480,7 +535,7 @@ public class SkillEffectManager : BaseManager
         if (target == null) return null;
 
         Vector3 spawnPos = target.position + offset;
-        var effect = await SpawnIndependentEffect(skillId, spawnPos, Quaternion.identity, target, false);
+        var effect = await SpawnIndependentEffect(skillId, spawnPos, Quaternion.identity, target, true);
 
         // 오프셋이 있으면 EffectFollower에 설정
         if (effect != null && offset != default)
@@ -522,26 +577,7 @@ public class SkillEffectManager : BaseManager
         return effect;
     }
 
-    /// <summary>
-    /// 에셋의 자체 이동 로직 비활성화
-    /// </summary>
-    private void DisableAssetMovement(GameObject effectInstance)
-    {
-        // ObjectMove 비활성화
-        var objectMove = effectInstance.GetComponentInChildren<ObjectMove>();
-        if (objectMove != null)
-        {
-            objectMove.MoveSpeed = 0;
-        }
-
-        // ObjectMoveDestroy 비활성화
-        var objectMoveDestroy = effectInstance.GetComponentInChildren<ObjectMoveDestroy>();
-        if (objectMoveDestroy != null)
-        {
-            objectMoveDestroy.MoveSpeed = 0;
-            objectMoveDestroy.isDestroy = false; // 자체 destroy 비활성화
-        }
-    }
+    // DisableAssetMovement 제거 - 에셋 원본 그대로 사용
 
     /// <summary>
     /// 이펙트 duration 계산 (ParticleSystem 기반)

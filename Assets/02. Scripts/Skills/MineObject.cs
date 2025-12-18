@@ -1,6 +1,7 @@
 //LMJ : Mine object that is placed on the field
 //      Explodes when an enemy steps on it (OnTriggerEnter)
-//      Used by Mine type skills (3000908): 풍선껌, 봉인된증거, 저주받은인형, 깜짝카메라
+//      Used by Mine type skills (3000908): 저주 마법, 봉인 마법진, 얼음 결정, 마검 지역 생성, 섬광구
+//      Supports chain explosion (40019 연쇄폭발) - spawns additional mines on explosion
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -26,6 +27,9 @@ namespace Novelian.Combat
 
         // Genre system (상성 시스템)
         private Genre attackerGenre = Genre.Horror;
+
+        // Chain explosion (연쇄폭발)
+        private int remainingChains = 0;
 
         //LMJ : Initialize and arm the mine
         public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float mineDamage, Vector3 position, Genre genre = Genre.Horror)
@@ -71,10 +75,16 @@ namespace Novelian.Combat
             int mineLayer = LayerMask.NameToLayer("Projectile");
             if (mineLayer >= 0) gameObject.layer = mineLayer;
 
+            // 연쇄폭발 (40019) 설정
+            if (support != null && support.chain_count > 0)
+            {
+                remainingChains = support.chain_count;
+            }
+
             isActive = true;
             hasExploded = false;
 
-            Debug.Log($"[MineObject] Initialized: {data.skill_name}, lifetime={lifetime}s, explosionRadius={aoeRadius}, damage={damage}");
+            Debug.Log($"[MineObject] Initialized: {data.skill_name}, lifetime={lifetime}s, explosionRadius={aoeRadius}, damage={damage}, chains={remainingChains}");
 
             // Start lifetime tracking
             lifetimeCts?.Cancel();
@@ -168,6 +178,12 @@ namespace Novelian.Combat
 
             Debug.Log($"[MineObject] Explosion hit {hitCount} targets");
 
+            // 연쇄폭발: 폭발 시 주변에 추가 지뢰 생성
+            if (remainingChains > 0)
+            {
+                SpawnChainMines();
+            }
+
             // Destroy mine after explosion
             DestroyMine();
         }
@@ -243,6 +259,48 @@ namespace Novelian.Combat
             }
 
             Object.Destroy(gameObject);
+        }
+
+        //LMJ : 연쇄폭발 - 주변에 추가 지뢰 생성
+        private void SpawnChainMines()
+        {
+            if (supportData == null || remainingChains <= 0) return;
+
+            float chainRange = supportData.chain_range > 0 ? supportData.chain_range : 10f;
+            float damageReduction = supportData.chain_damage_reduction / 100f;
+            float chainDamage = damage * (1f - damageReduction);
+
+            Debug.Log($"[MineObject] Spawning {remainingChains} chain mines, range={chainRange}, damage={chainDamage}");
+
+            // 주변 랜덤 위치에 연쇄 지뢰 생성
+            for (int i = 0; i < remainingChains; i++)
+            {
+                // 원형 범위 내 랜덤 위치
+                Vector2 randomCircle = Random.insideUnitCircle * chainRange;
+                Vector3 chainPos = transform.position + new Vector3(randomCircle.x, 0, randomCircle.y);
+
+                // 지면 높이 맞추기
+                Ray groundRay = new Ray(chainPos + Vector3.up * 10f, Vector3.down);
+                if (Physics.Raycast(groundRay, out RaycastHit groundHit, 20f, LayerMask.GetMask("Ground")))
+                {
+                    chainPos = groundHit.point;
+                }
+                else
+                {
+                    chainPos.y = 0f;
+                }
+
+                // 연쇄 지뢰 생성 (chain_count=0으로 설정하여 무한 연쇄 방지)
+                GameObject chainMineObj = new GameObject($"ChainMine_{skillData.skill_name}_{i}");
+                MineObject chainMine = chainMineObj.AddComponent<MineObject>();
+
+                // 연쇄 지뢰는 chain_count를 0으로 설정 (무한 연쇄 방지)
+                SupportSkillData chainSupportData = null; // 연쇄 지뢰는 서포트 효과 없음
+
+                chainMine.Initialize(skillData, skillPrefabs, chainSupportData, chainDamage, chainPos, attackerGenre);
+
+                Debug.Log($"[MineObject] Chain mine {i + 1} spawned at {chainPos}");
+            }
         }
 
         private void OnDestroy()

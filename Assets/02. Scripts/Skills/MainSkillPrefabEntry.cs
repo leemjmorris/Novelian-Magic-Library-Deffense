@@ -32,6 +32,22 @@ public class MainSkillPrefabEntry
     [Tooltip("영역 이펙트 프리팹 (채널링/빔 스킬용)")]
     public GameObject areaEffectPrefab;
 
+    [Header("Effect Scales")]
+    [Tooltip("메인 이펙트 스케일 (-1 = 전역값, 0 이상 = 개별값)")]
+    public float mainEffectScale = -1f;
+
+    [Tooltip("피격 이펙트 스케일 (-1 = 전역값, 0 이상 = 개별값)")]
+    public float hitEffectScale = -1f;
+
+    [Tooltip("시전 이펙트 스케일 (-1 = 전역값, 0 이상 = 개별값)")]
+    public float castEffectScale = -1f;
+
+    [Tooltip("트레일 이펙트 스케일 (-1 = 전역값, 0 이상 = 개별값)")]
+    public float trailEffectScale = -1f;
+
+    [Tooltip("영역 이펙트 스케일 (-1 = 전역값, 0 이상 = 개별값)")]
+    public float areaEffectScale = -1f;
+
     /// <summary>
     /// 메인 이펙트 존재 여부
     /// </summary>
@@ -51,4 +67,29 @@ public class MainSkillPrefabEntry
     /// 트레일 이펙트 존재 여부
     /// </summary>
     public bool HasTrailEffect() => trailEffectPrefab != null;
+
+    /// <summary>
+    /// 메인 이펙트 스케일 반환 (-1이면 기본값 1, 0 이상이면 해당값)
+    /// </summary>
+    public float GetMainScale() => mainEffectScale >= 0f ? mainEffectScale : 1f;
+
+    /// <summary>
+    /// 피격 이펙트 스케일 반환 (-1이면 기본값 1, 0 이상이면 해당값)
+    /// </summary>
+    public float GetHitScale() => hitEffectScale >= 0f ? hitEffectScale : 1f;
+
+    /// <summary>
+    /// 시전 이펙트 스케일 반환 (-1이면 기본값 1, 0 이상이면 해당값)
+    /// </summary>
+    public float GetCastScale() => castEffectScale >= 0f ? castEffectScale : 1f;
+
+    /// <summary>
+    /// 트레일 이펙트 스케일 반환 (-1이면 기본값 1, 0 이상이면 해당값)
+    /// </summary>
+    public float GetTrailScale() => trailEffectScale >= 0f ? trailEffectScale : 1f;
+
+    /// <summary>
+    /// 영역 이펙트 스케일 반환 (-1이면 기본값 1, 0 이상이면 해당값)
+    /// </summary>
+    public float GetAreaScale() => areaEffectScale >= 0f ? areaEffectScale : 1f;
 }

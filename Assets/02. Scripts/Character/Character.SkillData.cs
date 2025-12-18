@@ -256,7 +256,13 @@ namespace Novelian.Combat
                 hitEffectPrefab = entry.hitEffectPrefab,
                 castEffectPrefab = entry.castEffectPrefab,
                 trailEffectPrefab = entry.trailEffectPrefab,
-                areaEffectPrefab = entry.areaEffectPrefab
+                areaEffectPrefab = entry.areaEffectPrefab,
+                // Copy scale values for each effect type
+                mainEffectScale = entry.scaleOverride,
+                hitEffectScale = entry.hitEffectScale,
+                castEffectScale = entry.castEffectScale,
+                trailEffectScale = entry.trailEffectScale,
+                areaEffectScale = entry.areaEffectScale
             };
         }
 
@@ -327,13 +333,13 @@ namespace Novelian.Combat
                 return;
             }
 
-            if (!pool.HasPool<Projectile>())
+            if (!pool.HasPool<SkillProjectile>())
             {
-                bool success = pool.CreatePool<Projectile>(projectileTemplate, defaultCapacity: 20, maxSize: 100);
+                bool success = pool.CreatePool<SkillProjectile>(projectileTemplate, defaultCapacity: 20, maxSize: 100);
                 if (success)
                 {
-                    pool.WarmUp<Projectile>(20);
-                    Debug.Log($"[Character] Projectile pool initialized for skill: {basicAttackData.skill_name}");
+                    pool.WarmUp<SkillProjectile>(20);
+                    Debug.Log($"[Character] SkillProjectile pool initialized for skill: {basicAttackData.skill_name}");
                 }
                 else
                 {
@@ -367,12 +373,12 @@ namespace Novelian.Combat
             }
 
             // ProjectileTemplate은 모든 스킬이 공유하므로 이미 생성되어 있을 수 있음
-            if (!pool.HasPool<Projectile>())
+            if (!pool.HasPool<SkillProjectile>())
             {
-                bool success = pool.CreatePool<Projectile>(projectileTemplate, defaultCapacity: 10, maxSize: 50);
+                bool success = pool.CreatePool<SkillProjectile>(projectileTemplate, defaultCapacity: 10, maxSize: 50);
                 if (success)
                 {
-                    pool.WarmUp<Projectile>(10);
+                    pool.WarmUp<SkillProjectile>(10);
                     Debug.Log($"[Character] Active skill pool initialized for skill: {activeSkillData.skill_name}");
                 }
             }

@@ -108,6 +108,14 @@ public class MainSkillData
     [Optional]
     public string description { get; set; }
 
+    [Name("//use_asset")]
+    [Optional]
+    public string use_asset { get; set; }
+
+    [Name("//note")]
+    [Optional]
+    public string note { get; set; }
+
     #region Helper Properties (Enum 변환 - 새 ID 체계)
 
     /// <summary>

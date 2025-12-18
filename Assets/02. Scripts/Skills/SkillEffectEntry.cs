@@ -35,15 +35,33 @@ public class SkillEffectEntry
     public GameObject areaEffectPrefab;
 
     [Header("스케일 설정")]
-    [Tooltip("스케일 오버라이드 (0 = 전역값 사용, >0 = 개별값)")]
-    [Min(0f)]
-    public float scaleOverride = 0f;
+    [Tooltip("메인 이펙트 스케일 오버라이드 (-1 = 전역값 사용, 0 이상 = 개별값)")]
+    public float scaleOverride = -1f;
+
+    [Tooltip("피격 이펙트 스케일 (-1 = 전역값 사용, 0 이상 = 개별값)")]
+    public float hitEffectScale = -1f;
+
+    [Tooltip("시전 이펙트 스케일 (-1 = 전역값 사용, 0 이상 = 개별값)")]
+    public float castEffectScale = -1f;
+
+    [Tooltip("트레일 이펙트 스케일 (-1 = 전역값 사용, 0 이상 = 개별값)")]
+    public float trailEffectScale = -1f;
+
+    [Tooltip("영역 이펙트 스케일 (-1 = 전역값 사용, 0 이상 = 개별값)")]
+    public float areaEffectScale = -1f;
 
     [Header("AOE 이펙트 설정")]
     [Tooltip("이펙트 프리팹의 기본 반경 (scale=1일 때 시각적 반경)\n" +
              "AOE Preview에서 'Measure Effect' 버튼으로 측정 가능")]
     [Min(0.1f)]
     public float baseEffectRadius = 1f;
+
+    [Header("이펙트 지속시간 설정")]
+    [Tooltip("이펙트의 재생 지속시간 (초)\n" +
+             "ParticleSystem Duration 또는 수동 측정값\n" +
+             "AOE 스킬의 DOT 지속시간으로 사용됨")]
+    [Min(0f)]
+    public float effectDuration = 0f;
 
     [Header("동작 설정")]
     [Tooltip("에셋의 이동 로직 사용 여부 (ObjectMove 등)")]
@@ -77,12 +95,52 @@ public class SkillEffectEntry
     }
 
     /// <summary>
-    /// 실제 적용할 스케일 계산
+    /// 메인 이펙트 스케일 계산 (-1 = 전역값, 0 이상 = 개별값)
     /// </summary>
     /// <param name="globalScale">전역 스케일 값</param>
     /// <returns>적용할 스케일</returns>
     public float GetEffectiveScale(float globalScale)
     {
-        return scaleOverride > 0f ? scaleOverride : globalScale;
+        return scaleOverride >= 0f ? scaleOverride : globalScale;
+    }
+
+    /// <summary>
+    /// 피격 이펙트 스케일 계산 (-1 = 전역값, 0 이상 = 개별값)
+    /// </summary>
+    /// <param name="globalScale">전역 스케일 값</param>
+    /// <returns>적용할 스케일</returns>
+    public float GetHitEffectScale(float globalScale)
+    {
+        return hitEffectScale >= 0f ? hitEffectScale : globalScale;
+    }
+
+    /// <summary>
+    /// 시전 이펙트 스케일 계산 (-1 = 전역값, 0 이상 = 개별값)
+    /// </summary>
+    /// <param name="globalScale">전역 스케일 값</param>
+    /// <returns>적용할 스케일</returns>
+    public float GetCastEffectScale(float globalScale)
+    {
+        return castEffectScale >= 0f ? castEffectScale : globalScale;
+    }
+
+    /// <summary>
+    /// 트레일 이펙트 스케일 계산 (-1 = 전역값, 0 이상 = 개별값)
+    /// </summary>
+    /// <param name="globalScale">전역 스케일 값</param>
+    /// <returns>적용할 스케일</returns>
+    public float GetTrailEffectScale(float globalScale)
+    {
+        return trailEffectScale >= 0f ? trailEffectScale : globalScale;
+    }
+
+    /// <summary>
+    /// 영역 이펙트 스케일 계산 (-1 = 전역값, 0 이상 = 개별값)
+    /// </summary>
+    /// <param name="globalScale">전역 스케일 값</param>
+    /// <returns>적용할 스케일</returns>
+    public float GetAreaEffectScale(float globalScale)
+    {
+        return areaEffectScale >= 0f ? areaEffectScale : globalScale;
     }
 }

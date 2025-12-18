@@ -1,7 +1,8 @@
 //LMJ : Trap object that is placed on the field
 //      Continuously affects enemies within range for skill_lifetime duration
-//      Used by Trap type skills (3000807): 장미의가시, 슬랩스틱존, 현장보존, 트릭와이어, 피웅덩이, 깜짝카메라
+//      Used by Trap type skills (3000807): 집착 사슬, 빙판 생성, 불길한 봉인, 피웅덩이
 //      Uses MainSkillPrefabEntry interface (caller converts SkillEffectEntry to MainSkillPrefabEntry)
+//      Supports chain explosion (40019 연쇄폭발) - spawns additional traps on first trigger
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -32,6 +33,10 @@ namespace Novelian.Combat
 
         // Genre system (상성 시스템)
         private Genre attackerGenre = Genre.Horror;
+
+        // Chain explosion (연쇄폭발)
+        private int remainingChains = 0;
+        private bool hasTriggeredChain = false;
 
         //LMJ : Initialize and activate trap
         public void Initialize(MainSkillData data, MainSkillPrefabEntry prefabs, SupportSkillData support, float trapDamage, Vector3 position, Genre genre)
@@ -80,11 +85,18 @@ namespace Novelian.Combat
             int trapLayer = LayerMask.NameToLayer("Projectile");
             if (trapLayer >= 0) gameObject.layer = trapLayer;
 
+            // 연쇄폭발 (40019) 설정
+            if (support != null && support.chain_count > 0)
+            {
+                remainingChains = support.chain_count;
+                hasTriggeredChain = false;
+            }
+
             isActive = true;
             elapsedTime = 0f;
             affectedTargets.Clear();
 
-            Debug.Log($"[TrapObject] Initialized: {data.skill_name}, lifetime={lifetime}s, radius={aoeRadius}, damage={damage}");
+            Debug.Log($"[TrapObject] Initialized: {data.skill_name}, lifetime={lifetime}s, radius={aoeRadius}, damage={damage}, chains={remainingChains}");
 
             // Start lifetime tracking
             lifetimeCts?.Cancel();
@@ -159,6 +171,13 @@ namespace Novelian.Combat
             if (hitCount > 0)
             {
                 Debug.Log($"[TrapObject] Applied effects to {hitCount} targets");
+
+                // 연쇄폭발: 첫 적중 시 주변에 추가 트랩 생성
+                if (!hasTriggeredChain && remainingChains > 0)
+                {
+                    hasTriggeredChain = true;
+                    SpawnChainTraps();
+                }
             }
         }
 
@@ -243,6 +262,48 @@ namespace Novelian.Combat
             }
 
             Object.Destroy(gameObject);
+        }
+
+        //LMJ : 연쇄폭발 - 주변에 추가 트랩 생성
+        private void SpawnChainTraps()
+        {
+            if (supportData == null || remainingChains <= 0) return;
+
+            float chainRange = supportData.chain_range > 0 ? supportData.chain_range : 10f;
+            float damageReduction = supportData.chain_damage_reduction / 100f;
+            float chainDamage = damage * (1f - damageReduction);
+
+            Debug.Log($"[TrapObject] Spawning {remainingChains} chain traps, range={chainRange}, damage={chainDamage}");
+
+            // 주변 랜덤 위치에 연쇄 트랩 생성
+            for (int i = 0; i < remainingChains; i++)
+            {
+                // 원형 범위 내 랜덤 위치
+                Vector2 randomCircle = Random.insideUnitCircle * chainRange;
+                Vector3 chainPos = transform.position + new Vector3(randomCircle.x, 0, randomCircle.y);
+
+                // 지면 높이 맞추기
+                Ray groundRay = new Ray(chainPos + Vector3.up * 10f, Vector3.down);
+                if (Physics.Raycast(groundRay, out RaycastHit groundHit, 20f, LayerMask.GetMask("Ground")))
+                {
+                    chainPos = groundHit.point;
+                }
+                else
+                {
+                    chainPos.y = 0f;
+                }
+
+                // 연쇄 트랩 생성 (chain_count=0으로 설정하여 무한 연쇄 방지)
+                GameObject chainTrapObj = new GameObject($"ChainTrap_{skillData.skill_name}_{i}");
+                TrapObject chainTrap = chainTrapObj.AddComponent<TrapObject>();
+
+                // 연쇄 트랩은 chain_count를 0으로 설정 (무한 연쇄 방지)
+                SupportSkillData chainSupportData = null; // 연쇄 트랩은 서포트 효과 없음
+
+                chainTrap.Initialize(skillData, skillPrefabs, chainSupportData, chainDamage, chainPos, attackerGenre);
+
+                Debug.Log($"[TrapObject] Chain trap {i + 1} spawned at {chainPos}");
+            }
         }
 
         private void OnDestroy()

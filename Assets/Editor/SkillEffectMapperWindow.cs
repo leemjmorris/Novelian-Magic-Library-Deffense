@@ -80,6 +80,12 @@ public class SkillEffectMapperWindow : EditorWindow
     private GameObject aoeEffectPreviewInstance;
     private float aoeEffectPreviewScale = 1f;
 
+    // 이펙트 스케일 미리보기 관련 (Main Skills 탭용)
+    private GameObject scalePreviewInstance;
+    private Vector3 scalePreviewPosition = Vector3.zero;
+    private enum EffectPreviewType { Main, Hit, Cast, Trail, Area }
+    private EffectPreviewType currentPreviewType = EffectPreviewType.Main;
+
     private enum EffectSetType
     {
         All,
@@ -122,6 +128,7 @@ public class SkillEffectMapperWindow : EditorWindow
     {
         CleanupPreview();
         CleanupAOEPreview();
+        CleanupScalePreview();
 
         // Scene View 콜백 해제
         SceneView.duringSceneGui -= OnSceneGUI;
@@ -352,10 +359,167 @@ public class SkillEffectMapperWindow : EditorWindow
 
         EditorGUILayout.Space(10);
 
+        // 이펙트 지속시간 설정
+        EditorGUILayout.LabelField("Effect Duration (DOT용)", EditorStyles.boldLabel);
+        EditorGUILayout.BeginHorizontal();
+        entry.effectDuration = EditorGUILayout.FloatField("Duration (sec)", entry.effectDuration);
+        if (GUILayout.Button("Measure", GUILayout.Width(70)))
+        {
+            float measured = MeasureEffectDuration(entry.mainEffectPrefab);
+            if (measured > 0)
+            {
+                entry.effectDuration = measured;
+                EditorUtility.SetDirty(effectDatabase);
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.HelpBox("AOE 스킬의 DOT 지속시간으로 사용됩니다.\nMeasure 버튼으로 ParticleSystem Duration을 자동 측정합니다.", MessageType.Info);
+
+        EditorGUILayout.Space(10);
+
+        // 이펙트별 스케일 설정 (실시간 미리보기 지원)
+        EditorGUILayout.LabelField("Effect Scale Settings", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("-1 = 전역값 사용, 0 이상 = 개별값\n슬라이더로 조절 후 Scene에서 실시간 확인 가능", MessageType.Info);
+
+        EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+        // Main Effect Scale
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Main Effect", GUILayout.Width(80));
+        EditorGUI.BeginChangeCheck();
+        entry.scaleOverride = EditorGUILayout.Slider(entry.scaleOverride, -1f, 5f);
+        if (EditorGUI.EndChangeCheck())
+        {
+            EditorUtility.SetDirty(effectDatabase);
+            if (scalePreviewInstance != null && currentPreviewType == EffectPreviewType.Main)
+            {
+                float scale = entry.scaleOverride >= 0f ? entry.scaleOverride : 1f;
+                scalePreviewInstance.transform.localScale = Vector3.one * scale;
+                SceneView.RepaintAll();
+            }
+        }
+        if (GUILayout.Button("Preview", GUILayout.Width(60)))
+        {
+            SpawnScalePreview(entry, EffectPreviewType.Main);
+        }
+        EditorGUILayout.EndHorizontal();
+
+        // Hit Effect Scale
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Hit Effect", GUILayout.Width(80));
+        EditorGUI.BeginChangeCheck();
+        entry.hitEffectScale = EditorGUILayout.Slider(entry.hitEffectScale, -1f, 5f);
+        if (EditorGUI.EndChangeCheck())
+        {
+            EditorUtility.SetDirty(effectDatabase);
+            if (scalePreviewInstance != null && currentPreviewType == EffectPreviewType.Hit)
+            {
+                float scale = entry.hitEffectScale >= 0f ? entry.hitEffectScale : 1f;
+                scalePreviewInstance.transform.localScale = Vector3.one * scale;
+                SceneView.RepaintAll();
+            }
+        }
+        if (GUILayout.Button("Preview", GUILayout.Width(60)))
+        {
+            SpawnScalePreview(entry, EffectPreviewType.Hit);
+        }
+        EditorGUILayout.EndHorizontal();
+
+        // Cast Effect Scale
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Cast Effect", GUILayout.Width(80));
+        EditorGUI.BeginChangeCheck();
+        entry.castEffectScale = EditorGUILayout.Slider(entry.castEffectScale, -1f, 5f);
+        if (EditorGUI.EndChangeCheck())
+        {
+            EditorUtility.SetDirty(effectDatabase);
+            if (scalePreviewInstance != null && currentPreviewType == EffectPreviewType.Cast)
+            {
+                float scale = entry.castEffectScale >= 0f ? entry.castEffectScale : 1f;
+                scalePreviewInstance.transform.localScale = Vector3.one * scale;
+                SceneView.RepaintAll();
+            }
+        }
+        if (GUILayout.Button("Preview", GUILayout.Width(60)))
+        {
+            SpawnScalePreview(entry, EffectPreviewType.Cast);
+        }
+        EditorGUILayout.EndHorizontal();
+
+        // Trail Effect Scale
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Trail Effect", GUILayout.Width(80));
+        EditorGUI.BeginChangeCheck();
+        entry.trailEffectScale = EditorGUILayout.Slider(entry.trailEffectScale, -1f, 5f);
+        if (EditorGUI.EndChangeCheck())
+        {
+            EditorUtility.SetDirty(effectDatabase);
+            if (scalePreviewInstance != null && currentPreviewType == EffectPreviewType.Trail)
+            {
+                float scale = entry.trailEffectScale >= 0f ? entry.trailEffectScale : 1f;
+                scalePreviewInstance.transform.localScale = Vector3.one * scale;
+                SceneView.RepaintAll();
+            }
+        }
+        if (GUILayout.Button("Preview", GUILayout.Width(60)))
+        {
+            SpawnScalePreview(entry, EffectPreviewType.Trail);
+        }
+        EditorGUILayout.EndHorizontal();
+
+        // Area Effect Scale
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Area Effect", GUILayout.Width(80));
+        EditorGUI.BeginChangeCheck();
+        entry.areaEffectScale = EditorGUILayout.Slider(entry.areaEffectScale, -1f, 5f);
+        if (EditorGUI.EndChangeCheck())
+        {
+            EditorUtility.SetDirty(effectDatabase);
+            if (scalePreviewInstance != null && currentPreviewType == EffectPreviewType.Area)
+            {
+                float scale = entry.areaEffectScale >= 0f ? entry.areaEffectScale : 1f;
+                scalePreviewInstance.transform.localScale = Vector3.one * scale;
+                SceneView.RepaintAll();
+            }
+        }
+        if (GUILayout.Button("Preview", GUILayout.Width(60)))
+        {
+            SpawnScalePreview(entry, EffectPreviewType.Area);
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(5);
+
+        // 저장 버튼 (Play Mode에서 바로 반영)
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Apply & Save", GUILayout.Height(25)))
+        {
+            EditorUtility.SetDirty(effectDatabase);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SkillEffectMapper] Scale settings saved for skill {entry.skillId}");
+        }
+
+        // 미리보기 컨트롤
+        if (scalePreviewInstance != null)
+        {
+            if (GUILayout.Button("Clear Preview", GUILayout.Width(100)))
+            {
+                CleanupScalePreview();
+            }
+        }
+        EditorGUILayout.EndHorizontal();
+
+        if (scalePreviewInstance != null)
+        {
+            EditorGUILayout.LabelField($"미리보기 중: {currentPreviewType}", EditorStyles.miniLabel);
+        }
+
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.Space(10);
+
         // 추가 설정
         EditorGUILayout.LabelField("Advanced Settings", EditorStyles.boldLabel);
-
-        entry.scaleOverride = EditorGUILayout.FloatField("Scale Override", entry.scaleOverride);
         entry.useAssetMovement = EditorGUILayout.Toggle("Use Asset Movement", entry.useAssetMovement);
         entry.overrideSpeed = EditorGUILayout.Toggle("Override Speed", entry.overrideSpeed);
 
@@ -554,6 +718,21 @@ public class SkillEffectMapperWindow : EditorWindow
         if (GUILayout.Button("Auto-Map by Name Match"))
         {
             AutoMapByNameMatch();
+        }
+
+        if (GUILayout.Button("Auto-Map by CSV use_asset Column"))
+        {
+            AutoMapByCSVUseAsset();
+        }
+
+        if (GUILayout.Button("Measure All Effect Durations (AOE용)"))
+        {
+            MeasureAllEffectDurations();
+        }
+
+        if (GUILayout.Button("Measure & Save to CSV skill_lifetime"))
+        {
+            MeasureAndSaveToCSV();
         }
 
         EditorGUILayout.Space(10);
@@ -922,6 +1101,525 @@ public class SkillEffectMapperWindow : EditorWindow
 
         SaveEffectDatabase();
         Debug.Log($"[SkillEffectMapper] Auto-mapped {mapped} skills");
+    }
+
+    /// <summary>
+    /// CSV의 //use_asset 컬럼을 기반으로 자동 매핑
+    /// </summary>
+    private void AutoMapByCSVUseAsset()
+    {
+        if (effectDatabase == null || mainSkillDataList.Count == 0)
+        {
+            Debug.LogWarning("[SkillEffectMapper] Cannot auto-map: missing data");
+            return;
+        }
+
+        int mapped = 0;
+        int skipped = 0;
+        int notFound = 0;
+        var notFoundEffects = new List<string>();
+
+        foreach (var skill in mainSkillDataList)
+        {
+            // 이미 매핑된 스킬은 스킵
+            var entry = effectDatabase.GetEntry(skill.skill_id);
+            if (entry != null && entry.HasMainEffect())
+            {
+                skipped++;
+                continue;
+            }
+
+            // use_asset 컬럼 값 확인
+            string useAsset = skill.use_asset;
+            if (string.IsNullOrEmpty(useAsset))
+            {
+                continue;
+            }
+
+            // 이펙트 이름으로 프리팹 찾기
+            var matchingEffect = FindEffectByName(useAsset);
+            if (matchingEffect != null)
+            {
+                entry = GetOrCreateEntry(skill.skill_id);
+                entry.skillName = skill.skill_name;
+                entry.skillType = skill.GetSkillType();
+                entry.mainEffectPrefab = matchingEffect.prefab;
+
+                // ScriptBased 이펙트는 useAssetMovement = true
+                entry.useAssetMovement = matchingEffect.hasObjectMove || matchingEffect.hasObjectMoveDestroy;
+
+                // 히트 이펙트 자동 연결 시도
+                var hitEffect = FindHitEffectFor(useAsset);
+                if (hitEffect != null)
+                {
+                    entry.hitEffectPrefab = hitEffect.prefab;
+                }
+
+                mapped++;
+                Debug.Log($"[SkillEffectMapper] Mapped {skill.skill_id} ({skill.skill_name}) -> {useAsset}");
+            }
+            else
+            {
+                notFound++;
+                if (!notFoundEffects.Contains(useAsset))
+                {
+                    notFoundEffects.Add(useAsset);
+                }
+            }
+        }
+
+        SaveEffectDatabase();
+
+        string message = $"Auto-mapping by CSV use_asset completed!\n\n" +
+                         $"Mapped: {mapped}\n" +
+                         $"Skipped (already mapped): {skipped}\n" +
+                         $"Not Found: {notFound}";
+
+        if (notFoundEffects.Count > 0)
+        {
+            message += $"\n\nNot found effects:\n" + string.Join("\n", notFoundEffects.Take(10));
+            if (notFoundEffects.Count > 10)
+            {
+                message += $"\n... and {notFoundEffects.Count - 10} more";
+            }
+        }
+
+        Debug.Log($"[SkillEffectMapper] {message}");
+        EditorUtility.DisplayDialog("Auto-Map Complete", message, "OK");
+    }
+
+    /// <summary>
+    /// 이펙트 이름으로 프리팹 찾기
+    /// CSV의 use_asset 값 형식: "Effect_18_WindSlash", "Effect_32_FloatingArrow" 등
+    /// </summary>
+    private EffectPrefabInfo FindEffectByName(string effectName)
+    {
+        if (string.IsNullOrEmpty(effectName)) return null;
+
+        // 1. 정확한 이름 매칭
+        var exact = effectPrefabList.FirstOrDefault(e =>
+            e.name.Equals(effectName, StringComparison.OrdinalIgnoreCase));
+        if (exact != null) return exact;
+
+        // 2. 프리팹 이름에 CSV 이름이 포함된 경우
+        var containsName = effectPrefabList.FirstOrDefault(e =>
+            e.name.IndexOf(effectName, StringComparison.OrdinalIgnoreCase) >= 0);
+        if (containsName != null) return containsName;
+
+        // 3. CSV 이름에서 번호 추출하여 같은 폴더의 메인 프리팹 찾기
+        // Effect_18_WindSlash -> Effect_18_ 폴더의 메인 프리팹
+        if (effectName.StartsWith("Effect_", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = effectName.Split('_');
+            if (parts.Length >= 2)
+            {
+                string effectNumber = parts[1];
+                string effectFolder = $"Effect_{effectNumber}_";
+
+                // 해당 폴더의 메인 프리팹 찾기 (Base, Parts 폴더 제외됨)
+                var folderMatch = effectPrefabList.FirstOrDefault(e =>
+                    e.path.Contains(effectFolder) && !e.name.Contains("(Base)"));
+
+                if (folderMatch != null) return folderMatch;
+            }
+
+            // 4. CSV의 이름에서 접미사 추출하여 매칭
+            // Effect_18_WindSlash -> WindSlash로 검색
+            if (parts.Length >= 3)
+            {
+                string suffix = string.Join("_", parts.Skip(2));
+
+                // 접미사가 포함된 프리팹 찾기
+                var suffixMatch = effectPrefabList.FirstOrDefault(e =>
+                    e.name.IndexOf(suffix, StringComparison.OrdinalIgnoreCase) >= 0);
+
+                if (suffixMatch != null) return suffixMatch;
+
+                // 접미사가 없는 경우, 같은 번호의 폴더에서 비슷한 이름 찾기
+                string effectNumber = parts[1];
+                var similarMatch = effectPrefabList.FirstOrDefault(e =>
+                    e.name.Contains($"Effect_{effectNumber}_"));
+
+                if (similarMatch != null) return similarMatch;
+            }
+        }
+
+        // 5. 특수 케이스 매핑 (CSV 이름과 에셋 이름이 다른 경우)
+        var specialMapping = GetSpecialEffectMapping(effectName);
+        if (!string.IsNullOrEmpty(specialMapping))
+        {
+            var special = effectPrefabList.FirstOrDefault(e =>
+                e.name.IndexOf(specialMapping, StringComparison.OrdinalIgnoreCase) >= 0);
+            if (special != null) return special;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// CSV 이름과 에셋 이름이 다른 특수 케이스 매핑
+    /// </summary>
+    private string GetSpecialEffectMapping(string csvEffectName)
+    {
+        // CSV 이름 -> 에셋 이름 매핑
+        var mappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // EffectsSet_2(ScriptBased)의 이펙트들
+            { "Effect_03_ChargeFire", "Effect_03_ChargeFire" },
+            { "Effect_03_FireCross", "Effect_03_FireCross" },
+            { "Effect_04_ChargeShot", "Effect_04_ChargeAndRelease" },
+            { "Effect_04_FlamePrison", "Effect_04_FlamePrison" },
+            { "Effect_06_BloodFlood", "Effect_06_MassiveSlash" },
+            { "Effect_07_OneHandSmash", "Effect_07_OneHandSmash" },
+            { "Effect_09_GuardianShield", "Effect_09_GuardianShield" },
+            { "Effect_09_GloryShield", "Effect_09_GloryShield" },
+            { "Effect_11_ShiningSlashDance", "Effect_11_ShiningSlashDance" },
+            { "Effect_11_LightInFullBloom", "Effect_11_LightInFullBloom" },
+            { "Effect_13_DangerClose", "Effect_13_DangerClose" },
+            { "Effect_14_RuinExplosion", "Effect_14_RuinExplosion" },
+            { "Effect_15_MassiveCardRelease", "Effect_15_MassiveCardRelease" },
+            { "Effect_15_PhantomShow", "Effect_15_PhantomShow" },
+            { "Effect_16_SpaceWarpPortal", "Effect_16_SpaceWarpPortal" },
+            { "Effect_18_WindSlash", "Effect_18_WindBlade" },
+            { "Effect_18_TimeField", "Effect_18_TimeField" },
+            { "Effect_20_RapidFire", "Effect_20_RapidFire" },
+            { "Effect_22_WindCyclone", "Effect_22_WindCyclone" },
+            { "Effect_26_IceFatalWheel", "Effect_26_IceFatalWheel" },
+            { "Effect_28_PurifierBeam", "Effect_28_PurifierBeam" },
+            { "Effect_29_LumenCrash", "Effect_29_LumenCrash" },
+            { "Effect_30_SwordForce", "Effect_30_MagmaStrike" },
+            { "Effect_31_LumenJudgement", "Effect_31_LumenJudgement" },
+            { "Effect_32_FloatingArrow", "Effect_32_DevilEye" },
+            { "Effect_32_DevilEye", "Effect_32_DevilEye" },
+            { "Effect_33_DemonicSphere", "Effect_33_DeathRevolution" },
+            { "Effect_34_WindTurbulance", "Effect_34_WindTurbulance" },
+            { "Effect_34_SwordBoundary", "Effect_34_WindTurbulance" },
+            { "Effect_34_SwordDance", "Effect_34_WindTurbulance" },
+            { "Effect_38_PulseShot", "Effect_38_GloryBoundary" },
+            { "Effect_38_ElectricExplosion", "Effect_38_GloryBoundary" },
+            { "Effect_40_EMPAttack", "Effect_40_EMPAttack" },
+            { "Effect_42_CyberStorm", "Effect_42_PlanetDesaster" },
+            { "Effect_43_HolyRedemption", "Effect_43_HolyRedemption" },
+            { "Effect_43_DarkDimensionAttack", "Effect_43_DarkChainSwamp" },
+            { "Effect_44_PurifierWater", "Effect_44_PurifierWater" },
+            { "Effect_44_PlanetCrash", "Effect_44_PurifierWater" },
+            { "Effect_46_PoisonSmoke", "Effect_46_PoisonSmoke" },
+            { "Effect_47_SunBurst", "Effect_47_PreciseShot" },
+            { "Effect_47_PreciseShot", "Effect_47_PreciseShot" },
+            { "Effect_47_StarFallen", "Effect_47_PreciseShot" },
+            { "Effect_48_BondageChain", "Effect_48_BondageChain" },
+            { "Effect_48_CriticalTumor", "Effect_48_CriticalTumor" },
+            { "Effect_49_HugeTidalWave", "Effect_49_IceBlockCrash" },
+            { "Effect_49_IceBlockCrash", "Effect_49_IceBlockCrash" },
+            { "Effect_53_CurseOfSpider", "Effect_53_CurseOfSpider" },
+            { "Effect_05_Nuke", "Effect_05_Nuke" },
+            { "Effect_02_BlackHole", "Effect_02_BlackHole" },
+            { "Effect_12_CosmicHorror", "Effect_12_CosmicHorror" },
+        };
+
+        if (mappings.TryGetValue(csvEffectName, out string assetName))
+        {
+            return assetName;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 메인 이펙트에 대한 히트 이펙트 찾기
+    /// </summary>
+    private EffectPrefabInfo FindHitEffectFor(string mainEffectName)
+    {
+        if (string.IsNullOrEmpty(mainEffectName)) return null;
+
+        // 이펙트 번호 추출 (Effect_18_WindSlash -> 18)
+        if (mainEffectName.StartsWith("Effect_", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = mainEffectName.Split('_');
+            if (parts.Length >= 2)
+            {
+                string effectNumber = parts[1];
+
+                // 같은 번호의 HitEffect 찾기
+                var hitEffect = effectPrefabList.FirstOrDefault(e =>
+                    e.name.Contains($"Effect_{effectNumber}_") &&
+                    (e.name.Contains("Hit") || e.name.Contains("Explosion")));
+
+                return hitEffect;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 이펙트 지속시간을 측정하여 CSV의 skill_lifetime 컬럼에 저장
+    /// </summary>
+    private void MeasureAndSaveToCSV()
+    {
+        if (effectDatabase == null || mainSkillDataList.Count == 0)
+        {
+            Debug.LogWarning("[SkillEffectMapper] Cannot measure: missing database or CSV data");
+            EditorUtility.DisplayDialog("Error", "Database or CSV data not loaded", "OK");
+            return;
+        }
+
+        string csvPath = "Assets/Data/CSV/Skill/MainSkillTable.csv";
+        if (!System.IO.File.Exists(csvPath))
+        {
+            Debug.LogWarning($"[SkillEffectMapper] CSV file not found: {csvPath}");
+            EditorUtility.DisplayDialog("Error", $"CSV file not found: {csvPath}", "OK");
+            return;
+        }
+
+        int measured = 0;
+        int skipped = 0;
+        int failed = 0;
+
+        // CSV 파일 읽기
+        var lines = new List<string>(System.IO.File.ReadAllLines(csvPath));
+        if (lines.Count < 4) // 헤더 3줄 + 데이터 최소 1줄
+        {
+            Debug.LogWarning("[SkillEffectMapper] CSV file has invalid format");
+            return;
+        }
+
+        // skill_lifetime 컬럼 인덱스 찾기
+        string[] headers = lines[1].Split(',');
+        int lifetimeIndex = -1;
+        for (int i = 0; i < headers.Length; i++)
+        {
+            if (headers[i].Trim() == "skill_lifetime")
+            {
+                lifetimeIndex = i;
+                break;
+            }
+        }
+
+        if (lifetimeIndex == -1)
+        {
+            Debug.LogWarning("[SkillEffectMapper] skill_lifetime column not found in CSV");
+            EditorUtility.DisplayDialog("Error", "skill_lifetime column not found in CSV", "OK");
+            return;
+        }
+
+        // 각 AOE 스킬의 이펙트 지속시간 측정 및 CSV 업데이트
+        for (int lineIndex = 3; lineIndex < lines.Count; lineIndex++)
+        {
+            string[] fields = lines[lineIndex].Split(',');
+            if (fields.Length <= lifetimeIndex) continue;
+
+            // skill_id 파싱
+            if (!int.TryParse(fields[0], out int skillId)) continue;
+
+            // 해당 스킬 데이터 찾기
+            var skillData = mainSkillDataList.Find(s => s.skill_id == skillId);
+            if (skillData == null) continue;
+
+            // AOE 타입 스킬만 처리
+            var skillType = skillData.GetSkillType();
+            if (skillType != SkillAssetType.AOE)
+            {
+                skipped++;
+                continue;
+            }
+
+            // 이펙트 프리팹 찾기
+            var entry = effectDatabase.GetEntry(skillId);
+            GameObject effectPrefab = entry?.mainEffectPrefab;
+
+            if (effectPrefab == null)
+            {
+                // CSV의 use_asset으로 찾기 시도
+                string useAsset = skillData.use_asset;
+                if (!string.IsNullOrEmpty(useAsset))
+                {
+                    var effectInfo = FindEffectByName(useAsset);
+                    effectPrefab = effectInfo?.prefab;
+                }
+            }
+
+            if (effectPrefab == null)
+            {
+                failed++;
+                continue;
+            }
+
+            // 이펙트 지속시간 측정
+            float duration = MeasureEffectDuration(effectPrefab);
+            if (duration > 0)
+            {
+                // CSV 필드 업데이트
+                fields[lifetimeIndex] = duration.ToString("F1");
+                lines[lineIndex] = string.Join(",", fields);
+                measured++;
+
+                Debug.Log($"[SkillEffectMapper] Measured {skillId} ({skillData.skill_name}): {duration:F1}s");
+            }
+            else
+            {
+                failed++;
+            }
+        }
+
+        // CSV 파일 저장
+        System.IO.File.WriteAllLines(csvPath, lines);
+        AssetDatabase.Refresh();
+
+        string message = $"Effect Duration -> CSV skill_lifetime Complete!\n\n" +
+                         $"Measured & Saved: {measured}\n" +
+                         $"Skipped (not AOE): {skipped}\n" +
+                         $"Failed (no effect prefab): {failed}";
+
+        Debug.Log($"[SkillEffectMapper] {message}");
+        EditorUtility.DisplayDialog("Measurement Complete", message, "OK");
+
+        // CSV 리로드
+        LoadSkillData();
+    }
+
+    /// <summary>
+    /// 모든 AOE 스킬의 이펙트 지속시간 일괄 측정
+    /// </summary>
+    private void MeasureAllEffectDurations()
+    {
+        if (effectDatabase == null)
+        {
+            Debug.LogWarning("[SkillEffectMapper] No database loaded");
+            return;
+        }
+
+        int measured = 0;
+        int skipped = 0;
+        int failed = 0;
+
+        foreach (var entry in effectDatabase.entries)
+        {
+            // AOE 타입 스킬만 처리
+            if (entry.skillType != SkillAssetType.AOE &&
+                entry.skillType != SkillAssetType.DOT &&
+                entry.skillType != SkillAssetType.Trap)
+            {
+                skipped++;
+                continue;
+            }
+
+            if (entry.mainEffectPrefab == null)
+            {
+                skipped++;
+                continue;
+            }
+
+            // 이미 측정된 값이 있으면 스킵
+            if (entry.effectDuration > 0)
+            {
+                skipped++;
+                continue;
+            }
+
+            float duration = MeasureEffectDuration(entry.mainEffectPrefab);
+            if (duration > 0)
+            {
+                entry.effectDuration = duration;
+                measured++;
+            }
+            else
+            {
+                failed++;
+            }
+        }
+
+        EditorUtility.SetDirty(effectDatabase);
+        AssetDatabase.SaveAssets();
+
+        string message = $"Effect Duration Measurement Complete!\n\n" +
+                         $"Measured: {measured}\n" +
+                         $"Skipped: {skipped}\n" +
+                         $"Failed: {failed}";
+
+        Debug.Log($"[SkillEffectMapper] {message}");
+        EditorUtility.DisplayDialog("Measurement Complete", message, "OK");
+    }
+
+    /// <summary>
+    /// 이펙트 프리팹의 ParticleSystem Duration 측정
+    /// </summary>
+    private float MeasureEffectDuration(GameObject prefab)
+    {
+        if (prefab == null) return 0f;
+
+        float maxDuration = 0f;
+        float maxLoopDuration = 0f;
+
+        // 모든 ParticleSystem 검사
+        var particleSystems = prefab.GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in particleSystems)
+        {
+            var main = ps.main;
+            float duration = main.duration;
+
+            if (!main.loop)
+            {
+                // 루프가 아닌 파티클: duration + startLifetime
+                float totalDuration = duration + main.startLifetime.constantMax;
+                if (totalDuration > maxDuration)
+                {
+                    maxDuration = totalDuration;
+                }
+            }
+            else
+            {
+                // 루프 파티클: duration만 기록 (fallback용)
+                if (duration > maxLoopDuration)
+                {
+                    maxLoopDuration = duration;
+                }
+            }
+        }
+
+        // 루프 파티클만 있는 경우: 자동 측정 불가, 수동 입력 필요
+        // (루프 파티클은 무한 반복되므로 기획자가 직접 duration을 지정해야 함)
+
+        // ObjectMoveDestroy의 time 값도 확인
+        var objectMoveDestroy = prefab.GetComponent<ObjectMoveDestroy>();
+        if (objectMoveDestroy != null)
+        {
+            var timeField = objectMoveDestroy.GetType().GetField("time");
+            if (timeField != null)
+            {
+                float time = (float)timeField.GetValue(objectMoveDestroy);
+                if (time > maxDuration)
+                {
+                    maxDuration = time;
+                }
+            }
+        }
+
+        // ObjectMove의 time 값도 확인
+        var objectMove = prefab.GetComponent<ObjectMove>();
+        if (objectMove != null)
+        {
+            var timeField = objectMove.GetType().GetField("time");
+            if (timeField != null)
+            {
+                float time = (float)timeField.GetValue(objectMove);
+                if (time > maxDuration)
+                {
+                    maxDuration = time;
+                }
+            }
+        }
+
+        if (maxDuration > 0)
+        {
+            Debug.Log($"[SkillEffectMapper] Measured duration for {prefab.name}: {maxDuration:F2}s");
+        }
+        else
+        {
+            Debug.LogWarning($"[SkillEffectMapper] Loop particle only - manual input required: {prefab.name} (CSV의 skill_lifetime에 직접 입력 필요)");
+        }
+
+        return maxDuration;
     }
 
     #endregion
@@ -1658,6 +2356,97 @@ public class SkillEffectMapperWindow : EditorWindow
 
             DestroyImmediate(aoeEffectPreviewInstance);
             aoeEffectPreviewInstance = null;
+        }
+    }
+
+    /// <summary>
+    /// 이펙트 스케일 프리뷰 생성
+    /// </summary>
+    private void SpawnScalePreview(SkillEffectEntry entry, EffectPreviewType previewType)
+    {
+        CleanupScalePreview();
+
+        if (entry == null) return;
+
+        GameObject prefabToSpawn = null;
+        float scale = 1f;
+
+        switch (previewType)
+        {
+            case EffectPreviewType.Main:
+                prefabToSpawn = entry.mainEffectPrefab;
+                scale = entry.scaleOverride >= 0f ? entry.scaleOverride : 1f;
+                break;
+            case EffectPreviewType.Hit:
+                prefabToSpawn = entry.hitEffectPrefab;
+                scale = entry.hitEffectScale >= 0f ? entry.hitEffectScale : 1f;
+                break;
+            case EffectPreviewType.Cast:
+                prefabToSpawn = entry.castEffectPrefab;
+                scale = entry.castEffectScale >= 0f ? entry.castEffectScale : 1f;
+                break;
+            case EffectPreviewType.Trail:
+                prefabToSpawn = entry.trailEffectPrefab;
+                scale = entry.trailEffectScale >= 0f ? entry.trailEffectScale : 1f;
+                break;
+            case EffectPreviewType.Area:
+                prefabToSpawn = entry.areaEffectPrefab;
+                scale = entry.areaEffectScale >= 0f ? entry.areaEffectScale : 1f;
+                break;
+        }
+
+        if (prefabToSpawn == null)
+        {
+            Debug.LogWarning($"[SkillEffectMapper] No prefab assigned for {previewType} effect");
+            return;
+        }
+
+        scalePreviewInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefabToSpawn);
+        if (scalePreviewInstance != null)
+        {
+            scalePreviewInstance.name = $"[SCALE PREVIEW] {prefabToSpawn.name}";
+            scalePreviewInstance.transform.position = scalePreviewPosition;
+            scalePreviewInstance.transform.localScale = Vector3.one * scale;
+            scalePreviewInstance.hideFlags = HideFlags.DontSave;
+            currentPreviewType = previewType;
+
+            // Scene View 포커스
+            SceneView.lastActiveSceneView?.LookAt(scalePreviewPosition);
+            Selection.activeGameObject = scalePreviewInstance;
+
+            Debug.Log($"[SkillEffectMapper] Spawned {previewType} effect preview with scale {scale}");
+        }
+
+        SceneView.RepaintAll();
+    }
+
+    /// <summary>
+    /// 이펙트 스케일 프리뷰 정리
+    /// </summary>
+    private void CleanupScalePreview()
+    {
+        if (scalePreviewInstance != null)
+        {
+            // Selection 해제 (Inspector 에러 방지)
+            if (Selection.activeGameObject == scalePreviewInstance)
+            {
+                Selection.activeGameObject = null;
+            }
+
+            DestroyImmediate(scalePreviewInstance);
+            scalePreviewInstance = null;
+        }
+    }
+
+    /// <summary>
+    /// 스케일 프리뷰 인스턴스의 스케일을 실시간 업데이트
+    /// </summary>
+    private void UpdateScalePreviewScale(float newScale)
+    {
+        if (scalePreviewInstance != null)
+        {
+            scalePreviewInstance.transform.localScale = Vector3.one * newScale;
+            SceneView.RepaintAll();
         }
     }
 
