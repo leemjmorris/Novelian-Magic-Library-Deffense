@@ -23,6 +23,16 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     private bool isDead = false;
     public bool IsWallHit => isWallHit;
 
+    /// <summary>
+    /// JML: Override IsAlive to include isDead flag check.
+    /// This ensures dead bosses are not targeted during death animation.
+    /// </summary>
+    public override bool IsAlive()
+    {
+        if (isDead) return false;
+        return base.IsAlive();
+    }
+
     // Mark state tracking
     private MarkType currentMarkType = MarkType.None;
     private float markDamageMultiplier = 0f;

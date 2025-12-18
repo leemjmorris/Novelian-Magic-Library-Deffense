@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using NovelianMagicLibraryDefense.Events;
 using UnityEngine;
 
@@ -14,7 +16,20 @@ public class Monster : BaseEntity, ITargetable, IMovable
     [SerializeField] private MonsterMove monsterMove;
     [SerializeField] private Rigidbody rb;
     [SerializeField] private Collider collider3D;
+    [SerializeField] private Renderer[] renderers; // Dissolve용 렌더러 배열
     private Wall wall;
+
+    [Header("Death Effect Settings")]
+    [SerializeField] private float dissolveDuration = 2f; // Dissolve 사라짐 시간
+    [SerializeField] private GameObject dustParticlePrefab; // 먼지 파티클 프리팹 (인스펙터 할당)
+    [SerializeField] private DissolveSettings dissolveSettings; // Dissolve 설정 (인스펙터 할당)
+
+    // Dissolve 관련
+    private Material[][] originalMaterialsPerRenderer; // 렌더러별 원본 Material 백업
+    private Material[][] dissolveMaterialsPerRenderer; // 렌더러별 Dissolve Material 인스턴스
+    private static readonly int DISSOLVE_AMOUNT = Shader.PropertyToID("_DissolveAmount");
+    private Tween dissolveTween;
+    private bool dissolveMaterialsCreated = false;
 
     [Header("Stats")]
     [SerializeField] private float moveSpeed = 2f;
@@ -92,6 +107,16 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public bool IsWallHit => isInAttackRange || isWallHit; // 둘 중 하나라도 true면 정지
     private bool isDead = false;
     private bool isDizzy = false;
+
+    /// <summary>
+    /// JML: Override IsAlive to include isDead flag check.
+    /// This ensures dead monsters are not targeted during ragdoll/dissolve animation.
+    /// </summary>
+    public override bool IsAlive()
+    {
+        if (isDead) return false;
+        return base.IsAlive();
+    }
     private float dizzyTimer = 0f;
     public float Weight { get; private set; } = 1f;
 
@@ -229,7 +254,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
     public override void TakeDamage(float damage)
     {
-        TakeDamage(damage, false);
+        TakeDamage(damage, false, Vector3.zero);
     }
 
     /// <summary>
@@ -239,7 +264,25 @@ public class Monster : BaseEntity, ITargetable, IMovable
     /// <param name="isCriticalHit">치명타 여부 (Projectile에서 전달)</param>
     public void TakeDamage(float damage, bool isCriticalHit)
     {
+        TakeDamage(damage, isCriticalHit, Vector3.zero);
+    }
+
+    /// <summary>
+    /// 데미지 처리 (치명타 여부 및 공격자 위치 포함)
+    /// </summary>
+    /// <param name="damage">데미지량</param>
+    /// <param name="isCriticalHit">치명타 여부</param>
+    /// <param name="attackerPosition">공격자 위치 (사망 시 넉백 방향 계산용)</param>
+    public void TakeDamage(float damage, bool isCriticalHit, Vector3 attackerPosition)
+    {
         if (isDead) return;
+        if (!IsAlive()) return;
+
+        // 공격자 위치 저장 (사망 시 넉백 방향 계산용)
+        if (attackerPosition != Vector3.zero)
+        {
+            lastAttackerPosition = attackerPosition;
+        }
 
         // Apply Mark damage multiplier if active
         float finalDamage = damage;
@@ -264,7 +307,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
             return;
         }
 
-        base.TakeDamage(finalDamage);
+        // 체력 감소 (base.TakeDamage 대신 직접 처리하여 Die() 중복 호출 방지)
+        currentHealth -= finalDamage;
+
+        // 사망 시 공격자 위치 기반 넉백
+        if (currentHealth <= 0)
+        {
+            Die(attackerPosition);
+            return;
+        }
 
         // Dizzy 상태에서는 피격 애니메이션 재생하지 않음
         if (!isDizzy)
@@ -953,15 +1004,41 @@ public class Monster : BaseEntity, ITargetable, IMovable
         Weight = newWeight;
     }
 
+    // 마지막 공격자 위치 저장 (사망 시 넉백 방향 계산용)
+    private Vector3 lastAttackerPosition;
+
     public override void Die()
+    {
+        Die(Vector3.zero);
+    }
+
+    /// <summary>
+    /// 사망 처리 (공격자 위치 기반 넉백 포함)
+    /// </summary>
+    /// <param name="attackerPosition">공격자 위치 (넉백 방향 계산용, Vector3.zero면 기본 방향)</param>
+    public void Die(Vector3 attackerPosition)
     {
         // Prevent double Die() calls
         if (isDead) return;
         isDead = true;
 
-        monsterAnimator.SetTrigger(ANIM_DIE);
-        // LMJ: Don't disable collider immediately - let projectiles still hit during death animation
-        // collider3D.enabled = false; // Moved to DespawnMonster()
+        // 1. NavMeshAgent 즉시 비활성화 - 이동 완전 중단
+        if (monsterMove != null)
+        {
+            monsterMove.SetEnabled(false);
+        }
+
+        // 2. 애니메이터 비활성화 - 죽음 후 걷는 애니메이션 방지
+        if (monsterAnimator != null)
+        {
+            monsterAnimator.enabled = false;
+        }
+
+        // 3. Collider 즉시 비활성화 (충돌 방지)
+        if (collider3D != null)
+        {
+            collider3D.enabled = false;
+        }
 
         // JML: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);
@@ -969,15 +1046,160 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // LMJ: Use EventChannel instead of static event
         if (monsterEvents != null)
         {
-            Debug.Log($"[Monster] Die() - monsterEvents InstanceID: {monsterEvents.GetInstanceID()}");
             monsterEvents.RaiseMonsterDied(this);
-            Debug.Log($"[Monster] Die() - RaiseMonsterDied called for {gameObject.name}");
         }
         else
         {
             Debug.LogWarning($"[Monster] Die() - monsterEvents is NULL! 경험치 이벤트 발생 불가! Monster: {gameObject.name}");
         }
-        Invoke(nameof(DespawnMonster), 1.5f); // Die 애니메이션이 끝날 때까지 대기
+
+        // 4. 즉시 Dissolve 시작
+        StartDeathSequenceAsync().Forget();
+    }
+
+    /// <summary>
+    /// 사망 연출 시퀀스: Dissolve → Despawn (즉시 시작)
+    /// </summary>
+    private async UniTaskVoid StartDeathSequenceAsync()
+    {
+        if (this == null || gameObject == null) return;
+
+        // 먼지 파티클 재생
+        SpawnDustParticle();
+
+        // Dissolve 효과 시작
+        await PlayDissolveEffectAsync();
+
+        // Despawn
+        DespawnMonster();
+    }
+
+    /// <summary>
+    /// Dissolve 효과 재생 (DOTween으로 Material 애니메이션)
+    /// </summary>
+    private async UniTask PlayDissolveEffectAsync()
+    {
+        if (renderers == null || renderers.Length == 0)
+        {
+            // 렌더러가 없으면 그냥 대기 후 종료
+            await UniTask.Delay((int)(dissolveDuration * 1000));
+            return;
+        }
+
+        // DissolveSettings가 없으면 그냥 대기 후 종료
+        if (dissolveSettings == null)
+        {
+            Debug.LogWarning($"[Monster] {gameObject.name}: DissolveSettings가 설정되지 않아 Dissolve 효과를 재생할 수 없습니다.");
+            await UniTask.Delay((int)(dissolveDuration * 1000));
+            return;
+        }
+
+        // 런타임에서 Dissolve Material 생성 및 적용
+        CreateAndApplyDissolveMaterials();
+
+        // Dissolve Material 애니메이션
+        float dissolveValue = 0f;
+        dissolveTween = DOTween.To(() => dissolveValue, x =>
+        {
+            dissolveValue = x;
+            SetDissolveAmount(x);
+        }, 1f, dissolveDuration).SetEase(Ease.InQuad);
+
+        await dissolveTween.AsyncWaitForCompletion();
+    }
+
+    /// <summary>
+    /// 런타임에서 Dissolve Material 생성 및 적용
+    /// 원본 Material을 백업하고 Dissolve Material로 교체
+    /// </summary>
+    private void CreateAndApplyDissolveMaterials()
+    {
+        if (dissolveMaterialsCreated) return;
+        if (dissolveSettings == null || renderers == null) return;
+
+        // 렌더러별 Material 배열 초기화
+        originalMaterialsPerRenderer = new Material[renderers.Length][];
+        dissolveMaterialsPerRenderer = new Material[renderers.Length][];
+
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Renderer rend = renderers[i];
+            if (rend == null) continue;
+
+            // 원본 Material 백업 (sharedMaterials는 프리팹 원본이므로 복사)
+            Material[] origMats = rend.materials; // 인스턴스 복사본
+            originalMaterialsPerRenderer[i] = origMats;
+
+            // Dissolve Material 생성
+            Material[] dissolveMats = new Material[origMats.Length];
+            for (int j = 0; j < origMats.Length; j++)
+            {
+                dissolveMats[j] = dissolveSettings.CreateDissolveMaterial(origMats[j]);
+            }
+            dissolveMaterialsPerRenderer[i] = dissolveMats;
+
+            // Dissolve Material 적용
+            rend.materials = dissolveMats;
+        }
+
+        dissolveMaterialsCreated = true;
+    }
+
+    /// <summary>
+    /// 모든 렌더러의 Dissolve Material에 Dissolve 값 설정
+    /// </summary>
+    private void SetDissolveAmount(float amount)
+    {
+        if (dissolveMaterialsPerRenderer == null) return;
+
+        for (int i = 0; i < dissolveMaterialsPerRenderer.Length; i++)
+        {
+            if (dissolveMaterialsPerRenderer[i] == null) continue;
+
+            for (int j = 0; j < dissolveMaterialsPerRenderer[i].Length; j++)
+            {
+                Material mat = dissolveMaterialsPerRenderer[i][j];
+                if (mat != null && mat.HasProperty(DISSOLVE_AMOUNT))
+                {
+                    mat.SetFloat(DISSOLVE_AMOUNT, amount);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 먼지 파티클 효과 생성
+    /// DissolveSettings의 프리팹 우선, 없으면 개별 설정 사용
+    /// </summary>
+    private void SpawnDustParticle()
+    {
+        // DissolveSettings의 프리팹 우선 사용
+        GameObject particlePrefab = null;
+        if (dissolveSettings != null)
+        {
+            particlePrefab = dissolveSettings.GetDustParticlePrefab();
+        }
+
+        // DissolveSettings에 없으면 개별 설정 사용
+        if (particlePrefab == null)
+        {
+            particlePrefab = dustParticlePrefab;
+        }
+
+        if (particlePrefab == null) return;
+
+        Vector3 spawnPosition = collider3D != null ? collider3D.bounds.center : transform.position;
+        GameObject particle = Instantiate(particlePrefab, spawnPosition, Quaternion.identity);
+
+        // 파티클 시스템 자동 파괴
+        if (particle.TryGetComponent<ParticleSystem>(out var ps))
+        {
+            Destroy(particle, ps.main.duration + ps.main.startLifetime.constantMax);
+        }
+        else
+        {
+            Destroy(particle, dissolveDuration + 1f);
+        }
     }
 
     private bool isDespawning = false;
@@ -1071,6 +1293,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         targetWallCollider = null;
         attackTimer = 0f;
         Weight = 1f;
+        lastAttackerPosition = Vector3.zero;
 
         // Reset CC states
         isSlowed = false;
@@ -1081,9 +1304,10 @@ public class Monster : BaseEntity, ITargetable, IMovable
         currentMarkType = MarkType.None;
         markDamageMultiplier = 0f;
 
-        // 애니메이션 상태 초기화
+        // 애니메이션 상태 초기화 - 애니메이터 활성화
         if (monsterAnimator != null)
         {
+            monsterAnimator.enabled = true;
             monsterAnimator.SetBool(ANIM_IS_MOVING, true);
             monsterAnimator.SetBool(ANIM_DIZZY, false);
             monsterAnimator.ResetTrigger(ANIM_ATTACK);
@@ -1091,6 +1315,30 @@ public class Monster : BaseEntity, ITargetable, IMovable
             monsterAnimator.ResetTrigger(ANIM_DIE);
             monsterAnimator.ResetTrigger(ANIM_VICTORY);
         }
+
+        // Rigidbody 초기 상태 설정 (Kinematic으로 시작)
+        // Unity 6에서는 kinematic body의 velocity 설정이 지원되지 않음
+        // 따라서 non-kinematic 상태에서만 velocity를 초기화
+        if (rb != null)
+        {
+            if (!rb.isKinematic)
+            {
+                // Non-kinematic인 경우에만 velocity 초기화
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+            // Kinematic으로 설정 (이미 kinematic인 경우 무시됨)
+            rb.isKinematic = true;
+        }
+
+        // Collider 활성화
+        if (collider3D != null)
+        {
+            collider3D.enabled = true;
+        }
+
+        // Dissolve Material 리셋
+        ResetDissolveMaterials();
 
         // 목적지는 WaveManager에서 SetDestination()으로 설정됨
 
@@ -1109,6 +1357,59 @@ public class Monster : BaseEntity, ITargetable, IMovable
         TargetRegistry.Instance.RegisterTarget(this);
     }
 
+    /// <summary>
+    /// Dissolve Material 상태 리셋 (풀링 시 재사용 위해)
+    /// 원본 Material로 복원하고 Dissolve Material 인스턴스 정리
+    /// </summary>
+    private void ResetDissolveMaterials()
+    {
+        // Dissolve Tween 정리
+        if (dissolveTween != null && dissolveTween.IsActive())
+        {
+            dissolveTween.Kill();
+            dissolveTween = null;
+        }
+
+        // Dissolve Material이 생성되었으면 정리
+        if (dissolveMaterialsCreated && renderers != null)
+        {
+            // 원본 Material로 복원
+            if (originalMaterialsPerRenderer != null)
+            {
+                for (int i = 0; i < renderers.Length; i++)
+                {
+                    if (renderers[i] == null) continue;
+                    if (originalMaterialsPerRenderer[i] == null) continue;
+
+                    // 저장해둔 원본 Material로 복원
+                    renderers[i].materials = originalMaterialsPerRenderer[i];
+                }
+            }
+
+            // Dissolve Material 인스턴스 파괴
+            if (dissolveMaterialsPerRenderer != null)
+            {
+                for (int i = 0; i < dissolveMaterialsPerRenderer.Length; i++)
+                {
+                    if (dissolveMaterialsPerRenderer[i] == null) continue;
+
+                    for (int j = 0; j < dissolveMaterialsPerRenderer[i].Length; j++)
+                    {
+                        if (dissolveMaterialsPerRenderer[i][j] != null)
+                        {
+                            Destroy(dissolveMaterialsPerRenderer[i][j]);
+                        }
+                    }
+                }
+            }
+
+            // 배열 정리
+            originalMaterialsPerRenderer = null;
+            dissolveMaterialsPerRenderer = null;
+            dissolveMaterialsCreated = false;
+        }
+    }
+
     public override void OnDespawn()
     {
         isWallHit = false;
@@ -1121,10 +1422,14 @@ public class Monster : BaseEntity, ITargetable, IMovable
         targetWallCollider = null;
         attackTimer = 0f;
         Weight = 1f;
+        lastAttackerPosition = Vector3.zero;
         CancelInvoke(nameof(DespawnMonster));
 
         //LMJ : Stop weight update system
         weightUpdateCts?.Cancel();
+
+        // Dissolve Tween 정리
+        ResetDissolveMaterials();
 
         // MonsterMove 상태 초기화
         if (monsterMove != null)
@@ -1151,5 +1456,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         rootCts?.Cancel();
         rootCts?.Dispose();
+
+        // Dissolve Tween 정리
+        if (dissolveTween != null && dissolveTween.IsActive())
+        {
+            dissolveTween.Kill();
+        }
     }
 }
