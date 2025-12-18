@@ -181,15 +181,10 @@ namespace NovelianMagicLibraryDefense.UI
                 isPaused = true;
             }
 
-            // 게임 시작: 덱 캐릭터 수만큼 캐릭터 카드 표시 (3~4장)
-            int deckCount = DeckManager.Instance?.GetDeckCount() ?? 4;
-            CardData[] cards = GetCharacterCards(deckCount);
-
             panel.SetActive(true);
-            CreateCards(cards);
-            StartSelectionTimer().Forget();
 
-            Debug.Log($"[CardSelectPanel] Opened for game start - {deckCount} character cards");
+            // 데이터 로딩 대기 후 카드 표시
+            WaitForDataAndShowCards(isGameStart: true).Forget();
         }
 
         /// <summary>
@@ -207,31 +202,110 @@ namespace NovelianMagicLibraryDefense.UI
                 isPaused = true;
             }
 
-            // 현재 레벨 가져오기
-            currentPlayerLevel = GameManager.Instance?.Stage?.GetCurrentLevel() ?? 1;
-            int levelId = 700 + currentPlayerLevel; // 0701, 0702, ...
+            panel.SetActive(true);
 
-            // PlayerLevelTable에서 데이터 조회
-            var levelData = CSVLoader.Instance?.GetData<PlayerLevelData>(levelId);
+            // 데이터 로딩 대기 후 카드 표시
+            WaitForDataAndShowCards(isGameStart: false).Forget();
+        }
 
-            CardData[] cards;
+        /// <summary>
+        /// JML: 데이터 로딩 대기 후 카드 표시 (Issue #484)
+        /// CSV 로딩 + 캐릭터 프리팹 프리로드 완료까지 로딩 인디케이터 표시
+        /// </summary>
+        private async UniTaskVoid WaitForDataAndShowCards(bool isGameStart)
+        {
+            // 카드 슬롯 버튼 비활성화
+            SetCardSlotsInteractable(false);
 
-            if (levelData != null && levelData.Card_Type == 2)
+            // 1. CSV 로딩 대기
+            if (CSVLoader.Instance != null && !CSVLoader.Instance.IsInit)
             {
-                // 캐릭터 카드 레벨 (Card_Type 2 = 캐릭터 카드) - 덱 수에 따라 3~4장
-                cards = GetCharacterCardsForLevelUp();
-                Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=2 → 캐릭터 카드 {cards.Length}장");
+                int maxWaitFrames = 600; // 최대 10초 (60fps 기준)
+                int frameCount = 0;
+
+                while (!CSVLoader.Instance.IsInit && frameCount < maxWaitFrames)
+                {
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+                    frameCount++;
+                }
+
+                if (!CSVLoader.Instance.IsInit)
+                {
+                    Debug.LogWarning("[CardSelectPanel] CSV 로딩 타임아웃!");
+                }
+            }
+
+            // 2. 캐릭터 프리팹 프리로드 대기
+            if (placementManager != null && !placementManager.IsPreloadComplete())
+            {
+                int maxWaitFrames = 300; // 최대 5초
+                int frameCount = 0;
+
+                while (!placementManager.IsPreloadComplete() && frameCount < maxWaitFrames)
+                {
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+                    frameCount++;
+                }
+
+                if (!placementManager.IsPreloadComplete())
+                {
+                    Debug.LogWarning("[CardSelectPanel] 캐릭터 프리로드 타임아웃!");
+                }
+            }
+
+            // 카드 생성
+            CardData[] cards;
+            if (isGameStart)
+            {
+                int deckCount = DeckManager.Instance?.GetDeckCount() ?? 4;
+                cards = GetCharacterCards(deckCount);
+                Debug.Log($"[CardSelectPanel] Opened for game start - {deckCount} character cards");
             }
             else
             {
-                // 스킬/스탯 카드 레벨 (Card_Type 1 또는 levelData null) - 항상 4장 고정
-                cards = GetRandomStatCards(4);
-                Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=1 → 스킬/스탯 카드 4장");
+                // 레벨업 카드 로직
+                currentPlayerLevel = GameManager.Instance?.Stage?.GetCurrentLevel() ?? 1;
+                int levelId = 700 + currentPlayerLevel;
+                var levelData = CSVLoader.Instance?.GetData<PlayerLevelData>(levelId);
+
+                if (levelData != null && levelData.Card_Type == 2)
+                {
+                    cards = GetCharacterCardsForLevelUp();
+                    Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=2 → 캐릭터 카드 {cards.Length}장");
+                }
+                else
+                {
+                    cards = GetRandomStatCards(4);
+                    Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=1 → 스킬/스탯 카드 4장");
+                }
             }
 
-            panel.SetActive(true);
             CreateCards(cards);
+
+            // 카드 슬롯 버튼 활성화
+            SetCardSlotsInteractable(true);
+
+            // 타이머 시작
             StartSelectionTimer().Forget();
+        }
+
+        /// <summary>
+        /// JML: 카드 슬롯 버튼 활성화/비활성화 (Issue #484)
+        /// </summary>
+        private void SetCardSlotsInteractable(bool interactable)
+        {
+            if (cardSlots == null) return;
+
+            for (int i = 0; i < cardSlots.Length; i++)
+            {
+                if (cardSlots[i] == null) continue;
+
+                var button = cardSlots[i].GetComponent<UnityEngine.UI.Button>();
+                if (button != null)
+                {
+                    button.interactable = interactable;
+                }
+            }
         }
 
         /// <summary>
