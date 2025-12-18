@@ -187,6 +187,14 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void InitializeFromCSV()
         {
+            // Issue #476: BossDungeon 모드면 StageManager 초기화 스킵
+            // BossDungeonManager가 별도로 처리함
+            if (SelectedBossDungeon.HasSelection)
+            {
+                Debug.Log("[StageManager] BossDungeon mode detected - skipping StageManager initialization");
+                return;
+            }
+
             // CSVLoader 초기화 확인
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {

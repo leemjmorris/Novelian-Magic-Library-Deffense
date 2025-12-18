@@ -141,6 +141,43 @@ public class CharacterPlacementManager : MonoBehaviour
         return isPreloadComplete;
     }
 
+    /// <summary>
+    /// Issue #476: 그리드 슬롯이 생성되었는지 확인
+    /// </summary>
+    public bool HasGridSlots()
+    {
+        return gridSlots != null && gridSlots.Count > 0;
+    }
+
+    /// <summary>
+    /// Issue #476: 완전 초기화 여부 (프리로드 + 그리드 생성 완료)
+    /// </summary>
+    public bool IsFullyInitialized => isPreloadComplete && HasGridSlots();
+
+    /// <summary>
+    /// Issue #476: 초기화 완료까지 대기 (BossDungeonManager에서 호출)
+    /// 프리로드 완료 + 그리드 생성까지 대기
+    /// </summary>
+    public async UniTask WaitForInitializationAsync()
+    {
+        Debug.Log("[CharacterPlacementManager] 초기화 대기 시작...");
+
+        // 1. 프리로드 완료 대기
+        while (!isPreloadComplete)
+        {
+            await UniTask.Yield();
+        }
+        Debug.Log("[CharacterPlacementManager] 프리로드 완료");
+
+        // 2. 그리드 생성 (waitForLayoutPreset=true일 때 직접 생성)
+        if (!HasGridSlots())
+        {
+            Debug.Log("[CharacterPlacementManager] 그리드가 없어서 생성...");
+            CreateGrid();
+        }
+        Debug.Log($"[CharacterPlacementManager] 초기화 완료: 그리드 {gridSlots.Count}개 슬롯");
+    }
+
     private void OnEnable()
     {
         Debug.Log("[CharacterPlacementManager] OnEnable called! Starting InputManager event subscription");
