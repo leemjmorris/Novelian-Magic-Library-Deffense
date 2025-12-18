@@ -1,10 +1,14 @@
 ﻿using NovelianMagicLibraryDefense.Events;
+using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 //JML: Boss monster entity with enhanced stats and wall attack behavior
 public class BossMonster : BaseEntity, ITargetable, IMovable
 {
     [Header("Event Channels")]
     [SerializeField] private MonsterEvents monsterEvents;
+
+    [Header("Boss Dungeon (Issue #476)")]
+    [SerializeField] private BossDungeonManager bossDungeonManager;
 
     [Header("References")]
     [SerializeField] private Collider collider3D;
@@ -16,12 +20,18 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackInterval = 0.7f;
     [SerializeField] private float fallOffThreshold = -10f;
+    [SerializeField] private float attackRange = 2f; // 공격 범위 (Wall과의 거리)
 
     private float attackTimer = 0f;
     private Wall wall;
-    private bool isWallHit = false;
+    private bool isWallHit = false; // 물리 충돌 백업용
+    private bool isInAttackRange = false; // 공격 범위 내 진입 여부 (Monster.cs와 동일)
     private bool isDead = false;
-    public bool IsWallHit => isWallHit;
+
+    // Wall 참조 (거리 기반 공격 범위 체크용)
+    private Collider targetWallCollider;
+
+    public bool IsWallHit => isInAttackRange || isWallHit; // 둘 중 하나라도 true면 정지
 
     /// <summary>
     /// JML: Override IsAlive to include isDead flag check.
@@ -39,6 +49,11 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     private float markEndTime = 0f; // Time.time when mark expires
     private System.Threading.CancellationTokenSource markCts;
 
+    // Issue #476: 스턴 상태 (도전던전용)
+    private bool isStunned = false;
+    private float originalMoveSpeedForStun;
+    private System.Threading.CancellationTokenSource stunCts;
+
     // JML: ITargetable implementation
     public float Weight { get; private set; } = 5f; // Example weight value
 
@@ -49,6 +64,38 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     /// 보스 장르 반환 (상성 계산용)
     /// </summary>
     public Genre GetGenre() => bossGenre;
+
+    /// <summary>
+    /// Issue #476: BossDungeonManager 참조 설정 (스폰 시 주입)
+    /// </summary>
+    public void SetBossDungeonManager(BossDungeonManager manager)
+    {
+        bossDungeonManager = manager;
+    }
+
+    /// <summary>
+    /// Issue #476: Wall 참조 설정 (거리 기반 공격 범위 체크용)
+    /// BossDungeonManager에서 호출
+    /// </summary>
+    public void SetWallTarget(Wall wallTarget, Collider wallCollider)
+    {
+        wall = wallTarget;
+        targetWallCollider = wallCollider;
+        Debug.Log($"[BossMonster] Wall 타겟 설정 완료 - Wall: {(wall != null)}, Collider: {(targetWallCollider != null)}");
+    }
+
+    /// <summary>
+    /// Issue #476: 런타임에 AddComponent로 추가될 때 참조 자동 설정
+    /// 기존 프리팹의 컴포넌트들을 자동으로 찾아서 연결
+    /// </summary>
+    public void InitializeReferences()
+    {
+        if (collider3D == null) collider3D = GetComponent<Collider>();
+        if (rb == null) rb = GetComponent<Rigidbody>();
+        if (monsterMove == null) monsterMove = GetComponent<MonsterMove>();
+
+        Debug.Log($"[BossMonster] 참조 초기화 완료 - Collider: {(collider3D != null)}, Rigidbody: {(rb != null)}, MonsterMove: {(monsterMove != null)}");
+    }
 
     /// <summary>
     /// CSV 데이터 기반으로 보스 스탯 초기화
@@ -103,12 +150,30 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     //JML: Physics-based movement in FixedUpdate
     private void FixedUpdate()
     {
+        // Wall에 닿으면 이동 중지 (IsWallHit = isInAttackRange || isWallHit)
+        if (IsWallHit)
+        {
+            if (Time.frameCount % 60 == 0)
+            {
+                Debug.Log($"[BossMonster] FixedUpdate 정지: isInAttackRange={isInAttackRange}, isWallHit={isWallHit}");
+            }
+            return;
+        }
+
+        // 디버그: 이동 상태 확인
+        if (Time.frameCount % 120 == 0)
+        {
+            Debug.Log($"[BossMonster] 이동 중: moveSpeed={moveSpeed}, monsterMove={monsterMove != null}");
+        }
+
         monsterMove.Move(this, moveSpeed);
     }
 
     //JML: Game logic in Update
     private void Update()
     {
+        if (isDead) return;
+
         // 맵 밖으로 떨어진 경우 despawn
         if (transform.position.y < fallOffThreshold)
         {
@@ -117,16 +182,92 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
             return;
         }
 
-        if (isWallHit && wall != null)
+        // Issue #476: 스턴 중이면 공격하지 않음
+        if (isStunned) return;
+
+        // 공격 범위 체크 (거리 기반) - Monster.cs와 동일한 방식
+        CheckAttackRange();
+
+        // 벽 공격 처리 (공격 범위 내이거나 물리 충돌 시)
+        // targetWallCollider 사용 (wall은 OnCollisionExit에서 null 될 수 있음)
+        bool canAttack = (isInAttackRange || isWallHit) && targetWallCollider != null;
+        if (canAttack)
         {
             attackTimer += Time.deltaTime;
+
+            // Issue #476: 공격 카운트다운 UI 업데이트
+            float remainingSeconds = attackInterval - attackTimer;
+            if (bossDungeonManager != null)
+            {
+                bossDungeonManager.UpdateAttackCountdown(remainingSeconds);
+            }
+
             if (attackInterval <= attackTimer)
             {
-                wall.TakeDamage(damage);
+                // Issue #476: 도전던전에서는 스턴 게이지 증가 (결계 공격)
+                if (bossDungeonManager != null)
+                {
+                    bossDungeonManager.OnBossAttackWall();
+                }
+
                 attackTimer = 0f;
+                Debug.Log($"[BossMonster] 벽 공격!");
+            }
+        }
+        else
+        {
+            // 공격 범위 밖이면 카운트다운 숨김
+            if (bossDungeonManager != null)
+            {
+                bossDungeonManager.UpdateAttackCountdown(0f);
             }
         }
         // Weight는 고정값 사용 (매 프레임 증가 제거)
+    }
+
+    /// <summary>
+    /// 공격 범위 체크 (Wall Collider 기반 - Monster.cs와 동일한 방식)
+    /// </summary>
+    private void CheckAttackRange()
+    {
+        if (targetWallCollider == null) return;
+
+        // Wall Collider의 가장 가까운 지점까지의 거리 계산
+        Vector3 closestPoint = targetWallCollider.ClosestPoint(transform.position);
+        float distanceToWall = Vector3.Distance(transform.position, closestPoint);
+
+        // 공격 범위 내 진입 체크
+        bool wasInRange = isInAttackRange;
+        isInAttackRange = distanceToWall <= attackRange;
+
+        // 공격 범위 진입 시 NavMeshAgent 정지
+        if (isInAttackRange && !wasInRange)
+        {
+            if (monsterMove != null)
+            {
+                monsterMove.SetEnabled(false);
+            }
+            Debug.Log($"[BossMonster] 공격 범위 진입! 거리: {distanceToWall:F2}m");
+        }
+        // 공격 범위 이탈 시 NavMeshAgent 재활성화 (Dead나 Stunned가 아닐 때)
+        else if (!isInAttackRange && wasInRange && !isDead && !isStunned)
+        {
+            // Issue #476: 거리 기반 체크가 물리 충돌보다 우선
+            // 넉백으로 밀려났을 때 물리 충돌이 아직 남아있어도 이동 재개
+            isWallHit = false;
+
+            if (monsterMove != null)
+            {
+                monsterMove.SetEnabled(true);
+                // NavMeshAgent 목적지 재설정 (넉백 후 다시 Wall로 이동)
+                // targetWallCollider 사용 (wall은 OnCollisionExit에서 null 될 수 있음)
+                if (targetWallCollider != null)
+                {
+                    monsterMove.SetDestination(targetWallCollider.transform.position);
+                }
+            }
+            Debug.Log($"[BossMonster] 공격 범위 이탈! 거리: {distanceToWall:F2}m - 이동 재개");
+        }
     }
 
     public override void TakeDamage(float damage)
@@ -159,6 +300,8 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
             Vector3 textPosition = collider3D != null ? collider3D.bounds.center : transform.position;
             NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance.ShowDamage(textPosition, finalDamage, isCritical);
         }
+
+        // Issue #476: 스턴 게이지는 보스가 결계를 공격할 때만 증가 (캐릭터 공격 시 아님)
 
         Debug.Log($"BossMonster took {finalDamage} damage. current Health: {currentHealth - finalDamage}");
         base.TakeDamage(finalDamage);
@@ -464,23 +607,110 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         return Mathf.Max(0f, remaining); // Never return negative
     }
 
+    #region Issue #476: 스턴 시스템 (도전던전용)
+
+    /// <summary>
+    /// 스턴 적용 (이동/공격 중지)
+    /// </summary>
+    public void ApplyStun(float duration)
+    {
+        if (isStunned || !IsAlive()) return;
+
+        isStunned = true;
+        originalMoveSpeedForStun = moveSpeed;
+        moveSpeed = 0f;
+
+        // 스턴 해제 예약
+        stunCts?.Cancel();
+        stunCts?.Dispose();
+        stunCts = new System.Threading.CancellationTokenSource();
+        ReleaseStunAfterDelayAsync(duration, stunCts.Token).Forget();
+
+        Debug.Log($"[BossMonster] 스턴 적용! {duration}초");
+    }
+
+    /// <summary>
+    /// 스턴 해제
+    /// </summary>
+    public void ReleaseStun()
+    {
+        if (!isStunned) return;
+
+        isStunned = false;
+        moveSpeed = originalMoveSpeedForStun;
+
+        Debug.Log("[BossMonster] 스턴 해제");
+    }
+
+    private async Cysharp.Threading.Tasks.UniTaskVoid ReleaseStunAfterDelayAsync(float duration, System.Threading.CancellationToken ct)
+    {
+        try
+        {
+            await Cysharp.Threading.Tasks.UniTask.Delay((int)(duration * 1000), cancellationToken: ct);
+            if (!ct.IsCancellationRequested)
+            {
+                ReleaseStun();
+            }
+        }
+        catch (System.OperationCanceledException)
+        {
+            // Expected when cancelled
+        }
+    }
+
+    /// <summary>
+    /// 스턴 상태 확인
+    /// </summary>
+    public bool IsStunned => isStunned;
+
+    /// <summary>
+    /// 공격 주기 설정 (도전던전 전용)
+    /// </summary>
+    public void SetAttackInterval(float interval)
+    {
+        attackInterval = interval;
+        Debug.Log($"[BossMonster] 공격 주기 설정: {interval}초");
+    }
+
+    #endregion
+
     public override void Die()
     {
+        Debug.Log($"[BossMonster] Die() 호출됨! isDead={isDead}");
+
         // Prevent double Die() calls
         if (isDead) return;
         isDead = true;
+
+        Debug.Log("[BossMonster] 사망 처리 시작...");
 
         // LMJ: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);
 
         // LMJ: Use EventChannel instead of static event
+        Debug.Log($"[BossMonster] monsterEvents: {(monsterEvents != null ? "있음" : "NULL!")}");
         if (monsterEvents != null)
         {
+            Debug.Log("[BossMonster] RaiseBossDied 이벤트 발생!");
             monsterEvents.RaiseBossDied(this);
         }
+        else
+        {
+            Debug.LogError("[BossMonster] monsterEvents가 null이라 이벤트 발생 불가!");
+        }
 
-        // LMJ: Changed from ObjectPoolManager.Instance to GameManager.Instance.Pool
-        NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
+        // Issue #476: BossDungeon에서 스폰된 경우 풀이 아닌 Destroy 사용
+        // (Monster 타입 풀로 스폰 후 BossMonster 컴포넌트 추가했으므로 Despawn<BossMonster> 불가)
+        if (bossDungeonManager != null)
+        {
+            Debug.Log("[BossMonster] BossDungeon 모드 - Destroy 호출");
+            Destroy(gameObject);
+        }
+        else
+        {
+            // 기존 스테이지 시스템: 풀로 반환
+            NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool.Despawn(this);
+        }
     }
 
     /// <summary>
@@ -519,13 +749,21 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         isDead = false;
 
         isWallHit = false;
+        isInAttackRange = false; // 거리 기반 체크 초기화
         wall = null;
+        targetWallCollider = null;
         attackTimer = 0f;
         Weight = 5f;
 
         // Reset Mark state
         currentMarkType = MarkType.None;
         markDamageMultiplier = 0f;
+
+        // Issue #476: Reset Stun state
+        isStunned = false;
+        stunCts?.Cancel();
+        stunCts?.Dispose();
+        stunCts = null;
 
         // 목적지는 WaveManager에서 SetDestination()으로 설정됨
 
@@ -535,7 +773,9 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     public override void OnDespawn()
     {
         isWallHit = false;
+        isInAttackRange = false;
         wall = null;
+        targetWallCollider = null;
         attackTimer = 0f;
         Weight = 5f;
 
@@ -554,5 +794,9 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     {
         markCts?.Cancel();
         markCts?.Dispose();
+
+        // Issue #476: 스턴 CTS 정리
+        stunCts?.Cancel();
+        stunCts?.Dispose();
     }
 }

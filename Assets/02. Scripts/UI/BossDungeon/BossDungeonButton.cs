@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Cysharp.Threading.Tasks;
+using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.UI
@@ -39,11 +41,7 @@ namespace NovelianMagicLibraryDefense.UI
         private void Start()
         {
             SetFloorIndex(floorIndex);
-
-            // TODO: BossDungeonProgressManager에서 해금 상태 확인
-            // 현재는 1스테이지만 해금
-            bool isUnlocked = (floorIndex == 1);
-            SetLocked(!isUnlocked);
+            // Issue #476: 해금 상태는 BossDungeonScrollManager.InitializeDungeonButtons()에서 설정
         }
 
         /// <summary>
@@ -121,11 +119,30 @@ namespace NovelianMagicLibraryDefense.UI
             // SelectedBossDungeon에 저장 (씬 전환 후에도 유지)
             SelectedBossDungeon.Data = cachedDungeonData;
 
-            Debug.Log($"[BossDungeonButton] 던전 선택: Dungeon_ID={cachedDungeonData.Dungeon_ID}, " +
+            Debug.Log($"[BossDungeonButton] ===== 던전 선택 완료 =====");
+            Debug.Log($"[BossDungeonButton] Dungeon_ID={cachedDungeonData.Dungeon_ID}, " +
                       $"Floor={cachedDungeonData.Floor_Index}, Boss_ID={cachedDungeonData.Boss_ID}, " +
                       $"Time_Limit={cachedDungeonData.Time_Limit}초");
+            Debug.Log($"[BossDungeonButton] SelectedBossDungeon.HasSelection = {SelectedBossDungeon.HasSelection}");
+            Debug.Log($"[BossDungeonButton] 씬 전환 시작: BossDungeonScene으로 이동...");
 
-            // TODO: 스테이지 정보 팝업 표시 또는 씬 전환
+            // 씬 전환
+            LoadBossDungeonSceneAsync().Forget();
+        }
+
+        /// <summary>
+        /// 보스 던전 씬으로 전환 (페이드 효과 포함)
+        /// </summary>
+        private async UniTaskVoid LoadBossDungeonSceneAsync()
+        {
+            if (FadeController.Instance != null)
+            {
+                await FadeController.Instance.LoadSceneWithFade(SceneName.BossDungeonScene);
+            }
+            else
+            {
+                await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(SceneName.BossDungeonScene);
+            }
         }
 
         /// <summary>
