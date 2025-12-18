@@ -65,8 +65,17 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         gridManager = GetComponentInParent<CharacterCardGridManager>();
         rectTransform = GetComponent<RectTransform>();
 
-        // 시작 시 빈 상태로 초기화
-        SetEmpty();
+        // Issue #476: 이미 Initialize()가 호출된 경우 SetEmpty() 스킵
+        // (스크립트 실행 순서 문제로 BossDungeonManager.Awake()가 먼저 실행되어
+        //  Initialize()가 Awake()보다 먼저 호출될 수 있음)
+        if (isEmpty)
+        {
+            SetEmpty();
+        }
+        else
+        {
+            Debug.Log($"[ChaCard] Awake: 이미 초기화됨, SetEmpty 스킵 (charId={characterId})");
+        }
     }
 
     private void Start()
@@ -115,15 +124,24 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
     /// <param name="character">연결할 Character 인스턴스 (스탯 표시용)</param>
     public async UniTask Initialize(int charId, int tier = 1, Character character = null)
     {
+        Debug.Log($"[ChaCard] Initialize 시작: charId={charId}, gameObject={gameObject.name}, " +
+                  $"characterNameText={characterNameText != null}, iconImage={iconImage != null}");
+
         characterId = charId;
         starTier = Mathf.Clamp(tier, 1, 3);
         isEmpty = false;
         linkedCharacter = character;
+        Debug.Log($"[ChaCard] isEmpty=false 설정됨: gameObject={gameObject.name}, charId={charId}");
 
         // 1. CSV에서 캐릭터 데이터 로드
-        if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
+        bool csvReady = CSVLoader.Instance != null && CSVLoader.Instance.IsInit;
+        Debug.Log($"[ChaCard] CSV 상태: Instance={CSVLoader.Instance != null}, IsInit={CSVLoader.Instance?.IsInit}");
+
+        if (csvReady)
         {
             var characterData = CSVLoader.Instance.GetData<CharacterData>(charId);
+            Debug.Log($"[ChaCard] CharacterData: {(characterData != null ? $"Name_ID={characterData.Character_Name_ID}" : "NULL")}");
+
             if (characterData != null)
             {
                 // 캐릭터 이름 설정
@@ -131,6 +149,11 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
                 if (characterNameText != null)
                 {
                     characterNameText.text = stringData?.Text ?? $"Character_{charId}";
+                    Debug.Log($"[ChaCard] 이름 설정됨: {characterNameText.text}");
+                }
+                else
+                {
+                    Debug.LogError($"[ChaCard] characterNameText가 NULL입니다! charId={charId}");
                 }
 
                 // 아이콘 로드
@@ -148,16 +171,23 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
                         }
                     }
 
+                    Debug.Log($"[ChaCard] 아이콘 로드 시작: {addressableKey}");
+
                     try
                     {
                         var sprite = await Addressables.LoadAssetAsync<Sprite>(addressableKey).ToUniTask();
                         iconImage.sprite = sprite;
                         iconImage.color = Color.white;
+                        Debug.Log($"[ChaCard] 아이콘 로드 완료: {addressableKey}");
                     }
                     catch (System.Exception e)
                     {
                         Debug.LogWarning($"[ChaCard] Failed to load icon for character {charId}: {e.Message}");
                     }
+                }
+                else
+                {
+                    Debug.LogError($"[ChaCard] iconImage가 NULL입니다! charId={charId}");
                 }
             }
             else
@@ -168,6 +198,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         }
         else
         {
+            Debug.LogWarning($"[ChaCard] CSV 로드 안됨! Fallback 사용. charId={charId}");
             SetFallbackData(charId);
         }
 
@@ -202,6 +233,8 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
     /// </summary>
     public void SetEmpty()
     {
+        // Issue #476: 디버그 - SetEmpty 호출 추적
+        Debug.Log($"[ChaCard] SetEmpty 호출됨: gameObject={gameObject.name}, instanceId={GetInstanceID()}, 이전 charId={characterId}", this);
         characterId = -1;
         starTier = 1;
         isEmpty = true;

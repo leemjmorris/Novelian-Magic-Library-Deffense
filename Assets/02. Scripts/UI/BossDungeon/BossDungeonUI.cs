@@ -21,27 +21,50 @@ namespace NovelianMagicLibraryDefense.UI
 
         [Header("Stun Gauge UI")]
         [SerializeField] private GameObject stunGaugePanel;
-        [SerializeField] private Image stunGaugeFillImage;
+        [SerializeField] private Slider stunGaugeSlider;  // Slider 사용
         [SerializeField] private TextMeshProUGUI stunGaugeText;
-        [SerializeField] private GameObject stunActiveEffect;
+        [SerializeField] private GameObject characterStunEffect;  // 캐릭터들 스턴 효과
+
+        [Header("Attack Countdown UI")]
+        [SerializeField] private TextMeshProUGUI attackCountdownText;  // 보스 공격까지 남은 시간
 
         [Header("Floor Info")]
         [SerializeField] private TextMeshProUGUI floorText;
 
-        [Header("Result Popup")]
-        [SerializeField] private BossDungeonResultPopup resultPopup;
+        [Header("Result Panels")]
+        [SerializeField] private BossDungeonClearPanel clearPanel;   // 승리 패널
+        [SerializeField] private BossDungeonFailedPanel failedPanel; // 패배 패널
 
         // 초기 시간 (타이머 Fill용)
         private float initialTime;
 
         private void Awake()
         {
+            // Issue #476: 결과 패널 비활성화
+            if (clearPanel != null)
+                clearPanel.gameObject.SetActive(false);
+
+            if (failedPanel != null)
+                failedPanel.gameObject.SetActive(false);
+
             // 초기 상태
             if (timeWarningEffect != null)
                 timeWarningEffect.SetActive(false);
 
-            if (stunActiveEffect != null)
-                stunActiveEffect.SetActive(false);
+            if (characterStunEffect != null)
+                characterStunEffect.SetActive(false);
+
+            // 공격 카운트다운 초기화
+            if (attackCountdownText != null)
+                attackCountdownText.text = "";
+
+            // 스턴 게이지 초기화 (0에서 시작)
+            if (stunGaugeSlider != null)
+            {
+                stunGaugeSlider.minValue = 0f;
+                stunGaugeSlider.maxValue = 1f;
+                stunGaugeSlider.value = 0f;
+            }
         }
 
         /// <summary>
@@ -141,9 +164,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void UpdateStunGauge(float current, float max)
         {
-            if (stunGaugeFillImage != null && max > 0)
+            if (stunGaugeSlider != null && max > 0)
             {
-                stunGaugeFillImage.fillAmount = current / max;
+                stunGaugeSlider.value = current / max;
             }
 
             if (stunGaugeText != null)
@@ -154,29 +177,61 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// 보스 스턴 효과 표시
+        /// 캐릭터 스턴 효과 표시 (결계 스턴 게이지 100 도달 시)
         /// </summary>
-        public void ShowBossStunEffect(float duration)
+        public void ShowCharacterStunEffect(float duration)
         {
-            if (stunActiveEffect != null)
+            if (characterStunEffect != null)
             {
-                stunActiveEffect.SetActive(true);
-                HideStunEffectAfterDelayAsync(duration).Forget();
+                characterStunEffect.SetActive(true);
+                HideCharacterStunEffectAfterDelayAsync(duration).Forget();
             }
 
-            Debug.Log($"[BossDungeonUI] 보스 스턴! 지속시간: {duration}초");
+            Debug.Log($"[BossDungeonUI] 캐릭터들 스턴! 지속시간: {duration}초");
         }
 
         /// <summary>
-        /// 스턴 효과 숨기기
+        /// 캐릭터 스턴 효과 숨기기
         /// </summary>
-        private async UniTaskVoid HideStunEffectAfterDelayAsync(float delay)
+        private async UniTaskVoid HideCharacterStunEffectAfterDelayAsync(float delay)
         {
             await UniTask.Delay((int)(delay * 1000));
 
-            if (stunActiveEffect != null)
+            if (characterStunEffect != null)
             {
-                stunActiveEffect.SetActive(false);
+                characterStunEffect.SetActive(false);
+            }
+        }
+
+        /// <summary>
+        /// 공격 카운트다운 업데이트 (보스가 공격하기까지 남은 시간)
+        /// </summary>
+        public void UpdateAttackCountdown(float remainingSeconds)
+        {
+            if (attackCountdownText == null)
+            {
+                Debug.LogWarning("[BossDungeonUI] attackCountdownText가 null입니다! Inspector에서 연결해주세요.");
+                return;
+            }
+
+            if (remainingSeconds <= 0f)
+            {
+                attackCountdownText.text = "";
+            }
+            else
+            {
+                int seconds = Mathf.CeilToInt(remainingSeconds);
+                attackCountdownText.text = $"다음 공격까지 {seconds}초";
+
+                // 3초 이하면 빨간색
+                if (remainingSeconds <= 3f)
+                {
+                    attackCountdownText.color = criticalTimeColor;
+                }
+                else
+                {
+                    attackCountdownText.color = normalTimeColor;
+                }
             }
         }
 
@@ -185,9 +240,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void ShowClearResult(float remainingTime)
         {
-            if (resultPopup != null)
+            if (clearPanel != null)
             {
-                resultPopup.ShowClear(remainingTime);
+                clearPanel.Show(remainingTime);
             }
         }
 
@@ -196,9 +251,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void ShowFailResult(string reason)
         {
-            if (resultPopup != null)
+            if (failedPanel != null)
             {
-                resultPopup.ShowFail(reason);
+                failedPanel.Show(reason);
             }
         }
     }

@@ -1,10 +1,14 @@
 using NovelianMagicLibraryDefense.Events;
+using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
 public class Wall : MonoBehaviour, IEntity
 {
     [Header("Event Channels")]
     [SerializeField] private WallEvents wallEvents;
+
+    [Header("Boss Dungeon (Issue #476)")]
+    [SerializeField] private BossDungeonManager bossDungeonManager;
 
     [Header("Health Settings")]
     [SerializeField] private float maxHealth = 200f;

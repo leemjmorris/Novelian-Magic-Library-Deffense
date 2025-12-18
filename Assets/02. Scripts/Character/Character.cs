@@ -133,6 +133,9 @@ namespace Novelian.Combat
         private bool isInitialized = false;
         private bool isChanneling = false;
 
+        // Issue #476: 도전던전 스턴 상태
+        private bool isStunnedByBossDungeon = false;
+
         // JML: 책갈피 시스템 (Issue #320)
         private int characterId = -1;
         private bool isManuallyInitialized = false;  // Initialize()로 초기화되었는지 여부
@@ -287,6 +290,9 @@ namespace Novelian.Combat
         //      Now supports all skill types (same as ForceAttack)
         private void TryAttack()
         {
+            // Issue #476: 도전던전 스턴 상태면 공격 안함
+            if (isStunnedByBossDungeon) return;
+
             // 디버그: 초기화 상태 확인
             if (!isInitialized)
             {
@@ -394,6 +400,9 @@ namespace Novelian.Combat
         //LMJ : Attempt to use active skill on target
         private void TryUseActiveSkill()
         {
+            // Issue #476: 도전던전 스턴 상태면 공격 안함
+            if (isStunnedByBossDungeon) return;
+
             if (!isInitialized || activeSkillData == null) return;
 
             // Skip if already channeling
@@ -792,6 +801,41 @@ namespace Novelian.Combat
             UnityEditor.Handles.Label(gizmoPos + Vector3.up * 0.5f, $"AOE: {lastAOERadius:F1}");
         }
 #endif
+
+        #endregion
+
+        #region Issue #476: 도전던전 스턴 시스템
+
+        /// <summary>
+        /// 도전던전에서 결계 스턴 게이지 100 도달 시 호출
+        /// 캐릭터 공격 중지
+        /// </summary>
+        public void ApplyStunFromBossDungeon(float duration)
+        {
+            if (isStunnedByBossDungeon) return;
+
+            isStunnedByBossDungeon = true;
+            Debug.Log($"[Character] 도전던전 스턴 적용: {duration}초");
+        }
+
+        /// <summary>
+        /// 도전던전 스턴 해제
+        /// </summary>
+        public void ReleaseStunFromBossDungeon()
+        {
+            if (!isStunnedByBossDungeon) return;
+
+            isStunnedByBossDungeon = false;
+            Debug.Log("[Character] 도전던전 스턴 해제");
+        }
+
+        /// <summary>
+        /// 캐릭터가 살아있는지 확인 (IPoolable과 별개로 간단 체크)
+        /// </summary>
+        public bool IsAlive()
+        {
+            return gameObject.activeInHierarchy;
+        }
 
         #endregion
     }

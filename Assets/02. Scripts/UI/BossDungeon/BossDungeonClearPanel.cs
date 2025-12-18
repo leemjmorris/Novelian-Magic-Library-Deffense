@@ -8,29 +8,23 @@ using UnityEngine.UI;
 namespace NovelianMagicLibraryDefense.UI
 {
     /// <summary>
-    /// Issue #476 - 도전던전 결과 팝업
-    /// 클리어/실패 결과 표시 및 보상 처리
+    /// Issue #476 - 도전던전 클리어 패널
+    /// StageClearPanel과 동일한 구조
     /// </summary>
-    public class BossDungeonResultPopup : MonoBehaviour
+    public class BossDungeonClearPanel : MonoBehaviour
     {
-        [Header("Panel References")]
-        [SerializeField] private GameObject clearPanel;
-        [SerializeField] private GameObject failPanel;
+        [Header("Panel")]
+        [SerializeField] private GameObject panel;
 
-        [Header("Clear UI")]
-        [SerializeField] private TextMeshProUGUI clearTitleText;
-        [SerializeField] private TextMeshProUGUI clearTimeText;
-        [SerializeField] private TextMeshProUGUI clearFloorText;
+        [Header("Text Fields")]
+        [SerializeField] private TextMeshProUGUI titleText;
+        [SerializeField] private TextMeshProUGUI floorText;
+        [SerializeField] private TextMeshProUGUI timeText;
         [SerializeField] private TextMeshProUGUI rewardText;
 
-        [Header("Fail UI")]
-        [SerializeField] private TextMeshProUGUI failTitleText;
-        [SerializeField] private TextMeshProUGUI failReasonText;
-        [SerializeField] private TextMeshProUGUI failFloorText;
-
         [Header("Buttons")]
-        [SerializeField] private Button retryButton;
         [SerializeField] private Button lobbyButton;
+        [SerializeField] private Button retryButton;
         [SerializeField] private Button nextFloorButton;
 
         [Header("Animation")]
@@ -39,77 +33,95 @@ namespace NovelianMagicLibraryDefense.UI
 
         private BossDungeonData currentDungeonData;
 
+        public bool IsOpen => (panel != null ? panel : gameObject).activeSelf;
+
         private void Awake()
         {
-            // 초기 상태 숨김
-            if (clearPanel != null)
-                clearPanel.SetActive(false);
-
-            if (failPanel != null)
-                failPanel.SetActive(false);
-
             // 버튼 이벤트 연결
-            if (retryButton != null)
-                retryButton.onClick.AddListener(OnRetryButton);
-
             if (lobbyButton != null)
-                lobbyButton.onClick.AddListener(OnLobbyButton);
+                lobbyButton.onClick.AddListener(OnLobbyButtonClicked);
+
+            if (retryButton != null)
+                retryButton.onClick.AddListener(OnRetryButtonClicked);
 
             if (nextFloorButton != null)
-                nextFloorButton.onClick.AddListener(OnNextFloorButton);
+                nextFloorButton.onClick.AddListener(OnNextFloorButtonClicked);
+        }
+
+        private void OnDestroy()
+        {
+            if (lobbyButton != null)
+                lobbyButton.onClick.RemoveListener(OnLobbyButtonClicked);
+
+            if (retryButton != null)
+                retryButton.onClick.RemoveListener(OnRetryButtonClicked);
+
+            if (nextFloorButton != null)
+                nextFloorButton.onClick.RemoveListener(OnNextFloorButtonClicked);
         }
 
         /// <summary>
-        /// 클리어 결과 표시
+        /// 클리어 패널 표시
         /// </summary>
-        public void ShowClear(float remainingTime)
+        public void Show(float remainingTime)
         {
             currentDungeonData = SelectedBossDungeon.Data;
 
-            ShowClearAsync(remainingTime).Forget();
+            // Issue #476: 텍스트를 패널 활성화 전에 먼저 세팅 (텍스트 변경이 눈에 보이지 않도록)
+            SetupTexts(remainingTime);
+
+            // 패널 활성화
+            GameObject targetPanel = panel != null ? panel : gameObject;
+            targetPanel.SetActive(true);
+
+            ShowAsync().Forget();
         }
 
-        private async UniTaskVoid ShowClearAsync(float remainingTime)
+        /// <summary>
+        /// 텍스트 미리 세팅 (패널 활성화 전)
+        /// </summary>
+        private void SetupTexts(float remainingTime)
         {
-            // 지연 후 표시 (연출용)
-            await UniTask.Delay((int)(showDelay * 1000));
+            if (titleText != null)
+                titleText.text = "클리어!";
 
-            if (clearPanel != null)
-            {
-                clearPanel.SetActive(true);
-            }
-
-            // 클리어 정보 표시
-            if (clearTitleText != null)
-            {
-                clearTitleText.text = "클리어!";
-            }
-
-            if (clearTimeText != null)
+            if (timeText != null)
             {
                 int minutes = Mathf.FloorToInt(remainingTime / 60f);
                 int seconds = Mathf.FloorToInt(remainingTime % 60f);
-                clearTimeText.text = $"남은 시간: {minutes:00}:{seconds:00}";
+                timeText.text = $"남은 시간: {minutes:00}:{seconds:00}";
             }
 
-            if (clearFloorText != null && currentDungeonData != null)
-            {
-                clearFloorText.text = $"{currentDungeonData.Floor_Index}층 클리어";
-            }
+            if (floorText != null && currentDungeonData != null)
+                floorText.text = $"{currentDungeonData.Floor_Index}층 클리어";
 
-            // 보상 표시 및 지급
-            DisplayRewards();
-
-            // 다음 층 해금 (Firebase 저장)
-            UnlockNextFloor();
+            // 보상 텍스트 세팅
+            SetupRewardText();
 
             // 다음 층 버튼 활성화 (마지막 층이 아닐 경우)
             if (nextFloorButton != null && currentDungeonData != null)
             {
-                // TODO: 최대 층 체크 (현재는 100층까지)
                 bool hasNextFloor = currentDungeonData.Floor_Index < 100;
                 nextFloorButton.gameObject.SetActive(hasNextFloor);
             }
+        }
+
+        private async UniTaskVoid ShowAsync()
+        {
+            // 지연 후 게임 일시정지 및 보상 지급
+            if (showDelay > 0)
+            {
+                await UniTask.Delay((int)(showDelay * 1000));
+            }
+
+            // Issue #476: 게임 일시정지
+            Time.timeScale = 0f;
+
+            // 보상 지급 (텍스트는 이미 세팅됨)
+            GiveRewardsToPlayer();
+
+            // 다음 층 해금 (Firebase 저장)
+            UnlockNextFloor();
 
             // 애니메이션 재생
             if (animator != null)
@@ -117,64 +129,24 @@ namespace NovelianMagicLibraryDefense.UI
                 animator.SetTrigger("Clear");
             }
 
-            Debug.Log($"[BossDungeonResultPopup] 클리어 표시 - 남은 시간: {remainingTime:F1}초");
+            Debug.Log("[BossDungeonClearPanel] 클리어 표시 완료");
         }
 
         /// <summary>
-        /// 실패 결과 표시
+        /// 패널 닫기
         /// </summary>
-        public void ShowFail(string reason)
+        public void Close()
         {
-            currentDungeonData = SelectedBossDungeon.Data;
-
-            ShowFailAsync(reason).Forget();
+            GameObject targetPanel = panel != null ? panel : gameObject;
+            targetPanel.SetActive(false);
         }
 
-        private async UniTaskVoid ShowFailAsync(string reason)
-        {
-            // 지연 후 표시 (연출용)
-            await UniTask.Delay((int)(showDelay * 1000));
-
-            if (failPanel != null)
-            {
-                failPanel.SetActive(true);
-            }
-
-            // 실패 정보 표시
-            if (failTitleText != null)
-            {
-                failTitleText.text = "실패...";
-            }
-
-            if (failReasonText != null)
-            {
-                failReasonText.text = reason;
-            }
-
-            if (failFloorText != null && currentDungeonData != null)
-            {
-                failFloorText.text = $"{currentDungeonData.Floor_Index}층";
-            }
-
-            // 다음 층 버튼 숨김
-            if (nextFloorButton != null)
-            {
-                nextFloorButton.gameObject.SetActive(false);
-            }
-
-            // 애니메이션 재생
-            if (animator != null)
-            {
-                animator.SetTrigger("Fail");
-            }
-
-            Debug.Log($"[BossDungeonResultPopup] 실패 표시 - 사유: {reason}");
-        }
+        #region Rewards
 
         /// <summary>
-        /// 보상 표시 및 지급
+        /// 보상 텍스트만 세팅 (패널 활성화 전에 호출)
         /// </summary>
-        private void DisplayRewards()
+        private void SetupRewardText()
         {
             if (currentDungeonData == null)
             {
@@ -186,7 +158,6 @@ namespace NovelianMagicLibraryDefense.UI
             if (rewardGroupId == 0)
             {
                 SetRewardText("보상\n-");
-                Debug.Log("[BossDungeonResultPopup] Reward_Group_ID가 0입니다.");
                 return;
             }
 
@@ -194,7 +165,6 @@ namespace NovelianMagicLibraryDefense.UI
             if (rewardGroupTable == null)
             {
                 SetRewardText("보상\n-");
-                Debug.LogWarning("[BossDungeonResultPopup] RewardGroupTable not loaded");
                 return;
             }
 
@@ -202,21 +172,32 @@ namespace NovelianMagicLibraryDefense.UI
             if (rewardGroup == null)
             {
                 SetRewardText("보상\n-");
-                Debug.LogWarning($"[BossDungeonResultPopup] RewardGroup not found: {rewardGroupId}");
                 return;
             }
 
-            // 보상 텍스트 생성 및 지급
             string rewardTextStr = GetRewardText(rewardGroup);
             SetRewardText(rewardTextStr);
-            GiveRewards(rewardGroup);
-
-            Debug.Log($"[BossDungeonResultPopup] 보상 표시 및 지급 완료 - Reward_Group_ID: {rewardGroupId}");
         }
 
         /// <summary>
-        /// 보상 텍스트 설정
+        /// 보상 지급 (딜레이 후 호출)
         /// </summary>
+        private void GiveRewardsToPlayer()
+        {
+            if (currentDungeonData == null) return;
+
+            int rewardGroupId = currentDungeonData.Reward_Group_ID;
+            if (rewardGroupId == 0) return;
+
+            var rewardGroupTable = CSVLoader.Instance?.GetTable<RewardGroupData>();
+            if (rewardGroupTable == null) return;
+
+            RewardGroupData rewardGroup = rewardGroupTable.GetId(rewardGroupId);
+            if (rewardGroup == null) return;
+
+            GiveRewards(rewardGroup);
+        }
+
         private void SetRewardText(string text)
         {
             if (rewardText != null)
@@ -225,9 +206,6 @@ namespace NovelianMagicLibraryDefense.UI
             }
         }
 
-        /// <summary>
-        /// 보상 텍스트 생성
-        /// </summary>
         private string GetRewardText(RewardGroupData rewardGroup)
         {
             int[] rewardIds = new int[]
@@ -240,10 +218,7 @@ namespace NovelianMagicLibraryDefense.UI
             };
 
             var rewardTable = CSVLoader.Instance?.GetTable<RewardData>();
-            if (rewardTable == null)
-            {
-                return "보상\n-";
-            }
+            if (rewardTable == null) return "보상\n-";
 
             System.Collections.Generic.List<string> rewardStrings = new System.Collections.Generic.List<string>();
 
@@ -264,17 +239,11 @@ namespace NovelianMagicLibraryDefense.UI
                 rewardStrings.Add($"{itemName} x{countStr}");
             }
 
-            if (rewardStrings.Count == 0)
-            {
-                return "보상\n-";
-            }
+            if (rewardStrings.Count == 0) return "보상\n-";
 
             return "보상\n" + string.Join(", ", rewardStrings);
         }
 
-        /// <summary>
-        /// 보상 지급
-        /// </summary>
         private void GiveRewards(RewardGroupData rewardGroup)
         {
             int[] rewardIds = new int[]
@@ -296,87 +265,62 @@ namespace NovelianMagicLibraryDefense.UI
                 RewardData reward = rewardTable.GetId(rewardId);
                 if (reward == null || reward.Item_ID == 0) continue;
 
-                // 수량 결정 (Min~Max 범위 내 랜덤)
                 int amount = reward.Min_Count == reward.Max_Count
                     ? reward.Min_Count
-                    : UnityEngine.Random.Range(reward.Min_Count, reward.Max_Count + 1);
+                    : Random.Range(reward.Min_Count, reward.Max_Count + 1);
 
                 GiveItem(reward.Item_ID, amount);
             }
         }
 
-        /// <summary>
-        /// 아이템 지급 (Currency 또는 Ingredient)
-        /// </summary>
         private void GiveItem(int itemId, int amount)
         {
-            // Item_ID 범위로 타입 구분
-            // 1600번대: Currency
-            // 10000번대: Ingredient
-
             if (itemId >= 1600 && itemId < 1700)
             {
-                // Currency 지급
                 if (CurrencyManager.Instance != null)
                 {
                     CurrencyManager.Instance.AddCurrency(itemId, amount);
-                    Debug.Log($"[BossDungeonResultPopup] Currency 지급: ID={itemId}, Amount={amount}");
+                    Debug.Log($"[BossDungeonClearPanel] Currency 지급: ID={itemId}, Amount={amount}");
                 }
             }
             else if (itemId >= 10000)
             {
-                // Ingredient 지급
                 if (IngredientManager.Instance != null)
                 {
                     IngredientManager.Instance.AddIngredient(itemId, amount);
-                    Debug.Log($"[BossDungeonResultPopup] Ingredient 지급: ID={itemId}, Amount={amount}");
+                    Debug.Log($"[BossDungeonClearPanel] Ingredient 지급: ID={itemId}, Amount={amount}");
                 }
-            }
-            else
-            {
-                Debug.LogWarning($"[BossDungeonResultPopup] 알 수 없는 Item_ID: {itemId}");
             }
         }
 
-        /// <summary>
-        /// Item_ID로 아이템 이름 조회
-        /// </summary>
         private string GetItemName(int itemId)
         {
             int nameId = 0;
 
             if (itemId >= 1600 && itemId < 1700)
             {
-                // Currency
                 var currencyTable = CSVLoader.Instance?.GetTable<CurrencyData>();
                 CurrencyData currency = currencyTable?.GetId(itemId);
-                if (currency != null)
-                {
-                    nameId = currency.Currency_Name_ID;
-                }
+                if (currency != null) nameId = currency.Currency_Name_ID;
             }
             else if (itemId >= 10000)
             {
-                // Ingredient
                 var ingredientTable = CSVLoader.Instance?.GetTable<IngredientData>();
                 IngredientData ingredient = ingredientTable?.GetId(itemId);
-                if (ingredient != null)
-                {
-                    nameId = ingredient.Ingredient_Name_ID;
-                }
+                if (ingredient != null) nameId = ingredient.Ingredient_Name_ID;
             }
 
             if (nameId == 0) return null;
 
-            // StringTable에서 이름 조회
             var stringTable = CSVLoader.Instance?.GetTable<StringTable>();
             StringTable stringData = stringTable?.GetId(nameId);
             return stringData?.Text;
         }
 
-        /// <summary>
-        /// 다음 층 해금 (Firebase 저장)
-        /// </summary>
+        #endregion
+
+        #region Floor Unlock
+
         private void UnlockNextFloor()
         {
             if (currentDungeonData == null) return;
@@ -388,7 +332,6 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 int currentProgress = FirebaseSaveManager.Instance.CachedData.progression.bossDungeonProgress;
 
-                // 현재 진행도보다 높은 층을 클리어한 경우에만 해금
                 if (clearedFloor >= currentProgress)
                 {
                     int nextFloor = clearedFloor + 1;
@@ -397,78 +340,60 @@ namespace NovelianMagicLibraryDefense.UI
                         FirebaseManager.Instance.CurrentUserId,
                         FirebaseSaveManager.Instance.CachedData.progression
                     ).Forget();
-                    Debug.Log($"[BossDungeonResultPopup] 다음 층 해금: {nextFloor}층");
+                    Debug.Log($"[BossDungeonClearPanel] 다음 층 해금: {nextFloor}층");
                 }
             }
         }
 
+        #endregion
+
         #region Button Handlers
 
-        /// <summary>
-        /// 재도전 버튼
-        /// </summary>
-        private void OnRetryButton()
+        private void OnLobbyButtonClicked()
         {
-            Debug.Log("[BossDungeonResultPopup] 재도전 버튼 클릭");
-
-            // 같은 던전 다시 시작
-            LoadSceneAsync(SceneName.BossDungeonScene).Forget();
-        }
-
-        /// <summary>
-        /// 로비 버튼
-        /// </summary>
-        private void OnLobbyButton()
-        {
-            Debug.Log("[BossDungeonResultPopup] 로비 버튼 클릭");
-
-            // 선택 데이터 초기화
+            Debug.Log("[BossDungeonClearPanel] 로비 버튼 클릭");
+            Time.timeScale = 1f;
+            Close();
             SelectedBossDungeon.Clear();
-
             LoadSceneAsync(SceneName.LobbyScene).Forget();
         }
 
-        /// <summary>
-        /// 다음 층 버튼
-        /// </summary>
-        private void OnNextFloorButton()
+        private void OnRetryButtonClicked()
+        {
+            Debug.Log("[BossDungeonClearPanel] 재도전 버튼 클릭");
+            Time.timeScale = 1f;
+            Close();
+            LoadSceneAsync(SceneName.BossDungeonScene).Forget();
+        }
+
+        private void OnNextFloorButtonClicked()
         {
             if (currentDungeonData == null) return;
 
-            Debug.Log("[BossDungeonResultPopup] 다음 층 버튼 클릭");
+            Time.timeScale = 1f;
 
-            // 다음 층 데이터 설정
             int nextFloorIndex = currentDungeonData.Floor_Index + 1;
-            var nextDungeonData = CSVLoader.Instance.GetTable<BossDungeonData>()
-                .Find(d => d.Floor_Index == nextFloorIndex);
+            var nextDungeonData = CSVLoader.Instance?.GetTable<BossDungeonData>()
+                ?.Find(d => d.Floor_Index == nextFloorIndex);
 
             if (nextDungeonData != null)
             {
                 SelectedBossDungeon.Data = nextDungeonData;
+                Close();
                 LoadSceneAsync(SceneName.BossDungeonScene).Forget();
-            }
-            else
-            {
-                Debug.LogError($"[BossDungeonResultPopup] 다음 층({nextFloorIndex}) 데이터를 찾을 수 없습니다!");
             }
         }
 
-        /// <summary>
-        /// 씬 로드 (페이드 효과 포함)
-        /// </summary>
         private async UniTaskVoid LoadSceneAsync(string sceneName)
         {
-            // 페이드 아웃
             if (FadeController.Instance != null)
             {
                 FadeController.Instance.fadePanel.SetActive(true);
                 await FadeController.Instance.FadeOut(0.5f);
             }
 
-            // 씬 로드
             await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
 
-            // 페이드 인
             if (FadeController.Instance != null)
             {
                 await FadeController.Instance.FadeIn(0.5f);
@@ -477,17 +402,5 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         #endregion
-
-        private void OnDestroy()
-        {
-            if (retryButton != null)
-                retryButton.onClick.RemoveListener(OnRetryButton);
-
-            if (lobbyButton != null)
-                lobbyButton.onClick.RemoveListener(OnLobbyButton);
-
-            if (nextFloorButton != null)
-                nextFloorButton.onClick.RemoveListener(OnNextFloorButton);
-        }
     }
 }

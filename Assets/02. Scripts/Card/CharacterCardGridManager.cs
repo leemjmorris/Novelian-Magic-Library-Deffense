@@ -27,17 +27,17 @@ public class CharacterCardGridManager : MonoBehaviour
 
     private void Awake()
     {
-        // CharacterPlacementManager 자동 찾기 (인스펙터에 설정 안 된 경우)
+        // Issue #476: Inspector에서 연결 필수 (Find 메서드 사용 금지)
         if (placementManager == null)
         {
-            placementManager = FindFirstObjectByType<CharacterPlacementManager>();
+            Debug.LogError("[CharacterCardGridManager] PlacementManager가 Inspector에서 연결되지 않았습니다!");
         }
     }
 
     private void Start()
     {
-        // 모든 슬롯 빈 상태로 초기화
-        ClearAllSlots();
+        // Issue #476: ClearAllSlots() 제거 - ChaCard.Awake()에서 이미 SetEmpty() 호출됨
+        // 레이스 컨디션 방지: BossDungeonManager의 async 초기화와 충돌 가능
 
         // 상세 정보 카드 초기 비활성화
         if (characterInfoCard != null)
@@ -69,13 +69,16 @@ public class CharacterCardGridManager : MonoBehaviour
             return;
         }
 
+        // Issue #476: 디버그 - 초기화할 카드 객체 정보
+        Debug.Log($"[CharacterCardGridManager] OnCharacterSpawned: slotIndex={slotIndex}, card={card.gameObject.name}, instanceId={card.GetInstanceID()}");
+
         // 슬롯 매핑 저장
         slotToCharacterId[slotIndex] = characterId;
 
         // ChaCard 초기화 (Character 인스턴스 포함)
         await card.Initialize(characterId, starTier, character);
 
-        Debug.Log($"[CharacterCardGridManager] Slot {slotIndex} updated: Character {characterId}, {starTier}성");
+        Debug.Log($"[CharacterCardGridManager] Slot {slotIndex} updated: Character {characterId}, {starTier}성, card.IsEmpty={card.IsEmpty}");
     }
 
     /// <summary>
@@ -286,9 +289,12 @@ public class CharacterCardGridManager : MonoBehaviour
 
         int compatibleCount = 0;
 
+        // Issue #476: 디버그 - 각 슬롯 상태 출력
+        Debug.Log($"[CharacterCardGridManager] ShowCompatibleCharacters 시작: cardSlots.Length={cardSlots.Length}");
         for (int i = 0; i < cardSlots.Length; i++)
         {
             var card = cardSlots[i];
+            Debug.Log($"[CharacterCardGridManager] Slot[{i}]: card={card != null}, name={card?.gameObject.name}, instanceId={card?.GetInstanceID()}, IsEmpty={card?.IsEmpty}, CharacterId={card?.CharacterId}");
             if (card == null || card.IsEmpty) continue;
 
             // 해당 슬롯의 캐릭터 가져오기
