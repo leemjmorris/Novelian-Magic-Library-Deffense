@@ -88,12 +88,14 @@ namespace Firebase.Data
         public int highestClearedStage;
         public int playerLevel;
         public int playerExp;
+        public int bossDungeonProgress; // Issue #476: 도전던전 해금된 최대 층
 
         public ProgressionData()
         {
             highestClearedStage = 0;
             playerLevel = 1;
             playerExp = 0;
+            bossDungeonProgress = 1; // 1층부터 시작
         }
     }
 

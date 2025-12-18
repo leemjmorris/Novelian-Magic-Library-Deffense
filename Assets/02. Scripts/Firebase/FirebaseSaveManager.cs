@@ -170,7 +170,8 @@ public class FirebaseSaveManager : MonoBehaviour
             {
                 { "highestClearedStage", progression.highestClearedStage },
                 { "playerLevel", progression.playerLevel },
-                { "playerExp", progression.playerExp }
+                { "playerExp", progression.playerExp },
+                { "bossDungeonProgress", progression.bossDungeonProgress } // Issue #476
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("progression").UpdateChildrenAsync(data);
@@ -432,7 +433,8 @@ public class FirebaseSaveManager : MonoBehaviour
                 {
                     { "highestClearedStage", data.progression.highestClearedStage },
                     { "playerLevel", data.progression.playerLevel },
-                    { "playerExp", data.progression.playerExp }
+                    { "playerExp", data.progression.playerExp },
+                    { "bossDungeonProgress", data.progression.bossDungeonProgress } // Issue #476
                 }
             },
             { "characters", new Dictionary<string, object>
@@ -543,6 +545,7 @@ public class FirebaseSaveManager : MonoBehaviour
             data.progression.highestClearedStage = GetIntValue(progressionSnap.Child("highestClearedStage"));
             data.progression.playerLevel = GetIntValue(progressionSnap.Child("playerLevel"));
             data.progression.playerExp = GetIntValue(progressionSnap.Child("playerExp"));
+            data.progression.bossDungeonProgress = GetIntValue(progressionSnap.Child("bossDungeonProgress"), 1); // Issue #476: 기본값 1
         }
 
         // characters
@@ -658,6 +661,13 @@ public class FirebaseSaveManager : MonoBehaviour
     private int GetIntValue(DataSnapshot snap)
     {
         if (snap.Value == null) return 0;
+        return Convert.ToInt32(snap.Value);
+    }
+
+    // Issue #476: 기본값 매개변수 오버로드
+    private int GetIntValue(DataSnapshot snap, int defaultValue)
+    {
+        if (snap.Value == null) return defaultValue;
         return Convert.ToInt32(snap.Value);
     }
 

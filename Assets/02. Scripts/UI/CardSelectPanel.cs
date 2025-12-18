@@ -20,6 +20,7 @@ namespace NovelianMagicLibraryDefense.UI
     {
         [Header("Panel References")]
         [SerializeField] private GameObject panel;
+        [SerializeField] private GameObject cardGrid;  // Issue #476: CardGrid 활성화용
 
         [Header("Card Slots (CardGrid의 Card1~4)")]
         [Tooltip("CardGrid 오브젝트의 Card1~4 슬롯을 연결 (StageCard 컴포넌트 필요)")]
@@ -102,7 +103,6 @@ namespace NovelianMagicLibraryDefense.UI
             // JML: Inspector 참조가 없으면 Tag로 fallback 시도
             if (placementManager == null)
             {
-                // 1순위: Tag로 찾기
                 GameObject cpmObj = GameObject.FindWithTag("CharacterPlacementManager");
                 if (cpmObj != null)
                 {
@@ -112,13 +112,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (placementManager == null)
             {
-                // 2순위: FindFirstObjectByType으로 찾기
-                placementManager = FindFirstObjectByType<CharacterPlacementManager>();
-            }
-
-            if (placementManager == null)
-            {
-                Debug.LogWarning("[CardSelectPanel] CharacterPlacementManager not found! Inspector에서 할당해주세요.");
+                Debug.LogWarning("[CardSelectPanel] CharacterPlacementManager not found! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
             }
             else
             {
@@ -142,13 +136,31 @@ namespace NovelianMagicLibraryDefense.UI
                 }
             }
 
-            // JML: CharacterCardGridManager 자동 찾기 (Issue #424)
-            if (characterCardGridManager == null)
-            {
-                characterCardGridManager = FindFirstObjectByType<CharacterCardGridManager>();
-            }
-
             Debug.Log("[CardSelectPanel] Awake completed, ready to use");
+        }
+
+        /// <summary>
+        /// Issue #476: CharacterPlacementManager 참조 설정 (BossDungeonManager에서 호출)
+        /// </summary>
+        public void SetPlacementManager(CharacterPlacementManager manager)
+        {
+            if (manager != null)
+            {
+                placementManager = manager;
+                Debug.Log("[CardSelectPanel] PlacementManager가 외부에서 설정됨");
+            }
+        }
+
+        /// <summary>
+        /// Issue #476: CharacterCardGridManager 참조 설정 (BossDungeonManager에서 호출)
+        /// </summary>
+        public void SetCharacterCardGridManager(CharacterCardGridManager manager)
+        {
+            if (manager != null)
+            {
+                characterCardGridManager = manager;
+                Debug.Log($"[CardSelectPanel] CharacterCardGridManager가 외부에서 설정됨: instanceId={manager.GetInstanceID()}");
+            }
         }
 
         /// <summary>
@@ -206,6 +218,153 @@ namespace NovelianMagicLibraryDefense.UI
 
             // 데이터 로딩 대기 후 카드 표시
             WaitForDataAndShowCards(isGameStart: false).Forget();
+        }
+
+        /// <summary>
+        /// Issue #476: 도전던전 전용 카드 선택
+        /// 캐릭터 카드 3장 + 스탯 카드 1장 (캐릭터가 3성이면 캐릭터 2장 + 스탯 2장)
+        /// </summary>
+        public void OpenForBossDungeon()
+        {
+            Debug.Log("[CardSelectPanel] OpenForBossDungeon 호출됨");
+
+            if (panel == null)
+            {
+                Debug.LogError("[CardSelectPanel] panel이 null입니다! Inspector에서 Panel을 연결해주세요.");
+                return;
+            }
+
+            previousTimeScale = Time.timeScale;
+            Time.timeScale = 0f;
+            isPaused = true;
+
+            panel.SetActive(true);
+
+            // Issue #476: CardGrid도 활성화 (카드 슬롯 표시용)
+            if (cardGrid != null)
+            {
+                cardGrid.SetActive(true);
+                Debug.Log("[CardSelectPanel] CardGrid 활성화됨");
+            }
+            else
+            {
+                // cardGrid 참조가 없으면 cardSlots[0]의 부모를 활성화 시도
+                if (cardSlots != null && cardSlots.Length > 0 && cardSlots[0] != null)
+                {
+                    var parent = cardSlots[0].transform.parent;
+                    if (parent != null)
+                    {
+                        parent.gameObject.SetActive(true);
+                        Debug.Log($"[CardSelectPanel] CardGrid(부모) 활성화됨: {parent.name}");
+                    }
+                }
+            }
+
+            Debug.Log("[CardSelectPanel] 패널 활성화됨, 카드 로딩 시작...");
+
+            // 데이터 로딩 대기 후 카드 표시
+            WaitForDataAndShowBossDungeonCards().Forget();
+        }
+
+        /// <summary>
+        /// Issue #476: 도전던전 카드 표시 (캐릭터 3장 + 스탯 1장)
+        /// </summary>
+        private async UniTaskVoid WaitForDataAndShowBossDungeonCards()
+        {
+            SetCardSlotsInteractable(false);
+
+            // CSV 로딩 대기
+            if (CSVLoader.Instance != null && !CSVLoader.Instance.IsInit)
+            {
+                int maxWaitFrames = 600;
+                int frameCount = 0;
+                while (!CSVLoader.Instance.IsInit && frameCount < maxWaitFrames)
+                {
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+                    frameCount++;
+                }
+            }
+
+            // 캐릭터 프리팹 프리로드 대기
+            if (placementManager != null && !placementManager.IsPreloadComplete())
+            {
+                int maxWaitFrames = 300;
+                int frameCount = 0;
+                while (!placementManager.IsPreloadComplete() && frameCount < maxWaitFrames)
+                {
+                    await UniTask.Yield(PlayerLoopTiming.Update);
+                    frameCount++;
+                }
+            }
+
+            // 도전던전 카드 생성: 캐릭터 3장 + 스탯 1장 (또는 캐릭터 2장 + 스탯 2장)
+            CardData[] cards = GetBossDungeonCards();
+            CreateCards(cards);
+
+            SetCardSlotsInteractable(true);
+            StartSelectionTimer().Forget();
+        }
+
+        /// <summary>
+        /// Issue #476: 도전던전용 카드 구성
+        /// 기본: 캐릭터 3장 + 스탯 1장
+        /// 캐릭터가 3성이면 스탯으로 대체
+        /// </summary>
+        private CardData[] GetBossDungeonCards()
+        {
+            List<int> validCharacterPool = BuildValidCharacterPoolForUpgrade();
+            CardData[] cards = new CardData[4];
+
+            // 캐릭터 카드 수 결정 (기본 3장, 업그레이드 가능한 캐릭터 수에 따라 조정)
+            int charCardCount = Math.Min(3, validCharacterPool.Count);
+            int statCardCount = 4 - charCardCount;
+
+            // 캐릭터 카드 채우기 (업그레이드용)
+            ShuffleList(validCharacterPool);
+            for (int i = 0; i < charCardCount; i++)
+            {
+                cards[i] = new CardData(CardType.Character, validCharacterPool[i]);
+            }
+
+            // 스탯 카드 채우기
+            var statCards = GetRandomStatCards(statCardCount);
+            for (int i = 0; i < statCardCount; i++)
+            {
+                cards[charCardCount + i] = statCards[i];
+            }
+
+            Debug.Log($"[CardSelectPanel] 도전던전 카드: 캐릭터 {charCardCount}장 + 스탯 {statCardCount}장");
+            return cards;
+        }
+
+        /// <summary>
+        /// Issue #476: 업그레이드 가능한 캐릭터 풀 (필드에 있고 최종 성급 아닌 캐릭터만)
+        /// </summary>
+        private List<int> BuildValidCharacterPoolForUpgrade()
+        {
+            List<int> validPool = new List<int>();
+
+            if (placementManager == null)
+            {
+                Debug.LogWarning("[CardSelectPanel] placementManager가 null입니다! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
+                return validPool;
+            }
+
+            var fieldCharacters = placementManager.GetAllCharacters() ?? new List<Novelian.Combat.Character>();
+            Debug.Log($"[CardSelectPanel] 필드 캐릭터 수: {fieldCharacters.Count}개");
+
+            foreach (var character in fieldCharacters)
+            {
+                // 최종 성급이 아니면 업그레이드 가능
+                if (!character.IsFinalStarTier())
+                {
+                    validPool.Add(character.GetCharacterId());
+                    Debug.Log($"[CardSelectPanel] 업그레이드 가능: {character.GetCharacterId()}");
+                }
+            }
+
+            Debug.Log($"[CardSelectPanel] 업그레이드 가능 캐릭터: {validPool.Count}개");
+            return validPool;
         }
 
         /// <summary>
@@ -813,6 +972,7 @@ namespace NovelianMagicLibraryDefense.UI
             // 호환 캐릭터 표시 (CharacterCardGrid 애니메이션)
             if (characterCardGridManager != null)
             {
+                Debug.Log($"[CardSelectPanel] ShowCompatibleCharacters 호출 전: characterCardGridManager.instanceId={characterCardGridManager.GetInstanceID()}");
                 characterCardGridManager.ShowCompatibleCharacters(supportId, this);
             }
 
@@ -1130,15 +1290,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void ProcessCharacterCard(int characterId)
         {
-            // JML: placementManager가 null이면 다시 찾기 시도
             if (placementManager == null)
             {
-                placementManager = FindFirstObjectByType<CharacterPlacementManager>();
-            }
-
-            if (placementManager == null)
-            {
-                Debug.LogError("[CardSelectPanel] CharacterPlacementManager is null! Inspector에서 할당하거나 씬에 배치해주세요.");
+                Debug.LogError("[CardSelectPanel] CharacterPlacementManager is null! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
                 return;
             }
 
@@ -1632,17 +1786,23 @@ namespace NovelianMagicLibraryDefense.UI
         private async UniTask StartSelectionTimer()
         {
             isCardSelected = false;
+
+            // Issue #476: 기존 타이머 취소 후 새로 생성
+            selectionCts?.Cancel();
             selectionCts?.Dispose();
             selectionCts = new CancellationTokenSource();
+
+            // 로컬 변수로 캡처 (동시 실행 시 안전성 확보)
+            var cts = selectionCts;
             float remainingTime = SELECTION_TIME;
 
             UpdateTimerText(remainingTime);
 
             try
             {
-                while (remainingTime > 0 && !isCardSelected)
+                while (remainingTime > 0 && !isCardSelected && cts != null && !cts.IsCancellationRequested)
                 {
-                    await UniTask.Delay(1000, ignoreTimeScale: true, cancellationToken: selectionCts.Token);
+                    await UniTask.Delay(1000, ignoreTimeScale: true, cancellationToken: cts.Token);
                     remainingTime -= 1f;
                     UpdateTimerText(remainingTime);
                 }
@@ -1659,8 +1819,12 @@ namespace NovelianMagicLibraryDefense.UI
             }
             finally
             {
-                selectionCts?.Dispose();
-                selectionCts = null;
+                // 현재 CTS와 같은 경우에만 정리 (다른 타이머가 이미 시작되었을 수 있음)
+                if (selectionCts == cts)
+                {
+                    selectionCts?.Dispose();
+                    selectionCts = null;
+                }
             }
         }
 

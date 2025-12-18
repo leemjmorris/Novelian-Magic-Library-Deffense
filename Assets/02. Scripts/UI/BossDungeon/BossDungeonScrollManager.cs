@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.UI
 {
@@ -29,12 +31,15 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void LoadUnlockedFloorCount()
         {
-            // TODO: Firebase에서 해금 상태 로드
-            // 현재는 기본값 1 사용
-            if (FirebaseSaveManager.Instance != null && FirebaseSaveManager.Instance.CachedData != null)
+            if (FirebaseSaveManager.Instance?.CachedData?.progression != null)
             {
-                // TODO: UserData에 bossDungeonProgress 필드 추가 필요
-                // unlockedFloorCount = FirebaseSaveManager.Instance.CachedData.bossDungeonProgress;
+                unlockedFloorCount = FirebaseSaveManager.Instance.CachedData.progression.bossDungeonProgress;
+                Debug.Log($"[BossDungeonScrollManager] 해금 상태 로드: {unlockedFloorCount}층");
+            }
+            else
+            {
+                unlockedFloorCount = 1; // 기본값
+                Debug.Log("[BossDungeonScrollManager] Firebase 데이터 없음, 기본값(1층) 사용");
             }
         }
 
@@ -106,10 +111,16 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void SaveUnlockedFloorCount()
         {
-            // TODO: Firebase에 저장
-            // FirebaseSaveManager.Instance.CachedData.bossDungeonProgress = unlockedFloorCount;
-            // FirebaseSaveManager.Instance.SaveUserDataAsync().Forget();
-            Debug.Log($"[BossDungeonScrollManager] 해금 상태 저장: {unlockedFloorCount}층");
+            if (FirebaseSaveManager.Instance?.CachedData?.progression != null &&
+                FirebaseManager.Instance != null)
+            {
+                FirebaseSaveManager.Instance.CachedData.progression.bossDungeonProgress = unlockedFloorCount;
+                FirebaseSaveManager.Instance.SaveProgressionAsync(
+                    FirebaseManager.Instance.CurrentUserId,
+                    FirebaseSaveManager.Instance.CachedData.progression
+                ).Forget();
+                Debug.Log($"[BossDungeonScrollManager] 해금 상태 저장: {unlockedFloorCount}층");
+            }
         }
     }
 }
