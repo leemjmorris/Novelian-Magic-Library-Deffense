@@ -26,6 +26,9 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Settings")]
         [SerializeField] private int stageNumber;
 
+        [Header("PopUp Panel (Optional)")]
+        [SerializeField] private StagePopUpPanel stagePopUpPanel;
+
         private bool isLocked = true;
         [SerializeField] private bool startLocked = true; // Inspector에서 초기 잠금 상태 설정
 
@@ -143,6 +146,12 @@ namespace NovelianMagicLibraryDefense.UI
 
             // SelectedStage에 저장 (씬 전환 후에도 유지)
             SelectedStage.Data = cachedStageData;
+
+            // 팝업 패널 텍스트 업데이트
+            if (stagePopUpPanel != null)
+            {
+                stagePopUpPanel.UpdateStageText();
+            }
 
             Debug.Log($"[StageButton] 스테이지 선택: Stage_ID={cachedStageData.Stage_ID}, " +
                       $"Time_Limit={cachedStageData.Time_Limit}, Barrier_HP={cachedStageData.Barrier_HP}");
