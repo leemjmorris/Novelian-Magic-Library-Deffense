@@ -807,5 +807,92 @@ namespace Novelian.Combat
 #endif
 
         #endregion
+
+        #region Magic Focus (39034 마법 집중)
+
+        /// <summary>
+        /// 마법 집중 효과 활성화 (39034)
+        /// 다음 N번의 AOE 스킬 데미지 증가
+        /// </summary>
+        /// <param name="aoeShotCount">영향받을 AOE 스킬 횟수 (기본 3)</param>
+        /// <param name="damageMultiplier">데미지 배율 (1.5 = 50% 증가)</param>
+        public void ActivateMagicFocus(int aoeShotCount, float damageMultiplier)
+        {
+            magicFocusRemainingCount = aoeShotCount;
+            magicFocusDamageMultiplier = damageMultiplier;
+            Debug.Log($"[Character] 마법 집중 활성화: 다음 {aoeShotCount}번의 AOE 스킬 데미지 {(damageMultiplier - 1f) * 100f:F0}% 증가");
+        }
+
+        /// <summary>
+        /// 마법 집중 효과 소모 및 배율 반환
+        /// AOE 스킬 사용 시 호출됨
+        /// </summary>
+        /// <returns>현재 적용할 데미지 배율 (1.0 = 효과 없음)</returns>
+        public float ConsumeMagicFocusMultiplier()
+        {
+            if (magicFocusRemainingCount <= 0)
+            {
+                return 1.0f;
+            }
+
+            magicFocusRemainingCount--;
+            Debug.Log($"[Character] 마법 집중 사용: 데미지 x{magicFocusDamageMultiplier:F2}, 남은 횟수: {magicFocusRemainingCount}");
+
+            // 마지막 사용이면 배율 초기화
+            if (magicFocusRemainingCount <= 0)
+            {
+                float returnMultiplier = magicFocusDamageMultiplier;
+                magicFocusDamageMultiplier = 1.0f;
+                Debug.Log("[Character] 마법 집중 효과 종료");
+                return returnMultiplier;
+            }
+
+            return magicFocusDamageMultiplier;
+        }
+
+        /// <summary>
+        /// 마법 집중 효과가 활성화되어 있는지 확인
+        /// </summary>
+        public bool HasMagicFocusActive()
+        {
+            return magicFocusRemainingCount > 0;
+        }
+
+        #endregion
+
+        #region Issue #476: 도전던전 스턴 시스템
+
+        /// <summary>
+        /// 도전던전에서 결계 스턴 게이지 100 도달 시 호출
+        /// 캐릭터 공격 중지
+        /// </summary>
+        public void ApplyStunFromBossDungeon(float duration)
+        {
+            if (isStunnedByBossDungeon) return;
+
+            isStunnedByBossDungeon = true;
+            Debug.Log($"[Character] 도전던전 스턴 적용: {duration}초");
+        }
+
+        /// <summary>
+        /// 도전던전 스턴 해제
+        /// </summary>
+        public void ReleaseStunFromBossDungeon()
+        {
+            if (!isStunnedByBossDungeon) return;
+
+            isStunnedByBossDungeon = false;
+            Debug.Log("[Character] 도전던전 스턴 해제");
+        }
+
+        /// <summary>
+        /// 캐릭터가 살아있는지 확인 (IPoolable과 별개로 간단 체크)
+        /// </summary>
+        public bool IsAlive()
+        {
+            return gameObject.activeInHierarchy;
+        }
+
+        #endregion
     }
 }
