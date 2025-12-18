@@ -19,6 +19,7 @@ public static class SceneName
     public static readonly string LibraryManagementScene = "LibraryManagementScene";
     public static readonly string DispatchSystemScene = "DispatchSystemScene";
     public static readonly string BookMarkCraftScene = "BookMarkCraftScene";
+    public static readonly string BossDungeonScene = "BossDungeonScene";  // Issue #476 - 도전던전 씬
 }
 
 public static class AddressableKey
@@ -70,6 +71,9 @@ public static class AddressableKey
     public static readonly string PartySynergyTable = "PartySynergyTable";  // 파티 시너지 테이블
     public static readonly string PartySynergyEnhancementTable = "PartySynergyEnhancementTable";  // 파티 시너지 강화 테이블
     public static readonly string PartySynergyEffectTable = "PartySynergyEffectTable";
+
+    // Issue #476 - 도전던전 테이블
+    public static readonly string BossDungeonTable = "BossDungeonTable";
     
     // JML: Icon Addressable Keys
     public static readonly string Icon_Mystery = "Icon_Mystery";
