@@ -116,7 +116,7 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 if (token.IsCancellationRequested) return;
 
-                elapsed += Time.deltaTime;
+                elapsed += Time.unscaledDeltaTime;
                 float t = Mathf.Clamp01(elapsed / animationDuration);
                 t = 1f - Mathf.Pow(1f - t, 3f); // EaseOutCubic
 
