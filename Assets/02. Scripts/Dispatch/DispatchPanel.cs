@@ -401,14 +401,26 @@ namespace Dispatch
             DispatchLocation location = GetLocationBySlotIndex(slotIndex);
             Debug.Log($"[DispatchPanel] 파견 장소: {location}");
 
+            // 파견 중일 때는 현재 파견 중인 장소의 보상 정보만 표시
+            if (isDispatching)
+            {
+                location = currentSelectedLocation;
+            }
+
             // 해당 장소의 보상 정보로 패널 업데이트
             UpdateRewardInfoForLocation(location);
+
+            // 파견 중이면 rewardInfoText 활성화 (UpdateDispatchUI에서 숨겨졌으므로)
+            if (isDispatching && rewardInfoText != null)
+            {
+                rewardInfoText.gameObject.SetActive(true);
+            }
 
             // 보상 정보 패널 표시
             if (infoPanel != null)
             {
                 infoPanel.SetActive(true);
-                AddLog($"ℹ️ 아이템 슬롯 {slotIndex + 1} 클릭 - {GetLocationName(location)} 보상 정보 표시");
+                AddLog($" 아이템 슬롯 {slotIndex + 1} 클릭 - {GetLocationName(location)} 보상 정보 표시");
             }
             else
             {
@@ -457,20 +469,25 @@ namespace Dispatch
             var locationData = GetLocationData(location);
             if (locationData == null)
             {
+                Debug.LogError($"[DispatchPanel] locationData null - location: {location}");
                 rewardInfoText.text = "보상 정보를 불러올 수 없습니다.";
                 return;
             }
 
-            // 기본 시간(4시간, Time_ID=5201)의 보상 데이터 사용
-            var rewardTableData = GetRewardData(locationData.Dispatch_Location_ID, 5201);
+            // 현재 선택된 시간의 보상 데이터 사용 (파견 중이면 파견 시작 시의 시간)
+            int timeID = currentSelectedTimeID > 0 ? currentSelectedTimeID : 5201;
+            Debug.Log($"[DispatchPanel] UpdateRewardInfoForLocation - location: {location}, locationID: {locationData.Dispatch_Location_ID}, timeID: {timeID}, hours: {currentSelectedHours}");
+
+            var rewardTableData = GetRewardData(locationData.Dispatch_Location_ID, timeID);
             if (rewardTableData == null)
             {
-                rewardInfoText.text = "보상 정보를 불러올 수 없습니다.";
+                Debug.LogError($"[DispatchPanel] rewardTableData null - locationID: {locationData.Dispatch_Location_ID}, timeID: {timeID}");
+                rewardInfoText.text = $"보상 정보를 불러올 수 없습니다.\n(Location: {locationData.Dispatch_Location_ID}, TimeID: {timeID})";
                 return;
             }
 
-            // 보상 정보 표시
-            DisplayRewardInfoForLocation(location, rewardTableData, 1f);
+            // 보상 정보 표시 (Reward_Multiplier 적용: 4시간=1배, 8시간=1.8배, 12시간=2.6배, 23시간=5배)
+            DisplayRewardInfoForLocation(location, rewardTableData, rewardTableData.Reward_Multiplier);
         }
 
         /// <summary>
@@ -490,6 +507,7 @@ namespace Dispatch
             string locationName = GetLocationName(location);
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             sb.AppendLine($"<b>{locationName}</b>");
+            sb.AppendLine($"<color=#88CCFF> {currentSelectedHours}시간</color>");
             sb.AppendLine("<color=#AAAAAA>───────────────</color>");
             sb.AppendLine("<b>예상 보상:</b>");
 
@@ -537,8 +555,20 @@ namespace Dispatch
             // 버튼 인덱스에 해당하는 파견 장소 결정
             DispatchLocation location = GetLocationBySlotIndex(buttonIndex);
 
+            // 파견 중일 때는 현재 파견 중인 장소의 보상 정보만 표시
+            if (isDispatching)
+            {
+                location = currentSelectedLocation;
+            }
+
             // 해당 장소의 보상 정보로 패널 업데이트
             UpdateRewardInfoForLocation(location);
+
+            // 파견 중이면 rewardInfoText 활성화 (UpdateDispatchUI에서 숨겨졌으므로)
+            if (isDispatching && rewardInfoText != null)
+            {
+                rewardInfoText.gameObject.SetActive(true);
+            }
 
             // 보상 정보 패널 표시
             infoPanel.SetActive(true);
@@ -553,6 +583,13 @@ namespace Dispatch
             if (infoPanel != null && infoPanel.activeSelf)
             {
                 infoPanel.SetActive(false);
+
+                // 파견 중이면 rewardInfoText 다시 숨기기
+                if (isDispatching && rewardInfoText != null)
+                {
+                    rewardInfoText.gameObject.SetActive(false);
+                }
+
                 AddLog("ℹ️ 보상 정보 패널 닫힘 (패널 클릭)");
             }
         }
@@ -816,6 +853,9 @@ namespace Dispatch
         /// </summary>
         private void OnDispatchStartButtonClicked()
         {
+            // 보상 정보 패널이 열려있으면 닫기
+            CloseInfoPanelIfOpen();
+
             if (isDispatching)
             {
                 // 파견 완료 - 보상 획득
@@ -825,6 +865,25 @@ namespace Dispatch
             {
                 // 파견 시작
                 StartDispatch();
+            }
+        }
+
+        /// <summary>
+        /// 보상 정보 패널이 열려있으면 닫기
+        /// </summary>
+        private void CloseInfoPanelIfOpen()
+        {
+            if (infoPanel != null && infoPanel.activeSelf)
+            {
+                infoPanel.SetActive(false);
+
+                // 파견 중이면 rewardInfoText도 숨기기
+                if (isDispatching && rewardInfoText != null)
+                {
+                    rewardInfoText.gameObject.SetActive(false);
+                }
+
+                AddLog("ℹ️ 보상 정보 패널 닫힘 (버튼 클릭)");
             }
         }
 
@@ -1057,6 +1116,12 @@ namespace Dispatch
         {
             int index = Mathf.RoundToInt(value);
             UpdateTimeDisplay(index);
+
+            // 정보 패널이 열려있으면 자동으로 업데이트
+            if (infoPanel != null && infoPanel.activeSelf)
+            {
+                UpdateRewardInfoForLocation(currentSelectedLocation);
+            }
         }
 
         /// <summary>
@@ -1395,6 +1460,46 @@ namespace Dispatch
                 x.Dispatch_Location_ID == locationID &&
                 x.Dispatch_Time_ID == timeID
             ).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// 시간(hours)으로부터 Time_ID 조회
+        /// </summary>
+        private int GetTimeIDFromHours(int hours)
+        {
+            // availableTimes에서 먼저 찾기
+            if (availableTimes != null && availableTimes.Count > 0)
+            {
+                var timeData = availableTimes.FirstOrDefault(x => (int)x.Required_Hours == hours);
+                if (timeData != null)
+                {
+                    return timeData.Dispatch_Time_ID;
+                }
+            }
+
+            // availableTimes가 없으면 직접 CSV에서 조회
+            if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
+            {
+                var timeTable = CSVLoader.Instance.GetTable<DispatchTimeTableData>();
+                if (timeTable != null)
+                {
+                    var timeData = timeTable.FindAll(x => (int)x.Required_Hours == hours).FirstOrDefault();
+                    if (timeData != null)
+                    {
+                        return timeData.Dispatch_Time_ID;
+                    }
+                }
+            }
+
+            // 하드코딩 fallback (CSV 로드 전에도 동작하도록)
+            return hours switch
+            {
+                4 => 5201,
+                8 => 5202,
+                12 => 5203,
+                23 => 5204,
+                _ => 5201
+            };
         }
 
         /// <summary>
@@ -1928,6 +2033,12 @@ namespace Dispatch
         /// </summary>
         private void LoadDispatchState()
         {
+            // CSV 데이터가 로드되지 않았으면 먼저 로드
+            if (availableTimes == null || availableTimes.Count == 0)
+            {
+                LoadCSVData();
+            }
+
             // Firebase 캐시 데이터에서 로드
             var dispatchData = FirebaseSaveManager.Instance?.CachedData?.dispatch;
             if (dispatchData == null)
@@ -1951,7 +2062,7 @@ namespace Dispatch
                 startTimeString = state.startTime,
                 selectedLocation = state.locationId,
                 selectedHours = state.hours,
-                selectedTimeID = state.hours,
+                selectedTimeID = GetTimeIDFromHours(state.hours),
                 dispatchType = (int)panelDispatchType
             };
 
@@ -2174,6 +2285,9 @@ namespace Dispatch
 
         private void OnDisable()
         {
+            // 보상 정보 패널이 열려있으면 닫기
+            CloseInfoPanelIfOpen();
+
             // 파견 중일 때만 상태 저장
             if (isDispatching)
             {
