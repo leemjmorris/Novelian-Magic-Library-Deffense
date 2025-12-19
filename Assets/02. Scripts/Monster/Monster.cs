@@ -192,6 +192,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // Don't move if dead, dizzy, or rooted
         if (isDead || isDizzy || isRooted) return;
 
+        // Wall의 ClosestPoint 방향으로 계속 조준 (원형 Wall 대응)
+        if (targetWallCollider != null && monsterMove != null && !IsWallHit)
+        {
+            Vector3 closestPoint = targetWallCollider.ClosestPoint(transform.position);
+            monsterMove.UpdateDirection(closestPoint);
+        }
+
         // Apply slow multiplier to movement speed
         float effectiveSpeed = isSlowed ? moveSpeed * slowMultiplier : moveSpeed;
         monsterMove.Move(this, effectiveSpeed);
@@ -219,7 +226,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 isDizzy = false;
                 monsterAnimator.SetBool(ANIM_DIZZY, false);
 
-                // Re-enable NavMeshAgent after dizzy ends
+                // Re-enable movement after dizzy ends
                 if (monsterMove != null)
                 {
                     monsterMove.SetEnabled(true);
@@ -335,14 +342,14 @@ public class Monster : BaseEntity, ITargetable, IMovable
         dizzyTimer = duration;
         monsterAnimator.SetBool(ANIM_DIZZY, true);
 
-        // Dizzy 상태에서는 NavMeshAgent 비활성화
+        // Dizzy 상태에서는 이동 비활성화
         if (monsterMove != null)
         {
             monsterMove.SetEnabled(false);
         }
 
-        // Legacy Rigidbody support (if exists and not kinematic)
-        if (rb != null && !rb.isKinematic)
+        // Stop Rigidbody movement
+        if (rb != null)
         {
             rb.linearVelocity = Vector3.zero;
         }
@@ -399,7 +406,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         isRooted = true;
 
-        // Stop NavMeshAgent but don't disable it completely
+        // Stop movement
         if (monsterMove != null)
         {
             monsterMove.SetEnabled(false);
@@ -419,7 +426,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
             {
                 isRooted = false;
 
-                // Re-enable NavMeshAgent if not dead or dizzy
+                // Re-enable movement if not dead or dizzy
                 if (!isDead && !isDizzy && monsterMove != null)
                 {
                     monsterMove.SetEnabled(true);
@@ -443,7 +450,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         Vector3 knockbackDirection = (transform.position - sourcePosition).normalized;
         knockbackDirection.y = 0f; // Keep on same Y level
 
-        // Temporarily disable NavMeshAgent for knockback
+        // Temporarily disable movement for knockback
         if (monsterMove != null)
         {
             monsterMove.SetEnabled(false);
@@ -452,11 +459,10 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // Apply knockback force using Rigidbody
         if (rb != null)
         {
-            rb.isKinematic = false;
             rb.AddForce(knockbackDirection * force, ForceMode.Impulse);
         }
 
-        // Re-enable NavMeshAgent after short delay
+        // Re-enable movement after short delay
         KnockbackRecoveryAsync().Forget();
     }
 
@@ -467,14 +473,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         if (!isDead && !isDizzy && !isRooted)
         {
-            // Reset Rigidbody
+            // Reset Rigidbody velocity
             if (rb != null)
             {
                 rb.linearVelocity = Vector3.zero;
-                rb.isKinematic = true;
             }
 
-            // Re-enable NavMeshAgent
+            // Re-enable movement
             if (monsterMove != null)
             {
                 monsterMove.SetEnabled(true);
@@ -940,7 +945,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         bool wasInRange = isInAttackRange;
         isInAttackRange = distanceToWall <= attackRange;
 
-        // 공격 범위 진입 시 NavMeshAgent 정지
+        // 공격 범위 진입 시 이동 정지
         if (isInAttackRange && !wasInRange)
         {
             if (monsterMove != null)
@@ -948,7 +953,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 monsterMove.SetEnabled(false);
             }
         }
-        // 공격 범위 이탈 시 NavMeshAgent 재활성화 (Dizzy나 Dead가 아닐 때)
+        // 공격 범위 이탈 시 이동 재활성화 (Dizzy나 Dead가 아닐 때)
         else if (!isInAttackRange && wasInRange && !isDizzy && !isDead)
         {
             if (monsterMove != null)
@@ -1022,7 +1027,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (isDead) return;
         isDead = true;
 
-        // 1. NavMeshAgent 즉시 비활성화 - 이동 완전 중단
+        // 1. 이동 즉시 중단
         if (monsterMove != null)
         {
             monsterMove.SetEnabled(false);
@@ -1234,14 +1239,14 @@ public class Monster : BaseEntity, ITargetable, IMovable
             wall = collision.gameObject.GetComponent<Wall>();
             isWallHit = true;
 
-            // Wall에 닿으면 NavMeshAgent 비활성화하여 밀림 방지
+            // Wall에 닿으면 이동 비활성화
             if (monsterMove != null)
             {
                 monsterMove.SetEnabled(false);
             }
 
             // Rigidbody velocity 초기화
-            if (rb != null && !rb.isKinematic)
+            if (rb != null)
             {
                 rb.linearVelocity = Vector3.zero;
             }
@@ -1254,7 +1259,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (collision.gameObject.CompareTag(Tag.Wall) && isWallHit)
         {
             // Rigidbody velocity를 0으로 설정하여 밀림 방지
-            if (rb != null && !rb.isKinematic)
+            if (rb != null)
             {
                 rb.linearVelocity = Vector3.zero;
             }
@@ -1268,7 +1273,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
             isWallHit = false;
             wall = null;
 
-            // Wall에서 떨어지면 NavMeshAgent 다시 활성화 (Dizzy 상태가 아닐 때만)
+            // Wall에서 떨어지면 이동 다시 활성화 (Dizzy 상태가 아닐 때만)
             if (monsterMove != null && !isDizzy && !isDead)
             {
                 monsterMove.SetEnabled(true);
@@ -1316,19 +1321,17 @@ public class Monster : BaseEntity, ITargetable, IMovable
             monsterAnimator.ResetTrigger(ANIM_VICTORY);
         }
 
-        // Rigidbody 초기 상태 설정 (Kinematic으로 시작)
-        // Unity 6에서는 kinematic body의 velocity 설정이 지원되지 않음
-        // 따라서 non-kinematic 상태에서만 velocity를 초기화
+        // Rigidbody 초기 상태 설정 (물리 기반 이동)
         if (rb != null)
         {
-            if (!rb.isKinematic)
-            {
-                // Non-kinematic인 경우에만 velocity 초기화
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-            }
-            // Kinematic으로 설정 (이미 kinematic인 경우 무시됨)
-            rb.isKinematic = true;
+            rb.isKinematic = false;
+            rb.useGravity = false;
+            rb.mass = 10f; // 질량 증가 - 밀림 감소
+            rb.linearDamping = 5f; // 저항 추가 - 밀림 후 빠른 정지
+            rb.interpolation = RigidbodyInterpolation.Interpolate; // 부드러운 이동
+            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
         }
 
         // Collider 활성화
@@ -1340,16 +1343,15 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // Dissolve Material 리셋
         ResetDissolveMaterials();
 
-        // 목적지는 WaveManager에서 SetDestination()으로 설정됨
+        // 가장 가까운 Wall 찾기
+        FindNearestWall();
 
-        // NavMesh에 Warp (위치 동기화)
-        if (monsterMove != null)
+        // MonsterMove 초기화 (Rigidbody + Wall 방향)
+        if (monsterMove != null && rb != null)
         {
-            monsterMove.WarpToPosition(transform.position);
+            Vector3 targetPos = targetWallTransform != null ? targetWallTransform.position : transform.position + transform.forward * 10f;
+            monsterMove.Initialize(rb, targetPos);
         }
-
-        // Face toward Wall on spawn
-        FaceTowardWall();
 
         //LMJ : Start weight update system
         StartWeightUpdate();
