@@ -21,6 +21,10 @@ namespace Novelian.Training
         private bool hasFocusMark = false;
         private float markRemainingTime = 0f;
 
+        // Animator 캐시
+        private Animator _animator;
+        private static readonly int PUSHED_TRIGGER = Animator.StringToHash("pushed");
+
         #region ITargetable Implementation
 
         public Transform GetTransform() => transform;
@@ -38,8 +42,14 @@ namespace Novelian.Training
             // 데미지 기록 이벤트 발생 (DPSCalculator가 구독)
             OnDamageTaken?.Invoke(damage);
 
+            // 피격 애니메이션 재생 (매번 리셋하여 died로 전환 방지)
+            if (_animator != null)
+            {
+                _animator.Play(PUSHED_TRIGGER, 0, 0f);
+            }
+
             // 무한 체력이므로 죽지 않음
-            // Debug.Log($"[DummyTarget] Took {damage} damage");
+            Debug.Log($"[DummyTarget] Took {damage:F1} damage (subscribers: {OnDamageTaken?.GetInvocationList()?.Length ?? 0})");
         }
 
         public bool HasFocusMark() => hasFocusMark;
@@ -94,6 +104,43 @@ namespace Novelian.Training
 
         #region Lifecycle
 
+        private void Awake()
+        {
+            // Monster 태그 설정 (타겟팅을 위해 필요)
+            gameObject.tag = "Monster";
+
+            // Monster 레이어 설정 (Projectile과 충돌 감지를 위해 필요)
+            int monsterLayer = LayerMask.NameToLayer("Monster");
+            if (monsterLayer >= 0)
+            {
+                gameObject.layer = monsterLayer;
+                Debug.Log($"[DummyTarget] Layer set to Monster ({monsterLayer})");
+            }
+            else
+            {
+                Debug.LogWarning("[DummyTarget] Monster layer not found! Projectile collision may not work.");
+            }
+
+            // Monster/BossMonster 컴포넌트가 있으면 즉시 제거 (더미는 죽으면 안 됨)
+            // DestroyImmediate 사용 - Destroy()는 프레임 끝에 제거되므로 그 전에 데미지 받아 죽을 수 있음
+            var monster = GetComponent<Monster>();
+            if (monster != null)
+            {
+                DestroyImmediate(monster);
+                Debug.Log("[DummyTarget] Monster component removed immediately to prevent death");
+            }
+
+            var bossMonster = GetComponent<BossMonster>();
+            if (bossMonster != null)
+            {
+                DestroyImmediate(bossMonster);
+                Debug.Log("[DummyTarget] BossMonster component removed immediately to prevent death");
+            }
+
+            // Animator 캐시 (died 상태 전환 방지용)
+            _animator = GetComponent<Animator>();
+        }
+
         private void OnEnable()
         {
             Register();
@@ -117,6 +164,7 @@ namespace Novelian.Training
                 }
             }
         }
+
 
         #endregion
     }

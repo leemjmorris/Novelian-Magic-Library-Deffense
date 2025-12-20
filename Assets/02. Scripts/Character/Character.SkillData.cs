@@ -323,7 +323,8 @@ namespace Novelian.Combat
             var pool = GameManager.Instance?.Pool;
             if (pool == null)
             {
-                Debug.LogError("[Character] ObjectPoolManager is null!");
+                // TrainingScene 등에서는 Pool 없이 동작 (Instantiate 사용)
+                Debug.Log("[Character] ObjectPoolManager not available. Using Instantiate fallback.");
                 return;
             }
 

@@ -39,7 +39,8 @@ namespace Novelian.Combat
             // Launch projectile(s) - 다중 발사 지원 (add_projectiles)
             if (projectilePrefab != null || projectileTemplate != null)
             {
-                var pool = GameManager.Instance.Pool;
+                // Pool 확인 (TrainingScene 등에서 GameManager 없을 수 있음)
+                var pool = GameManager.Instance?.Pool;
 
                 // 발사체 개수 계산 (CSV의 projectile_count + 서포트 추가)
                 // 파편화(40002)는 명중 시 분열이므로 발사 시에는 서포트 추가분 제외
@@ -60,7 +61,34 @@ namespace Novelian.Combat
                 else
                 {
                     // 1발만 발사하는 경우 즉시 발사
-                    Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                    Projectile projectile = null;
+                    if (pool != null)
+                    {
+                        projectile = pool.Spawn<Projectile>(spawnPos);
+                    }
+                    else
+                    {
+                        // Pool 없으면 Instantiate (TrainingScene 등)
+                        if (projectilePrefab != null)
+                        {
+                            var go = UnityEngine.Object.Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+                            projectile = go.GetComponent<Projectile>();
+                        }
+                        else if (projectileTemplate != null)
+                        {
+                            var go = UnityEngine.Object.Instantiate(projectileTemplate, spawnPos, Quaternion.identity);
+                            projectile = go.GetComponent<Projectile>();
+                        }
+                    }
+
+                    // 투사체 스폰 실패 시 instant attack으로 fallback
+                    if (projectile == null)
+                    {
+                        Debug.Log("[Character] Projectile unavailable. Using instant attack fallback.");
+                        ApplyInstantDamage(target, hitEffectPrefab);
+                        return;
+                    }
+
                     projectile.Launch(spawnPos, targetPos, FinalProjectileSpeed, FinalProjectileLifetime, FinalDamage, basicAttackSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier(), GetGenre());
                     Debug.Log($"[Character] Fired 1 projectile {basicAttackData.skill_name} (Damage: {FinalDamage:F1}, Speed: {FinalProjectileSpeed:F1})");
                 }
@@ -68,37 +96,55 @@ namespace Novelian.Combat
             // Instant attack (no projectile)
             else
             {
-                // Hit effect at target collider center
-                Collider targetCol = target.GetTransform().GetComponent<Collider>();
-                Vector3 hitPos = targetCol != null ? targetCol.bounds.center : target.GetPosition();
+                ApplyInstantDamage(target, hitEffectPrefab);
+            }
+        }
 
-                if (hitEffectPrefab != null)
-                {
-                    GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
-                    UnityEngine.Object.Destroy(hitEffect, 2f);
-                }
+        /// <summary>
+        /// Instant attack (투사체 없이 즉시 데미지 적용)
+        /// </summary>
+        private void ApplyInstantDamage(ITargetable target, GameObject hitEffectPrefab)
+        {
+            // Hit effect at target collider center
+            Collider targetCol = target.GetTransform().GetComponent<Collider>();
+            Vector3 hitPos = targetCol != null ? targetCol.bounds.center : target.GetPosition();
 
-                // Apply damage (치명타 적용)
-                var (finalDmg, isCrit) = DamageCalculator.CalculateCriticalDamage(FinalDamage, GetDisplayCritChance(), GetDisplayCritMultiplier());
-                if (target.GetTransform().CompareTag(Tag.Monster))
+            if (hitEffectPrefab != null)
+            {
+                GameObject hitEffect = UnityEngine.Object.Instantiate(hitEffectPrefab, hitPos, Quaternion.identity);
+                UnityEngine.Object.Destroy(hitEffect, 2f);
+            }
+
+            // Apply damage (치명타 적용)
+            var (finalDmg, isCrit) = DamageCalculator.CalculateCriticalDamage(FinalDamage, GetDisplayCritChance(), GetDisplayCritMultiplier());
+            if (target.GetTransform().CompareTag(Tag.Monster))
+            {
+                Monster monster = target.GetTransform().GetComponent<Monster>();
+                if (monster != null)
                 {
-                    Monster monster = target.GetTransform().GetComponent<Monster>();
-                    if (monster != null)
-                    {
-                        // 상성 배율 적용
-                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), monster.GetGenre());
-                        monster.TakeDamage(finalDmg * genreMultiplier, isCrit);
-                    }
+                    // 상성 배율 적용
+                    float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), monster.GetGenre());
+                    monster.TakeDamage(finalDmg * genreMultiplier, isCrit);
                 }
-                else if (target.GetTransform().CompareTag(Tag.BossMonster))
+                else
                 {
-                    BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
-                    if (boss != null)
-                    {
-                        // 상성 배율 적용
-                        float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), boss.GetGenre());
-                        boss.TakeDamage(finalDmg * genreMultiplier, isCrit);
-                    }
+                    // Monster 컴포넌트 없는 경우 (DummyTarget 등) ITargetable로 데미지 적용
+                    target.TakeDamage(finalDmg);
+                }
+            }
+            else if (target.GetTransform().CompareTag(Tag.BossMonster))
+            {
+                BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
+                if (boss != null)
+                {
+                    // 상성 배율 적용
+                    float genreMultiplier = DamageCalculator.CalculateGenreMultiplier(GetGenre(), boss.GetGenre());
+                    boss.TakeDamage(finalDmg * genreMultiplier, isCrit);
+                }
+                else
+                {
+                    // BossMonster 컴포넌트 없는 경우 ITargetable로 데미지 적용
+                    target.TakeDamage(finalDmg);
                 }
             }
         }
@@ -120,10 +166,35 @@ namespace Novelian.Combat
 
             if (projectilePrefab != null || projectileTemplate != null)
             {
-                var pool = GameManager.Instance.Pool;
+                // Pool 확인 (TrainingScene 등에서 GameManager 없을 수 있음)
+                var pool = GameManager.Instance?.Pool;
 
                 // Spawn projectile
-                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                Projectile projectile = null;
+                if (pool != null)
+                {
+                    projectile = pool.Spawn<Projectile>(spawnPos);
+                }
+                else
+                {
+                    // Pool 없으면 Instantiate (TrainingScene 등)
+                    if (projectilePrefab != null)
+                    {
+                        var go = UnityEngine.Object.Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+                        projectile = go.GetComponent<Projectile>();
+                    }
+                    else if (projectileTemplate != null)
+                    {
+                        var go = UnityEngine.Object.Instantiate(projectileTemplate, spawnPos, Quaternion.identity);
+                        projectile = go.GetComponent<Projectile>();
+                    }
+                }
+
+                if (projectile == null)
+                {
+                    Debug.LogWarning("[Character] LaunchDynamiteProjectile: Failed to spawn projectile");
+                    return;
+                }
 
                 // Launch with dynamite parameters
                 // skill_lifetime을 폭발 딜레이로 사용, Projectile에서 다이너마이트 처리
@@ -157,10 +228,35 @@ namespace Novelian.Combat
 
             if (projectilePrefab != null || projectileTemplate != null)
             {
-                var pool = GameManager.Instance.Pool;
+                // Pool 확인 (TrainingScene 등에서 GameManager 없을 수 있음)
+                var pool = GameManager.Instance?.Pool;
 
                 // Spawn projectile
-                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                Projectile projectile = null;
+                if (pool != null)
+                {
+                    projectile = pool.Spawn<Projectile>(spawnPos);
+                }
+                else
+                {
+                    // Pool 없으면 Instantiate (TrainingScene 등)
+                    if (projectilePrefab != null)
+                    {
+                        var go = UnityEngine.Object.Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+                        projectile = go.GetComponent<Projectile>();
+                    }
+                    else if (projectileTemplate != null)
+                    {
+                        var go = UnityEngine.Object.Instantiate(projectileTemplate, spawnPos, Quaternion.identity);
+                        projectile = go.GetComponent<Projectile>();
+                    }
+                }
+
+                if (projectile == null)
+                {
+                    Debug.LogWarning("[Character] LaunchLegendaryStaffProjectile: Failed to spawn projectile");
+                    return;
+                }
 
                 // Launch with legendary staff parameters
                 // range를 투사체 속도로 사용 (CSV에 projectile_speed가 0)
@@ -185,7 +281,12 @@ namespace Novelian.Combat
             Vector3 spawnPos = transform.position + spawnOffset;
             Vector3 targetPos = target.GetPosition();
 
-            var pool = GameManager.Instance.Pool;
+            // Pool 확인 (TrainingScene 등에서 GameManager 없을 수 있음)
+            var pool = GameManager.Instance?.Pool;
+
+            // 액티브 스킬 프리팹 (pool 없을 때 사용)
+            GameObject activePrefab = activeSkillPrefabs?.projectilePrefab;
+
             int projectileCount = FinalActiveProjectileCount;
             float spreadAngle = 15f;
 
@@ -197,7 +298,32 @@ namespace Novelian.Combat
                 Vector3 spreadDirection = rotation * direction;
                 Vector3 spreadTargetPos = spawnPos + spreadDirection * 1000f;
 
-                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                Projectile projectile = null;
+                if (pool != null)
+                {
+                    projectile = pool.Spawn<Projectile>(spawnPos);
+                }
+                else
+                {
+                    // Pool 없으면 Instantiate (TrainingScene 등)
+                    if (activePrefab != null)
+                    {
+                        var go = UnityEngine.Object.Instantiate(activePrefab, spawnPos, Quaternion.identity);
+                        projectile = go.GetComponent<Projectile>();
+                    }
+                    else if (projectileTemplate != null)
+                    {
+                        var go = UnityEngine.Object.Instantiate(projectileTemplate, spawnPos, Quaternion.identity);
+                        projectile = go.GetComponent<Projectile>();
+                    }
+                }
+
+                if (projectile == null)
+                {
+                    Debug.LogWarning($"[Character] LaunchActiveProjectile: Failed to spawn projectile {i + 1}/{projectileCount}");
+                    continue;
+                }
+
                 projectile.Launch(spawnPos, spreadTargetPos, FinalActiveProjectileSpeed, FinalActiveProjectileLifetime, FinalActiveDamage, activeSkillId, supportSkillId, GetDisplayCritChance(), GetDisplayCritMultiplier(), GetGenre());
             }
 
@@ -215,6 +341,9 @@ namespace Novelian.Combat
 
             Debug.Log($"[Character] Burst fire started: {projectileCount} projectiles ({basicAttackData.skill_name})");
 
+            // Instantiate용 프리팹 (pool 없을 때 사용)
+            GameObject projectilePrefab = basicAttackPrefabs?.projectilePrefab;
+
             for (int i = 0; i < projectileCount; i++)
             {
                 // 취소 요청 확인 (씬 전환 등)
@@ -225,7 +354,25 @@ namespace Novelian.Combat
                 }
 
                 // 발사 시점에 타겟 방향 재계산 (동일한 방향으로 연속 발사)
-                Projectile projectile = pool.Spawn<Projectile>(spawnPos);
+                Projectile projectile = null;
+                if (pool != null)
+                {
+                    projectile = pool.Spawn<Projectile>(spawnPos);
+                }
+                else
+                {
+                    // Pool 없으면 Instantiate (TrainingScene 등)
+                    if (projectilePrefab != null)
+                    {
+                        var go = UnityEngine.Object.Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+                        projectile = go.GetComponent<Projectile>();
+                    }
+                    else if (projectileTemplate != null)
+                    {
+                        var go = UnityEngine.Object.Instantiate(projectileTemplate, spawnPos, Quaternion.identity);
+                        projectile = go.GetComponent<Projectile>();
+                    }
+                }
 
                 // 풀이 클리어된 경우 안전하게 종료
                 if (projectile == null)

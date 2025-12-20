@@ -188,7 +188,7 @@ public class LobbyUI : MonoBehaviour
 
     public void OnTrainingGroundButton()
     {
-        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+        LoadSceneWithFadeOnly(SceneName.TrainingScene).Forget();
     }
 
     /// <summary>
