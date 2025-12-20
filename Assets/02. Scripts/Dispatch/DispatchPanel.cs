@@ -231,6 +231,12 @@ namespace Dispatch
                     ref scrollVelocity,
                     0.1f
                 );
+
+                // 스크롤 이동 중일 때 창고 변경 감지 (화살표 클릭으로 이동 시)
+                if (!isDispatching)
+                {
+                    CheckAndUpdateWarehouse();
+                }
             }
 
             // 스와이프 중일 때 실시간으로 창고 변경 감지 (파견 중이 아닐 때만)
@@ -349,8 +355,79 @@ namespace Dispatch
                 eventTrigger.triggers.Add(endDragEntry);
             }
 
+            // 화살표 버튼 클릭 이벤트 등록
+            SetupArrowButtonEvents();
+
             // 아이템 슬롯 버튼 이벤트 등록 (각 슬롯 클릭 시 해당 파견의 보상 정보 패널 표시)
             SetupItemSlotButtons();
+        }
+
+        /// <summary>
+        /// 화살표 버튼 클릭 이벤트 설정
+        /// </summary>
+        private void SetupArrowButtonEvents()
+        {
+            // 왼쪽 화살표 버튼 설정
+            if (leftArrowImage != null)
+            {
+                var leftButton = leftArrowImage.GetComponent<Button>();
+                if (leftButton == null)
+                {
+                    leftButton = leftArrowImage.gameObject.AddComponent<Button>();
+                    leftButton.transition = Selectable.Transition.None;
+                }
+                leftButton.onClick.AddListener(OnLeftArrowClicked);
+            }
+
+            // 오른쪽 화살표 버튼 설정
+            if (rightArrowImage != null)
+            {
+                var rightButton = rightArrowImage.GetComponent<Button>();
+                if (rightButton == null)
+                {
+                    rightButton = rightArrowImage.gameObject.AddComponent<Button>();
+                    rightButton.transition = Selectable.Transition.None;
+                }
+                rightButton.onClick.AddListener(OnRightArrowClicked);
+            }
+        }
+
+        /// <summary>
+        /// 왼쪽 화살표 클릭 - 이전 파견 위치로 이동
+        /// </summary>
+        private void OnLeftArrowClicked()
+        {
+            // 파견 중에는 이동 불가
+            if (isDispatching) return;
+
+            int totalButtons = panelDispatchType == DispatchType.Combat ? totalCombatButtons : totalGatheringButtons;
+
+            if (currentButtonIndex > 0)
+            {
+                currentButtonIndex--;
+                // 스와이프와 동일하게 targetScrollPosition 설정
+                targetScrollPosition = (float)currentButtonIndex / (totalButtons - 1);
+                AddLog($"⬅️ 왼쪽 화살표 클릭: 인덱스 {currentButtonIndex}");
+            }
+        }
+
+        /// <summary>
+        /// 오른쪽 화살표 클릭 - 다음 파견 위치로 이동
+        /// </summary>
+        private void OnRightArrowClicked()
+        {
+            // 파견 중에는 이동 불가
+            if (isDispatching) return;
+
+            int totalButtons = panelDispatchType == DispatchType.Combat ? totalCombatButtons : totalGatheringButtons;
+
+            if (currentButtonIndex < totalButtons - 1)
+            {
+                currentButtonIndex++;
+                // 스와이프와 동일하게 targetScrollPosition 설정
+                targetScrollPosition = (float)currentButtonIndex / (totalButtons - 1);
+                AddLog($"➡️ 오른쪽 화살표 클릭: 인덱스 {currentButtonIndex}");
+            }
         }
 
         /// <summary>
@@ -2280,6 +2357,21 @@ namespace Dispatch
                 var infoPanelButton = infoPanel.GetComponent<Button>();
                 if (infoPanelButton != null)
                     infoPanelButton.onClick.RemoveListener(OnInfoPanelClicked);
+            }
+
+            // 화살표 버튼 이벤트 리스너 제거
+            if (leftArrowImage != null)
+            {
+                var leftButton = leftArrowImage.GetComponent<Button>();
+                if (leftButton != null)
+                    leftButton.onClick.RemoveListener(OnLeftArrowClicked);
+            }
+
+            if (rightArrowImage != null)
+            {
+                var rightButton = rightArrowImage.GetComponent<Button>();
+                if (rightButton != null)
+                    rightButton.onClick.RemoveListener(OnRightArrowClicked);
             }
         }
 
