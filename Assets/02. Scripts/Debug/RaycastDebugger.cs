@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using System.Collections.Generic;
 
 /// <summary>
@@ -11,17 +12,20 @@ public class RaycastDebugger : MonoBehaviour
 {
     void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        // New Input System 사용
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
+            Vector2 mousePosition = Mouse.current.position.ReadValue();
+
             PointerEventData pointerData = new PointerEventData(EventSystem.current)
             {
-                position = Input.mousePosition
+                position = mousePosition
             };
 
             List<RaycastResult> results = new List<RaycastResult>();
             EventSystem.current.RaycastAll(pointerData, results);
 
-            Debug.Log($"=== 클릭 위치: {Input.mousePosition} ===");
+            Debug.Log($"=== 클릭 위치: {mousePosition} ===");
             Debug.Log($"Raycast 결과 개수: {results.Count}");
 
             for (int i = 0; i < results.Count; i++)
