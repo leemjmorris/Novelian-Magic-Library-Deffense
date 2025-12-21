@@ -1006,7 +1006,8 @@ namespace Novelian.Combat
         //LMJ : Handle collision with monsters and obstacles (both Physics and Effect modes)
         private void OnTriggerEnter(Collider other)
         {
-            // JML: OnTriggerEnter 로그 제거
+            // 디버그: 어떤 오브젝트와 충돌하는지 확인
+            Debug.Log($"[Projectile] 충돌: {other.name}, Tag: {other.tag}, Layer: {LayerMask.LayerToName(other.gameObject.layer)}");
 
             if (!isInitialized) return;
 
