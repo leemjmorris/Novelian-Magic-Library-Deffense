@@ -20,6 +20,7 @@ public static class SceneName
     public static readonly string DispatchSystemScene = "DispatchSystemScene";
     public static readonly string BookMarkCraftScene = "BookMarkCraftScene";
     public static readonly string BossDungeonScene = "BossDungeonScene";  // Issue #476 - 도전던전 씬
+    public static readonly string TrainingScene = "TrainingScene"; // Test Scene
 }
 
 public static class AddressableKey

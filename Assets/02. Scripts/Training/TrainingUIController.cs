@@ -31,8 +31,17 @@ namespace Novelian.Training
         [SerializeField] private TMP_Dropdown gradeDropdown;
         [SerializeField] private TMP_Dropdown enhancementDropdown;
         [SerializeField] private TMP_Dropdown mainSkillBookmarkDropdown;
-        [SerializeField] private TMP_Dropdown supportSkillBookmarkDropdown;
-        [SerializeField] private TMP_Dropdown statBookmarkDropdown;
+        [SerializeField] private TMP_Dropdown supportSkillDropdown;  // 보조 스킬 (책갈피 아님)
+
+        [Header("Stat Bookmark Dropdowns (4개)")]
+        [SerializeField] private TMP_Dropdown statBookmarkDropdown1;
+        [SerializeField] private TMP_Dropdown statBookmarkDropdown2;
+        [SerializeField] private TMP_Dropdown statBookmarkDropdown3;
+        [SerializeField] private TMP_Dropdown statBookmarkDropdown4;
+
+        [Header("My Deck Toggle")]
+        [SerializeField] private Toggle useMyDeckToggle;
+        [SerializeField] private GameObject singleCharacterSettingsPanel;  // 단일 캐릭터 설정 패널 (토글 OFF 시 표시)
 
         #endregion
 
@@ -61,19 +70,26 @@ namespace Novelian.Training
         #region Serialized Fields - Settings Panels
 
         [Header("Settings Panels (시작 시 숨김)")]
+        [SerializeField] private GameObject settingsPanel;  // 전체 설정 패널
         [SerializeField] private GameObject characterSettingRail;
         [SerializeField] private GameObject bookMarkSettingRail;
+
+        [Header("DPS Panel (시작 시 표시)")]
+        [SerializeField] private GameObject dpsPanel;  // DPS 측정 패널
 
         #endregion
 
         #region Serialized Fields - Controls
 
         [Header("Dummy Control")]
+        [SerializeField] private Button dummyMinusButton;
         [SerializeField] private TMP_Text dummyCountText;
+        [SerializeField] private Button dummyPlusButton;
 
         [Header("Buttons")]
-        [SerializeField] private Button startStopButton;
-        [SerializeField] private TMP_Text startStopButtonText;
+        [SerializeField] private Button startButton;
+        [SerializeField] private Button resetButton;
+        [SerializeField] private Button stopButton;  // DPS 패널의 정지 버튼
 
         #endregion
 
@@ -85,7 +101,11 @@ namespace Novelian.Training
         // 드롭다운 데이터 캐시
         private List<CharacterData> characterDataList = new List<CharacterData>();
         private List<MainSkillData> mainSkillDataList = new List<MainSkillData>();
+        private List<SupportSkillData> supportSkillDataList = new List<SupportSkillData>();
         private List<BookmarkOptionData> statOptionDataList = new List<BookmarkOptionData>();
+
+        // 스탯 드롭다운 배열 (편의용)
+        private TMP_Dropdown[] statBookmarkDropdowns;
 
         #endregion
 
@@ -120,10 +140,106 @@ namespace Novelian.Training
                 trainingManager.OnTrainingStopped -= OnTrainingStopped;
                 trainingManager.OnTrainingReset -= OnTrainingReset;
             }
+
+            // 버튼 이벤트 해제
+            if (dummyMinusButton != null) dummyMinusButton.onClick.RemoveListener(OnDummyDecrease);
+            if (dummyPlusButton != null) dummyPlusButton.onClick.RemoveListener(OnDummyIncrease);
+            if (startButton != null) startButton.onClick.RemoveListener(OnStartButton);
+            if (resetButton != null) resetButton.onClick.RemoveListener(OnResetButton);
+            if (stopButton != null) stopButton.onClick.RemoveListener(OnStopButton);
+            if (useMyDeckToggle != null) useMyDeckToggle.onValueChanged.RemoveListener(OnUseMyDeckToggleChanged);
+
+            // 드롭다운 이벤트 해제
+            if (characterDropdown != null) characterDropdown.onValueChanged.RemoveListener(OnCharacterDropdownChanged);
+            if (gradeDropdown != null) gradeDropdown.onValueChanged.RemoveListener(OnGradeDropdownChanged);
+            if (enhancementDropdown != null) enhancementDropdown.onValueChanged.RemoveListener(OnEnhancementDropdownChanged);
+            if (mainSkillBookmarkDropdown != null) mainSkillBookmarkDropdown.onValueChanged.RemoveListener(OnMainSkillBookmarkDropdownChanged);
+            if (supportSkillDropdown != null) supportSkillDropdown.onValueChanged.RemoveListener(OnSupportSkillDropdownChanged);
+            if (statBookmarkDropdown1 != null) statBookmarkDropdown1.onValueChanged.RemoveListener(OnStatBookmarkDropdown1Changed);
+            if (statBookmarkDropdown2 != null) statBookmarkDropdown2.onValueChanged.RemoveListener(OnStatBookmarkDropdown2Changed);
+            if (statBookmarkDropdown3 != null) statBookmarkDropdown3.onValueChanged.RemoveListener(OnStatBookmarkDropdown3Changed);
+            if (statBookmarkDropdown4 != null) statBookmarkDropdown4.onValueChanged.RemoveListener(OnStatBookmarkDropdown4Changed);
         }
 
         private async void Start()
         {
+            // 스탯 드롭다운 배열 초기화
+            statBookmarkDropdowns = new TMP_Dropdown[]
+            {
+                statBookmarkDropdown1,
+                statBookmarkDropdown2,
+                statBookmarkDropdown3,
+                statBookmarkDropdown4
+            };
+
+            // 내 덱 토글 이벤트 연결
+            if (useMyDeckToggle != null)
+            {
+                useMyDeckToggle.onValueChanged.AddListener(OnUseMyDeckToggleChanged);
+            }
+
+            // 더미 버튼 이벤트 연결
+            if (dummyMinusButton != null)
+            {
+                dummyMinusButton.onClick.AddListener(OnDummyDecrease);
+            }
+            if (dummyPlusButton != null)
+            {
+                dummyPlusButton.onClick.AddListener(OnDummyIncrease);
+            }
+
+            // 시작/리셋/정지 버튼 이벤트 연결
+            if (startButton != null)
+            {
+                startButton.onClick.AddListener(OnStartButton);
+            }
+            if (resetButton != null)
+            {
+                resetButton.onClick.AddListener(OnResetButton);
+            }
+            if (stopButton != null)
+            {
+                stopButton.onClick.AddListener(OnStopButton);
+            }
+
+            // 드롭다운 이벤트 연결
+            if (characterDropdown != null)
+            {
+                characterDropdown.onValueChanged.AddListener(OnCharacterDropdownChanged);
+            }
+            if (gradeDropdown != null)
+            {
+                gradeDropdown.onValueChanged.AddListener(OnGradeDropdownChanged);
+            }
+            if (enhancementDropdown != null)
+            {
+                enhancementDropdown.onValueChanged.AddListener(OnEnhancementDropdownChanged);
+            }
+            if (mainSkillBookmarkDropdown != null)
+            {
+                mainSkillBookmarkDropdown.onValueChanged.AddListener(OnMainSkillBookmarkDropdownChanged);
+            }
+            if (supportSkillDropdown != null)
+            {
+                supportSkillDropdown.onValueChanged.AddListener(OnSupportSkillDropdownChanged);
+            }
+            if (statBookmarkDropdown1 != null)
+            {
+                statBookmarkDropdown1.onValueChanged.AddListener(OnStatBookmarkDropdown1Changed);
+            }
+            if (statBookmarkDropdown2 != null)
+            {
+                statBookmarkDropdown2.onValueChanged.AddListener(OnStatBookmarkDropdown2Changed);
+            }
+            if (statBookmarkDropdown3 != null)
+            {
+                statBookmarkDropdown3.onValueChanged.AddListener(OnStatBookmarkDropdown3Changed);
+            }
+            if (statBookmarkDropdown4 != null)
+            {
+                statBookmarkDropdown4.onValueChanged.AddListener(OnStatBookmarkDropdown4Changed);
+            }
+
             // CSVLoader 초기화 대기
             await WaitForCSVLoaderAsync();
 
@@ -134,6 +250,14 @@ namespace Novelian.Training
             InitializeDropdowns();
             UpdateDummyCountDisplay();
             UpdateDamageInfoDisplay();
+            UpdateButtonStates();
+
+            // 초기 토글 상태 적용
+            OnUseMyDeckToggleChanged(useMyDeckToggle != null && useMyDeckToggle.isOn);
+
+            // 초기 패널 상태: 설정 패널 표시, DPS 패널 숨김
+            if (settingsPanel != null) settingsPanel.SetActive(true);
+            if (dpsPanel != null) dpsPanel.SetActive(false);
         }
 
         /// <summary>
@@ -176,6 +300,18 @@ namespace Novelian.Training
                 }
             }
 
+            // 보조 스킬 데이터 로드 (책갈피 아님)
+            var supportSkillTable = CSVLoader.Instance?.GetTable<SupportSkillData>();
+            if (supportSkillTable != null)
+            {
+                supportSkillDataList.Clear();
+                var allSupportSkills = supportSkillTable.GetAll();
+                for (int i = 0; i < allSupportSkills.Count; i++)
+                {
+                    supportSkillDataList.Add(allSupportSkills[i]);
+                }
+            }
+
             // 스탯 옵션 데이터 로드
             var optionTable = CSVLoader.Instance?.GetTable<BookmarkOptionData>();
             if (optionTable != null)
@@ -189,7 +325,7 @@ namespace Novelian.Training
             }
 
             await UniTask.CompletedTask;
-            Debug.Log($"[TrainingUIController] 드롭다운 데이터 로드 완료: 캐릭터={characterDataList.Count}, 스킬={mainSkillDataList.Count}, 스탯옵션={statOptionDataList.Count}");
+            Debug.Log($"[TrainingUIController] 드롭다운 데이터 로드 완료: 캐릭터={characterDataList.Count}, 메인스킬={mainSkillDataList.Count}, 보조스킬={supportSkillDataList.Count}, 스탯옵션={statOptionDataList.Count}");
         }
 
         #endregion
@@ -255,29 +391,47 @@ namespace Novelian.Training
                 mainSkillBookmarkDropdown.value = 0;
             }
 
-            // 보조 스킬 책갈피 드롭다운 (현재는 "없음"만)
-            if (supportSkillBookmarkDropdown != null)
+            // 보조 스킬 드롭다운 (책갈피 아님)
+            if (supportSkillDropdown != null)
             {
-                supportSkillBookmarkDropdown.ClearOptions();
-                supportSkillBookmarkDropdown.AddOptions(new List<string> { "없음" });
-                supportSkillBookmarkDropdown.value = 0;
+                supportSkillDropdown.ClearOptions();
+                var supportOptions = new List<string> { "없음" };
+                for (int i = 0; i < supportSkillDataList.Count; i++)
+                {
+                    string skillName = supportSkillDataList[i].support_name ?? $"보조스킬 {supportSkillDataList[i].support_id}";
+                    supportOptions.Add(skillName);
+                }
+                supportSkillDropdown.AddOptions(supportOptions);
+                supportSkillDropdown.value = 0;
             }
 
-            // 스탯 책갈피 드롭다운
-            if (statBookmarkDropdown != null)
-            {
-                statBookmarkDropdown.ClearOptions();
-                var statOptions = new List<string> { "없음" };
-                for (int i = 0; i < statOptionDataList.Count; i++)
-                {
-                    string optionName = GetOptionDisplayName(statOptionDataList[i]);
-                    statOptions.Add(optionName);
-                }
-                statBookmarkDropdown.AddOptions(statOptions);
-                statBookmarkDropdown.value = 0;
-            }
+            // 스탯 책갈피 드롭다운 4개 초기화
+            InitializeStatBookmarkDropdowns();
 
             Debug.Log("[TrainingUIController] 드롭다운 초기화 완료");
+        }
+
+        /// <summary>
+        /// 스탯 책갈피 드롭다운 4개 초기화
+        /// </summary>
+        private void InitializeStatBookmarkDropdowns()
+        {
+            var statOptions = new List<string> { "없음" };
+            for (int i = 0; i < statOptionDataList.Count; i++)
+            {
+                string optionName = GetOptionDisplayName(statOptionDataList[i]);
+                statOptions.Add(optionName);
+            }
+
+            for (int i = 0; i < statBookmarkDropdowns.Length; i++)
+            {
+                if (statBookmarkDropdowns[i] != null)
+                {
+                    statBookmarkDropdowns[i].ClearOptions();
+                    statBookmarkDropdowns[i].AddOptions(new List<string>(statOptions));
+                    statBookmarkDropdowns[i].value = 0;
+                }
+            }
         }
 
         /// <summary>
@@ -337,9 +491,9 @@ namespace Novelian.Training
         }
 
         /// <summary>
-        /// 시작/종료 버튼 OnClick
+        /// 시작 버튼 OnClick (훈련 시작/정지 토글)
         /// </summary>
-        public void OnStartStopButton()
+        public void OnStartButton()
         {
             if (trainingManager == null) return;
 
@@ -359,6 +513,14 @@ namespace Novelian.Training
         public void OnResetButton()
         {
             trainingManager?.ResetTraining();
+        }
+
+        /// <summary>
+        /// 정지 버튼 OnClick (DPS 패널에서 사용)
+        /// </summary>
+        public void OnStopButton()
+        {
+            trainingManager?.StopTraining();
         }
 
         #endregion
@@ -418,34 +580,138 @@ namespace Novelian.Training
         }
 
         /// <summary>
-        /// 보조 스킬 책갈피 드롭다운 변경
+        /// 보조 스킬 드롭다운 변경 (책갈피 아님)
         /// </summary>
-        public void OnSupportSkillBookmarkDropdownChanged(int index)
-        {
-            // 현재는 "없음"만 있음
-            trainingManager?.SetSupportSkillBookmark(0);
-            UpdateDamageInfoDisplay();
-        }
-
-        /// <summary>
-        /// 스탯 책갈피 드롭다운 변경
-        /// </summary>
-        public void OnStatBookmarkDropdownChanged(int index)
+        public void OnSupportSkillDropdownChanged(int index)
         {
             // index 0 = "없음"
             if (index <= 0)
             {
-                trainingManager?.SetStatBookmark(0);
+                trainingManager?.SetSupportSkill(0);
             }
             else
             {
-                int optionIndex = index - 1;
-                if (optionIndex >= 0 && optionIndex < statOptionDataList.Count)
+                int skillIndex = index - 1;
+                if (skillIndex >= 0 && skillIndex < supportSkillDataList.Count)
                 {
-                    trainingManager?.SetStatBookmark(statOptionDataList[optionIndex].Option_ID);
+                    trainingManager?.SetSupportSkill(supportSkillDataList[skillIndex].support_id);
                 }
             }
             UpdateDamageInfoDisplay();
+        }
+
+        /// <summary>
+        /// 스탯 책갈피 드롭다운 1 변경
+        /// </summary>
+        public void OnStatBookmarkDropdown1Changed(int index)
+        {
+            SetStatBookmarkFromDropdown(0, index);
+        }
+
+        /// <summary>
+        /// 스탯 책갈피 드롭다운 2 변경
+        /// </summary>
+        public void OnStatBookmarkDropdown2Changed(int index)
+        {
+            SetStatBookmarkFromDropdown(1, index);
+        }
+
+        /// <summary>
+        /// 스탯 책갈피 드롭다운 3 변경
+        /// </summary>
+        public void OnStatBookmarkDropdown3Changed(int index)
+        {
+            SetStatBookmarkFromDropdown(2, index);
+        }
+
+        /// <summary>
+        /// 스탯 책갈피 드롭다운 4 변경
+        /// </summary>
+        public void OnStatBookmarkDropdown4Changed(int index)
+        {
+            SetStatBookmarkFromDropdown(3, index);
+        }
+
+        /// <summary>
+        /// 스탯 책갈피 설정 (공통 로직)
+        /// </summary>
+        private void SetStatBookmarkFromDropdown(int slotIndex, int dropdownIndex)
+        {
+            // dropdownIndex 0 = "없음"
+            if (dropdownIndex <= 0)
+            {
+                trainingManager?.SetStatBookmark(slotIndex, 0);
+            }
+            else
+            {
+                int optionIndex = dropdownIndex - 1;
+                if (optionIndex >= 0 && optionIndex < statOptionDataList.Count)
+                {
+                    trainingManager?.SetStatBookmark(slotIndex, statOptionDataList[optionIndex].Option_ID);
+                }
+            }
+            UpdateDamageInfoDisplay();
+        }
+
+        /// <summary>
+        /// 내 덱 사용 토글 변경
+        /// </summary>
+        public void OnUseMyDeckToggleChanged(bool isOn)
+        {
+            // "내 덱 사용" ON인데 DeckManager가 없거나 덱이 비어있으면 경고 후 토글 해제
+            if (isOn)
+            {
+                if (DeckManager.Instance == null)
+                {
+                    Debug.LogWarning("[TrainingUIController] DeckManager가 없습니다. LobbyScene에서 진입해주세요.");
+                    if (useMyDeckToggle != null) useMyDeckToggle.isOn = false;
+                    return;
+                }
+
+                var deckCharacters = DeckManager.Instance.GetValidCharacters();
+                if (deckCharacters == null || deckCharacters.Count == 0)
+                {
+                    Debug.LogWarning("[TrainingUIController] 덱에 캐릭터가 없습니다. 덱을 먼저 설정해주세요.");
+                    if (useMyDeckToggle != null) useMyDeckToggle.isOn = false;
+                    return;
+                }
+
+                Debug.Log($"[TrainingUIController] 내 덱 사용 모드 ON - 덱 캐릭터 {deckCharacters.Count}명");
+            }
+
+            trainingManager?.SetUseMyDeck(isOn);
+
+            // 단일 캐릭터 설정 패널 활성화/비활성화
+            if (singleCharacterSettingsPanel != null)
+            {
+                singleCharacterSettingsPanel.SetActive(!isOn);
+            }
+
+            // 토글 ON: 덱 모드 - 설정 드롭다운 비활성화
+            // 토글 OFF: 단일 캐릭터 모드 - 설정 드롭다운 활성화
+            SetDropdownsInteractable(!isOn);
+
+            Debug.Log($"[TrainingUIController] 내 덱 사용 모드: {(isOn ? "ON" : "OFF")}");
+        }
+
+        /// <summary>
+        /// 드롭다운들 활성화/비활성화
+        /// </summary>
+        private void SetDropdownsInteractable(bool interactable)
+        {
+            if (characterDropdown != null) characterDropdown.interactable = interactable;
+            if (gradeDropdown != null) gradeDropdown.interactable = interactable;
+            if (enhancementDropdown != null) enhancementDropdown.interactable = interactable;
+            if (mainSkillBookmarkDropdown != null) mainSkillBookmarkDropdown.interactable = interactable;
+            if (supportSkillDropdown != null) supportSkillDropdown.interactable = interactable;
+
+            for (int i = 0; i < statBookmarkDropdowns.Length; i++)
+            {
+                if (statBookmarkDropdowns[i] != null)
+                {
+                    statBookmarkDropdowns[i].interactable = interactable;
+                }
+            }
         }
 
         #endregion
@@ -455,21 +721,29 @@ namespace Novelian.Training
         private void OnTrainingStarted()
         {
             isRunning = true;
-            UpdateStartStopButtonText();
+            UpdateButtonStates();
 
             // 설정 패널 숨김
+            if (settingsPanel != null) settingsPanel.SetActive(false);
             if (characterSettingRail != null) characterSettingRail.SetActive(false);
             if (bookMarkSettingRail != null) bookMarkSettingRail.SetActive(false);
+
+            // DPS 패널 표시
+            if (dpsPanel != null) dpsPanel.SetActive(true);
         }
 
         private void OnTrainingStopped()
         {
             isRunning = false;
-            UpdateStartStopButtonText();
+            UpdateButtonStates();
 
             // 설정 패널 표시
+            if (settingsPanel != null) settingsPanel.SetActive(true);
             if (characterSettingRail != null) characterSettingRail.SetActive(true);
             if (bookMarkSettingRail != null) bookMarkSettingRail.SetActive(true);
+
+            // DPS 패널 숨김
+            if (dpsPanel != null) dpsPanel.SetActive(false);
         }
 
         private void OnTrainingReset()
@@ -481,12 +755,26 @@ namespace Novelian.Training
 
         #region Display Updates
 
-        private void UpdateStartStopButtonText()
+        /// <summary>
+        /// 버튼 상태 업데이트 (시작/정지에 따라)
+        /// </summary>
+        private void UpdateButtonStates()
         {
-            if (startStopButtonText != null)
+            // 시작 버튼: 훈련 중이 아닐 때만 활성화
+            if (startButton != null)
             {
-                startStopButtonText.text = isRunning ? "종료" : "시작";
+                startButton.interactable = !isRunning;
             }
+
+            // 리셋 버튼: 항상 활성화 (또는 훈련 중일 때만 비활성화)
+            if (resetButton != null)
+            {
+                resetButton.interactable = true;
+            }
+
+            // 더미 조절 버튼: 훈련 중이 아닐 때만 활성화
+            if (dummyMinusButton != null) dummyMinusButton.interactable = !isRunning;
+            if (dummyPlusButton != null) dummyPlusButton.interactable = !isRunning;
         }
 
         private void UpdateDummyCountDisplay()
@@ -535,11 +823,40 @@ namespace Novelian.Training
             // 강화 보너스 계산 (임시: 강화 레벨당 5%)
             float enhancementBonus = trainingManager.SelectedEnhancement * 0.05f;
 
-            // 총 보너스
-            float totalBonus = (gradeMultiplier - 1.0f) + enhancementBonus;
+            // 보조 스킬 데미지 배율
+            float supportDamageMult = 1.0f;
+            int supportSkillIndex = supportSkillDropdown != null ? supportSkillDropdown.value - 1 : -1;
+            if (supportSkillIndex >= 0 && supportSkillIndex < supportSkillDataList.Count)
+            {
+                supportDamageMult = supportSkillDataList[supportSkillIndex].damage_mult;
+            }
 
-            // 최종 데미지
-            float finalDamage = baseDamage * (1f + totalBonus);
+            // 스탯 책갈피 보너스 계산
+            float statBookmarkBonus = 0f;
+            int[] bookmarkIndices = new int[]
+            {
+                statBookmarkDropdown1 != null ? statBookmarkDropdown1.value - 1 : -1,
+                statBookmarkDropdown2 != null ? statBookmarkDropdown2.value - 1 : -1,
+                statBookmarkDropdown3 != null ? statBookmarkDropdown3.value - 1 : -1,
+                statBookmarkDropdown4 != null ? statBookmarkDropdown4.value - 1 : -1
+            };
+            foreach (int idx in bookmarkIndices)
+            {
+                if (idx >= 0 && idx < statOptionDataList.Count)
+                {
+                    var option = statOptionDataList[idx];
+                    if (option.Option_Type == OptionType.AttackPower)
+                    {
+                        statBookmarkBonus += option.Option_Value;
+                    }
+                }
+            }
+
+            // 총 보너스 (성급 + 강화 + 스탯 책갈피)
+            float totalBonus = (gradeMultiplier - 1.0f) + enhancementBonus + statBookmarkBonus;
+
+            // 최종 데미지 (기본 × 보조스킬배율 × 보너스)
+            float finalDamage = baseDamage * supportDamageMult * (1f + totalBonus);
 
             // 공격 속도
             float attackSpeed = skillData.cooldown > 0 ? 1f / skillData.cooldown : 1f;
@@ -656,33 +973,36 @@ namespace Novelian.Training
         }
 
         /// <summary>
-        /// 보조 스킬 책갈피 드롭다운 옵션 설정
+        /// 보조 스킬 드롭다운 옵션 설정
         /// </summary>
-        public void SetSupportSkillBookmarkOptions(List<string> bookmarkNames)
+        public void SetSupportSkillOptions(List<string> skillNames)
         {
-            if (supportSkillBookmarkDropdown != null)
+            if (supportSkillDropdown != null)
             {
-                supportSkillBookmarkDropdown.ClearOptions();
-                supportSkillBookmarkDropdown.AddOptions(bookmarkNames);
-                if (bookmarkNames.Count > 0)
+                supportSkillDropdown.ClearOptions();
+                supportSkillDropdown.AddOptions(skillNames);
+                if (skillNames.Count > 0)
                 {
-                    supportSkillBookmarkDropdown.value = 0;
+                    supportSkillDropdown.value = 0;
                 }
             }
         }
 
         /// <summary>
-        /// 스탯 책갈피 드롭다운 옵션 설정
+        /// 스탯 책갈피 드롭다운 4개 옵션 설정
         /// </summary>
         public void SetStatBookmarkOptions(List<string> bookmarkNames)
         {
-            if (statBookmarkDropdown != null)
+            for (int i = 0; i < statBookmarkDropdowns.Length; i++)
             {
-                statBookmarkDropdown.ClearOptions();
-                statBookmarkDropdown.AddOptions(bookmarkNames);
-                if (bookmarkNames.Count > 0)
+                if (statBookmarkDropdowns[i] != null)
                 {
-                    statBookmarkDropdown.value = 0;
+                    statBookmarkDropdowns[i].ClearOptions();
+                    statBookmarkDropdowns[i].AddOptions(new List<string>(bookmarkNames));
+                    if (bookmarkNames.Count > 0)
+                    {
+                        statBookmarkDropdowns[i].value = 0;
+                    }
                 }
             }
         }

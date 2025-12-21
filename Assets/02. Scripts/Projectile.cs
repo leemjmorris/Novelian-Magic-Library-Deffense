@@ -226,11 +226,14 @@ namespace Novelian.Combat
                 int basePierce = skillData?.pierce_count ?? 0;
                 int supportPierce = supportSkillData?.add_pierce ?? 0;
 
+                // 디버그: Pierce 초기화 상태 확인
+                Debug.Log($"[Projectile] Pierce Init - supportSkillId={supportSkillId}, supportSkillData={(supportSkillData != null ? "OK" : "NULL")}, basePierce={basePierce}, supportPierce={supportPierce}");
+
                 if (basePierce > 0 || supportPierce > 0)
                 {
                     maxPierceCount = basePierce + supportPierce;
                     baseDamageForPierce = damageAmount;
-                    // JML: Pierce init 로그 제거
+                    Debug.Log($"[Projectile] Pierce ENABLED! maxPierceCount={maxPierceCount}");
                 }
             }
 
@@ -1059,7 +1062,44 @@ namespace Novelian.Combat
             if (other.CompareTag(Tag.Monster))
             {
                 Monster monster = other.GetComponent<Monster>();
-                if (monster != null)
+
+                // Monster 컴포넌트가 없는 경우 (DummyTarget 등) ITargetable로 처리
+                if (monster == null)
+                {
+                    ITargetable targetable = other.GetComponent<ITargetable>();
+                    if (targetable != null)
+                    {
+                        // 다이너마이트/전설의 지팡이/시한폭탄은 별도 처리
+                        if (isDynamite || isLegendaryStaff || (isTimeBomb && !timeBombAttached))
+                        {
+                            return;
+                        }
+
+                        // Apply damage
+                        var (damageToApply, isCrit) = CalculateDamageToApply();
+                        targetable.TakeDamage(damageToApply);
+
+                        // Spawn hit effect
+                        SpawnHitEffectAtCollider(other);
+
+                        // 부메랑이 아니면 풀로 반환
+                        if (!isBoomerang)
+                        {
+                            if (mode == ProjectileMode.Physics)
+                            {
+                                ReturnToPool();
+                            }
+                            else if (mode == ProjectileMode.Effect)
+                            {
+                                lifetimeCts?.Cancel();
+                                Destroy(gameObject);
+                            }
+                        }
+                    }
+                    return;
+                }
+
+                // 이하 기존 Monster 처리 코드
                 {
                     // 다이너마이트: 적과 충돌해도 무시 (퓨즈 타이머가 끝나야 폭발)
                     if (isDynamite)
@@ -1638,7 +1678,16 @@ namespace Novelian.Combat
         private void ReturnToPool()
         {
             lifetimeCts?.Cancel();
-            GameManager.Instance.Pool.Despawn(this);
+            var pool = GameManager.Instance?.Pool;
+            if (pool != null)
+            {
+                pool.Despawn(this);
+            }
+            else
+            {
+                // Pool 없으면 Destroy (TrainingScene 등)
+                Destroy(gameObject);
+            }
         }
 
         // IPoolable implementation

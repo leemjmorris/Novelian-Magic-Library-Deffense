@@ -739,6 +739,15 @@ namespace Novelian.Combat
         /// </summary>
         public bool HasSupportSkill() => supportSkillId > 0 && supportData != null;
 
+        /// <summary>
+        /// 투사체 템플릿 설정 (TrainingScene 등 Pool 없는 환경용)
+        /// </summary>
+        public void SetProjectileTemplate(GameObject template)
+        {
+            projectileTemplate = template;
+            Debug.Log($"[Character] ProjectileTemplate 설정됨: {(template != null ? template.name : "null")}");
+        }
+
         #endregion
 
         #region AOE Gizmo (Runtime Debug)

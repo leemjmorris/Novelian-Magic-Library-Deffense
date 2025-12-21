@@ -35,6 +35,9 @@ namespace Novelian.Training
         [SerializeField, Tooltip("허수아비 프리팹")]
         private GameObject dummyPrefab;
 
+        [SerializeField, Tooltip("투사체 템플릿 (TrainingScene용)")]
+        private GameObject projectileTemplate;
+
         [Header("References")]
         [SerializeField]
         private DPSCalculator dpsCalculator;
@@ -46,6 +49,7 @@ namespace Novelian.Training
         // 상태
         private bool isRunning = false;
         private Character currentCharacter;
+        private List<Character> deckCharacters = new List<Character>();  // 내 덱 모드용
         private List<DummyTarget> activeDummies = new List<DummyTarget>();
 
         // 설정 값
@@ -53,9 +57,12 @@ namespace Novelian.Training
         private int selectedGrade = 1;
         private int selectedEnhancement = 0;
         private int selectedMainSkillBookmarkId = 0;
-        private int selectedSupportSkillBookmarkId = 0;
-        private int selectedStatBookmarkId = 0;
+        private int selectedSupportSkillId = 0;  // 보조 스킬 (책갈피 아님)
+        private int[] selectedStatBookmarkIds = new int[4];  // 스탯 책갈피 4개 (중복 가능)
         private int dummyCount = 1;
+
+        // 내 덱 사용 모드
+        private bool useMyDeck = false;
 
         // 캐릭터 데이터 캐시
         private List<CharacterData> characterDataList = new List<CharacterData>();
@@ -82,6 +89,8 @@ namespace Novelian.Training
         public int SelectedCharacterId => selectedCharacterId;
         public int SelectedGrade => selectedGrade;
         public int SelectedEnhancement => selectedEnhancement;
+        public bool UseMyDeck => useMyDeck;
+        public int[] SelectedStatBookmarkIds => selectedStatBookmarkIds;
 
         #endregion
 
@@ -89,6 +98,16 @@ namespace Novelian.Training
 
         private async void Start()
         {
+            // DPSCalculator 자동 찾기 (Inspector에서 연결 안 된 경우)
+            if (dpsCalculator == null)
+            {
+                dpsCalculator = GetComponent<DPSCalculator>();
+                if (dpsCalculator == null)
+                {
+                    Debug.LogWarning("[TrainingManager] DPSCalculator가 없습니다. Inspector에서 연결하거나 같은 오브젝트에 추가하세요.");
+                }
+            }
+
             // CSVLoader 초기화 대기
             await WaitForCSVLoaderAsync();
 
@@ -106,6 +125,7 @@ namespace Novelian.Training
             {
                 Destroy(currentCharacter.gameObject);
             }
+            DespawnDeckCharacters();
             DespawnDummies();
         }
 
@@ -353,21 +373,36 @@ namespace Novelian.Training
         }
 
         /// <summary>
-        /// 보조 스킬 책갈피 선택 (SupportSkillTable의 support_id)
+        /// 보조 스킬 선택 (SupportSkillTable의 support_id) - 책갈피 아님
         /// </summary>
-        public void SetSupportSkillBookmark(int supportSkillId)
+        public void SetSupportSkill(int supportSkillId)
         {
-            selectedSupportSkillBookmarkId = supportSkillId;
-            Debug.Log($"[TrainingManager] 보조 스킬 책갈피 설정: {supportSkillId}");
+            selectedSupportSkillId = supportSkillId;
+            Debug.Log($"[TrainingManager] 보조 스킬 설정: {supportSkillId}");
         }
 
         /// <summary>
         /// 스탯 책갈피 선택 (BookmarkOptionTable의 Option_ID)
+        /// slotIndex: 0~3 (4개 슬롯)
         /// </summary>
-        public void SetStatBookmark(int optionId)
+        public void SetStatBookmark(int slotIndex, int optionId)
         {
-            selectedStatBookmarkId = optionId;
-            Debug.Log($"[TrainingManager] 스탯 책갈피 설정: {optionId}");
+            if (slotIndex < 0 || slotIndex >= 4)
+            {
+                Debug.LogWarning($"[TrainingManager] 잘못된 슬롯 인덱스: {slotIndex}");
+                return;
+            }
+            selectedStatBookmarkIds[slotIndex] = optionId;
+            Debug.Log($"[TrainingManager] 스탯 책갈피 {slotIndex + 1} 설정: {optionId}");
+        }
+
+        /// <summary>
+        /// 내 덱 사용 모드 설정
+        /// </summary>
+        public void SetUseMyDeck(bool use)
+        {
+            useMyDeck = use;
+            Debug.Log($"[TrainingManager] 내 덱 사용 모드: {(use ? "ON" : "OFF")}");
         }
 
         /// <summary>
@@ -412,17 +447,29 @@ namespace Novelian.Training
         {
             if (isRunning) return;
 
-            Debug.Log("[TrainingManager] 훈련 시작");
+            Debug.Log($"[TrainingManager] 훈련 시작 (내 덱 사용: {useMyDeck})");
             isRunning = true;
 
-            // 캐릭터 스폰
-            await SpawnCharacterAsync();
+            if (useMyDeck)
+            {
+                // 내 덱 모드: 기존 덱 데이터로 캐릭터들 스폰
+                await SpawnMyDeckAsync();
+            }
+            else
+            {
+                // 단일 캐릭터 모드: 설정된 캐릭터 1명 스폰
+                await SpawnCharacterAsync();
+            }
 
             // 허수아비 스폰
             SpawnDummies();
 
-            // DPS 측정 시작
-            dpsCalculator.StartMeasurement();
+            // DPS 측정 초기화 후 시작
+            if (dpsCalculator != null)
+            {
+                dpsCalculator.Reset();
+                dpsCalculator.StartMeasurement();
+            }
 
             OnTrainingStarted?.Invoke();
         }
@@ -437,18 +484,31 @@ namespace Novelian.Training
             Debug.Log("[TrainingManager] 훈련 정지");
             isRunning = false;
 
-            // 캐릭터 비활성화
+            // 단일 캐릭터 비활성화
             if (currentCharacter != null)
             {
                 currentCharacter.SetAutoAttackEnabled(false);
                 currentCharacter.gameObject.SetActive(false);
             }
 
+            // 덱 캐릭터들 비활성화
+            for (int i = 0; i < deckCharacters.Count; i++)
+            {
+                if (deckCharacters[i] != null)
+                {
+                    deckCharacters[i].SetAutoAttackEnabled(false);
+                    deckCharacters[i].gameObject.SetActive(false);
+                }
+            }
+
             // 허수아비 비활성화
             DespawnDummies();
 
             // DPS 측정 일시정지
-            dpsCalculator.PauseMeasurement();
+            if (dpsCalculator != null)
+            {
+                dpsCalculator.PauseMeasurement();
+            }
 
             OnTrainingStopped?.Invoke();
         }
@@ -461,12 +521,15 @@ namespace Novelian.Training
             Debug.Log("[TrainingManager] 훈련 리셋");
 
             // DPS 측정 리셋
-            dpsCalculator.Reset();
-
-            // 실행 중이면 타이머 재시작
-            if (isRunning)
+            if (dpsCalculator != null)
             {
-                dpsCalculator.StartMeasurement();
+                dpsCalculator.Reset();
+
+                // 실행 중이면 타이머 재시작
+                if (isRunning)
+                {
+                    dpsCalculator.StartMeasurement();
+                }
             }
 
             OnTrainingReset?.Invoke();
@@ -542,16 +605,25 @@ namespace Novelian.Training
                 ApplyMainSkillBookmark(currentCharacter, selectedMainSkillBookmarkId);
             }
 
-            // 보조 스킬 책갈피 적용
-            if (selectedSupportSkillBookmarkId > 0)
+            // 보조 스킬 적용 (책갈피 아님)
+            if (selectedSupportSkillId > 0)
             {
-                currentCharacter.EquipSupportSkill(selectedSupportSkillBookmarkId);
+                currentCharacter.EquipSupportSkill(selectedSupportSkillId);
             }
 
-            // 스탯 책갈피 적용
-            if (selectedStatBookmarkId > 0)
+            // 스탯 책갈피 4개 적용 (중복 가능)
+            for (int i = 0; i < selectedStatBookmarkIds.Length; i++)
             {
-                ApplyStatBookmark(currentCharacter, selectedStatBookmarkId);
+                if (selectedStatBookmarkIds[i] > 0)
+                {
+                    ApplyStatBookmark(currentCharacter, selectedStatBookmarkIds[i]);
+                }
+            }
+
+            // TrainingScene용 투사체 템플릿 설정 (GameManager/Pool 없이 투사체 사용 가능하게)
+            if (projectileTemplate != null)
+            {
+                currentCharacter.SetProjectileTemplate(projectileTemplate);
             }
 
             // 자동 공격 활성화
@@ -712,6 +784,126 @@ namespace Novelian.Training
         }
 
         /// <summary>
+        /// 내 덱 모드: DeckManager에서 덱 데이터를 가져와 캐릭터들 스폰
+        /// </summary>
+        private async UniTask SpawnMyDeckAsync()
+        {
+            // 기존 캐릭터들 제거
+            DespawnDeckCharacters();
+            if (currentCharacter != null)
+            {
+                Destroy(currentCharacter.gameObject);
+                currentCharacter = null;
+            }
+
+            // DeckManager에서 현재 덱 정보 가져오기
+            if (DeckManager.Instance == null)
+            {
+                Debug.LogError("[TrainingManager] DeckManager가 없습니다");
+                return;
+            }
+
+            var deckCharacterIds = DeckManager.Instance.GetValidCharacters();
+            if (deckCharacterIds == null || deckCharacterIds.Count == 0)
+            {
+                Debug.LogWarning("[TrainingManager] 덱에 캐릭터가 없습니다");
+                return;
+            }
+
+            Debug.Log($"[TrainingManager] 내 덱 캐릭터 {deckCharacterIds.Count}명 스폰 시작");
+
+            int spawnIndex = 0;
+            foreach (var characterId in deckCharacterIds)
+            {
+                if (characterId <= 0) continue;
+
+                // 프리팹 키 조회
+                string prefabKey = GetCharacterPrefabKey(characterId);
+                if (string.IsNullOrEmpty(prefabKey)) continue;
+
+                // 캐시된 프리팹 조회
+                if (!loadedCharacterPrefabs.TryGetValue(prefabKey, out GameObject prefab) || prefab == null)
+                {
+                    Debug.LogWarning($"[TrainingManager] 프리팹 없음: {prefabKey}");
+                    continue;
+                }
+
+                // 스폰 위치 (가로로 배치)
+                float xOffset = (spawnIndex - (deckCharacterIds.Count - 1) / 2f) * 2f;
+                Vector3 spawnPos = (characterSpawnPoint != null ? characterSpawnPoint.position : Vector3.zero)
+                                   + new Vector3(xOffset, 0f, 0f);
+                Quaternion spawnRot = characterSpawnPoint != null ? characterSpawnPoint.rotation : Quaternion.identity;
+
+                // 프리팹 인스턴스화
+                GameObject charObj = Instantiate(prefab, spawnPos, spawnRot);
+                Character character = charObj.GetComponent<Character>();
+
+                if (character == null)
+                {
+                    Destroy(charObj);
+                    continue;
+                }
+
+                // 자동 공격 비활성화 후 초기화
+                character.SetAutoAttackEnabled(false);
+                character.Initialize(characterId);
+
+                // 캐릭터 보유 데이터에서 성급/강화 정보 적용
+                ApplyOwnedCharacterData(character, characterId);
+
+                // TrainingScene용 투사체 템플릿 설정
+                if (projectileTemplate != null)
+                {
+                    character.SetProjectileTemplate(projectileTemplate);
+                }
+
+                // 자동 공격 활성화
+                character.SetAutoAttackEnabled(true);
+
+                deckCharacters.Add(character);
+                spawnIndex++;
+            }
+
+            Debug.Log($"[TrainingManager] 내 덱 캐릭터 {deckCharacters.Count}명 스폰 완료");
+            await UniTask.CompletedTask;
+        }
+
+        /// <summary>
+        /// 보유 캐릭터 데이터 적용 (성급, 강화, 장착된 책갈피 등)
+        /// TODO: CharacterEnhancementManager/BookmarkEquipManager와 연동
+        /// </summary>
+        private void ApplyOwnedCharacterData(Character character, int characterId)
+        {
+            // 강화 레벨 적용 (CharacterEnhancementManager에서 가져오기)
+            if (CharacterEnhancementManager.Instance != null)
+            {
+                int enhancementLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterId);
+                if (enhancementLevel > 0)
+                {
+                    ApplyEnhancement(character, enhancementLevel);
+                }
+            }
+
+            // TODO: 성급 정보 연동 (현재 시스템에 성급 저장 기능 추가 필요)
+            // TODO: 장착된 책갈피 정보 연동 (BookmarkEquipManager 연동)
+        }
+
+        /// <summary>
+        /// 덱 캐릭터들 제거
+        /// </summary>
+        private void DespawnDeckCharacters()
+        {
+            for (int i = 0; i < deckCharacters.Count; i++)
+            {
+                if (deckCharacters[i] != null)
+                {
+                    Destroy(deckCharacters[i].gameObject);
+                }
+            }
+            deckCharacters.Clear();
+        }
+
+        /// <summary>
         /// 허수아비 스폰
         /// </summary>
         private void SpawnDummies()
@@ -748,6 +940,7 @@ namespace Novelian.Training
                     dummy = dummyObj.AddComponent<DummyTarget>();
                 }
                 activeDummies.Add(dummy);
+                Debug.Log($"[TrainingManager] 허수아비 {i + 1} 스폰: position={spawnPos}, layer={dummyObj.layer}");
             }
 
             Debug.Log($"[TrainingManager] 허수아비 {dummyCount}마리 스폰 완료");
