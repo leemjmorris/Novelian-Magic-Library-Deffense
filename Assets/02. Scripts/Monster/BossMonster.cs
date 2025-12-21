@@ -170,10 +170,17 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         // 디버그: 이동 상태 확인
         if (Time.frameCount % 120 == 0)
         {
-            Debug.Log($"[BossMonster] 이동 중: moveSpeed={moveSpeed}, monsterMove={monsterMove != null}");
+            Debug.Log($"[BossMonster] 이동 중: moveSpeed={moveSpeed}, monsterMove={monsterMove != null}, targetWallCollider={targetWallCollider != null}, rb={rb != null}");
         }
 
-        monsterMove.Move(this, moveSpeed);
+        if (monsterMove != null)
+        {
+            monsterMove.Move(this, moveSpeed);
+        }
+        else
+        {
+            Debug.LogError("[BossMonster] monsterMove가 null입니다!");
+        }
     }
 
     //JML: Game logic in Update
@@ -809,7 +816,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
             rb.mass = 20f; // 보스는 더 무거움 - 밀림 감소
             rb.linearDamping = 5f; // 저항 추가 - 밀림 후 빠른 정지
             rb.interpolation = RigidbodyInterpolation.Interpolate; // 부드러운 이동
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
