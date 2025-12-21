@@ -241,6 +241,12 @@ namespace Novelian.Combat
         //LMJ : Main attack loop with UniTask (using skill-based attack speed)
         private async UniTaskVoid AttackLoopAsync(CancellationToken ct)
         {
+            // 첫 공격은 즉시 실행
+            if (!ct.IsCancellationRequested && Time.timeScale > 0f)
+            {
+                TryAttack();
+            }
+
             while (!ct.IsCancellationRequested)
             {
                 // Wait for attack interval (using final attack speed from skill + character modifier)
