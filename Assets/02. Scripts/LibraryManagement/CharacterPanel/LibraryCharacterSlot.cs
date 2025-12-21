@@ -14,6 +14,7 @@ public class LibraryCharacterSlot : MonoBehaviour
     [SerializeField] private TextMeshProUGUI characterLevel;
     [SerializeField] private Slider characterLevelBar;
     [SerializeField] private Image characterSprite;
+    [SerializeField] private Image genreIcon;
     [SerializeField] private Button characterInfoButton;
     [SerializeField] private CanvasGroup canvasGroup;
 
@@ -26,14 +27,14 @@ public class LibraryCharacterSlot : MonoBehaviour
 
     private void Start()
     {
-        characterInfoButton.onClick.AddListener(OnClickCharacterInfo);
-
-
+        if (characterInfoButton != null)
+            characterInfoButton.onClick.AddListener(OnClickCharacterInfo);
     }
 
     private void OnDestroy()
     {
-        characterInfoButton.onClick.RemoveListener(OnClickCharacterInfo);
+        if (characterInfoButton != null)
+            characterInfoButton.onClick.RemoveListener(OnClickCharacterInfo);
     }
 
     private void OnClickCharacterInfo()
@@ -54,7 +55,8 @@ public class LibraryCharacterSlot : MonoBehaviour
         characterID = data.Character_ID;
 
         // 2. 캐릭터 이름 표시
-        characterName.text = CSVLoader.Instance.GetData<StringTable>(data.Character_Name_ID)?.Text ?? "Unknown";
+        if (characterName != null)
+            characterName.text = CSVLoader.Instance.GetData<StringTable>(data.Character_Name_ID)?.Text ?? "Unknown";
 
         // 3. 현재 강화 레벨 (CharacterEnhancementManager에서 가져오기)
         int currentEnhanceLevel = 1;
@@ -73,17 +75,23 @@ public class LibraryCharacterSlot : MonoBehaviour
         {
             currentLevel = levelData.Level;
             // 6. 레벨 표시
-            characterLevel.text = $"Lv {currentEnhanceLevel}";
-            characterSliderLevelText.text = $"{currentEnhanceLevel}/10";
+            if (characterLevel != null)
+                characterLevel.text = $"Lv {currentEnhanceLevel}";
+            if (characterSliderLevelText != null)
+                characterSliderLevelText.text = $"{currentEnhanceLevel}/10";
 
             // 7. 레벨 슬라이더 설정 (강화 레벨 기준)
-            characterLevelBar.value = currentEnhanceLevel / 10f;
+            if (characterLevelBar != null)
+                characterLevelBar.value = currentEnhanceLevel / 10f;
         }
 
         // 8. 캐릭터 스프라이트 로드 (Addressables 사용)
         LoadCharacterSprite(data.Character_ID);
 
-        // 9. 보유 여부 확인 및 UI 적용
+        // 9. 장르 아이콘 로드
+        LoadGenreIcon(data.Genre);
+
+        // 10. 보유 여부 확인 및 UI 적용
         ApplyOwnershipState();
     }
 
@@ -104,7 +112,8 @@ public class LibraryCharacterSlot : MonoBehaviour
             {
                 canvasGroup.alpha = 1f;
             }
-            characterInfoButton.interactable = true;
+            if (characterInfoButton != null)
+                characterInfoButton.interactable = true;
         }
         else
         {
@@ -113,12 +122,16 @@ public class LibraryCharacterSlot : MonoBehaviour
             {
                 canvasGroup.alpha = unownedAlpha;
             }
-            characterInfoButton.interactable = false;
+            if (characterInfoButton != null)
+                characterInfoButton.interactable = false;
 
             // 미보유 캐릭터는 레벨 0으로 표시
-            characterLevelBar.value = 0f;
-            characterSliderLevelText.text = "0/10";
-            characterLevel.text = "Lv 0";
+            if (characterLevelBar != null)
+                characterLevelBar.value = 0f;
+            if (characterSliderLevelText != null)
+                characterSliderLevelText.text = "0/10";
+            if (characterLevel != null)
+                characterLevel.text = "Lv 0";
         }
     }
     // 강화 레벨에 따라 올바른 LevelData ID 반환
@@ -139,6 +152,32 @@ public class LibraryCharacterSlot : MonoBehaviour
             _ => data.Cha_Level_1_ID
         };
     }
+    /// <summary>
+    /// 장르 아이콘 로드
+    /// </summary>
+    private void LoadGenreIcon(Genre genre)
+    {
+        if (genreIcon == null) return;
+
+        string genreKey = genre switch
+        {
+            Genre.Horror => AddressableKey.IconHorror,
+            Genre.Romance => AddressableKey.IconRomance,
+            Genre.Adventure => AddressableKey.IconAdventure,
+            Genre.Comedy => AddressableKey.IconComedy,
+            Genre.Mystery => AddressableKey.Icon_Mystery,
+            _ => AddressableKey.Icon_Mystery
+        };
+
+        Addressables.LoadAssetAsync<Sprite>(genreKey).Completed += handle =>
+        {
+            if (handle.Status == AsyncOperationStatus.Succeeded && genreIcon != null)
+            {
+                genreIcon.sprite = handle.Result;
+            }
+        };
+    }
+
     // 캐릭터 스프라이트 로드
     private void LoadCharacterSprite(int characterId)
     {
@@ -193,9 +232,12 @@ public class LibraryCharacterSlot : MonoBehaviour
         if (levelData != null)
         {
             currentLevel = levelData.Level;
-            characterSliderLevelText.text = $"{currentEnhanceLevel}/10";
-            characterLevel.text = $"Lv {currentEnhanceLevel}";
-            characterLevelBar.value = currentEnhanceLevel / 10f;
+            if (characterSliderLevelText != null)
+                characterSliderLevelText.text = $"{currentEnhanceLevel}/10";
+            if (characterLevel != null)
+                characterLevel.text = $"Lv {currentEnhanceLevel}";
+            if (characterLevelBar != null)
+                characterLevelBar.value = currentEnhanceLevel / 10f;
 
             // InfoPanel이 열려있다면 갱신
             if (infoPanel != null)
