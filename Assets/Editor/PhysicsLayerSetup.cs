@@ -72,18 +72,13 @@ public class PhysicsLayerSetup : EditorWindow
 
                 if (prefab != null)
                 {
-                    // Check if it has a Projectile component
-                    Projectile projectileComponent = prefab.GetComponent<Projectile>();
+                    // LMJ: Projectile 클래스 삭제됨 - 이름 기반으로 레이어 설정
+                    // Set layer based on prefab name containing "Projectile"
+                    prefab.layer = projectileLayer;
+                    EditorUtility.SetDirty(prefab);
+                    count++;
 
-                    if (projectileComponent != null)
-                    {
-                        // Set layer
-                        prefab.layer = projectileLayer;
-                        EditorUtility.SetDirty(prefab);
-                        count++;
-
-                        Debug.Log($"[PhysicsLayerSetup] Set {prefab.name} to Layer {projectileLayer} (Projectile)");
-                    }
+                    Debug.Log($"[PhysicsLayerSetup] Set {prefab.name} to Layer {projectileLayer} (Projectile)");
                 }
             }
         }

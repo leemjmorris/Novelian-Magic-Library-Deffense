@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using TMPro;
 using NovelianMagicLibraryDefense.Managers;
+using Novelian.Combat;
 
 namespace NovelianMagicLibraryDefense.UI
 {
@@ -1539,7 +1540,7 @@ namespace NovelianMagicLibraryDefense.UI
                 if (mainSkillData == null) continue;
 
                 // 호환성 검증
-                SkillAssetType skillType = mainSkillData.GetSkillType();
+                string skillType = mainSkillData.GetSkillType();
                 if (compatibilityData.IsCompatibleWith(skillType))
                 {
                     targetCharacter = character;

@@ -1,9 +1,10 @@
 using System;
 using CsvHelper.Configuration.Attributes;
+using Novelian.Combat;
 
 /// <summary>
 /// MainSkillTable.csv 데이터 클래스
-/// 새로운 스킬 시스템 - 스킬 타입 ID 기반
+/// 간소화된 새 스킬 시스템 - behavior_type 문자열 기반
 /// </summary>
 [Serializable]
 public class MainSkillData
@@ -11,60 +12,18 @@ public class MainSkillData
     [Name("skill_id")]
     public int skill_id { get; set; }
 
-    [Name("skill_type_ID")]
-    public int skill_type_ID { get; set; }
+    [Name("//skill_name")]
+    [Optional]
+    public string skill_name { get; set; }
 
-    [Name("element_type_ID")]
-    public int element_type_ID { get; set; }
+    [Name("behavior_type")]
+    public string behavior_type { get; set; }
 
     [Name("base_damage")]
     public float base_damage { get; set; }
 
-    // Issue #362 - 버프/디버프/CC/DOT/표식 컬럼 추가
-    [Name("buff_type")]
-    public int buff_type { get; set; }
-
-    [Name("base_buff_value")]
-    public float base_buff_value { get; set; }
-
-    [Name("debuff_type")]
-    public int debuff_type { get; set; }
-
-    [Name("base_debuff_value")]
-    public float base_debuff_value { get; set; }
-
-    [Name("cc_type")]
-    public int cc_type { get; set; }
-
-    [Name("cc_duration")]
-    public float cc_duration { get; set; }
-
-    [Name("stun_use")]
-    public bool stun_use { get; set; }
-
-    [Name("cc_slow_amount")]
-    public float cc_slow_amount { get; set; }
-
-    [Name("dot_duration")]
-    public float dot_duration { get; set; }
-
-    [Name("dot_tick_interval")]
-    public float dot_tick_interval { get; set; }
-
-    [Name("dot_damage_per_tick")]
-    public float dot_damage_per_tick { get; set; }
-
-    [Name("mark_duration")]
-    public float mark_duration { get; set; }
-
-    [Name("mark_damage_mult")]
-    public float mark_damage_mult { get; set; }
-
     [Name("cooldown")]
     public float cooldown { get; set; }
-
-    [Name("cast_time")]
-    public float cast_time { get; set; }
 
     [Name("range")]
     public float range { get; set; }
@@ -72,255 +31,170 @@ public class MainSkillData
     [Name("projectile_speed")]
     public float projectile_speed { get; set; }
 
-    [Name("projectile_count")]
-    public int projectile_count { get; set; }
-
-    [Name("skill_lifetime")]
-    public float skill_lifetime { get; set; }
-
-    [Name("pierce_count")]
-    public int pierce_count { get; set; }
-
-    [Name("is_homing")]
-    public bool is_homing { get; set; }
-
     [Name("aoe_radius")]
     public float aoe_radius { get; set; }
 
-    [Name("aoe_angle")]
-    public float aoe_angle { get; set; }
-
-    [Name("channel_duration")]
-    public float channel_duration { get; set; }
-
-    [Name("channel_tick_interval")]
-    public float channel_tick_interval { get; set; }
-
-    [Name("interruptible")]
-    public bool interruptible { get; set; }
-
-    // CSV의 //로 시작하는 주석 컬럼 (선택적)
-    [Name("//skill_name")]
-    [Optional]
-    public string skill_name { get; set; }
+    [Name("duration")]
+    public float duration { get; set; }
 
     [Name("//description")]
     [Optional]
     public string description { get; set; }
 
-    [Name("//use_asset")]
-    [Optional]
-    public string use_asset { get; set; }
-
-    [Name("//note")]
-    [Optional]
-    public string note { get; set; }
-
-    #region Helper Properties (Enum 변환 - 새 ID 체계)
+    #region Behavior Type Helpers
 
     /// <summary>
-    /// skill_type_ID를 SkillAssetType으로 변환
-    /// 3000100=Projectile, 3000201=InstantSingle, 3000302=AOE, etc.
+    /// behavior_type 문자열을 SkillBehaviorType enum으로 변환
     /// </summary>
-    public SkillAssetType GetSkillType()
+    public SkillBehaviorType GetBehaviorType()
     {
-        return skill_type_ID switch
-        {
-            3000100 => SkillAssetType.Projectile,
-            3000201 => SkillAssetType.InstantSingle,
-            3000302 => SkillAssetType.AOE,
-            3000403 => SkillAssetType.DOT,
-            3000504 => SkillAssetType.Buff,
-            3000605 => SkillAssetType.Debuff,
-            3000706 => SkillAssetType.Channeling,
-            3000807 => SkillAssetType.Trap,
-            3000908 => SkillAssetType.Mine,
-            _ => SkillAssetType.Projectile
-        };
-    }
+        if (string.IsNullOrEmpty(behavior_type))
+            return SkillBehaviorType.Unknown;
 
-    /// <summary>
-    /// element_type_ID를 ElementType으로 변환
-    /// 3101000=None, 3101101=Romance, 3101202=Comedy, etc.
-    /// </summary>
-    public ElementType GetElementType()
-    {
-        return element_type_ID switch
+        return behavior_type switch
         {
-            3101000 => ElementType.None,
-            3101101 => ElementType.Romance,
-            3101202 => ElementType.Comedy,
-            3101303 => ElementType.Adventure,
-            3101404 => ElementType.Mystery,
-            3101505 => ElementType.Fear,
-            _ => ElementType.None
+            "SingleProjectile" => SkillBehaviorType.Projectile,
+            "ExplosiveProjectile" => SkillBehaviorType.Projectile,
+            "BeamRay" => SkillBehaviorType.Beam,
+            "TargetAOE" => SkillBehaviorType.Visual_AOE,
+            "LinearAOE" => SkillBehaviorType.Visual_AOE,
+            "GroundAOE" => SkillBehaviorType.Field,
+            "Barrier" => SkillBehaviorType.Shield,
+            "Buff" => SkillBehaviorType.Shield,
+            "Debuff" => SkillBehaviorType.Field,
+            "Trap" => SkillBehaviorType.Field,
+            "Instant" => SkillBehaviorType.Visual_AOE,
+            _ => SkillBehaviorType.Unknown
         };
     }
 
     /// <summary>
     /// 투사체 스킬인지 확인
     /// </summary>
-    public bool IsProjectileSkill => skill_type_ID == 3000100;
+    public bool IsProjectileSkill => behavior_type == "SingleProjectile" || behavior_type == "ExplosiveProjectile";
 
     /// <summary>
-    /// 범위 스킬인지 확인
+    /// 빔 스킬인지 확인
     /// </summary>
-    public bool IsAOESkill => skill_type_ID == 3000302;
+    public bool IsBeamSkill => behavior_type == "BeamRay";
 
     /// <summary>
-    /// DOT 스킬인지 확인
+    /// AOE 스킬인지 확인
     /// </summary>
-    public bool IsDOTSkill => skill_type_ID == 3000403;
+    public bool IsAOESkill => behavior_type == "TargetAOE" || behavior_type == "LinearAOE" || behavior_type == "GroundAOE";
 
     /// <summary>
-    /// 채널링 스킬인지 확인
+    /// 지속형 장판 스킬인지 확인
     /// </summary>
-    public bool IsChannelingSkill => skill_type_ID == 3000706;
+    public bool IsGroundSkill => behavior_type == "GroundAOE";
 
     /// <summary>
-    /// 함정/지뢰 스킬인지 확인
+    /// 폭발형 투사체인지 확인
     /// </summary>
-    public bool IsTrapSkill => skill_type_ID == 3000807 || skill_type_ID == 3000908;
+    public bool IsExplosiveProjectile => behavior_type == "ExplosiveProjectile";
+
+    /// <summary>
+    /// 방어막 스킬인지 확인
+    /// </summary>
+    public bool IsBarrierSkill => behavior_type == "Barrier";
 
     /// <summary>
     /// 버프 스킬인지 확인
     /// </summary>
-    public bool IsBuffSkill => skill_type_ID == 3000504;
+    public bool IsBuffSkill => behavior_type == "Buff";
 
     /// <summary>
     /// 디버프 스킬인지 확인
     /// </summary>
-    public bool IsDebuffSkill => skill_type_ID == 3000605;
+    public bool IsDebuffSkill => behavior_type == "Debuff";
 
     /// <summary>
-    /// 부메랑 스킬인지 확인 (skill_id=39021)
-    /// 발사 후 일정 거리에서 돌아오며 경로상의 적을 두 번 타격
+    /// 트랩 스킬인지 확인
     /// </summary>
-    public bool IsBoomerangSkill => skill_id == 39021;
+    public bool IsTrapSkill => behavior_type == "Trap";
 
     /// <summary>
-    /// 다이너마이트 스킬인지 확인 (skill_id=39028)
-    /// 투사체를 던져서 skill_lifetime 후에 폭발하여 AOE 데미지
+    /// 즉발 스킬인지 확인
     /// </summary>
-    public bool IsDynamiteSkill => skill_id == 39028;
+    public bool IsInstantSkill => behavior_type == "Instant";
 
     /// <summary>
-    /// 전설의 지팡이 스킬인지 확인 (skill_id=39029)
-    /// 투사체가 일직선으로 날아가며 경로상의 모든 적에게 AOE 데미지
+    /// 투사체 속도가 있는 스킬인지 확인
     /// </summary>
-    public bool IsLegendaryStaffSkill => skill_id == 39029;
+    public bool HasProjectileSpeed => projectile_speed > 0;
 
     /// <summary>
-    /// 의문의 예고장 스킬인지 확인 (skill_id=39035)
-    /// 투사체가 몬스터에 부착되고, skill_lifetime 후에 폭발하여 데미지
+    /// 범위 효과가 있는 스킬인지 확인
     /// </summary>
-    public bool IsTimeBombSkill => skill_id == 39035;
+    public bool HasAOERadius => aoe_radius > 0;
 
     /// <summary>
-    /// 심장마비 스킬인지 확인 (skill_id=39046)
-    /// 체력 10% 이하인 적을 즉사시킴 (보스 제외)
+    /// 지속시간이 있는 스킬인지 확인
     /// </summary>
-    public bool IsInstantKillSkill => skill_id == 39046;
+    public bool HasDuration => duration > 0;
+
+    #endregion
+
+    #region Compatibility Helpers
 
     /// <summary>
-    /// Trap 타입 스킬인지 확인 (3000807)
-    /// 필드에 설치되어 범위 내 적에게 지속 효과
+    /// SupportCompatibilityData.IsCompatibleWith()와 호환되는 스킬 타입 반환
     /// </summary>
-    public bool IsTrapTypeSkill => skill_type_ID == 3000807;
+    public string GetSkillType() => behavior_type;
 
-    /// <summary>
-    /// Mine 타입 스킬인지 확인 (3000908)
-    /// 필드에 설치되어 밟으면 발동
-    /// </summary>
-    public bool IsMineTypeSkill => skill_type_ID == 3000908;
+    #endregion
 
-    /// <summary>
-    /// CC 타입 반환 (3302100=None, 3302201=Stun, 3302302=Slow)
-    /// </summary>
-    public CCType GetCCType()
-    {
-        return cc_type switch
-        {
-            3302100 => CCType.None,
-            3302201 => CCType.Stun,
-            3302302 => CCType.Slow,
-            _ => CCType.None
-        };
-    }
+    #region Legacy Compatibility (Character.StatusEffects.cs)
+    // 이전 시스템과의 호환성을 위한 스텁 프로퍼티들
+    // 새 시스템에서는 이 효과들이 SupportSkillData로 분리됨
 
-    /// <summary>
-    /// 버프 타입 반환
-    /// </summary>
-    public BuffType GetBuffType()
-    {
-        return buff_type switch
-        {
-            3604400 => BuffType.None,
-            3604501 => BuffType.ATK_Damage_UP,
-            3604602 => BuffType.ATK_Speed_UP,
-            3604703 => BuffType.ATK_Range_UP,
-            3604804 => BuffType.Critical_Damage_UP,
-            3604905 => BuffType.Battle_Exp_UP,
-            _ => BuffType.None
-        };
-    }
+    /// <summary>CC 효과 여부 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public bool HasCCEffect => false;
 
-    /// <summary>
-    /// 디버프 타입 반환
-    /// </summary>
-    public DeBuffType GetDeBuffType()
-    {
-        return debuff_type switch
-        {
-            3605000 => DeBuffType.None,
-            3605101 => DeBuffType.ATK_Damage_Down,
-            3605202 => DeBuffType.ATK_Speed_Down,
-            3605303 => DeBuffType.Take_Damage_UP,
-            _ => DeBuffType.None
-        };
-    }
+    /// <summary>DOT 효과 여부 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public bool HasDOTEffect => false;
 
-    /// <summary>
-    /// CC 효과가 있는 스킬인지 확인
-    /// stun_use=true 이거나 cc_duration > 0 이면 CC 효과 있음
-    /// </summary>
-    public bool HasCCEffect => stun_use || (cc_type != 3302100 && cc_duration > 0);
+    /// <summary>마크 효과 여부 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public bool HasMarkEffect => false;
 
-    /// <summary>
-    /// DOT 효과가 있는 스킬인지 확인
-    /// </summary>
-    public bool HasDOTEffect => dot_duration > 0 && dot_damage_per_tick > 0;
+    /// <summary>디버프 효과 여부 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public bool HasDebuffEffect => false;
 
-    /// <summary>
-    /// 표식 효과가 있는 스킬인지 확인
-    /// </summary>
-    public bool HasMarkEffect => mark_duration > 0 && mark_damage_mult > 0;
+    /// <summary>DOT 틱당 데미지 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public float dot_damage_per_tick => 0f;
 
-    /// <summary>
-    /// 버프 효과가 있는 스킬인지 확인
-    /// </summary>
-    public bool HasBuffEffect => buff_type != 3604400 && base_buff_value > 0;
+    /// <summary>DOT 지속시간 - duration 사용</summary>
+    public float dot_duration => duration;
 
-    /// <summary>
-    /// 디버프 효과가 있는 스킬인지 확인
-    /// </summary>
-    public bool HasDebuffEffect => debuff_type != 3605000 && base_debuff_value > 0;
+    /// <summary>DOT 틱 간격 - 기본값 1초</summary>
+    public float dot_tick_interval => 1f;
 
-    /// <summary>
-    /// 속성 타입 기반 표식 타입 반환
-    /// </summary>
-    public MarkType GetElementBasedMarkType()
-    {
-        return element_type_ID switch
-        {
-            3101101 => MarkType.Romance,    // 로맨스
-            3101202 => MarkType.Comedy,     // 코미디
-            3101303 => MarkType.Adventure,  // 모험
-            3101404 => MarkType.Mystery,    // 추리
-            3101505 => MarkType.Fear,       // 공포
-            _ => MarkType.None
-        };
-    }
+    /// <summary>스킬 지속시간 - duration 사용</summary>
+    public float skill_lifetime => duration;
+
+    /// <summary>마크 데미지 배율 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public float mark_damage_mult => 1f;
+
+    /// <summary>마크 지속시간 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public float mark_duration => 0f;
+
+    /// <summary>기본 디버프 값 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public float base_debuff_value => 0f;
+
+    /// <summary>CC 지속시간 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public float cc_duration => 0f;
+
+    /// <summary>CC 슬로우 양 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public float cc_slow_amount => 0f;
+
+    /// <summary>스턴 사용 여부 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public bool stun_use => false;
+
+    /// <summary>CC 타입 반환 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public Novelian.Combat.CCType GetCCType() => Novelian.Combat.CCType.None;
+
+    /// <summary>디버프 타입 반환 - 새 시스템에서는 서포트 스킬에서 처리</summary>
+    public Novelian.Combat.DeBuffType GetDeBuffType() => Novelian.Combat.DeBuffType.None;
 
     #endregion
 }

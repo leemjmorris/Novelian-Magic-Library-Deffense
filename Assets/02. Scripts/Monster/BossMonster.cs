@@ -1,5 +1,6 @@
 ﻿using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.Managers;
+using Novelian.Combat;
 using UnityEngine;
 //JML: Boss monster entity with enhanced stats and wall attack behavior
 public class BossMonster : BaseEntity, ITargetable, IMovable
@@ -81,7 +82,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     {
         wall = wallTarget;
         targetWallCollider = wallCollider;
-        Debug.Log($"[BossMonster] Wall 타겟 설정 완료 - Wall: {(wall != null)}, Collider: {(targetWallCollider != null)}");
     }
 
     /// <summary>
@@ -94,7 +94,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         if (rb == null) rb = GetComponent<Rigidbody>();
         if (monsterMove == null) monsterMove = GetComponent<MonsterMove>();
 
-        Debug.Log($"[BossMonster] 참조 초기화 완료 - Collider: {(collider3D != null)}, Rigidbody: {(rb != null)}, MonsterMove: {(monsterMove != null)}");
     }
 
     /// <summary>
@@ -153,17 +152,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         // Wall에 닿으면 이동 중지 (IsWallHit = isInAttackRange || isWallHit)
         if (IsWallHit)
         {
-            if (Time.frameCount % 60 == 0)
-            {
-                Debug.Log($"[BossMonster] FixedUpdate 정지: isInAttackRange={isInAttackRange}, isWallHit={isWallHit}");
-            }
             return;
-        }
-
-        // 디버그: 이동 상태 확인
-        if (Time.frameCount % 120 == 0)
-        {
-            Debug.Log($"[BossMonster] 이동 중: moveSpeed={moveSpeed}, monsterMove={monsterMove != null}");
         }
 
         monsterMove.Move(this, moveSpeed);
@@ -211,7 +200,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
                 }
 
                 attackTimer = 0f;
-                Debug.Log($"[BossMonster] 벽 공격!");
             }
         }
         else
@@ -247,7 +235,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
             {
                 monsterMove.SetEnabled(false);
             }
-            Debug.Log($"[BossMonster] 공격 범위 진입! 거리: {distanceToWall:F2}m");
         }
         // 공격 범위 이탈 시 NavMeshAgent 재활성화 (Dead나 Stunned가 아닐 때)
         else if (!isInAttackRange && wasInRange && !isDead && !isStunned)
@@ -266,7 +253,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
                     monsterMove.SetDestination(targetWallCollider.transform.position);
                 }
             }
-            Debug.Log($"[BossMonster] 공격 범위 이탈! 거리: {distanceToWall:F2}m - 이동 재개");
         }
     }
 
@@ -291,7 +277,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         {
             finalDamage = damage * (1f + markDamageMultiplier / 100f);
             isCritical = true; // Mark amplified damage도 크리티컬로 표시
-            Debug.Log($"[BossMonster] Mark amplified damage: {damage:F1} -> {finalDamage:F1} (+{markDamageMultiplier}%)");
         }
 
         // LMJ: Show floating damage text
@@ -303,7 +288,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
 
         // Issue #476: 스턴 게이지는 보스가 결계를 공격할 때만 증가 (캐릭터 공격 시 아님)
 
-        Debug.Log($"BossMonster took {finalDamage} damage. current Health: {currentHealth - finalDamage}");
         base.TakeDamage(finalDamage);
     }
 
@@ -314,7 +298,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     public void ApplyCC(CCType ccType, float duration, float slowAmount, GameObject ccEffectPrefab = null)
     {
         // Boss is immune to CC - show effect but don't apply actual CC
-        Debug.Log($"[BossMonster] CC IMMUNE: {ccType} blocked (Boss cannot be crowd controlled)");
 
         // LMJ: Show "IMMUNE" floating text
         if (NovelianMagicLibraryDefense.Managers.DamageTextManager.Instance != null)
@@ -329,7 +312,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
             GameObject ccEffect = Instantiate(ccEffectPrefab, transform.position, Quaternion.identity, transform);
             // Destroy effect quickly since CC doesn't apply
             Destroy(ccEffect, 0.5f);
-            Debug.Log($"[BossMonster] CC effect shown briefly (immune): {ccEffectPrefab.name}");
         }
 
         // No actual CC effect is applied to Boss
@@ -347,7 +329,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     private async Cysharp.Threading.Tasks.UniTaskVoid StartDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration, GameObject dotEffectPrefab)
     {
         float elapsed = 0f;
-        Debug.Log($"[BossMonster] {dotType} DOT started: {damagePerTick} dmg every {tickInterval}s for {duration}s");
 
         while (elapsed < duration && IsAlive())
         {
@@ -364,10 +345,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
                 Destroy(tickEffect, 0.5f);
             }
 
-            Debug.Log($"[BossMonster] {dotType} tick: {damagePerTick} damage");
         }
-
-        Debug.Log($"[BossMonster] {dotType} DOT ended");
     }
 
     /// <summary>
@@ -375,7 +353,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     /// </summary>
     public void ApplyMark(MarkType markType, float duration, float damageMultiplier, GameObject markEffectPrefab)
     {
-        Debug.Log($"[BossMonster] {markType} Mark applied: +{damageMultiplier}% damage for {duration}s");
 
         // Cancel previous mark if exists
         markCts?.Cancel();
@@ -400,7 +377,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
             markEffect.transform.localPosition = Vector3.up * (bossHeight + 0.5f);
 
             Destroy(markEffect, duration);
-            Debug.Log($"[BossMonster] Mark effect spawned above head: {markEffectPrefab.name}, height offset: {bossHeight + 0.5f}m");
         }
 
         // Start mark duration
@@ -418,7 +394,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
                 // Clear mark state
                 currentMarkType = MarkType.None;
                 markDamageMultiplier = 0f;
-                Debug.Log($"[BossMonster] Mark ended");
             }
         }
         catch (System.OperationCanceledException)
@@ -443,7 +418,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     /// </summary>
     public void ApplyDebuff(DeBuffType debuffType, float value, float duration, GameObject debuffEffectPrefab = null)
     {
-        Debug.Log($"[BossMonster] {debuffType} Debuff applied: {value}% for {duration}s");
 
         // Cancel previous debuff if exists
         debuffCts?.Cancel();
@@ -564,7 +538,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
 
         currentDebuffType = DeBuffType.None;
         debuffValue = 0f;
-        Debug.Log($"[BossMonster] Debuff ended");
     }
 
     // 기존 StartDebuff는 하위 호환성을 위해 유지
@@ -625,8 +598,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         stunCts?.Dispose();
         stunCts = new System.Threading.CancellationTokenSource();
         ReleaseStunAfterDelayAsync(duration, stunCts.Token).Forget();
-
-        Debug.Log($"[BossMonster] 스턴 적용! {duration}초");
     }
 
     /// <summary>
@@ -638,8 +609,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
 
         isStunned = false;
         moveSpeed = originalMoveSpeedForStun;
-
-        Debug.Log("[BossMonster] 스턴 해제");
     }
 
     private async Cysharp.Threading.Tasks.UniTaskVoid ReleaseStunAfterDelayAsync(float duration, System.Threading.CancellationToken ct)
@@ -669,29 +638,22 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     public void SetAttackInterval(float interval)
     {
         attackInterval = interval;
-        Debug.Log($"[BossMonster] 공격 주기 설정: {interval}초");
     }
 
     #endregion
 
     public override void Die()
     {
-        Debug.Log($"[BossMonster] Die() 호출됨! isDead={isDead}");
-
         // Prevent double Die() calls
         if (isDead) return;
         isDead = true;
-
-        Debug.Log("[BossMonster] 사망 처리 시작...");
 
         // LMJ: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);
 
         // LMJ: Use EventChannel instead of static event
-        Debug.Log($"[BossMonster] monsterEvents: {(monsterEvents != null ? "있음" : "NULL!")}");
         if (monsterEvents != null)
         {
-            Debug.Log("[BossMonster] RaiseBossDied 이벤트 발생!");
             monsterEvents.RaiseBossDied(this);
         }
         else
@@ -703,7 +665,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         // (Monster 타입 풀로 스폰 후 BossMonster 컴포넌트 추가했으므로 Despawn<BossMonster> 불가)
         if (bossDungeonManager != null)
         {
-            Debug.Log("[BossMonster] BossDungeon 모드 - Destroy 호출");
             Destroy(gameObject);
         }
         else
@@ -728,7 +689,6 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     {
         if (collision.gameObject.CompareTag(Tag.Wall))
         {
-            Debug.Log("BossMonster hit the wall.");
             wall = collision.gameObject.GetComponent<Wall>();
             isWallHit = true;
         }

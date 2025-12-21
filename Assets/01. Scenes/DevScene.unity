@@ -793,6 +793,63 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 356802173}
   m_CullTransparentMesh: 1
+--- !u!1 &365101849
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 365101851}
+  - component: {fileID: 365101850}
+  m_Layer: 0
+  m_Name: SkillTestManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &365101850
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365101849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4cdfbe703aa117c41b2f5772e5e76767, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mainSkillDropdown: {fileID: 1315875690}
+  supportSkillDropdown: {fileID: 1632154774}
+  fireButton: {fileID: 821202643}
+  addMonsterButton: {fileID: 2096717444}
+  removeMonsterButton: {fileID: 751784877}
+  resetButton: {fileID: 1903404238}
+  logText: {fileID: 2078253124}
+  monsterCountText: {fileID: 1878207752}
+  monsterSpawnArea: {fileID: 667116444}
+  characterSpawnPoint: {fileID: 1082387379}
+  monsterPrefab: {fileID: 1162074717683033587, guid: c5d018dd148732545b73c269e2652131, type: 3}
+  characterPrefab: {fileID: 572321362692614098, guid: d600084dd6f7b7a45a384943ec801284, type: 3}
+  testCharacter: {fileID: 0}
+--- !u!4 &365101851
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 365101849}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &378670160
 GameObject:
   m_ObjectHideFlags: 0
@@ -1013,69 +1070,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 1440, y: 193}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &502452826
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 502452828}
-  - component: {fileID: 502452827}
-  m_Layer: 0
-  m_Name: SkillTestManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &502452827
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 502452826}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eaf1f9baf3da3b248a2146a290ff43b9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  invincibleButton: {fileID: 2094775606}
-  invincibleButtonText: {fileID: 1492856036}
-  monsterCountText: {fileID: 1878207752}
-  mainSkillDropdown: {fileID: 1315875690}
-  supportSkillDropdown: {fileID: 1632154774}
-  addMonsterButton: {fileID: 2096717444}
-  removeMonsterButton: {fileID: 751784877}
-  resetButton: {fileID: 1903404238}
-  linePatternButton: {fileID: 534991561}
-  circlePatternButton: {fileID: 1919713309}
-  randomPatternButton: {fileID: 704653578}
-  statsText: {fileID: 2078253124}
-  fireButton: {fileID: 821202643}
-  monsterSpawnArea: {fileID: 667116444}
-  characterSpawnPoint: {fileID: 1082387379}
-  monsterPrefab: {fileID: 967941316364084182, guid: 0cd28ea9b50f97c4480a749edee76713, type: 3}
-  characterPrefab: {fileID: 572321362692614098, guid: d600084dd6f7b7a45a384943ec801284, type: 3}
-  maxMonsters: 8
-  monsterSpacing: 2
---- !u!4 &502452828
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 502452826}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &534991557
 GameObject:
   m_ObjectHideFlags: 0
@@ -2855,7 +2849,7 @@ Transform:
   m_GameObject: {fileID: 1082387378}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -1.86}
+  m_LocalPosition: {x: 0, y: 0, z: -6.19}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4142,53 +4136,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 28}
   m_Pivot: {x: 0.5, y: 1}
---- !u!1 &1379992040
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1379992042}
-  - component: {fileID: 1379992041}
-  m_Layer: 0
-  m_Name: SkillEffectManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1379992041
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1379992040}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f8223163abc9fa445a9160718414fcfc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  database: {fileID: 11400000, guid: 634509797584fd9429624099ffaac70b, type: 2}
-  defaultPoolCapacity: 10
-  maxPoolSize: 50
---- !u!4 &1379992042
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1379992040}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -3.5934334, y: 4.776352, z: 0.64145947}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1384676497
 GameObject:
   m_ObjectHideFlags: 0
@@ -5497,6 +5444,51 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   sharedProfile: {fileID: 11400000, guid: a47552b3bb7d2c44c9950003adc2d3b9, type: 2}
+--- !u!1 &1720182481
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1720182483}
+  - component: {fileID: 1720182482}
+  m_Layer: 0
+  m_Name: SkillExecutor
+  m_TagString: SkillExecutor
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1720182482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1720182481}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 68483e65a5708084c82006845fea06de, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  vfxDatabase: {fileID: 11400000, guid: 4d1e5f5f855b0d34b98c459d5a030028, type: 2}
+--- !u!4 &1720182483
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1720182481}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 9.931059, y: 14.567819, z: -1.3802129}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1747900725
 GameObject:
   m_ObjectHideFlags: 0
@@ -6791,7 +6783,6 @@ SceneRoots:
   - {fileID: 415365394}
   - {fileID: 1155969046}
   - {fileID: 1455658926}
-  - {fileID: 502452828}
   - {fileID: 667116444}
   - {fileID: 1082387379}
   - {fileID: 1122126510}
@@ -6800,4 +6791,5 @@ SceneRoots:
   - {fileID: 1945319924}
   - {fileID: 629779742}
   - {fileID: 1535858457}
-  - {fileID: 1379992042}
+  - {fileID: 365101851}
+  - {fileID: 1720182483}

@@ -2,6 +2,7 @@
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using NovelianMagicLibraryDefense.Events;
+using Novelian.Combat;
 using UnityEngine;
 
 //JML: Monster entity with movement and wall attack behavior
@@ -57,7 +58,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public void SetInvincible(bool invincible)
     {
         isInvincible = invincible;
-        Debug.Log($"[Monster] 무적 모드: {isInvincible}");
     }
 
     /// <summary>
@@ -303,7 +303,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // 무적 모드일 때는 데미지 텍스트만 표시하고 실제 체력 감소는 스킵 (테스트용)
         if (isInvincible)
         {
-            Debug.Log($"[Monster] 무적 모드 - 데미지 표시만: {finalDamage:F1}");
             return;
         }
 
@@ -563,7 +562,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
                 Destroy(tickEffect, 0.5f);
             }
 
-            Debug.Log($"[Monster] {dotType} tick: {damagePerTick} damage");
         }
     }
 
@@ -757,7 +755,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         currentDebuffType = DeBuffType.None;
         debuffValue = 0f;
-        Debug.Log($"[Monster] Debuff ended");
     }
 
     // 기존 StartDebuff는 하위 호환성을 위해 유지 (다른 곳에서 사용할 수 있음)
@@ -843,7 +840,6 @@ public class Monster : BaseEntity, ITargetable, IMovable
         cachedWalls = walls ?? new List<Wall>();
         cachedWallTransforms = transforms ?? new List<Transform>();
         cachedWallColliders = colliders ?? new List<Collider>();
-        Debug.Log($"[Monster] Wall cache initialized with {cachedWalls.Count} wall(s)");
     }
 
     /// <summary>

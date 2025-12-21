@@ -148,7 +148,6 @@ public class CSVLoader : MonoBehaviour
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
                 RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
                 RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "Skill/SupportCompatibilityTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "Skill/SkillLevelTable.csv", x => x.GetCompositeKey()),
 
                 // 인게임 카드 시스템 테이블 (3행 헤더 형식) - Card/Stage 폴더
                 RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "Card/CardTable.csv", x => x.Card_ID),
@@ -391,26 +390,6 @@ public class CSVLoader : MonoBehaviour
         return TableHolder<T>.Table?.GetId(id);
     }
 
-    /// <summary>
-    /// 스킬 레벨 데이터 조회 (skill_id + level 조합)
-    /// </summary>
-    public SkillLevelData GetSkillLevelData(int skillId, int level)
-    {
-        int compositeKey = skillId * 100 + level;
-        return GetData<SkillLevelData>(compositeKey);
-    }
-
-    /// <summary>
-    /// 특정 스킬의 모든 레벨 데이터 조회
-    /// </summary>
-    public List<SkillLevelData> GetAllSkillLevels(int skillId)
-    {
-        var table = GetTable<SkillLevelData>();
-        if (table == null) return new List<SkillLevelData>();
-
-        return table.FindAll(x => x.skill_id == skillId);
-    }
-
 #if UNITY_EDITOR
     /// <summary>
     /// 에디터에서 스킬 테이블만 다시 로드 (CSV 수정 후 즉시 반영용)
@@ -422,7 +401,7 @@ public class CSVLoader : MonoBehaviour
         await UniTask.WhenAll(
             RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
             RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
-            RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "Skill/SkillLevelTable.csv", x => x.GetCompositeKey())
+            RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "Skill/SupportCompatibilityTable.csv", x => x.support_id)
         );
 
         Debug.Log("[CSVLoader] Skill tables reloaded!");
@@ -470,7 +449,6 @@ public class CSVLoader : MonoBehaviour
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
                 RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
                 RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "Skill/SupportCompatibilityTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SkillLevelData>(AddressableKey.SkillLevelTable, "Skill/SkillLevelTable.csv", x => x.GetCompositeKey()),
 
                 // 인게임 카드 시스템 테이블 (3행 헤더) - Card/Stage 폴더
                 RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "Card/CardTable.csv", x => x.Card_ID),

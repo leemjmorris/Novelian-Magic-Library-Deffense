@@ -11,14 +11,17 @@ public class VariousTranslateMove : MonoBehaviour {
     public bool m_upMove;
     public float m_changedFactor;
     float m_Time;
+    float m_scalefactor;
 
     void Start()
     {
         m_Time = Time.time;
+        // 공식 문서: 부모 오브젝트의 스케일을 사용 (VariousEffectsScene은 데모씬 전용)
+        m_scalefactor = transform.parent != null ? transform.parent.localScale.x : 1f;
     }
 
 	void Update () {
-        m_changedFactor = VariousEffectsScene.m_gaph_scenesizefactor;
+        m_changedFactor = m_scalefactor;
 
         if (m_fowardMove)
             transform.Translate(transform.forward * m_power * m_changedFactor * Time.deltaTime * 150);
