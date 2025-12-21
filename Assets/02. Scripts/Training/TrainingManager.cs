@@ -653,74 +653,20 @@ namespace Novelian.Training
         }
 
         /// <summary>
-        /// 강화 단계 적용 (CharacterEnhancementTable 기반)
+        /// 강화 단계 적용
+        /// 강화는 책갈피 슬롯 해금이 주 목적이지만, 훈련소에서는 레벨당 5% 데미지 보너스 적용
         /// </summary>
         private void ApplyEnhancement(Character character, int enhancementLevel)
         {
             if (enhancementLevel <= 0) return;
 
-            // CharacterEnhancementTable에서 해당 캐릭터의 강화 데이터 조회
-            var enhancementTable = CSVLoader.Instance?.GetTable<CharacterEnhancementData>();
-            if (enhancementTable == null)
-            {
-                Debug.LogWarning("[TrainingManager] CharacterEnhancementTable 로드 실패");
-                return;
-            }
+            // 강화 레벨당 5% 데미지 보너스 (UI 계산과 동일)
+            const float ENHANCEMENT_BONUS_PER_LEVEL = 0.05f;
+            float totalBonus = enhancementLevel * ENHANCEMENT_BONUS_PER_LEVEL;
 
-            // 캐릭터 ID로 강화 데이터 찾기
-            CharacterEnhancementData enhancementData = null;
-            var allEnhancements = enhancementTable.GetAll();
-            for (int i = 0; i < allEnhancements.Count; i++)
-            {
-                if (allEnhancements[i].Character_ID == selectedCharacterId)
-                {
-                    enhancementData = allEnhancements[i];
-                    break;
-                }
-            }
-
-            if (enhancementData == null)
-            {
-                Debug.LogWarning($"[TrainingManager] 캐릭터 {selectedCharacterId}의 강화 데이터를 찾을 수 없음");
-                return;
-            }
-
-            // 강화 레벨별 스탯 증가 적용
-            // Pw_Level1~10은 각 강화 단계의 스탯 증가량(%)을 나타냄
-            float totalBonus = 0f;
-            for (int i = 1; i <= enhancementLevel; i++)
-            {
-                float levelBonus = GetEnhancementBonus(enhancementData, i);
-                totalBonus += levelBonus;
-            }
-
-            // 데미지 버프로 적용 (% 단위)
-            if (totalBonus > 0)
-            {
-                character.ApplyStatBuff(StatType.Damage, totalBonus / 100f);
-                Debug.Log($"[TrainingManager] 강화 {enhancementLevel}단계 적용: +{totalBonus}%");
-            }
-        }
-
-        /// <summary>
-        /// 강화 데이터에서 특정 레벨의 보너스 값 추출
-        /// </summary>
-        private float GetEnhancementBonus(CharacterEnhancementData data, int level)
-        {
-            return level switch
-            {
-                1 => data.Pw_Level1,
-                2 => data.Pw_Level2,
-                3 => data.Pw_Level3,
-                4 => data.Pw_Level4,
-                5 => data.Pw_Level5,
-                6 => data.Pw_Level6,
-                7 => data.Pw_Level7,
-                8 => data.Pw_Level8,
-                9 => data.Pw_Level9,
-                10 => data.Pw_Level10,
-                _ => 0f
-            };
+            // 데미지 버프로 적용
+            character.ApplyStatBuff(StatType.Damage, totalBonus);
+            Debug.Log($"[TrainingManager] 강화 {enhancementLevel}단계 적용: +{totalBonus * 100f}%");
         }
 
         /// <summary>
