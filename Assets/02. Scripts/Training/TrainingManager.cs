@@ -35,6 +35,9 @@ namespace Novelian.Training
         [SerializeField, Tooltip("허수아비 프리팹")]
         private GameObject dummyPrefab;
 
+        [SerializeField, Tooltip("투사체 템플릿 (TrainingScene용)")]
+        private GameObject projectileTemplate;
+
         [Header("References")]
         [SerializeField]
         private DPSCalculator dpsCalculator;
@@ -461,9 +464,10 @@ namespace Novelian.Training
             // 허수아비 스폰
             SpawnDummies();
 
-            // DPS 측정 시작
+            // DPS 측정 초기화 후 시작
             if (dpsCalculator != null)
             {
+                dpsCalculator.Reset();
                 dpsCalculator.StartMeasurement();
             }
 
@@ -614,6 +618,12 @@ namespace Novelian.Training
                 {
                     ApplyStatBookmark(currentCharacter, selectedStatBookmarkIds[i]);
                 }
+            }
+
+            // TrainingScene용 투사체 템플릿 설정 (GameManager/Pool 없이 투사체 사용 가능하게)
+            if (projectileTemplate != null)
+            {
+                currentCharacter.SetProjectileTemplate(projectileTemplate);
             }
 
             // 자동 공격 활성화
@@ -840,6 +850,12 @@ namespace Novelian.Training
 
                 // 캐릭터 보유 데이터에서 성급/강화 정보 적용
                 ApplyOwnedCharacterData(character, characterId);
+
+                // TrainingScene용 투사체 템플릿 설정
+                if (projectileTemplate != null)
+                {
+                    character.SetProjectileTemplate(projectileTemplate);
+                }
 
                 // 자동 공격 활성화
                 character.SetAutoAttackEnabled(true);

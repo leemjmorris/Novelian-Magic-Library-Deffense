@@ -148,6 +148,17 @@ namespace Novelian.Training
             if (resetButton != null) resetButton.onClick.RemoveListener(OnResetButton);
             if (stopButton != null) stopButton.onClick.RemoveListener(OnStopButton);
             if (useMyDeckToggle != null) useMyDeckToggle.onValueChanged.RemoveListener(OnUseMyDeckToggleChanged);
+
+            // 드롭다운 이벤트 해제
+            if (characterDropdown != null) characterDropdown.onValueChanged.RemoveListener(OnCharacterDropdownChanged);
+            if (gradeDropdown != null) gradeDropdown.onValueChanged.RemoveListener(OnGradeDropdownChanged);
+            if (enhancementDropdown != null) enhancementDropdown.onValueChanged.RemoveListener(OnEnhancementDropdownChanged);
+            if (mainSkillBookmarkDropdown != null) mainSkillBookmarkDropdown.onValueChanged.RemoveListener(OnMainSkillBookmarkDropdownChanged);
+            if (supportSkillDropdown != null) supportSkillDropdown.onValueChanged.RemoveListener(OnSupportSkillDropdownChanged);
+            if (statBookmarkDropdown1 != null) statBookmarkDropdown1.onValueChanged.RemoveListener(OnStatBookmarkDropdown1Changed);
+            if (statBookmarkDropdown2 != null) statBookmarkDropdown2.onValueChanged.RemoveListener(OnStatBookmarkDropdown2Changed);
+            if (statBookmarkDropdown3 != null) statBookmarkDropdown3.onValueChanged.RemoveListener(OnStatBookmarkDropdown3Changed);
+            if (statBookmarkDropdown4 != null) statBookmarkDropdown4.onValueChanged.RemoveListener(OnStatBookmarkDropdown4Changed);
         }
 
         private async void Start()
@@ -189,6 +200,44 @@ namespace Novelian.Training
             if (stopButton != null)
             {
                 stopButton.onClick.AddListener(OnStopButton);
+            }
+
+            // 드롭다운 이벤트 연결
+            if (characterDropdown != null)
+            {
+                characterDropdown.onValueChanged.AddListener(OnCharacterDropdownChanged);
+            }
+            if (gradeDropdown != null)
+            {
+                gradeDropdown.onValueChanged.AddListener(OnGradeDropdownChanged);
+            }
+            if (enhancementDropdown != null)
+            {
+                enhancementDropdown.onValueChanged.AddListener(OnEnhancementDropdownChanged);
+            }
+            if (mainSkillBookmarkDropdown != null)
+            {
+                mainSkillBookmarkDropdown.onValueChanged.AddListener(OnMainSkillBookmarkDropdownChanged);
+            }
+            if (supportSkillDropdown != null)
+            {
+                supportSkillDropdown.onValueChanged.AddListener(OnSupportSkillDropdownChanged);
+            }
+            if (statBookmarkDropdown1 != null)
+            {
+                statBookmarkDropdown1.onValueChanged.AddListener(OnStatBookmarkDropdown1Changed);
+            }
+            if (statBookmarkDropdown2 != null)
+            {
+                statBookmarkDropdown2.onValueChanged.AddListener(OnStatBookmarkDropdown2Changed);
+            }
+            if (statBookmarkDropdown3 != null)
+            {
+                statBookmarkDropdown3.onValueChanged.AddListener(OnStatBookmarkDropdown3Changed);
+            }
+            if (statBookmarkDropdown4 != null)
+            {
+                statBookmarkDropdown4.onValueChanged.AddListener(OnStatBookmarkDropdown4Changed);
             }
 
             // CSVLoader 초기화 대기
@@ -609,6 +658,27 @@ namespace Novelian.Training
         /// </summary>
         public void OnUseMyDeckToggleChanged(bool isOn)
         {
+            // "내 덱 사용" ON인데 DeckManager가 없거나 덱이 비어있으면 경고 후 토글 해제
+            if (isOn)
+            {
+                if (DeckManager.Instance == null)
+                {
+                    Debug.LogWarning("[TrainingUIController] DeckManager가 없습니다. LobbyScene에서 진입해주세요.");
+                    if (useMyDeckToggle != null) useMyDeckToggle.isOn = false;
+                    return;
+                }
+
+                var deckCharacters = DeckManager.Instance.GetValidCharacters();
+                if (deckCharacters == null || deckCharacters.Count == 0)
+                {
+                    Debug.LogWarning("[TrainingUIController] 덱에 캐릭터가 없습니다. 덱을 먼저 설정해주세요.");
+                    if (useMyDeckToggle != null) useMyDeckToggle.isOn = false;
+                    return;
+                }
+
+                Debug.Log($"[TrainingUIController] 내 덱 사용 모드 ON - 덱 캐릭터 {deckCharacters.Count}명");
+            }
+
             trainingManager?.SetUseMyDeck(isOn);
 
             // 단일 캐릭터 설정 패널 활성화/비활성화
@@ -753,11 +823,40 @@ namespace Novelian.Training
             // 강화 보너스 계산 (임시: 강화 레벨당 5%)
             float enhancementBonus = trainingManager.SelectedEnhancement * 0.05f;
 
-            // 총 보너스
-            float totalBonus = (gradeMultiplier - 1.0f) + enhancementBonus;
+            // 보조 스킬 데미지 배율
+            float supportDamageMult = 1.0f;
+            int supportSkillIndex = supportSkillDropdown != null ? supportSkillDropdown.value - 1 : -1;
+            if (supportSkillIndex >= 0 && supportSkillIndex < supportSkillDataList.Count)
+            {
+                supportDamageMult = supportSkillDataList[supportSkillIndex].damage_mult;
+            }
 
-            // 최종 데미지
-            float finalDamage = baseDamage * (1f + totalBonus);
+            // 스탯 책갈피 보너스 계산
+            float statBookmarkBonus = 0f;
+            int[] bookmarkIndices = new int[]
+            {
+                statBookmarkDropdown1 != null ? statBookmarkDropdown1.value - 1 : -1,
+                statBookmarkDropdown2 != null ? statBookmarkDropdown2.value - 1 : -1,
+                statBookmarkDropdown3 != null ? statBookmarkDropdown3.value - 1 : -1,
+                statBookmarkDropdown4 != null ? statBookmarkDropdown4.value - 1 : -1
+            };
+            foreach (int idx in bookmarkIndices)
+            {
+                if (idx >= 0 && idx < statOptionDataList.Count)
+                {
+                    var option = statOptionDataList[idx];
+                    if (option.Option_Type == OptionType.AttackPower)
+                    {
+                        statBookmarkBonus += option.Option_Value;
+                    }
+                }
+            }
+
+            // 총 보너스 (성급 + 강화 + 스탯 책갈피)
+            float totalBonus = (gradeMultiplier - 1.0f) + enhancementBonus + statBookmarkBonus;
+
+            // 최종 데미지 (기본 × 보조스킬배율 × 보너스)
+            float finalDamage = baseDamage * supportDamageMult * (1f + totalBonus);
 
             // 공격 속도
             float attackSpeed = skillData.cooldown > 0 ? 1f / skillData.cooldown : 1f;

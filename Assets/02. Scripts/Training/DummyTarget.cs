@@ -23,7 +23,7 @@ namespace Novelian.Training
 
         // Animator 캐시
         private Animator _animator;
-        private static readonly int PUSHED_TRIGGER = Animator.StringToHash("pushed");
+        private static readonly int PUSHED_HASH = Animator.StringToHash("pushed");
 
         #region ITargetable Implementation
 
@@ -42,10 +42,10 @@ namespace Novelian.Training
             // 데미지 기록 이벤트 발생 (DPSCalculator가 구독)
             OnDamageTaken?.Invoke(damage);
 
-            // 피격 애니메이션 재생 (매번 리셋하여 died로 전환 방지)
-            if (_animator != null)
+            // 피격 애니메이션 재생 (처음부터 재생하여 Exit Time 리셋)
+            if (_animator != null && _animator.enabled)
             {
-                _animator.Play(PUSHED_TRIGGER, 0, 0f);
+                _animator.Play(PUSHED_HASH, 0, 0f);
             }
 
             // 무한 체력이므로 죽지 않음
@@ -164,7 +164,6 @@ namespace Novelian.Training
                 }
             }
         }
-
 
         #endregion
     }
