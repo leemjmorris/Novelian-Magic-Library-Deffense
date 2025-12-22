@@ -473,6 +473,7 @@ public class FirebaseSaveManager : MonoBehaviour
                     { "application", data.currencies.application },
                     { "recommendation", data.currencies.recommendation },
                     { "magicStone", data.currencies.magicStone },
+                    { "dungeonPass", data.currencies.dungeonPass },
                     { "ap", data.currencies.ap },
                     { "apRecoveryTime", data.currencies.apRecoveryTime }
                 }
@@ -582,6 +583,7 @@ public class FirebaseSaveManager : MonoBehaviour
             data.currencies.application = GetIntValue(currenciesSnap.Child("application"));
             data.currencies.recommendation = GetIntValue(currenciesSnap.Child("recommendation"));
             data.currencies.magicStone = GetIntValue(currenciesSnap.Child("magicStone"));
+            data.currencies.dungeonPass = GetIntValue(currenciesSnap.Child("dungeonPass"));
             data.currencies.ap = GetIntValue(currenciesSnap.Child("ap"));
             if (currenciesSnap.Child("apRecoveryTime").Exists)
                 data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value.ToString();
