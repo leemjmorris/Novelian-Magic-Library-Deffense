@@ -233,6 +233,13 @@ public class EnhancementPanel : MonoBehaviour
         // 이전에 로드한 아이콘 해제
         ReleaseMaterialIcon(slotIndex);
 
+        // materialId가 0이면 재료 없음
+        if (materialId == 0)
+        {
+            iconImage.enabled = false;
+            return;
+        }
+
         // IngredientData에서 Path_ID 가져오기
         var ingredientData = CSVLoader.Instance?.GetData<IngredientData>(materialId);
         if (ingredientData == null || ingredientData.Path_ID == 0)
@@ -243,13 +250,20 @@ public class EnhancementPanel : MonoBehaviour
 
         // PathData에서 Addressable_Key 가져오기
         var pathData = CSVLoader.Instance?.GetData<PathData>(ingredientData.Path_ID);
-        if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key))
+        if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
         {
             iconImage.enabled = false;
             return;
         }
 
         string iconPath = pathData.Addressable_Key;
+
+        // 유효한 Addressable 키인지 확인
+        if (string.IsNullOrWhiteSpace(iconPath) || iconPath == "0")
+        {
+            iconImage.enabled = false;
+            return;
+        }
 
         try
         {
