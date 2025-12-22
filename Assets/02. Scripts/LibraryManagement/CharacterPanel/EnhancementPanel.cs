@@ -1,6 +1,8 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using Cysharp.Threading.Tasks;
 
 /// <summary>
@@ -12,10 +14,13 @@ public class EnhancementPanel : MonoBehaviour
     [SerializeField] private TextMeshProUGUI enhancementLevelText;
     [SerializeField] private TextMeshProUGUI material1Text;
     [SerializeField] private TextMeshProUGUI material1CountText;
+    [SerializeField] private Image material1Icon;
     [SerializeField] private TextMeshProUGUI material2Text;
     [SerializeField] private TextMeshProUGUI material2CountText;
+    [SerializeField] private Image material2Icon;
     [SerializeField] private TextMeshProUGUI material3Text;
     [SerializeField] private TextMeshProUGUI material3CountText;
+    [SerializeField] private Image material3Icon;
     [SerializeField] private TextMeshProUGUI goldText;
 
     [Header("Upgrade Button")]
@@ -27,6 +32,14 @@ public class EnhancementPanel : MonoBehaviour
     [SerializeField] private GameObject raycastPanel;
 
     private int characterID;
+
+    // Addressables 메모리 관리
+    private AsyncOperationHandle<Sprite> material1IconHandle;
+    private AsyncOperationHandle<Sprite> material2IconHandle;
+    private AsyncOperationHandle<Sprite> material3IconHandle;
+    private bool hasMaterial1Icon = false;
+    private bool hasMaterial2Icon = false;
+    private bool hasMaterial3Icon = false;
 
     private void OnEnable()
     {
@@ -98,6 +111,9 @@ public class EnhancementPanel : MonoBehaviour
             material1Text.text = $"{mat1Name}";
             material1CountText.text = $"{mat1Current}/{mat1Required}";
             material1CountText.color = mat1Enough ? Color.white : Color.red;
+
+            // 재료 1 아이콘 로드
+            LoadMaterialIcon(nextInfo.Material_1_ID, material1Icon, 1).Forget();
         }
 
         // 재료 2 표시
@@ -111,6 +127,9 @@ public class EnhancementPanel : MonoBehaviour
             material2Text.text = $"{mat2Name}";
             material2CountText.text = $"{mat2Current}/{mat2Required}";
             material2CountText.color = mat2Enough ? Color.white : Color.red;
+
+            // 재료 2 아이콘 로드
+            LoadMaterialIcon(nextInfo.Material_2_ID, material2Icon, 2).Forget();
         }
 
         // 재료 3 표시
@@ -124,6 +143,9 @@ public class EnhancementPanel : MonoBehaviour
             material3Text.text = $"{mat3Name}";
             material3CountText.text = $"{mat3Current}/{mat3Required}";
             material3CountText.color = mat3Enough ? Color.white : Color.red;
+
+            // 재료 3 아이콘 로드
+            LoadMaterialIcon(nextInfo.Material_3_ID, material3Icon, 3).Forget();
         }
 
         goldText.text = $"소모 골드: {nextInfo.Material_4_Count}G";
@@ -199,5 +221,128 @@ public class EnhancementPanel : MonoBehaviour
         characterInfoPanel?.RefreshLevelUI();
         characterInfoPanel?.RefreshBookmarkUI();
         characterInfoPanelObject.SetActive(true);
+    }
+
+    /// <summary>
+    /// 재료 아이콘 로드 (비동기)
+    /// </summary>
+    private async UniTaskVoid LoadMaterialIcon(int materialId, Image iconImage, int slotIndex)
+    {
+        if (iconImage == null) return;
+
+        // 이전에 로드한 아이콘 해제
+        ReleaseMaterialIcon(slotIndex);
+
+        // materialId가 0이면 재료 없음
+        if (materialId == 0)
+        {
+            iconImage.enabled = false;
+            return;
+        }
+
+        // IngredientData에서 Path_ID 가져오기
+        var ingredientData = CSVLoader.Instance?.GetData<IngredientData>(materialId);
+        if (ingredientData == null || ingredientData.Path_ID == 0)
+        {
+            iconImage.enabled = false;
+            return;
+        }
+
+        // PathData에서 Addressable_Key 가져오기
+        var pathData = CSVLoader.Instance?.GetData<PathData>(ingredientData.Path_ID);
+        if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
+        {
+            iconImage.enabled = false;
+            return;
+        }
+
+        string iconPath = pathData.Addressable_Key;
+
+        // 유효한 Addressable 키인지 확인
+        if (string.IsNullOrWhiteSpace(iconPath) || iconPath == "0")
+        {
+            iconImage.enabled = false;
+            return;
+        }
+
+        try
+        {
+            var handle = Addressables.LoadAssetAsync<Sprite>(iconPath);
+            Sprite icon = await handle.Task;
+
+            if (icon != null && iconImage != null)
+            {
+                iconImage.sprite = icon;
+                iconImage.enabled = true;
+
+                // 핸들 저장
+                switch (slotIndex)
+                {
+                    case 1:
+                        material1IconHandle = handle;
+                        hasMaterial1Icon = true;
+                        break;
+                    case 2:
+                        material2IconHandle = handle;
+                        hasMaterial2Icon = true;
+                        break;
+                    case 3:
+                        material3IconHandle = handle;
+                        hasMaterial3Icon = true;
+                        break;
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[EnhancementPanel] Failed to load material icon: {iconPath}\n{e.Message}");
+            iconImage.enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// 재료 아이콘 메모리 해제
+    /// </summary>
+    private void ReleaseMaterialIcon(int slotIndex)
+    {
+        switch (slotIndex)
+        {
+            case 1:
+                if (hasMaterial1Icon && material1IconHandle.IsValid())
+                {
+                    Addressables.Release(material1IconHandle);
+                    hasMaterial1Icon = false;
+                }
+                break;
+            case 2:
+                if (hasMaterial2Icon && material2IconHandle.IsValid())
+                {
+                    Addressables.Release(material2IconHandle);
+                    hasMaterial2Icon = false;
+                }
+                break;
+            case 3:
+                if (hasMaterial3Icon && material3IconHandle.IsValid())
+                {
+                    Addressables.Release(material3IconHandle);
+                    hasMaterial3Icon = false;
+                }
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 모든 재료 아이콘 메모리 해제
+    /// </summary>
+    private void ReleaseAllMaterialIcons()
+    {
+        ReleaseMaterialIcon(1);
+        ReleaseMaterialIcon(2);
+        ReleaseMaterialIcon(3);
+    }
+
+    private void OnDestroy()
+    {
+        ReleaseAllMaterialIcons();
     }
 }

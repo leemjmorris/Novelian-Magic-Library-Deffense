@@ -217,6 +217,7 @@ public class CharacterInfoPanel : MonoBehaviour
 
     public void ShowPanel()
     {
+        Debug.Log($"[CharacterInfoPanel] ShowPanel called - panel: {(panel != null ? panel.name : "NULL")}, raycastPanel: {(raycastPanel != null ? raycastPanel.name : "NULL")}");
         raycastPanel?.SetActive(true);
         panel.SetActive(true);
     }

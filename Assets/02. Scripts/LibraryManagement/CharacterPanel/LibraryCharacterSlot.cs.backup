@@ -39,11 +39,7 @@ public class LibraryCharacterSlot : MonoBehaviour
 
     private void OnClickCharacterInfo()
     {
-        if (infoPanel == null)
-        {
-            Debug.LogError($"[LibraryCharacterSlot] infoPanel is null! Cannot open character info for ID: {characterID}");
-            return;
-        }
+        if (infoPanel == null) return;
 
         Debug.Log($"Character Info Clicked for ID: {characterID}");
         infoPanel.InitInfo(characterID, currentLevel, this);
@@ -53,11 +49,6 @@ public class LibraryCharacterSlot : MonoBehaviour
     public void SetInfoPanelObj(GameObject panel)
     {
         infoPanel = panel.GetComponent<CharacterInfoPanel>();
-    }
-
-    public void SetInfoPanel(CharacterInfoPanel panel)
-    {
-        infoPanel = panel;
     }
 
     public void InitSlot(CharacterData data)
@@ -123,23 +114,15 @@ public class LibraryCharacterSlot : MonoBehaviour
             {
                 canvasGroup.alpha = 1f;
             }
-            if (characterSprite != null)
-            {
-                characterSprite.color = Color.white;
-            }
             if (characterInfoButton != null)
                 characterInfoButton.interactable = true;
         }
         else
         {
-            // 미보유 캐릭터: 검정색 + 클릭 불가 + 슬라이더 0
+            // 미보유 캐릭터: 어둡게 + 클릭 불가 + 슬라이더 0
             if (canvasGroup != null)
             {
-                canvasGroup.alpha = 1f; // 불투명
-            }
-            if (characterSprite != null)
-            {
-                characterSprite.color = Color.black; // 검정색
+                canvasGroup.alpha = unownedAlpha;
             }
             if (characterInfoButton != null)
                 characterInfoButton.interactable = false;
