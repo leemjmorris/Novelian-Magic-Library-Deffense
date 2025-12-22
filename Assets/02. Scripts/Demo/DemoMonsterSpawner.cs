@@ -5,6 +5,16 @@ using UnityEngine;
 namespace NovelianMagicLibraryDefense.Demo
 {
     /// <summary>
+    /// 몬스터 스폰 포메이션
+    /// </summary>
+    public enum MonsterFormation
+    {
+        Random,
+        Line,
+        Circle
+    }
+
+    /// <summary>
     /// Demo-specific monster spawner
     /// Supports spawning from top, bottom, or both directions based on placement mode
     /// Uses direct prefab instantiation (no Addressables/CSVLoader/ObjectPoolManager)
@@ -233,6 +243,141 @@ namespace NovelianMagicLibraryDefense.Demo
             // Spawn areas are already configured in inspector
             // This method can be extended if dynamic adjustment is needed
             Debug.Log($"[DemoMonsterSpawner] Spawn areas updated for {mode} mode");
+        }
+
+        /// <summary>
+        /// 포메이션에 따라 몬스터 스폰
+        /// </summary>
+        public void SpawnMonstersInFormation(MonsterFormation formation, int count)
+        {
+            if (monsterPrefab == null)
+            {
+                Debug.LogError("[DemoMonsterSpawner] Monster prefab not assigned!");
+                return;
+            }
+
+            // 스폰 중심점 계산 (bottom spawn area 중심)
+            Vector3 center = (bottomSpawnAreaMin + bottomSpawnAreaMax) / 2f;
+
+            List<Vector3> positions = GetFormationPositions(formation, count, center);
+
+            foreach (var pos in positions)
+            {
+                SpawnMonsterAtPosition(pos);
+            }
+
+            Debug.Log($"[DemoMonsterSpawner] Spawned {count} monsters in {formation} formation");
+        }
+
+        private List<Vector3> GetFormationPositions(MonsterFormation formation, int count, Vector3 center)
+        {
+            var positions = new List<Vector3>();
+
+            switch (formation)
+            {
+                case MonsterFormation.Line:
+                    positions = GetLineFormationPositions(count, center);
+                    break;
+
+                case MonsterFormation.Circle:
+                    positions = GetCircleFormationPositions(count, center);
+                    break;
+
+                case MonsterFormation.Random:
+                default:
+                    positions = GetRandomFormationPositions(count);
+                    break;
+            }
+
+            return positions;
+        }
+
+        private List<Vector3> GetLineFormationPositions(int count, Vector3 center)
+        {
+            var positions = new List<Vector3>();
+            float spacing = 2f;
+            float totalWidth = (count - 1) * spacing;
+            float startX = center.x - totalWidth / 2f;
+
+            for (int i = 0; i < count; i++)
+            {
+                float x = startX + i * spacing;
+                positions.Add(new Vector3(x, center.y, center.z));
+            }
+
+            return positions;
+        }
+
+        private List<Vector3> GetCircleFormationPositions(int count, Vector3 center)
+        {
+            var positions = new List<Vector3>();
+            float radius = Mathf.Max(2f, count * 0.5f);
+
+            for (int i = 0; i < count; i++)
+            {
+                float angle = (360f / count) * i * Mathf.Deg2Rad;
+                float x = center.x + Mathf.Cos(angle) * radius;
+                float z = center.z + Mathf.Sin(angle) * radius;
+                positions.Add(new Vector3(x, center.y, z));
+            }
+
+            return positions;
+        }
+
+        private List<Vector3> GetRandomFormationPositions(int count)
+        {
+            var positions = new List<Vector3>();
+            float minSpacing = 3f;
+            int maxAttempts = 50;
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 newPos = Vector3.zero;
+                bool validPosition = false;
+
+                for (int attempt = 0; attempt < maxAttempts; attempt++)
+                {
+                    newPos = GetRandomSpawnPosition(false);
+
+                    // 기존 위치들과 최소 간격 체크
+                    validPosition = true;
+                    foreach (var existingPos in positions)
+                    {
+                        float dist = Vector3.Distance(newPos, existingPos);
+                        if (dist < minSpacing)
+                        {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+
+                    if (validPosition) break;
+                }
+
+                positions.Add(newPos);
+            }
+
+            return positions;
+        }
+
+        private GameObject SpawnMonsterAtPosition(Vector3 position)
+        {
+            GameObject monsterObj = Instantiate(monsterPrefab, position, Quaternion.identity);
+            monsterObj.name = $"DemoMonster_{spawnedMonsters.Count}";
+
+            var monster = monsterObj.GetComponent<Monster>();
+            if (monster != null)
+            {
+                monster.OnSpawn();
+
+                if (targetObj != null)
+                {
+                    monster.SetDestination(targetObj.position);
+                }
+            }
+
+            spawnedMonsters.Add(monsterObj);
+            return monsterObj;
         }
 
         #endregion

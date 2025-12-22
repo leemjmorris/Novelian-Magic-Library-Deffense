@@ -19,6 +19,11 @@ namespace NovelianMagicLibraryDefense.Demo
         [SerializeField] private Button toggleCameraButton;
         [SerializeField] private Button resetButton;
 
+        [Header("Monster Formation Buttons")]
+        [SerializeField] private Button linePatternButton;
+        [SerializeField] private Button circlePatternButton;
+        [SerializeField] private Button randomPatternButton;
+
         [Header("UI Labels")]
         [SerializeField] private TextMeshProUGUI modeLabel;
         [SerializeField] private TextMeshProUGUI statusLabel;
@@ -92,6 +97,22 @@ namespace NovelianMagicLibraryDefense.Demo
             if (resetButton != null)
             {
                 resetButton.onClick.AddListener(OnResetClicked);
+            }
+
+            // Monster Formation Buttons
+            if (linePatternButton != null)
+            {
+                linePatternButton.onClick.AddListener(OnLinePatternClicked);
+            }
+
+            if (circlePatternButton != null)
+            {
+                circlePatternButton.onClick.AddListener(OnCirclePatternClicked);
+            }
+
+            if (randomPatternButton != null)
+            {
+                randomPatternButton.onClick.AddListener(OnRandomPatternClicked);
             }
         }
 
@@ -174,6 +195,45 @@ namespace NovelianMagicLibraryDefense.Demo
             }
 
             UpdateStatusLabel("All cleared");
+            UpdateCountLabels();
+        }
+
+        private void OnLinePatternClicked()
+        {
+            if (monsterSpawner == null || !monsterSpawner.IsReady)
+            {
+                UpdateStatusLabel("Not ready yet!");
+                return;
+            }
+
+            monsterSpawner.SpawnMonstersInFormation(MonsterFormation.Line, monstersPerSpawn);
+            UpdateStatusLabel($"Spawned {monstersPerSpawn} monsters (Line)");
+            UpdateCountLabels();
+        }
+
+        private void OnCirclePatternClicked()
+        {
+            if (monsterSpawner == null || !monsterSpawner.IsReady)
+            {
+                UpdateStatusLabel("Not ready yet!");
+                return;
+            }
+
+            monsterSpawner.SpawnMonstersInFormation(MonsterFormation.Circle, monstersPerSpawn);
+            UpdateStatusLabel($"Spawned {monstersPerSpawn} monsters (Circle)");
+            UpdateCountLabels();
+        }
+
+        private void OnRandomPatternClicked()
+        {
+            if (monsterSpawner == null || !monsterSpawner.IsReady)
+            {
+                UpdateStatusLabel("Not ready yet!");
+                return;
+            }
+
+            monsterSpawner.SpawnMonstersInFormation(MonsterFormation.Random, monstersPerSpawn);
+            UpdateStatusLabel($"Spawned {monstersPerSpawn} monsters (Random)");
             UpdateCountLabels();
         }
 
@@ -265,6 +325,9 @@ namespace NovelianMagicLibraryDefense.Demo
             if (toggleModeButton != null) toggleModeButton.onClick.RemoveListener(OnToggleModeClicked);
             if (toggleCameraButton != null) toggleCameraButton.onClick.RemoveListener(OnToggleCameraClicked);
             if (resetButton != null) resetButton.onClick.RemoveListener(OnResetClicked);
+            if (linePatternButton != null) linePatternButton.onClick.RemoveListener(OnLinePatternClicked);
+            if (circlePatternButton != null) circlePatternButton.onClick.RemoveListener(OnCirclePatternClicked);
+            if (randomPatternButton != null) randomPatternButton.onClick.RemoveListener(OnRandomPatternClicked);
         }
     }
 }

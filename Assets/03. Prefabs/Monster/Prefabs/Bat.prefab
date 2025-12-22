@@ -815,7 +815,7 @@ BoxCollider:
   m_Enabled: 1
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 1.18, z: 0}
 --- !u!195 &4461833444130580110
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -872,9 +872,7 @@ MonoBehaviour:
   collider3D: {fileID: 1233883231449382756}
   renderers:
   - {fileID: 1162074717669370099}
-  ragdollDuration: 5
   dissolveDuration: 2
-  deathKnockbackForce: 8
   dustParticlePrefab: {fileID: 0}
   dissolveSettings: {fileID: 11400000, guid: f2353f89a7bbdbf4fa23df2d7bc3f92f, type: 2}
   moveSpeed: 10

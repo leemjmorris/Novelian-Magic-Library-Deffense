@@ -1,8 +1,5 @@
 using Cysharp.Threading.Tasks;
 using UnityEngine;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Novelian.Combat
 {
@@ -11,14 +8,15 @@ namespace Novelian.Combat
     /// </summary>
     public class SkillProjectile : MonoBehaviour
     {
-        [Header("Runtime Data")]
+        #region Runtime Data
         private MainSkillData mainSkill;
         private SupportSkillData supportSkill;
         private ITargetable target;
         private bool isExplosive;
-        private GameObject hitPrefab; // 피격/폭발 이펙트 프리팹
+        private GameObject hitPrefab;
+        #endregion
 
-        [Header("State")]
+        #region State
         private bool isInitialized;
         private int pierceCount;
         private int chainCount;
@@ -26,10 +24,32 @@ namespace Novelian.Combat
         private float speed;
         private float maxRange;
         private Vector3 startPosition;
+        #endregion
 
-        [Header("Homing")]
+        #region Homing
         private bool isHoming;
         private float homingStrength;
+        #endregion
+
+        #region Constants
+        private const float DEFAULT_SPEED = 15f;
+        private const float DEFAULT_RANGE = 20f;
+        private const float HIT_EFFECT_LIFETIME = 2f;
+        private const float RAYCAST_OFFSET = 0.5f;
+        private const float DEFAULT_CHAIN_RANGE = 5f;
+        private const float DEFAULT_SPLIT_SCALE = 0.7f;
+        #endregion
+
+        #region Split Support
+        private bool isSplitProjectile;
+        private int splitCount;
+        private float splitSpreadAngle;
+        private float splitScaleMultiplier;
+        #endregion
+
+        #region Chain Support
+        private System.Collections.Generic.HashSet<int> chainHitTargets = new System.Collections.Generic.HashSet<int>();
+        #endregion
 
         public void Initialize(MainSkillData main, SupportSkillData support, ITargetable targetable, bool explosive, GameObject hitEffectPrefab = null)
         {
@@ -41,58 +61,56 @@ namespace Novelian.Combat
 
             // 기본 값 설정
             damage = SkillExecutor.CalculateDamage(main, support);
-            speed = main.projectile_speed > 0 ? main.projectile_speed : 15f;
-            maxRange = main.range > 0 ? main.range : 20f;
+            speed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_SPEED;
+            maxRange = main.range > 0 ? main.range : DEFAULT_RANGE;
             startPosition = transform.position;
 
             // 서포트 스킬 효과 적용
-            if (support != null)
-            {
-                // 관통
-                if (support.IsPierceSupport)
-                {
-                    pierceCount = support.count;
-                }
-
-                // 연쇄
-                if (support.IsChainSupport)
-                {
-                    chainCount = support.count;
-                }
-
-                // 유도
-                if (support.IsHomingSupport)
-                {
-                    isHoming = true;
-                    homingStrength = support.homing_strength;
-                }
-            }
+            ApplySupportEffects(support);
 
             isInitialized = true;
+        }
+
+        private void ApplySupportEffects(SupportSkillData support)
+        {
+            if (support == null) return;
+
+            if (support.IsPierceSupport)
+            {
+                pierceCount = support.count;
+            }
+
+            if (support.IsChainSupport)
+            {
+                chainCount = support.count;
+            }
+
+            if (support.IsHomingSupport)
+            {
+                isHoming = true;
+                homingStrength = support.homing_strength;
+            }
+
+            if (support.IsSplitSupport)
+            {
+                isSplitProjectile = true;
+                splitCount = support.count > 0 ? support.count : 3;
+                splitSpreadAngle = support.spread_angle > 0 ? support.spread_angle : 60f;
+                splitScaleMultiplier = support.scale_multiplier > 0 ? support.scale_multiplier : DEFAULT_SPLIT_SCALE;
+            }
         }
 
         private void Update()
         {
             if (!isInitialized) return;
 
-            // 유도 처리
-            if (isHoming && target != null && target.IsAlive())
-            {
-                Vector3 targetDir = (target.GetTransform().position - transform.position).normalized;
-                Vector3 newDir = Vector3.Lerp(transform.forward, targetDir, homingStrength * Time.deltaTime);
-                transform.rotation = Quaternion.LookRotation(newDir);
-            }
+            UpdateHoming();
 
-            // Raycast로 이동 경로상 충돌 체크 (터널링 방지)
             float moveDistance = speed * Time.deltaTime;
-            int monsterLayerMask = LayerMask.GetMask("Monster");
 
-            RaycastHit hit;
-            if (Physics.Raycast(transform.position, transform.forward, out hit, moveDistance + 0.5f, monsterLayerMask))
+            // Raycast로 충돌 체크 (RaycastAll 사용하여 이미 맞은 적 통과)
+            if (TryRaycastHit(moveDistance))
             {
-                // 몬스터와 충돌 감지됨 - 충돌 지점으로 이동 후 처리
-                transform.position = hit.point;
-                HandleHit(hit.collider);
                 return;
             }
 
@@ -100,89 +118,81 @@ namespace Novelian.Combat
             transform.position += transform.forward * moveDistance;
 
             // 최대 사거리 체크
-            if (Vector3.Distance(startPosition, transform.position) > maxRange)
+            float traveled = Vector3.Distance(startPosition, transform.position);
+            if (traveled > maxRange)
             {
                 DestroyProjectile();
             }
         }
 
-        /// <summary>
-        /// Raycast 충돌 처리
-        /// </summary>
-        private void HandleHit(Collider other)
+        private void UpdateHoming()
         {
-            if (!isInitialized) return;
+            if (!isHoming || target == null || !target.IsAlive()) return;
 
-            // ITargetable 가져오기
-            ITargetable hitTarget = other.GetComponent<Monster>();
-            if (hitTarget == null)
+            // Collider 중심을 향해 유도
+            Vector3 targetCenter = TargetableUtils.GetAimPosition(target);
+            Vector3 targetDir = (targetCenter - transform.position).normalized;
+
+            if (targetDir.sqrMagnitude > 0.001f)
             {
-                hitTarget = other.GetComponent<BossMonster>();
+                Vector3 newDir = Vector3.Lerp(transform.forward, targetDir, homingStrength * Time.deltaTime);
+                transform.rotation = Quaternion.LookRotation(newDir);
             }
+        }
 
-            if (hitTarget == null || !hitTarget.IsAlive())
+        private bool TryRaycastHit(float moveDistance)
+        {
+            int monsterLayerMask = LayerMask.GetMask("Monster");
+
+            // RaycastAll로 모든 충돌 검사 (이미 맞은 적 통과)
+            RaycastHit[] hits = Physics.RaycastAll(transform.position, transform.forward, moveDistance + RAYCAST_OFFSET, monsterLayerMask);
+
+            if (hits.Length == 0) return false;
+
+            // 거리순 정렬
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+            // 이미 맞은 적이 아닌 첫 번째 적 찾기
+            foreach (var hit in hits)
             {
-                return;
-            }
+                ITargetable hitTarget = TargetableUtils.GetTargetable(hit.collider);
+                if (hitTarget == null) continue;
 
-            // 데미지 적용
-            hitTarget.TakeDamage(damage);
-
-            // 폭발형 처리
-            if (isExplosive && mainSkill.aoe_radius > 0)
-            {
-                ExplodeAsync().Forget();
-                return;
-            }
-
-            // 관통 처리
-            if (pierceCount > 0)
-            {
-                pierceCount--;
-                if (supportSkill != null && supportSkill.chain_decay > 0)
+                int hitTargetId = hitTarget.GetTransform().GetInstanceID();
+                if (chainHitTargets.Contains(hitTargetId))
                 {
-                    damage *= supportSkill.chain_decay;
+                    // 이미 맞은 적은 스킵
+                    continue;
                 }
-                return;
+
+                // 유효한 타겟에 충돌
+                transform.position = hit.point;
+                ProcessHit(hit.collider);
+                return true;
             }
 
-            // 연쇄 처리
-            if (chainCount > 0)
-            {
-                ChainToNextTarget(hitTarget).Forget();
-                return;
-            }
-
-            // 일반 충돌 - Hit Effect 재생 후 파괴
-            SpawnHitEffect(transform.position);
-            DestroyProjectile();
+            return false;
         }
 
         private void OnTriggerEnter(Collider other)
         {
             if (!isInitialized) return;
+            if (!TargetableUtils.IsValidEnemy(other)) return;
 
-            // 몬스터 또는 보스 태그 체크
-            if (!other.CompareTag(Tag.Monster) && !other.CompareTag(Tag.BossMonster))
-            {
-                return;
-            }
+            ProcessHit(other);
+        }
 
-            // ITargetable 가져오기
-            ITargetable hitTarget = null;
-            if (other.CompareTag(Tag.Monster))
-            {
-                hitTarget = other.GetComponent<Monster>();
-            }
-            else if (other.CompareTag(Tag.BossMonster))
-            {
-                hitTarget = other.GetComponent<BossMonster>();
-            }
+        /// <summary>
+        /// 충돌 처리 (Raycast, Trigger 공용)
+        /// </summary>
+        private void ProcessHit(Collider other)
+        {
+            ITargetable hitTarget = TargetableUtils.GetTargetable(other);
+            if (hitTarget == null || !hitTarget.IsAlive()) return;
 
-            if (hitTarget == null || !hitTarget.IsAlive())
-            {
-                return;
-            }
+            // 이미 맞은 적인지 체크 (연쇄 스킬에서 중복 타격 방지)
+            int hitTargetId = hitTarget.GetTransform().GetInstanceID();
+            if (chainHitTargets.Contains(hitTargetId)) return;
 
             // 데미지 적용
             hitTarget.TakeDamage(damage);
@@ -194,28 +204,113 @@ namespace Novelian.Combat
                 return;
             }
 
+            // 분열 처리
+            if (TrySplit()) return;
+
             // 관통 처리
-            if (pierceCount > 0)
-            {
-                pierceCount--;
-                // 관통 시 데미지 감소 (서포트 스킬의 chain_decay 사용)
-                if (supportSkill != null && supportSkill.chain_decay > 0)
-                {
-                    damage *= supportSkill.chain_decay;
-                }
-                return; // 계속 진행
-            }
+            if (TryPierce()) return;
 
             // 연쇄 처리
-            if (chainCount > 0)
-            {
-                ChainToNextTarget(hitTarget).Forget();
-                return;
-            }
+            if (TryChain(hitTarget)) return;
 
-            // 일반 충돌 - Hit Effect 재생 후 파괴
+            // 일반 충돌
             SpawnHitEffect(transform.position);
             DestroyProjectile();
+        }
+
+        private bool TrySplit()
+        {
+            if (!isSplitProjectile || splitCount <= 0) return false;
+
+            SpawnSplitProjectiles();
+            DestroyProjectile();
+            return true;
+        }
+
+        private void SpawnSplitProjectiles()
+        {
+            float splitDamage = damage * (supportSkill?.chain_decay ?? 0.5f);
+
+            for (int i = 0; i < splitCount; i++)
+            {
+                float angleOffset = 0f;
+                if (splitCount > 1)
+                {
+                    angleOffset = Mathf.Lerp(-splitSpreadAngle / 2f, splitSpreadAngle / 2f, (float)i / (splitCount - 1));
+                }
+
+                Vector3 splitDir = Quaternion.Euler(0, angleOffset, 0) * transform.forward;
+                SpawnSplitProjectile(splitDir, splitDamage);
+            }
+        }
+
+        private void SpawnSplitProjectile(Vector3 direction, float splitDamage)
+        {
+            // VFX 프리팹 가져오기 (현재 투사체와 동일)
+            GameObject splitPrefab = gameObject;
+
+            // 새 투사체 생성
+            GameObject splitObj = Instantiate(splitPrefab, transform.position, Quaternion.LookRotation(direction));
+            splitObj.transform.localScale = transform.localScale * splitScaleMultiplier;
+
+            SkillProjectile splitProjectile = splitObj.GetComponent<SkillProjectile>();
+            if (splitProjectile != null)
+            {
+                // 분열 투사체는 더 이상 분열하지 않음
+                splitProjectile.InitializeAsSplit(mainSkill, damage * (supportSkill?.chain_decay ?? 0.5f), hitPrefab);
+            }
+        }
+
+        /// <summary>
+        /// 분열 투사체 초기화 (분열 서포트 없이)
+        /// </summary>
+        public void InitializeAsSplit(MainSkillData main, float splitDamage, GameObject hitEffectPrefab)
+        {
+            mainSkill = main;
+            supportSkill = null;
+            target = null;
+            isExplosive = false;
+            hitPrefab = hitEffectPrefab;
+
+            damage = splitDamage;
+            speed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_SPEED;
+            maxRange = main.range > 0 ? main.range : DEFAULT_RANGE;
+            startPosition = transform.position;
+
+            isSplitProjectile = false;
+            isInitialized = true;
+        }
+
+        private bool TryPierce()
+        {
+            if (pierceCount <= 0) return false;
+
+            pierceCount--;
+            ApplyDecay();
+            return true;
+        }
+
+        private bool TryChain(ITargetable hitTarget)
+        {
+            if (chainCount <= 0) return false;
+
+            // 현재 맞은 타겟을 히트 목록에 추가 (이미 ProcessHit에서 체크했지만 한번 더)
+            int hitTargetId = hitTarget.GetTransform().GetInstanceID();
+            chainHitTargets.Add(hitTargetId);
+
+            // 연쇄 처리 시작 전에 현재 투사체의 추가 충돌 방지
+            isInitialized = false;
+
+            ChainToNextTarget(hitTarget).Forget();
+            return true;
+        }
+
+        private void ApplyDecay()
+        {
+            if (supportSkill != null && supportSkill.chain_decay > 0)
+            {
+                damage *= supportSkill.chain_decay;
+            }
         }
 
         private async UniTaskVoid ExplodeAsync()
@@ -225,36 +320,15 @@ namespace Novelian.Combat
             // 폭발 이펙트 스폰
             SpawnHitEffect(transform.position);
 
-            // 범위 내 적 탐색
-            Collider[] colliders = Physics.OverlapSphere(transform.position, radius);
-
-            foreach (var col in colliders)
+            // 폭발 데미지 계산
+            float explosionDamage = damage;
+            if (supportSkill != null && supportSkill.explosion_ratio > 0)
             {
-                if (!col.CompareTag(Tag.Monster) && !col.CompareTag(Tag.BossMonster))
-                    continue;
-
-                ITargetable explosionTarget = null;
-                if (col.CompareTag(Tag.Monster))
-                {
-                    explosionTarget = col.GetComponent<Monster>();
-                }
-                else if (col.CompareTag(Tag.BossMonster))
-                {
-                    explosionTarget = col.GetComponent<BossMonster>();
-                }
-
-                if (explosionTarget != null && explosionTarget.IsAlive())
-                {
-                    // 폭발 데미지 (서포트 스킬 explosion_ratio 적용)
-                    float explosionDamage = damage;
-                    if (supportSkill != null && supportSkill.explosion_ratio > 0)
-                    {
-                        explosionDamage *= supportSkill.explosion_ratio;
-                    }
-
-                    explosionTarget.TakeDamage(explosionDamage);
-                }
+                explosionDamage *= supportSkill.explosion_ratio;
             }
+
+            // 범위 내 적에게 데미지
+            TargetableUtils.ApplyDamageInRadius(transform.position, radius, explosionDamage);
 
             await UniTask.Yield();
             DestroyProjectile();
@@ -264,61 +338,147 @@ namespace Novelian.Combat
         {
             chainCount--;
 
-            // 연쇄 범위 내 다음 타겟 찾기
-            float chainRange = supportSkill?.chain_range ?? 5f;
-            Collider[] colliders = Physics.OverlapSphere(transform.position, chainRange);
+            // 맞은 적의 Collider 중심에서 다음 타겟 검색
+            Vector3 hitTargetCenter = TargetableUtils.GetAimPosition(hitTarget);
 
-            ITargetable nextTarget = null;
-            float nearestDist = float.MaxValue;
+            float chainRange = supportSkill?.range > 0 ? supportSkill.range : DEFAULT_CHAIN_RANGE;
+            ITargetable nextTarget = FindNextChainTarget(hitTargetCenter, chainRange);
 
-            foreach (var col in colliders)
-            {
-                if (!col.CompareTag(Tag.Monster) && !col.CompareTag(Tag.BossMonster))
-                    continue;
-
-                ITargetable candidate = null;
-                if (col.CompareTag(Tag.Monster))
-                {
-                    candidate = col.GetComponent<Monster>();
-                }
-                else if (col.CompareTag(Tag.BossMonster))
-                {
-                    candidate = col.GetComponent<BossMonster>();
-                }
-
-                // 이전 타겟 제외
-                if (candidate == null || !candidate.IsAlive() || candidate == hitTarget)
-                    continue;
-
-                float dist = Vector3.Distance(transform.position, candidate.GetTransform().position);
-                if (dist < nearestDist)
-                {
-                    nearestDist = dist;
-                    nextTarget = candidate;
-                }
-            }
+            // 히트 이펙트 스폰
+            SpawnHitEffect(transform.position);
 
             if (nextTarget != null)
             {
-                // 다음 타겟으로 방향 전환
-                target = nextTarget;
-                Vector3 newDir = (nextTarget.GetTransform().position - transform.position).normalized;
-                transform.rotation = Quaternion.LookRotation(newDir);
+                // 맞은 적의 Collider 중심에서 새 투사체 스폰
+                // 주의: nextTarget은 히트 목록에 미리 추가하지 않음 - 새 투사체가 맞았을 때 자체적으로 추가
+                SpawnChainProjectile(hitTargetCenter, nextTarget, chainCount);
+            }
 
-                // 연쇄 시 데미지 감소
-                if (supportSkill != null && supportSkill.chain_decay > 0)
+            // 현재 투사체는 파괴
+            await UniTask.Yield();
+            DestroyProjectile();
+        }
+
+        private ITargetable FindNextChainTarget(Vector3 position, float range)
+        {
+            var targets = TargetableUtils.GetTargetsInRadius(position, range);
+
+            ITargetable nearest = null;
+            float nearestDist = float.MaxValue;
+
+            foreach (var t in targets)
+            {
+                if (!t.IsAlive()) continue;
+
+                // 이미 맞은 적은 제외
+                int targetId = t.GetTransform().GetInstanceID();
+                if (chainHitTargets.Contains(targetId)) continue;
+
+                float dist = Vector3.Distance(position, TargetableUtils.GetAimPosition(t));
+                if (dist < nearestDist)
                 {
-                    damage *= supportSkill.chain_decay;
+                    nearestDist = dist;
+                    nearest = t;
                 }
+            }
 
+            return nearest;
+        }
+
+        private void SpawnChainProjectile(Vector3 spawnPos, ITargetable nextTarget, int remainingChains)
+        {
+            // 연쇄 데미지 감쇠 적용
+            float chainDamage = damage * (supportSkill?.chain_decay ?? 0.8f);
+
+            // 타겟 Collider 중심
+            Vector3 targetCenter = TargetableUtils.GetAimPosition(nextTarget);
+
+            // 스폰 → 타겟 방향 (Collider 중심 간 직선)
+            Vector3 dir = (targetCenter - spawnPos).normalized;
+
+            // 방향이 0이면 (같은 위치) 앞으로
+            if (dir.sqrMagnitude < 0.001f)
+            {
+                dir = Vector3.forward;
+            }
+
+            // VFXDatabase에서 원본 prefab 가져오기
+            GameObject prefab = SkillExecutor.Instance.GetVFXPrefab(mainSkill.skill_id);
+            if (prefab == null)
+            {
+                Debug.LogError($"[SkillProjectile] Chain projectile prefab not found for skill_id: {mainSkill.skill_id}");
+                return;
+            }
+
+            // prefab에서 새 투사체 생성 (깨끗한 상태)
+            GameObject chainObj = Instantiate(prefab, spawnPos, Quaternion.LookRotation(dir));
+
+            // Layer 설정 (Physics 충돌을 위해 필수)
+            chainObj.layer = LayerMask.NameToLayer("Projectile");
+
+            // Collider 설정
+            Collider col = chainObj.GetComponent<Collider>();
+            if (col == null)
+            {
+                var sphereCol = chainObj.AddComponent<SphereCollider>();
+                sphereCol.radius = 0.5f;
+                sphereCol.isTrigger = true;
             }
             else
             {
-                // 다음 타겟 없음 - 파괴
-                DestroyProjectile();
+                col.isTrigger = true;
             }
 
-            await UniTask.Yield();
+            // Rigidbody 설정
+            Rigidbody rb = chainObj.GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = chainObj.AddComponent<Rigidbody>();
+                rb.useGravity = false;
+                rb.isKinematic = true;
+            }
+
+            // SkillProjectile 컴포넌트 추가 및 초기화
+            SkillProjectile chainProjectile = chainObj.GetComponent<SkillProjectile>();
+            if (chainProjectile == null)
+            {
+                chainProjectile = chainObj.AddComponent<SkillProjectile>();
+            }
+
+            chainProjectile.InitializeAsChain(mainSkill, supportSkill, nextTarget, chainDamage, remainingChains, hitPrefab, chainHitTargets);
+        }
+
+        public bool IsInitialized => isInitialized;
+
+        /// <summary>
+        /// 연쇄 투사체 초기화
+        /// </summary>
+        public void InitializeAsChain(MainSkillData main, SupportSkillData support, ITargetable targetable, float chainDamage, int remainingChains, GameObject hitEffectPrefab, System.Collections.Generic.HashSet<int> hitTargets)
+        {
+            mainSkill = main;
+            supportSkill = support;
+            target = targetable;
+            isExplosive = false;
+            hitPrefab = hitEffectPrefab;
+
+            damage = chainDamage;
+            speed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_SPEED;
+            maxRange = main.range > 0 ? main.range : DEFAULT_RANGE;
+            startPosition = transform.position;
+
+            chainCount = remainingChains;
+
+            // 이미 맞은 적 목록 복사
+            chainHitTargets = new System.Collections.Generic.HashSet<int>(hitTargets);
+
+            // 유도 효과는 서포트 스킬에 유도가 있을 때만 적용
+            if (support != null && support.IsHomingSupport)
+            {
+                isHoming = true;
+                homingStrength = support.homing_strength;
+            }
+
+            isInitialized = true;
         }
 
         private void DestroyProjectile()
@@ -328,16 +488,20 @@ namespace Novelian.Combat
         }
 
         /// <summary>
-        /// 피격/폭발 이펙트 스폰
+        /// 강제 비활성화 (연쇄 투사체 생성 시 기존 컴포넌트 즉시 비활성화용)
         /// </summary>
+        public void ForceDisable()
+        {
+            isInitialized = false;
+            enabled = false;
+        }
+
         private void SpawnHitEffect(Vector3 position)
         {
             if (hitPrefab == null) return;
 
             GameObject hitEffect = Instantiate(hitPrefab, position, Quaternion.identity);
-
-            // 이펙트 자동 삭제 (2초 후)
-            Destroy(hitEffect, 2f);
+            Destroy(hitEffect, HIT_EFFECT_LIFETIME);
         }
     }
 }

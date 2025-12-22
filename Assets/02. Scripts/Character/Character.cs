@@ -219,10 +219,7 @@ namespace Novelian.Combat
         {
             while (!ct.IsCancellationRequested)
             {
-                // 쿨다운 계산 (CSV 데이터 기반 + 쿨다운 감소 모디파이어)
-                float baseCooldown = basicAttackData?.cooldown ?? 1.5f;
-                float cooldownReduction = 1f - (cooldownModifier / 100f);
-                float interval = Mathf.Max(0.1f, baseCooldown * cooldownReduction);
+                float interval = CalculateAttackInterval();
 
                 await UniTask.Delay((int)(interval * 1000), cancellationToken: ct);
 
@@ -231,6 +228,39 @@ namespace Novelian.Combat
 
                 TryAttack();
             }
+        }
+
+        /// <summary>
+        /// 공격 간격 계산 (쿨다운 모디파이어 + 서포트 스킬 효과 적용)
+        /// </summary>
+        private float CalculateAttackInterval()
+        {
+            float baseCooldown = basicAttackData?.cooldown ?? 1.5f;
+
+            // 쿨다운 모디파이어 적용
+            float cooldownReduction = 1f - (cooldownModifier / 100f);
+            float interval = baseCooldown * cooldownReduction;
+
+            // RapidFire 서포트 - 공격 속도 증가 (쿨다운 감소)
+            if (supportData != null && supportData.IsRapidFireSupport)
+            {
+                // RapidFire는 공격 속도를 증가시키므로 쿨다운을 줄임 (예: 30% 증가 = 0.77배 쿨다운)
+                float rapidFireBonus = 1f + (supportData.speed / 100f);
+                if (rapidFireBonus > 0)
+                {
+                    interval /= rapidFireBonus;
+                }
+            }
+
+            // CooldownDown 서포트 - 직접적인 쿨다운 감소
+            if (supportData != null && supportData.IsCooldownDownSupport)
+            {
+                // CooldownDown은 쿨다운을 직접 감소 (예: scale_multiplier가 0.8이면 80%로 감소)
+                float cooldownMultiplier = supportData.scale_multiplier > 0 ? supportData.scale_multiplier : 0.8f;
+                interval *= cooldownMultiplier;
+            }
+
+            return Mathf.Max(0.1f, interval);
         }
 
         private void TryAttack()
@@ -489,6 +519,72 @@ namespace Novelian.Combat
         public bool IsAlive()
         {
             return gameObject.activeInHierarchy;
+        }
+
+        #endregion
+
+        #region Buff/Debuff Modifier API
+
+        /// <summary>
+        /// 버프 모디파이어 적용
+        /// </summary>
+        public void ApplyBuffModifier(string statType, float value)
+        {
+            switch (statType)
+            {
+                case "damage":
+                    damageModifier += value;
+                    break;
+                case "attackSpeed":
+                    attackSpeedModifier += value;
+                    break;
+                case "range":
+                    rangeModifier += value;
+                    break;
+                case "critChance":
+                    critChanceModifier += value;
+                    break;
+                case "critMultiplier":
+                    critMultiplierModifier += value;
+                    break;
+                case "projectileSpeed":
+                    projectileSpeedModifier += value;
+                    break;
+                case "cooldown":
+                    cooldownModifier += value;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 버프 모디파이어 제거
+        /// </summary>
+        public void RemoveBuffModifier(string statType, float value)
+        {
+            switch (statType)
+            {
+                case "damage":
+                    damageModifier -= value;
+                    break;
+                case "attackSpeed":
+                    attackSpeedModifier -= value;
+                    break;
+                case "range":
+                    rangeModifier -= value;
+                    break;
+                case "critChance":
+                    critChanceModifier -= value;
+                    break;
+                case "critMultiplier":
+                    critMultiplierModifier -= value;
+                    break;
+                case "projectileSpeed":
+                    projectileSpeedModifier -= value;
+                    break;
+                case "cooldown":
+                    cooldownModifier -= value;
+                    break;
+            }
         }
 
         #endregion

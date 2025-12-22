@@ -23,6 +23,19 @@ namespace Novelian.Combat
 
             [Tooltip("피격/폭발 이펙트 프리팹 (선택)")]
             public GameObject hitPrefab;
+
+            [Header("VFX Container (선택)")]
+            [Tooltip("SkillVFXContainer 프리팹 (외부 VFX를 감싼 컨테이너)")]
+            public GameObject containerPrefab;
+
+            [Tooltip("스폰 VFX 프리팹 (캐스팅 이펙트)")]
+            public GameObject spawnPrefab;
+
+            [Tooltip("소멸 VFX 프리팹")]
+            public GameObject expirePrefab;
+
+            [Tooltip("경고 VFX 프리팹 (AOE 착지점)")]
+            public GameObject warningPrefab;
         }
 
         [SerializeField]
@@ -73,6 +86,68 @@ namespace Novelian.Combat
             if (cache.TryGetValue(skillId, out Entry entry))
             {
                 return entry.hitPrefab;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// skill_id로 Container 프리팹 가져오기
+        /// Container가 있으면 Container, 없으면 vfxPrefab 반환
+        /// </summary>
+        public GameObject GetContainerOrVFXPrefab(int skillId)
+        {
+            if (cache == null) BuildCache();
+
+            if (cache.TryGetValue(skillId, out Entry entry))
+            {
+                return entry.containerPrefab != null ? entry.containerPrefab : entry.vfxPrefab;
+            }
+
+            Debug.LogWarning($"[SkillVFXDatabase] Prefab not found for skill_id: {skillId}");
+            return null;
+        }
+
+        /// <summary>
+        /// skill_id로 Spawn 프리팹 가져오기
+        /// </summary>
+        public GameObject GetSpawnPrefab(int skillId)
+        {
+            if (cache == null) BuildCache();
+
+            if (cache.TryGetValue(skillId, out Entry entry))
+            {
+                return entry.spawnPrefab;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// skill_id로 Expire 프리팹 가져오기
+        /// </summary>
+        public GameObject GetExpirePrefab(int skillId)
+        {
+            if (cache == null) BuildCache();
+
+            if (cache.TryGetValue(skillId, out Entry entry))
+            {
+                return entry.expirePrefab;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// skill_id로 Warning 프리팹 가져오기
+        /// </summary>
+        public GameObject GetWarningPrefab(int skillId)
+        {
+            if (cache == null) BuildCache();
+
+            if (cache.TryGetValue(skillId, out Entry entry))
+            {
+                return entry.warningPrefab;
             }
 
             return null;

@@ -8,18 +8,27 @@ namespace Novelian.Combat
     /// </summary>
     public class SkillTrap : MonoBehaviour
     {
-        [Header("Runtime Data")]
+        #region Runtime Data
         private MainSkillData mainSkill;
         private SupportSkillData supportSkill;
+        #endregion
 
-        [Header("Trap Settings")]
+        #region Trap Settings
         private float damage;
         private float radius;
         private float lifetime;
+        #endregion
 
-        [Header("State")]
+        #region State
         private bool isInitialized;
         private bool isTriggered;
+        #endregion
+
+        #region Constants
+        private const float DEFAULT_RADIUS = 2f;
+        private const float DEFAULT_LIFETIME = 10f;
+        private const int DESTROY_DELAY_MS = 500;
+        #endregion
 
         public void Initialize(MainSkillData main, SupportSkillData support)
         {
@@ -27,13 +36,12 @@ namespace Novelian.Combat
             supportSkill = support;
 
             damage = SkillExecutor.CalculateDamage(main, support);
-            radius = main.aoe_radius > 0 ? main.aoe_radius : 2f;
-            lifetime = main.duration > 0 ? main.duration : 10f;
+            radius = main.aoe_radius > 0 ? main.aoe_radius : DEFAULT_RADIUS;
+            lifetime = main.duration > 0 ? main.duration : DEFAULT_LIFETIME;
 
             isInitialized = true;
             isTriggered = false;
 
-            // 수명 타이머 시작
             StartLifetimeAsync().Forget();
         }
 
@@ -50,10 +58,7 @@ namespace Novelian.Combat
         private void OnTriggerEnter(Collider other)
         {
             if (!isInitialized || isTriggered) return;
-
-            // 몬스터만 트랩 발동
-            if (!other.CompareTag(Tag.Monster) && !other.CompareTag(Tag.BossMonster))
-                return;
+            if (!TargetableUtils.IsValidEnemy(other)) return;
 
             TriggerTrap();
         }
@@ -62,35 +67,9 @@ namespace Novelian.Combat
         {
             isTriggered = true;
 
+            // 범위 내 모든 적에게 데미지 + CC 효과
+            TargetableUtils.ApplyDamageInRadius(transform.position, radius, damage, ApplyCCEffects);
 
-            // 범위 내 모든 적에게 데미지
-            Collider[] colliders = Physics.OverlapSphere(transform.position, radius);
-
-            foreach (var col in colliders)
-            {
-                if (!col.CompareTag(Tag.Monster) && !col.CompareTag(Tag.BossMonster))
-                    continue;
-
-                ITargetable target = null;
-                if (col.CompareTag(Tag.Monster))
-                {
-                    target = col.GetComponent<Monster>();
-                }
-                else if (col.CompareTag(Tag.BossMonster))
-                {
-                    target = col.GetComponent<BossMonster>();
-                }
-
-                if (target != null && target.IsAlive())
-                {
-                    target.TakeDamage(damage);
-
-                    // CC 효과 적용
-                    ApplyCCEffects(target);
-                }
-            }
-
-            // 트랩 파괴 (약간의 딜레이 후)
             DestroyTrapDelayed().Forget();
         }
 
@@ -98,41 +77,33 @@ namespace Novelian.Combat
         {
             if (supportSkill == null) return;
 
-            // 슬로우
+            Transform targetTransform = target.GetTransform();
+
+            // 몬스터만 CC 효과 적용 (보스는 면역)
+            if (!targetTransform.CompareTag(Tag.Monster)) return;
+
+            Monster monster = targetTransform.GetComponent<Monster>();
+            if (monster == null) return;
+
             if (supportSkill.IsSlowSupport)
             {
-                if (target.GetTransform().CompareTag(Tag.Monster))
-                {
-                    var monster = target.GetTransform().GetComponent<Monster>();
-                    monster?.ApplySlow(supportSkill.slow_rate, supportSkill.duration);
-                }
+                monster.ApplySlow(supportSkill.slow_rate, supportSkill.duration);
             }
 
-            // 스턴/빙결
             if (supportSkill.IsStunSupport || supportSkill.IsFreezeSupport)
             {
-                // 보스는 스턴 면역
-                if (target.GetTransform().CompareTag(Tag.Monster))
-                {
-                    var monster = target.GetTransform().GetComponent<Monster>();
-                    monster?.ApplyDizzy(supportSkill.duration);
-                }
+                monster.ApplyDizzy(supportSkill.duration);
             }
 
-            // 넉백
             if (supportSkill.IsKnockbackSupport)
             {
-                if (target.GetTransform().CompareTag(Tag.Monster))
-                {
-                    var monster = target.GetTransform().GetComponent<Monster>();
-                    monster?.ApplyKnockback(transform.position, supportSkill.distance);
-                }
+                monster.ApplyKnockback(transform.position, supportSkill.distance);
             }
         }
 
         private async UniTaskVoid DestroyTrapDelayed()
         {
-            await UniTask.Delay(500); // 0.5초 후 파괴
+            await UniTask.Delay(DESTROY_DELAY_MS);
             DestroyTrap();
         }
 
