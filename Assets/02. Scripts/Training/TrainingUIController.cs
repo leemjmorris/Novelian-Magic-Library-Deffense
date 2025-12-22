@@ -8,6 +8,7 @@ namespace Novelian.Training
     using System.Collections.Generic;
     using Cysharp.Threading.Tasks;
     using Novelian.Combat;
+    using NovelianMagicLibraryDefense.Core;
 
     /// <summary>
     /// 훈련소 UI 컨트롤러 (UGUI)
@@ -1008,5 +1009,15 @@ namespace Novelian.Training
         }
 
         #endregion
+
+        public void HomeBtnClick()
+        {
+            LobbySceneChange().Forget();
+        }
+        public async UniTask LobbySceneChange()
+        {
+            await FadeController.Instance.LoadSceneWithFade(SceneName.LobbyScene);
+        }
     }
+
 }
