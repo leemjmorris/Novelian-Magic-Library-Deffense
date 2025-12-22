@@ -150,6 +150,12 @@ public class BookmarkEquipPanel : MonoBehaviour
     /// </summary>
     public void ClosePanel()
     {
+        // LibraryBookMarkInfoPanel도 닫기
+        if (libraryBookMarkInfoPanel != null)
+        {
+            libraryBookMarkInfoPanel.SetActive(false);
+        }
+
         gameObject.SetActive(false);
         raycastPanel?.SetActive(false);
         if (characterInfoPanel != null)
