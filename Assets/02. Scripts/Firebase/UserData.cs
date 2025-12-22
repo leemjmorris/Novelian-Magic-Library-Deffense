@@ -68,6 +68,7 @@ namespace Firebase.Data
         public int application;    // 1603: 지원서
         public int recommendation; // 1604: 추천서
         public int magicStone;     // 1605: 마석
+        public int dungeonPass;    // 1606: 던전 출입증
         public int ap;             // 1607: 행동력
         public string apRecoveryTime; // AP 회복 시간
 
@@ -78,6 +79,7 @@ namespace Firebase.Data
             application = 0;
             recommendation = 0;
             magicStone = 0;
+            dungeonPass = 0;
             ap = 30; // 기본 AP
             apRecoveryTime = DateTime.UtcNow.ToString("o");
         }

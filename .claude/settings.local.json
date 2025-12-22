@@ -55,7 +55,8 @@
       "Bash(C:Usersdwd97.localbinuv.exe --version)",
       "Bash(curl:*)",
       "Bash(powershell -Command \"$logPath = [Environment]::GetFolderPath\\(''LocalApplicationData''\\) + ''\\\\Unity\\\\Editor\\\\Editor.log''; if \\(Test-Path $logPath\\) { Get-Content $logPath -Tail 300 | Select-String -Pattern ''BossMonster|Wall|Update 상태|벽까지|공격'' } else { Write-Host ''Log not found at:'' $logPath }\")",
-      "Bash(powershell -Command:*)"
+      "Bash(powershell -Command:*)",
+      "Bash(claude --version:*)"
     ],
     "deny": [],
     "ask": []

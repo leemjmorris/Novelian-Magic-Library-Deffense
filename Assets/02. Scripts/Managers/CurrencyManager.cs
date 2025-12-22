@@ -21,6 +21,7 @@ public class CurrencyManager : MonoBehaviour
     public const int APPLICATION_ID = 1603; // 지원서
     public const int RECOMMENDATION_ID = 1604; // 추천서
     public const int MAGIC_STONE_ID = 1605; // 마석
+    public const int DUNGEON_PASS_ID = 1606; // 던전 출입증
     public const int AP_ID = 1607;          // AP (행동력)
 
     // AP 회복 설정
@@ -58,7 +59,7 @@ public class CurrencyManager : MonoBehaviour
         currencies[APPLICATION_ID] = 0;     // 지원서
         currencies[RECOMMENDATION_ID] = 0;  // 추천서
         currencies[MAGIC_STONE_ID] = 0;     // 마석
-        currencies[1606] = 0;               // 추가 재화 (StringTable 미등록)
+        currencies[DUNGEON_PASS_ID] = 0;    // 던전 출입증
         currencies[AP_ID] = 30;             // AP (테스트용 최대치 30)
 
         // CurrencyTable에서 최대 AP 조회
@@ -231,9 +232,10 @@ public class CurrencyManager : MonoBehaviour
         currencies[APPLICATION_ID] = data.application;
         currencies[RECOMMENDATION_ID] = data.recommendation;
         currencies[MAGIC_STONE_ID] = data.magicStone;
+        currencies[DUNGEON_PASS_ID] = data.dungeonPass;
         currencies[AP_ID] = data.ap;
 
-        Debug.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase에서 재화 로드 완료 - 골드: {data.gold}, AP: {data.ap}");
+        Debug.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase에서 재화 로드 완료 - 골드: {data.gold}, AP: {data.ap}, 던전출입증: {data.dungeonPass}");
     }
 
     /// <summary>
@@ -258,6 +260,7 @@ public class CurrencyManager : MonoBehaviour
             application = currencies[APPLICATION_ID],
             recommendation = currencies[RECOMMENDATION_ID],
             magicStone = currencies[MAGIC_STONE_ID],
+            dungeonPass = currencies[DUNGEON_PASS_ID],
             ap = currencies[AP_ID],
             apRecoveryTime = DateTime.UtcNow.ToString("o")
         };

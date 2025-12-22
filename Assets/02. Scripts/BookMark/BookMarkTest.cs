@@ -61,7 +61,8 @@ public class BookMarkTest : MonoBehaviour
         CurrencyManager.Instance.AddCurrency(CurrencyManager.EXP_ID, 1000);              // 경험치
         CurrencyManager.Instance.AddCurrency(CurrencyManager.APPLICATION_ID, 1000);     // 지원서
         CurrencyManager.Instance.AddCurrency(CurrencyManager.RECOMMENDATION_ID, 1000);  // 추천서
-        CurrencyManager.Instance.AddCurrency(CurrencyManager.MAGIC_STONE_ID, 1000);     // 마석            // AP (최대 30)
+        CurrencyManager.Instance.AddCurrency(CurrencyManager.MAGIC_STONE_ID, 1000);     // 마석
+        CurrencyManager.Instance.AddCurrency(CurrencyManager.DUNGEON_PASS_ID, 100);    // 던전 출입증
 
         Debug.Log("모든 재료 및 재화 지급 완료!");
     }
