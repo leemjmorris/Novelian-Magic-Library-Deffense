@@ -45,6 +45,7 @@ public class MainSkillData
 
     /// <summary>
     /// behavior_type 문자열을 SkillBehaviorType enum으로 변환
+    /// 신규 시스템: Projectile, BeamRay, AOE 3개 타입
     /// </summary>
     public SkillBehaviorType GetBehaviorType()
     {
@@ -53,12 +54,17 @@ public class MainSkillData
 
         return behavior_type switch
         {
+            "Projectile" => SkillBehaviorType.Projectile,
+            "BeamRay" => SkillBehaviorType.Beam,
+            "AOE" => SkillBehaviorType.Visual_AOE,
+            // Legacy 호환성 (이전 타입들도 지원)
             "SingleProjectile" => SkillBehaviorType.Projectile,
             "ExplosiveProjectile" => SkillBehaviorType.Projectile,
-            "BeamRay" => SkillBehaviorType.Beam,
+            "FallingProjectile" => SkillBehaviorType.Projectile,
             "TargetAOE" => SkillBehaviorType.Visual_AOE,
             "LinearAOE" => SkillBehaviorType.Visual_AOE,
             "GroundAOE" => SkillBehaviorType.Field,
+            "MovingAOE" => SkillBehaviorType.Visual_AOE,
             "Barrier" => SkillBehaviorType.Shield,
             "Buff" => SkillBehaviorType.Shield,
             "Debuff" => SkillBehaviorType.Field,
@@ -69,9 +75,12 @@ public class MainSkillData
     }
 
     /// <summary>
-    /// 투사체 스킬인지 확인
+    /// 투사체 스킬인지 확인 (신규 + Legacy 지원)
     /// </summary>
-    public bool IsProjectileSkill => behavior_type == "SingleProjectile" || behavior_type == "ExplosiveProjectile";
+    public bool IsProjectileSkill => behavior_type == "Projectile" ||
+                                     behavior_type == "SingleProjectile" ||
+                                     behavior_type == "ExplosiveProjectile" ||
+                                     behavior_type == "FallingProjectile";
 
     /// <summary>
     /// 빔 스킬인지 확인
@@ -79,44 +88,13 @@ public class MainSkillData
     public bool IsBeamSkill => behavior_type == "BeamRay";
 
     /// <summary>
-    /// AOE 스킬인지 확인
+    /// AOE 스킬인지 확인 (신규 + Legacy 지원)
     /// </summary>
-    public bool IsAOESkill => behavior_type == "TargetAOE" || behavior_type == "LinearAOE" || behavior_type == "GroundAOE";
-
-    /// <summary>
-    /// 지속형 장판 스킬인지 확인
-    /// </summary>
-    public bool IsGroundSkill => behavior_type == "GroundAOE";
-
-    /// <summary>
-    /// 폭발형 투사체인지 확인
-    /// </summary>
-    public bool IsExplosiveProjectile => behavior_type == "ExplosiveProjectile";
-
-    /// <summary>
-    /// 방어막 스킬인지 확인
-    /// </summary>
-    public bool IsBarrierSkill => behavior_type == "Barrier";
-
-    /// <summary>
-    /// 버프 스킬인지 확인
-    /// </summary>
-    public bool IsBuffSkill => behavior_type == "Buff";
-
-    /// <summary>
-    /// 디버프 스킬인지 확인
-    /// </summary>
-    public bool IsDebuffSkill => behavior_type == "Debuff";
-
-    /// <summary>
-    /// 트랩 스킬인지 확인
-    /// </summary>
-    public bool IsTrapSkill => behavior_type == "Trap";
-
-    /// <summary>
-    /// 즉발 스킬인지 확인
-    /// </summary>
-    public bool IsInstantSkill => behavior_type == "Instant";
+    public bool IsAOESkill => behavior_type == "AOE" ||
+                              behavior_type == "TargetAOE" ||
+                              behavior_type == "LinearAOE" ||
+                              behavior_type == "GroundAOE" ||
+                              behavior_type == "MovingAOE";
 
     /// <summary>
     /// 투사체 속도가 있는 스킬인지 확인
@@ -132,6 +110,36 @@ public class MainSkillData
     /// 지속시간이 있는 스킬인지 확인
     /// </summary>
     public bool HasDuration => duration > 0;
+
+    #region Legacy Compatibility - Deprecated (이전 시스템 호환성)
+    /// <summary>[Deprecated] 지속형 장판 스킬인지 확인 - AOE로 통합됨</summary>
+    [Obsolete("Use IsAOESkill instead. Ground skills are now part of AOE.")]
+    public bool IsGroundSkill => behavior_type == "GroundAOE" || (behavior_type == "AOE" && duration > 0);
+
+    /// <summary>[Deprecated] 폭발형 투사체인지 확인 - Projectile로 통합됨</summary>
+    [Obsolete("Use IsProjectileSkill with aoe_radius > 0 check instead.")]
+    public bool IsExplosiveProjectile => behavior_type == "ExplosiveProjectile" || (behavior_type == "Projectile" && aoe_radius > 0);
+
+    /// <summary>[Deprecated] 방어막 스킬인지 확인 - 제거됨</summary>
+    [Obsolete("Barrier type has been removed from the new skill system.")]
+    public bool IsBarrierSkill => behavior_type == "Barrier";
+
+    /// <summary>[Deprecated] 버프 스킬인지 확인 - 제거됨</summary>
+    [Obsolete("Buff type has been removed from the new skill system.")]
+    public bool IsBuffSkill => behavior_type == "Buff";
+
+    /// <summary>[Deprecated] 디버프 스킬인지 확인 - 제거됨</summary>
+    [Obsolete("Debuff type has been removed from the new skill system.")]
+    public bool IsDebuffSkill => behavior_type == "Debuff";
+
+    /// <summary>[Deprecated] 트랩 스킬인지 확인 - AOE로 통합됨</summary>
+    [Obsolete("Use IsAOESkill instead. Trap skills are now part of AOE.")]
+    public bool IsTrapSkill => behavior_type == "Trap";
+
+    /// <summary>[Deprecated] 즉발 스킬인지 확인 - AOE로 통합됨</summary>
+    [Obsolete("Use IsAOESkill instead. Instant skills are now part of AOE.")]
+    public bool IsInstantSkill => behavior_type == "Instant";
+    #endregion
 
     #endregion
 

@@ -241,17 +241,6 @@ namespace Novelian.Combat
             float cooldownReduction = 1f - (cooldownModifier / 100f);
             float interval = baseCooldown * cooldownReduction;
 
-            // RapidFire 서포트 - 공격 속도 증가 (쿨다운 감소)
-            if (supportData != null && supportData.IsRapidFireSupport)
-            {
-                // RapidFire는 공격 속도를 증가시키므로 쿨다운을 줄임 (예: 30% 증가 = 0.77배 쿨다운)
-                float rapidFireBonus = 1f + (supportData.speed / 100f);
-                if (rapidFireBonus > 0)
-                {
-                    interval /= rapidFireBonus;
-                }
-            }
-
             // CooldownDown 서포트 - 직접적인 쿨다운 감소
             if (supportData != null && supportData.IsCooldownDownSupport)
             {

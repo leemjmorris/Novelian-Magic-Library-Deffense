@@ -1,0 +1,144 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01e32f1aae885f4469de41d4f3b9f1f5, type: 3}
+  m_Name: SkillCombinationRules
+  m_EditorClassIdentifier: 
+  rules:
+  - behaviorType: SingleProjectile
+    allowedSupportTypes:
+    - Chain
+    - Pierce
+    - Split
+    - Homing
+    - MultiShot
+    - Slow
+    - Stun
+    - DOT
+    - Knockback
+    - DamageUp
+    - CooldownDown
+  - behaviorType: ExplosiveProjectile
+    allowedSupportTypes:
+    - Chain
+    - Pierce
+    - Split
+    - Homing
+    - MultiShot
+    - Slow
+    - Stun
+    - DOT
+    - Knockback
+    - DamageUp
+    - CooldownDown
+    - Linger
+    - Moving
+    - Expand
+    - PullIn
+  - behaviorType: FallingProjectile
+    allowedSupportTypes:
+    - Slow
+    - Stun
+    - DOT
+    - DamageUp
+    - CooldownDown
+    - AreaUp
+    - Moving
+  - behaviorType: BeamRay
+    allowedSupportTypes:
+    - Chain
+    - Pierce
+    - Slow
+    - Stun
+    - DOT
+    - DamageUp
+    - CooldownDown
+  - behaviorType: TargetAOE
+    allowedSupportTypes:
+    - Slow
+    - Stun
+    - DOT
+    - Knockback
+    - PullIn
+    - AreaUp
+    - DamageUp
+    - CooldownDown
+    - Linger
+    - Moving
+    - Expand
+  - behaviorType: LinearAOE
+    allowedSupportTypes:
+    - Slow
+    - Stun
+    - DOT
+    - Knockback
+    - PullIn
+    - AreaUp
+    - DamageUp
+    - CooldownDown
+    - Linger
+    - Moving
+    - Expand
+  - behaviorType: GroundAOE
+    allowedSupportTypes:
+    - Slow
+    - Stun
+    - DOT
+    - Knockback
+    - PullIn
+    - AreaUp
+    - DamageUp
+    - CooldownDown
+    - Linger
+    - Moving
+    - Expand
+  - behaviorType: MovingAOE
+    allowedSupportTypes:
+    - Slow
+    - Stun
+    - DOT
+    - Knockback
+    - PullIn
+    - AreaUp
+    - DamageUp
+    - CooldownDown
+    - Linger
+    - Moving
+    - Expand
+  - behaviorType: Barrier
+    allowedSupportTypes:
+    - CooldownDown
+    - AreaUp
+  - behaviorType: Buff
+    allowedSupportTypes:
+    - DamageUp
+    - CooldownDown
+  - behaviorType: Debuff
+    allowedSupportTypes:
+    - Slow
+    - Stun
+    - DOT
+    - Knockback
+    - DamageUp
+    - CooldownDown
+  - behaviorType: Trap
+    allowedSupportTypes:
+    - Slow
+    - Stun
+    - DOT
+    - Knockback
+  - behaviorType: Instant
+    allowedSupportTypes:
+    - Slow
+    - Stun
+    - DOT
+    - DamageUp
+    - CooldownDown

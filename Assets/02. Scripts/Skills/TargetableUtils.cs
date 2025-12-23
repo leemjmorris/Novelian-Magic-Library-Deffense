@@ -80,6 +80,30 @@ namespace Novelian.Combat
         }
 
         /// <summary>
+        /// 범위 내 모든 적에게 데미지 적용 + 맞은 적 목록 반환
+        /// </summary>
+        public static List<ITargetable> ApplyDamageInRadiusAndGetTargets(Vector3 center, float radius, float damage)
+        {
+            List<ITargetable> hitTargets = new List<ITargetable>();
+            Collider[] colliders = Physics.OverlapSphere(center, radius);
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                var col = colliders[i];
+                if (!IsValidEnemy(col)) continue;
+
+                ITargetable target = GetTargetable(col);
+                if (target != null && target.IsAlive())
+                {
+                    target.TakeDamage(damage);
+                    hitTargets.Add(target);
+                }
+            }
+
+            return hitTargets;
+        }
+
+        /// <summary>
         /// 범위 내 적 목록 반환
         /// </summary>
         public static List<ITargetable> GetTargetsInRadius(Vector3 center, float radius)

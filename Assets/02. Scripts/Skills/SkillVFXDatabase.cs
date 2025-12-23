@@ -24,6 +24,14 @@ namespace Novelian.Combat
             [Tooltip("피격/폭발 이펙트 프리팹 (선택)")]
             public GameObject hitPrefab;
 
+            [Tooltip("Hit 이펙트 스케일 (기본값 1)")]
+            [Range(0.1f, 50f)]
+            public float hitScale = 1f;
+
+            [Tooltip("스케일 1일 때의 기준 반경 (이펙트 크기에 맞춤)")]
+            [Range(0.1f, 20f)]
+            public float baseRadius = 1f;
+
             [Header("VFX Container (선택)")]
             [Tooltip("SkillVFXContainer 프리팹 (외부 VFX를 감싼 컨테이너)")]
             public GameObject containerPrefab;
@@ -89,6 +97,36 @@ namespace Novelian.Combat
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// skill_id로 Hit 스케일 가져오기
+        /// </summary>
+        public float GetHitScale(int skillId)
+        {
+            if (cache == null) BuildCache();
+
+            if (cache.TryGetValue(skillId, out Entry entry))
+            {
+                return entry.hitScale > 0 ? entry.hitScale : 1f;
+            }
+
+            return 1f;
+        }
+
+        /// <summary>
+        /// skill_id로 기준 반경 가져오기
+        /// </summary>
+        public float GetBaseRadius(int skillId)
+        {
+            if (cache == null) BuildCache();
+
+            if (cache.TryGetValue(skillId, out Entry entry))
+            {
+                return entry.baseRadius > 0 ? entry.baseRadius : 1f;
+            }
+
+            return 1f;
         }
 
         /// <summary>

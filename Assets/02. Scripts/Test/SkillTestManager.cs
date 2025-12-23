@@ -39,10 +39,12 @@ public class SkillTestManager : MonoBehaviour
     [Header("Test Character")]
     [SerializeField] private Character testCharacter;
 
+    [Header("조합 규칙 데이터")]
+    [SerializeField] private SkillCombinationRuleData combinationRuleData;
+
     // 데이터
     private List<MainSkillData> mainSkillList = new List<MainSkillData>();
     private List<SupportSkillData> supportSkillList = new List<SupportSkillData>();
-    private List<SupportCompatibilityData> compatibilityList = new List<SupportCompatibilityData>();
     private List<GameObject> spawnedMonsters = new List<GameObject>();
 
     // 현재 필터링된 서포트 스킬 목록 (드롭다운 인덱스 매핑용)
@@ -96,12 +98,14 @@ public class SkillTestManager : MonoBehaviour
             Log($"서포트 스킬 {supportSkillList.Count}개 로드됨");
         }
 
-        // SupportCompatibilityData 로드
-        var compatTable = CSVLoader.Instance.GetTable<SupportCompatibilityData>();
-        if (compatTable != null)
+        // 조합 규칙 데이터 확인
+        if (combinationRuleData != null)
         {
-            compatibilityList = compatTable.GetAll();
-            Log($"서포트 호환성 {compatibilityList.Count}개 로드됨");
+            Log("조합 규칙 데이터 로드됨");
+        }
+        else
+        {
+            Debug.LogWarning("[SkillTestManager] CombinationRuleData가 할당되지 않았습니다. Inspector에서 할당하세요.");
         }
     }
 
@@ -143,9 +147,20 @@ public class SkillTestManager : MonoBehaviour
 
         foreach (var support in supportSkillList)
         {
-            // 호환성 데이터 찾기
-            var compat = compatibilityList.Find(c => c.support_id == support.support_id);
-            if (compat != null && compat.IsCompatibleWith(behaviorType))
+            // SkillCombinationRuleData를 사용하여 조합 가능 여부 확인
+            bool isCompatible = false;
+
+            if (combinationRuleData != null)
+            {
+                isCompatible = combinationRuleData.IsValidCombination(behaviorType, support.support_type);
+            }
+            else
+            {
+                // 조합 규칙 데이터가 없으면 모든 조합 허용
+                isCompatible = true;
+            }
+
+            if (isCompatible)
             {
                 filteredSupportSkillList.Add(support);
                 options.Add($"[{support.support_id}] {support.support_name} ({support.support_type})");

@@ -231,7 +231,7 @@ namespace Novelian.Combat
         {
             if (supportSkill == null || !supportSkill.IsDOTSupport) return;
 
-            DOTType dotType = supportSkill.IsPoisonSupport ? DOTType.Poison : DOTType.Burn;
+            DOTType dotType = DOTType.Poison; // DOT 서포트 통합으로 기본값 사용
             float dotDamage = supportSkill.tick_damage;
             float dotInterval = supportSkill.tick_interval;
             float dotDuration = supportSkill.duration;

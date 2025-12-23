@@ -14,6 +14,14 @@ public class CSVLoader : MonoBehaviour
     public static CSVLoader Instance { get; private set; }
     public bool IsInit { get; private set; }
 
+#if UNITY_EDITOR
+    // Hot Reload 시스템
+    private static FileSystemWatcher skillCsvWatcher;
+    private static bool pendingReload = false;
+    private static float lastReloadTime = 0f;
+    private const float RELOAD_DEBOUNCE_TIME = 0.5f; // 중복 이벤트 방지
+#endif
+
     /// <summary>
     /// Generic static class for storing tables by type
     /// </summary>
@@ -89,7 +97,107 @@ public class CSVLoader : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
+
+#if UNITY_EDITOR
+        InitializeHotReload();
+#endif
     }
+
+#if UNITY_EDITOR
+    private void InitializeHotReload()
+    {
+        // 기존 Watcher 정리
+        if (skillCsvWatcher != null)
+        {
+            skillCsvWatcher.EnableRaisingEvents = false;
+            skillCsvWatcher.Changed -= OnSkillCsvChanged;
+            skillCsvWatcher.Dispose();
+            skillCsvWatcher = null;
+        }
+
+        string skillCsvPath = Path.Combine(Application.dataPath, "Data/CSV/Skill");
+
+        if (!Directory.Exists(skillCsvPath))
+        {
+            Debug.LogWarning($"[CSVLoader] Skill CSV 폴더를 찾을 수 없습니다: {skillCsvPath}");
+            return;
+        }
+
+        try
+        {
+            skillCsvWatcher = new FileSystemWatcher(skillCsvPath)
+            {
+                Filter = "*.csv",
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.FileName,
+                IncludeSubdirectories = false
+            };
+
+            skillCsvWatcher.Changed += OnSkillCsvChanged;
+            skillCsvWatcher.EnableRaisingEvents = true;
+
+            Debug.Log($"[CSVLoader] Hot Reload 활성화됨 - 감시 경로: {skillCsvPath}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[CSVLoader] FileSystemWatcher 초기화 실패: {ex.Message}");
+        }
+    }
+
+    private void OnSkillCsvChanged(object sender, FileSystemEventArgs e)
+    {
+        // 백그라운드 스레드에서 호출됨 - 플래그만 설정
+        pendingReload = true;
+    }
+
+    private void Update()
+    {
+        // 메인 스레드에서 리로드 처리
+        if (pendingReload && IsInit)
+        {
+            // 중복 이벤트 방지 (파일 저장 시 여러 번 호출될 수 있음)
+            if (Time.realtimeSinceStartup - lastReloadTime < RELOAD_DEBOUNCE_TIME)
+            {
+                pendingReload = false;
+                return;
+            }
+
+            lastReloadTime = Time.realtimeSinceStartup;
+            pendingReload = false;
+
+            Debug.Log($"[CSVLoader] CSV 변경 감지됨 - Hot Reload 실행");
+            ExecuteHotReload().Forget();
+        }
+    }
+
+    private async UniTaskVoid ExecuteHotReload()
+    {
+        Debug.Log("[CSVLoader] Hot Reload 실행 중...");
+        await ReloadSkillTablesAsync();
+        Debug.Log("[CSVLoader] Hot Reload 완료!");
+    }
+
+    private void OnDestroy()
+    {
+        if (skillCsvWatcher != null)
+        {
+            skillCsvWatcher.EnableRaisingEvents = false;
+            skillCsvWatcher.Changed -= OnSkillCsvChanged;
+            skillCsvWatcher.Dispose();
+            skillCsvWatcher = null;
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        if (skillCsvWatcher != null)
+        {
+            skillCsvWatcher.EnableRaisingEvents = false;
+            skillCsvWatcher.Changed -= OnSkillCsvChanged;
+            skillCsvWatcher.Dispose();
+            skillCsvWatcher = null;
+        }
+    }
+#endif
 
     private async UniTaskVoid Start()
     {

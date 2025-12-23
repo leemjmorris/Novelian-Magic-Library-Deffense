@@ -18,14 +18,16 @@ public class SkillEditorWindow : EditorWindow
     #region Tab System
     private enum Tab
     {
+        SkillCreator,
         VFXDatabase,
         CSVSync,
+        CombinationRules,
         Preview,
         Test,
         ExternalAssets
     }
-    private Tab currentTab = Tab.VFXDatabase;
-    private readonly string[] tabNames = { "VFX Database", "CSV 동기화", "프리뷰", "테스트", "외부 에셋" };
+    private Tab currentTab = Tab.SkillCreator;
+    private readonly string[] tabNames = { "스킬 제작", "VFX Database", "CSV 동기화", "조합 규칙", "프리뷰", "테스트", "외부 에셋" };
     #endregion
 
     #region References
@@ -43,9 +45,12 @@ public class SkillEditorWindow : EditorWindow
     #region Filter & Search
     private string searchFilter = "";
     private string behaviorTypeFilter = "All";
+    // 신규 시스템: 3개 behavior_type + Legacy 호환
     private readonly string[] behaviorTypes = {
-        "All", "SingleProjectile", "ExplosiveProjectile", "FallingProjectile",
-        "BeamRay", "TargetAOE", "LinearAOE", "GroundAOE", "MovingAOE",
+        "All", "Projectile", "BeamRay", "AOE",
+        // Legacy (이전 스킬 데이터 호환용)
+        "SingleProjectile", "ExplosiveProjectile", "FallingProjectile",
+        "TargetAOE", "LinearAOE", "GroundAOE", "MovingAOE",
         "Barrier", "Buff", "Debuff", "Trap", "Instant"
     };
     #endregion
@@ -60,35 +65,39 @@ public class SkillEditorWindow : EditorWindow
     private Vector2 externalAssetsScrollPosition;
     private List<ExternalEffectInfo> externalEffects = new List<ExternalEffectInfo>();
     private bool externalAssetsLoaded = false;
-    private string externalAssetPath = "Assets/SpecialSkillsEffectsPack/AllEffects";
+    private List<string> scanPaths = new List<string>();
+    private Vector2 scanPathsScrollPosition;
     private int selectedExternalEffectIndex = -1;
     private bool showScriptBasedOnly = false;
     private string externalSearchFilter = "";
 
-    // behavior_type 자동 매핑
+    // EditorPrefs 키
+    private const string SCAN_PATHS_PREF_KEY = "SkillEditor_ScanPaths";
+
+    // behavior_type 자동 매핑 - 신규 시스템: Projectile, BeamRay, AOE 3개 타입
     private static readonly Dictionary<string, string> EffectNameToBehaviorType = new Dictionary<string, string>
     {
-        // AOE 타입
-        { "tornado", "MovingAOE" },
-        { "storm", "MovingAOE" },
-        { "cyclone", "MovingAOE" },
-        { "blackhole", "GroundAOE" },
-        { "field", "GroundAOE" },
-        { "swamp", "GroundAOE" },
-        { "poison", "GroundAOE" },
-        { "timeField", "GroundAOE" },
-        { "nuke", "TargetAOE" },
-        { "explosion", "TargetAOE" },
-        { "boom", "TargetAOE" },
-        { "blast", "TargetAOE" },
-
-        // Falling 타입
-        { "orbital", "FallingProjectile" },
-        { "strike", "FallingProjectile" },
-        { "meteor", "FallingProjectile" },
-        { "airstrike", "FallingProjectile" },
-        { "fleet", "FallingProjectile" },
-        { "satelite", "FallingProjectile" },
+        // AOE 타입 (지속형, 폭발형, 이동형 모두 AOE로 통합)
+        { "tornado", "AOE" },
+        { "storm", "AOE" },
+        { "cyclone", "AOE" },
+        { "blackhole", "AOE" },
+        { "field", "AOE" },
+        { "swamp", "AOE" },
+        { "poison", "AOE" },
+        { "timeField", "AOE" },
+        { "nuke", "AOE" },
+        { "explosion", "AOE" },
+        { "boom", "AOE" },
+        { "blast", "AOE" },
+        { "slash", "AOE" },
+        { "wave", "AOE" },
+        { "orbital", "AOE" },
+        { "strike", "AOE" },
+        { "meteor", "AOE" },
+        { "airstrike", "AOE" },
+        { "fleet", "AOE" },
+        { "satelite", "AOE" },
 
         // Beam 타입
         { "beam", "BeamRay" },
@@ -96,19 +105,15 @@ public class SkillEditorWindow : EditorWindow
         { "breath", "BeamRay" },
         { "ray", "BeamRay" },
 
-        // Projectile 타입
-        { "shot", "SingleProjectile" },
-        { "fire", "SingleProjectile" },
-        { "ball", "SingleProjectile" },
-        { "bullet", "SingleProjectile" },
-        { "fist", "SingleProjectile" },
-
-        // 기타
-        { "shield", "Barrier" },
-        { "guardian", "Barrier" },
-        { "slash", "LinearAOE" },
-        { "wave", "LinearAOE" },
-        { "chain", "Debuff" }
+        // Projectile 타입 (모든 투사체 통합)
+        { "shot", "Projectile" },
+        { "fire", "Projectile" },
+        { "ball", "Projectile" },
+        { "bullet", "Projectile" },
+        { "fist", "Projectile" },
+        { "arrow", "Projectile" },
+        { "bolt", "Projectile" },
+        { "missile", "Projectile" }
     };
     #endregion
 
@@ -117,6 +122,56 @@ public class SkillEditorWindow : EditorWindow
     private GUIStyle boxStyle;
     private GUIStyle buttonStyle;
     private bool stylesInitialized = false;
+    #endregion
+
+    #region Skill Creator
+    private enum CreatorMode { Create, Edit }
+    private CreatorMode creatorMode = CreatorMode.Create;
+    private int editingSkillIndex = -1;
+
+    // 새 스킬 데이터
+    private int newSkillId;
+    private string newSkillName = "";
+    private int newBehaviorTypeIndex = 0;
+    private float newBaseDamage = 100f;
+    private float newCooldown = 2f;
+    private float newRange = 10f;
+    private float newProjectileSpeed = 15f;
+    private float newAoeRadius = 0f;
+    private float newDuration = 0f;
+    private string newDescription = "";
+    private GameObject newVfxPrefab;
+    private GameObject newHitPrefab;
+
+    // Hit Effect 스케일 및 자동 범위 설정
+    private float hitPrefabScale = 1f;
+    private float baseHitRadius = 1f;  // 스케일 1일 때의 기준 반경 (사용자가 직접 설정)
+    private bool autoRadiusFromHitEffect = false;
+    private float estimatedHitRadius = 0f;
+
+    private Vector2 creatorScrollPosition;
+    private Vector2 skillListScrollPosition;
+
+    // behavior_type 목록 (All 제외) - 신규 시스템: 3개만 사용
+    private readonly string[] creatableBehaviorTypes = {
+        "Projectile", "BeamRay", "AOE"
+    };
+    #endregion
+
+    #region Combination Rules
+    private SkillCombinationRuleData combinationRuleData;
+    private Vector2 combinationRulesScrollPosition;
+    private const string COMBINATION_RULES_ASSET_PATH = "Assets/Data/SkillCombinationRules.asset";
+
+    // 서포트 타입 목록 - 신규 시스템: 8개 타입
+    private readonly string[] supportTypes = {
+        "Pierce", "Homing", "MultiShot", "CC", "DOT", "Enhance", "Bounce", "Split"
+    };
+
+    // 서포트 타입 한글명 (툴팁용)
+    private readonly string[] supportTypeNames = {
+        "관통", "유도", "다중발사", "군중제어", "도트", "강화", "바운스", "분열"
+    };
     #endregion
 
     [MenuItem("Tools/Novelian/스킬 에디터 %#k")]
@@ -131,6 +186,7 @@ public class SkillEditorWindow : EditorWindow
     {
         FindVFXDatabase();
         LoadCSVData();
+        LoadScanPaths();
     }
 
     private void OnDisable()
@@ -173,11 +229,17 @@ public class SkillEditorWindow : EditorWindow
         // 현재 탭 렌더링
         switch (currentTab)
         {
+            case Tab.SkillCreator:
+                DrawSkillCreatorTab();
+                break;
             case Tab.VFXDatabase:
                 DrawVFXDatabaseTab();
                 break;
             case Tab.CSVSync:
                 DrawCSVSyncTab();
+                break;
+            case Tab.CombinationRules:
+                DrawCombinationRulesTab();
                 break;
             case Tab.Preview:
                 DrawPreviewTab();
@@ -190,6 +252,742 @@ public class SkillEditorWindow : EditorWindow
                 break;
         }
     }
+
+    #region Skill Creator Tab
+
+    private void DrawSkillCreatorTab()
+    {
+        EditorGUILayout.BeginHorizontal();
+
+        // 왼쪽: 스킬 목록
+        EditorGUILayout.BeginVertical(boxStyle, GUILayout.Width(250));
+        DrawSkillListPanel();
+        EditorGUILayout.EndVertical();
+
+        // 오른쪽: 스킬 편집 폼
+        EditorGUILayout.BeginVertical(boxStyle);
+        DrawSkillEditorPanel();
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawSkillListPanel()
+    {
+        EditorGUILayout.LabelField("스킬 목록", headerStyle);
+        EditorGUILayout.Space(5);
+
+        // 새 스킬 버튼
+        GUI.color = new Color(0.5f, 1f, 0.5f);
+        if (GUILayout.Button("+ 새 스킬 만들기", GUILayout.Height(30)))
+        {
+            CreateNewSkill();
+        }
+        GUI.color = Color.white;
+
+        EditorGUILayout.Space(10);
+
+        // 스킬 목록
+        if (!csvLoaded || csvSkills.Count == 0)
+        {
+            EditorGUILayout.HelpBox("CSV를 먼저 로드하세요.", MessageType.Info);
+            if (GUILayout.Button("CSV 로드"))
+            {
+                LoadCSVData();
+            }
+            return;
+        }
+
+        EditorGUILayout.LabelField($"총 {csvSkills.Count}개 스킬", EditorStyles.miniLabel);
+
+        skillListScrollPosition = EditorGUILayout.BeginScrollView(skillListScrollPosition);
+
+        for (int i = 0; i < csvSkills.Count; i++)
+        {
+            var skill = csvSkills[i];
+            bool isEditing = creatorMode == CreatorMode.Edit && editingSkillIndex == i;
+
+            EditorGUILayout.BeginHorizontal(isEditing ? "selectionRect" : "box");
+
+            // 스킬 ID와 이름
+            GUI.color = isEditing ? Color.cyan : Color.white;
+            if (GUILayout.Button($"[{skill.skill_id}] {skill.skill_name}", EditorStyles.label, GUILayout.Width(180)))
+            {
+                SelectSkillForEdit(i);
+            }
+            GUI.color = Color.white;
+
+            // 삭제 버튼
+            GUI.color = new Color(1f, 0.5f, 0.5f);
+            if (GUILayout.Button("✕", GUILayout.Width(20)))
+            {
+                if (EditorUtility.DisplayDialog("스킬 삭제",
+                    $"[{skill.skill_id}] {skill.skill_name}을(를) 삭제하시겠습니까?\n\n이 작업은 CSV에 즉시 반영됩니다.",
+                    "삭제", "취소"))
+                {
+                    DeleteSkill(i);
+                }
+            }
+            GUI.color = Color.white;
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        EditorGUILayout.EndScrollView();
+    }
+
+    private void DrawSkillEditorPanel()
+    {
+        string title = creatorMode == CreatorMode.Create ? "새 스킬 만들기" : $"스킬 편집: [{newSkillId}] {newSkillName}";
+        EditorGUILayout.LabelField(title, headerStyle);
+        EditorGUILayout.Space(10);
+
+        creatorScrollPosition = EditorGUILayout.BeginScrollView(creatorScrollPosition);
+
+        // 기본 정보
+        EditorGUILayout.LabelField("기본 정보", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+
+        // 스킬 ID
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("스킬 ID", GUILayout.Width(120));
+        GUI.enabled = creatorMode == CreatorMode.Create;
+        newSkillId = EditorGUILayout.IntField(newSkillId);
+        if (creatorMode == CreatorMode.Create && GUILayout.Button("자동", GUILayout.Width(50)))
+        {
+            newSkillId = GetNextAvailableSkillId();
+        }
+        GUI.enabled = true;
+        EditorGUILayout.EndHorizontal();
+
+        // ID 중복 체크
+        if (creatorMode == CreatorMode.Create && IsSkillIdDuplicate(newSkillId))
+        {
+            EditorGUILayout.HelpBox($"ID {newSkillId}는 이미 사용 중입니다!", MessageType.Error);
+        }
+
+        // 스킬 이름
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("스킬명", GUILayout.Width(120));
+        newSkillName = EditorGUILayout.TextField(newSkillName);
+        EditorGUILayout.EndHorizontal();
+
+        // behavior_type
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("행동 타입", GUILayout.Width(120));
+        newBehaviorTypeIndex = EditorGUILayout.Popup(newBehaviorTypeIndex, creatableBehaviorTypes);
+        EditorGUILayout.EndHorizontal();
+
+        // 설명
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("설명", GUILayout.Width(120));
+        newDescription = EditorGUILayout.TextField(newDescription);
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.Space(10);
+
+        // 스탯 정보
+        EditorGUILayout.LabelField("스탯", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+
+        DrawStatField("기본 데미지", ref newBaseDamage, "스킬의 기본 데미지");
+        DrawStatField("쿨다운 (초)", ref newCooldown, "스킬 재사용 대기시간");
+        DrawStatField("사거리", ref newRange, "스킬 사용 가능 거리");
+
+        // behavior_type에 따른 조건부 필드
+        string selectedBehavior = creatableBehaviorTypes[newBehaviorTypeIndex];
+
+        if (IsProjectileType(selectedBehavior))
+        {
+            DrawStatField("투사체 속도", ref newProjectileSpeed, "투사체 이동 속도");
+        }
+
+        if (IsAOEType(selectedBehavior))
+        {
+            DrawStatField("범위 반경", ref newAoeRadius, "AOE 효과 범위");
+        }
+
+        if (IsDurationType(selectedBehavior))
+        {
+            DrawStatField("지속시간 (초)", ref newDuration, "효과 지속 시간");
+        }
+
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.Space(10);
+
+        // VFX 설정
+        EditorGUILayout.LabelField("VFX 설정 (선택)", EditorStyles.boldLabel);
+        EditorGUILayout.BeginVertical("box");
+
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("VFX 프리팹", GUILayout.Width(120));
+        newVfxPrefab = (GameObject)EditorGUILayout.ObjectField(newVfxPrefab, typeof(GameObject), false);
+        EditorGUILayout.EndHorizontal();
+
+        // Hit 프리팹
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("Hit 프리팹", GUILayout.Width(120));
+        var prevHitPrefab = newHitPrefab;
+        newHitPrefab = (GameObject)EditorGUILayout.ObjectField(newHitPrefab, typeof(GameObject), false);
+        EditorGUILayout.EndHorizontal();
+
+        // Hit 프리팹이 있을 때만 추가 옵션 표시
+        if (newHitPrefab != null)
+        {
+            EditorGUILayout.Space(5);
+
+            // 기준 반경 슬라이더 (스케일 1일 때의 범위)
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("기준 반경", GUILayout.Width(120));
+            float prevBaseRadius = baseHitRadius;
+            baseHitRadius = EditorGUILayout.Slider(baseHitRadius, 0.1f, 20f);
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.LabelField("  ↳ 스케일 1일 때 이펙트와 일치하는 범위 설정", EditorStyles.miniLabel);
+
+            EditorGUILayout.Space(3);
+
+            // Hit Prefab 스케일 슬라이더
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Hit 스케일", GUILayout.Width(120));
+            float prevScale = hitPrefabScale;
+            hitPrefabScale = EditorGUILayout.Slider(hitPrefabScale, 0.1f, 50f);
+            EditorGUILayout.EndHorizontal();
+
+            // 범위 = 기준 반경 * 스케일
+            estimatedHitRadius = baseHitRadius * hitPrefabScale;
+
+            // 스케일 또는 기준 반경 변경 시 자동 저장
+            bool valueChanged = Mathf.Abs(prevScale - hitPrefabScale) > 0.01f || Mathf.Abs(prevBaseRadius - baseHitRadius) > 0.01f;
+            if (valueChanged && autoRadiusFromHitEffect && creatorMode == CreatorMode.Edit && editingSkillIndex >= 0)
+            {
+                newAoeRadius = estimatedHitRadius;
+                AutoSaveCurrentSkill();
+            }
+
+            // 계산된 범위 표시
+            EditorGUILayout.Space(3);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("계산된 범위", GUILayout.Width(120));
+            GUI.enabled = false;
+            EditorGUILayout.FloatField(estimatedHitRadius);
+            GUI.enabled = true;
+            EditorGUILayout.LabelField($"= {baseHitRadius:F1} × {hitPrefabScale:F1}", EditorStyles.miniLabel);
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.Space(5);
+
+            // 자동 범위 설정 토글
+            EditorGUILayout.BeginHorizontal();
+            bool prevAutoRadius = autoRadiusFromHitEffect;
+            autoRadiusFromHitEffect = EditorGUILayout.Toggle(autoRadiusFromHitEffect, GUILayout.Width(20));
+            EditorGUILayout.LabelField("스케일에 맞춰 범위 반경 자동 설정 (Play Mode Hot Reload)", EditorStyles.miniLabel);
+            EditorGUILayout.EndHorizontal();
+
+            // 자동 설정이 활성화되면 범위 반경 동기화
+            if (autoRadiusFromHitEffect && estimatedHitRadius > 0)
+            {
+                newAoeRadius = estimatedHitRadius;
+
+                // 토글이 켜졌을 때도 자동 저장 (편집 모드일 경우)
+                if (!prevAutoRadius && creatorMode == CreatorMode.Edit && editingSkillIndex >= 0)
+                {
+                    AutoSaveCurrentSkill();
+                }
+            }
+
+            // 동기화 상태 표시
+            if (autoRadiusFromHitEffect)
+            {
+                EditorGUILayout.HelpBox($"aoe_radius가 {estimatedHitRadius:F2} ({baseHitRadius:F1} × {hitPrefabScale:F1})로 자동 설정됩니다.\nPlay Mode에서 스케일/기준 반경 변경 시 자동으로 Hot Reload됩니다.", MessageType.Info);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("토글을 켜면 이펙트 스케일과 데미지 범위가 동기화됩니다.\n1. 먼저 스케일 1에서 기준 반경을 이펙트와 맞춤\n2. 스케일 조절 시 범위도 같이 변경됨", MessageType.None);
+            }
+        }
+
+        EditorGUILayout.EndVertical();
+
+        EditorGUILayout.EndScrollView();
+
+        EditorGUILayout.Space(10);
+
+        // 저장 버튼
+        DrawSaveButtons();
+    }
+
+    private void DrawStatField(string label, ref float value, string tooltip)
+    {
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField(new GUIContent(label, tooltip), GUILayout.Width(120));
+        value = EditorGUILayout.FloatField(value);
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawSaveButtons()
+    {
+        EditorGUILayout.BeginHorizontal();
+
+        // 유효성 검사
+        bool isValid = ValidateSkillData();
+
+        GUI.enabled = isValid;
+        GUI.color = new Color(0.5f, 0.8f, 1f);
+        string saveButtonText = creatorMode == CreatorMode.Create ? "CSV에 저장" : "변경사항 저장";
+        if (GUILayout.Button(saveButtonText, GUILayout.Height(35)))
+        {
+            SaveSkillToCSV();
+        }
+        GUI.color = Color.white;
+        GUI.enabled = true;
+
+        // 취소/초기화 버튼
+        if (GUILayout.Button(creatorMode == CreatorMode.Create ? "초기화" : "편집 취소", GUILayout.Height(35), GUILayout.Width(100)))
+        {
+            if (creatorMode == CreatorMode.Edit)
+            {
+                creatorMode = CreatorMode.Create;
+                editingSkillIndex = -1;
+            }
+            ResetSkillForm();
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+        if (!isValid)
+        {
+            EditorGUILayout.HelpBox("스킬 ID와 스킬명을 입력하세요.", MessageType.Warning);
+        }
+    }
+
+    private bool ValidateSkillData()
+    {
+        if (newSkillId <= 0) return false;
+        if (string.IsNullOrWhiteSpace(newSkillName)) return false;
+        if (creatorMode == CreatorMode.Create && IsSkillIdDuplicate(newSkillId)) return false;
+        return true;
+    }
+
+    private bool IsSkillIdDuplicate(int skillId)
+    {
+        for (int i = 0; i < csvSkills.Count; i++)
+        {
+            if (csvSkills[i].skill_id == skillId)
+            {
+                // 편집 모드에서 자기 자신은 중복이 아님
+                if (creatorMode == CreatorMode.Edit && editingSkillIndex == i)
+                    return false;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int GetNextAvailableSkillId()
+    {
+        if (csvSkills.Count == 0) return 1001;
+
+        // 현재 선택된 behavior_type에 맞는 ID 범위 찾기
+        string selectedBehavior = creatableBehaviorTypes[newBehaviorTypeIndex];
+        int baseId = GetBaseIdForBehaviorType(selectedBehavior);
+
+        // 해당 범위에서 사용 가능한 다음 ID 찾기
+        var usedIds = csvSkills.Select(s => s.skill_id).ToHashSet();
+        for (int id = baseId; id < baseId + 100; id++)
+        {
+            if (!usedIds.Contains(id))
+                return id;
+        }
+
+        // 범위 내에 없으면 전체에서 최대값 + 1
+        return csvSkills.Max(s => s.skill_id) + 1;
+    }
+
+    private int GetBaseIdForBehaviorType(string behaviorType)
+    {
+        return behaviorType switch
+        {
+            "SingleProjectile" => 1001,
+            "ExplosiveProjectile" => 1101,
+            "FallingProjectile" => 1201,
+            "BeamRay" => 1201,
+            "TargetAOE" => 1301,
+            "LinearAOE" => 1401,
+            "GroundAOE" => 1501,
+            "MovingAOE" => 1501,
+            "Barrier" => 1601,
+            "Buff" => 1701,
+            "Debuff" => 1801,
+            "Trap" => 1901,
+            "Instant" => 2001,
+            _ => 1001
+        };
+    }
+
+    private bool IsProjectileType(string behaviorType)
+    {
+        return behaviorType == "SingleProjectile" || behaviorType == "ExplosiveProjectile" ||
+               behaviorType == "FallingProjectile";
+    }
+
+    private bool IsAOEType(string behaviorType)
+    {
+        return behaviorType == "ExplosiveProjectile" || behaviorType == "TargetAOE" ||
+               behaviorType == "LinearAOE" || behaviorType == "GroundAOE" || behaviorType == "MovingAOE";
+    }
+
+    private bool IsDurationType(string behaviorType)
+    {
+        return behaviorType == "BeamRay" || behaviorType == "GroundAOE" ||
+               behaviorType == "Barrier" || behaviorType == "Buff" || behaviorType == "Debuff";
+    }
+
+    /// <summary>
+    /// 이펙트 프리팹의 실제 범위(반경)를 계산합니다.
+    /// ParticleSystem, Renderer, Collider를 분석하여 가장 큰 범위를 반환합니다.
+    /// </summary>
+    private float CalculateEffectRadius(GameObject prefab, float scale)
+    {
+        if (prefab == null) return 0f;
+
+        float maxRadius = 0f;
+
+        // 1. ParticleSystem에서 크기 추출
+        var particles = prefab.GetComponentsInChildren<ParticleSystem>(true);
+        foreach (var ps in particles)
+        {
+            var main = ps.main;
+            var shape = ps.shape;
+
+            // Shape 모듈의 반경 확인
+            if (shape.enabled)
+            {
+                float shapeRadius = 0f;
+                switch (shape.shapeType)
+                {
+                    case ParticleSystemShapeType.Sphere:
+                    case ParticleSystemShapeType.Hemisphere:
+                        shapeRadius = shape.radius;
+                        break;
+                    case ParticleSystemShapeType.Circle:
+                        shapeRadius = shape.radius;
+                        break;
+                    case ParticleSystemShapeType.Cone:
+                    case ParticleSystemShapeType.ConeVolume:
+                        shapeRadius = shape.radius;
+                        break;
+                    case ParticleSystemShapeType.Box:
+                        shapeRadius = Mathf.Max(shape.scale.x, shape.scale.z) * 0.5f;
+                        break;
+                }
+
+                // 파티클 시작 크기도 고려
+                float startSize = main.startSize.constantMax;
+                maxRadius = Mathf.Max(maxRadius, shapeRadius + startSize * 0.5f);
+            }
+        }
+
+        // 2. Renderer Bounds에서 크기 추출
+        var renderers = prefab.GetComponentsInChildren<Renderer>(true);
+        foreach (var renderer in renderers)
+        {
+            // ParticleSystemRenderer는 런타임에만 정확한 bounds를 가지므로 제외
+            if (renderer is ParticleSystemRenderer) continue;
+
+            var bounds = renderer.bounds;
+            float boundsRadius = Mathf.Max(bounds.extents.x, bounds.extents.z);
+            maxRadius = Mathf.Max(maxRadius, boundsRadius);
+        }
+
+        // 3. Collider에서 크기 추출 (있다면)
+        var colliders = prefab.GetComponentsInChildren<Collider>(true);
+        foreach (var collider in colliders)
+        {
+            if (collider is SphereCollider sphere)
+            {
+                maxRadius = Mathf.Max(maxRadius, sphere.radius);
+            }
+            else if (collider is CapsuleCollider capsule)
+            {
+                maxRadius = Mathf.Max(maxRadius, capsule.radius);
+            }
+            else if (collider is BoxCollider box)
+            {
+                maxRadius = Mathf.Max(maxRadius, Mathf.Max(box.size.x, box.size.z) * 0.5f);
+            }
+        }
+
+        // 4. 기본값 (아무것도 없을 경우)
+        if (maxRadius <= 0f)
+        {
+            // 프리팹의 루트 스케일 기반으로 추정
+            maxRadius = Mathf.Max(prefab.transform.localScale.x, prefab.transform.localScale.z);
+            if (maxRadius <= 0f) maxRadius = 1f;
+        }
+
+        // 스케일 적용
+        return maxRadius * scale;
+    }
+
+    private void CreateNewSkill()
+    {
+        creatorMode = CreatorMode.Create;
+        editingSkillIndex = -1;
+        ResetSkillForm();
+        newSkillId = GetNextAvailableSkillId();
+    }
+
+    private void SelectSkillForEdit(int index)
+    {
+        creatorMode = CreatorMode.Edit;
+        editingSkillIndex = index;
+
+        var skill = csvSkills[index];
+        newSkillId = skill.skill_id;
+        newSkillName = skill.skill_name;
+        newBehaviorTypeIndex = System.Array.IndexOf(creatableBehaviorTypes, skill.behavior_type);
+        if (newBehaviorTypeIndex < 0) newBehaviorTypeIndex = 0;
+        newBaseDamage = skill.base_damage;
+        newCooldown = skill.cooldown;
+        newRange = skill.range;
+        newProjectileSpeed = skill.projectile_speed;
+        newAoeRadius = skill.aoe_radius;
+        newDuration = skill.duration;
+        newDescription = skill.description ?? "";
+
+        // VFX 로드
+        if (vfxDatabase != null)
+        {
+            var entry = vfxDatabase.GetEntry(skill.skill_id);
+            if (entry != null)
+            {
+                newVfxPrefab = entry.vfxPrefab;
+                newHitPrefab = entry.hitPrefab;
+                hitPrefabScale = entry.hitScale > 0 ? entry.hitScale : 1f;
+                baseHitRadius = entry.baseRadius > 0 ? entry.baseRadius : 1f;
+
+                // hitPrefab이 있으면 예상 반경 계산 (기준 반경 * 스케일)
+                if (newHitPrefab != null)
+                {
+                    estimatedHitRadius = baseHitRadius * hitPrefabScale;
+                }
+            }
+            else
+            {
+                newVfxPrefab = null;
+                newHitPrefab = null;
+                hitPrefabScale = 1f;
+                baseHitRadius = 1f;
+                estimatedHitRadius = 0f;
+            }
+        }
+
+        // 자동 범위 설정 토글은 스킬 선택 시 기본값 off
+        autoRadiusFromHitEffect = false;
+    }
+
+    private void ResetSkillForm()
+    {
+        newSkillId = GetNextAvailableSkillId();
+        newSkillName = "";
+        newBehaviorTypeIndex = 0;
+        newBaseDamage = 100f;
+        newCooldown = 2f;
+        newRange = 10f;
+        newProjectileSpeed = 15f;
+        newAoeRadius = 0f;
+        newDuration = 0f;
+        newDescription = "";
+        newVfxPrefab = null;
+        newHitPrefab = null;
+
+        // Hit Effect 관련 필드 초기화
+        hitPrefabScale = 1f;
+        baseHitRadius = 1f;
+        autoRadiusFromHitEffect = false;
+        estimatedHitRadius = 0f;
+    }
+
+    private void DeleteSkill(int index)
+    {
+        // 백업 생성
+        CreateCSVBackup();
+
+        csvSkills.RemoveAt(index);
+        SaveAllSkillsToCSV();
+
+        if (editingSkillIndex == index)
+        {
+            creatorMode = CreatorMode.Create;
+            editingSkillIndex = -1;
+            ResetSkillForm();
+        }
+        else if (editingSkillIndex > index)
+        {
+            editingSkillIndex--;
+        }
+
+        Debug.Log("[SkillEditor] 스킬이 삭제되었습니다.");
+    }
+
+    private void SaveSkillToCSV()
+    {
+        // 백업 생성
+        CreateCSVBackup();
+
+        string selectedBehavior = creatableBehaviorTypes[newBehaviorTypeIndex];
+
+        if (creatorMode == CreatorMode.Create)
+        {
+            // 새 스킬 추가
+            var newSkill = new MainSkillCSVEntry
+            {
+                skill_id = newSkillId,
+                skill_name = newSkillName,
+                behavior_type = selectedBehavior,
+                base_damage = newBaseDamage,
+                cooldown = newCooldown,
+                range = newRange,
+                projectile_speed = newProjectileSpeed,
+                aoe_radius = newAoeRadius,
+                duration = newDuration,
+                description = newDescription
+            };
+            csvSkills.Add(newSkill);
+
+            Debug.Log($"[SkillEditor] 새 스킬 추가됨: [{newSkillId}] {newSkillName}");
+        }
+        else
+        {
+            // 기존 스킬 수정
+            var skill = csvSkills[editingSkillIndex];
+            skill.skill_name = newSkillName;
+            skill.behavior_type = selectedBehavior;
+            skill.base_damage = newBaseDamage;
+            skill.cooldown = newCooldown;
+            skill.range = newRange;
+            skill.projectile_speed = newProjectileSpeed;
+            skill.aoe_radius = newAoeRadius;
+            skill.duration = newDuration;
+            skill.description = newDescription;
+
+            Debug.Log($"[SkillEditor] 스킬 수정됨: [{newSkillId}] {newSkillName}");
+        }
+
+        // CSV 파일에 저장
+        SaveAllSkillsToCSV();
+
+        // VFX 할당 (hitScale 포함)
+        if (newVfxPrefab != null || newHitPrefab != null || hitPrefabScale != 1f)
+        {
+            AssignVFXToSkill(newSkillId, newVfxPrefab, newHitPrefab, hitPrefabScale, baseHitRadius);
+        }
+
+        // 폼 초기화
+        if (creatorMode == CreatorMode.Create)
+        {
+            ResetSkillForm();
+        }
+
+        EditorUtility.DisplayDialog("저장 완료", "스킬이 CSV에 저장되었습니다.", "확인");
+    }
+
+    /// <summary>
+    /// 스케일/범위 변경 시 자동 저장 (Play Mode Hot Reload용)
+    /// 대화상자 없이 즉시 저장
+    /// </summary>
+    private void AutoSaveCurrentSkill()
+    {
+        if (creatorMode != CreatorMode.Edit || editingSkillIndex < 0 || editingSkillIndex >= csvSkills.Count)
+            return;
+
+        // 현재 편집 중인 스킬의 aoe_radius 업데이트
+        var skill = csvSkills[editingSkillIndex];
+        skill.aoe_radius = newAoeRadius;
+
+        // CSV 파일에 저장 (백업 없이 빠르게)
+        SaveAllSkillsToCSV();
+
+        // VFXDatabase에 hitScale, baseRadius 저장
+        if (newHitPrefab != null || hitPrefabScale != 1f || baseHitRadius != 1f)
+        {
+            AssignVFXToSkill(skill.skill_id, newVfxPrefab, newHitPrefab, hitPrefabScale, baseHitRadius);
+        }
+
+        Debug.Log($"[SkillEditor] 자동 저장됨: [{skill.skill_id}] {skill.skill_name} - aoe_radius: {newAoeRadius:F2}, hitScale: {hitPrefabScale:F2}, baseRadius: {baseHitRadius:F2}");
+    }
+
+    private void CreateCSVBackup()
+    {
+        string fullPath = Path.Combine(Application.dataPath.Replace("Assets", ""), csvPath);
+        if (File.Exists(fullPath))
+        {
+            string backupPath = fullPath + ".backup";
+            File.Copy(fullPath, backupPath, true);
+            Debug.Log($"[SkillEditor] 백업 생성됨: {backupPath}");
+        }
+    }
+
+    private void SaveAllSkillsToCSV()
+    {
+        string fullPath = Path.Combine(Application.dataPath.Replace("Assets", ""), csvPath);
+
+        using (StreamWriter writer = new StreamWriter(fullPath, false, System.Text.Encoding.UTF8))
+        {
+            // 헤더 (한글 주석)
+            writer.WriteLine("//스킬ID,//스킬명,행동타입,기본데미지,쿨다운,사거리,투사체속도,범위반경,지속시간,//설명");
+            // 헤더 (영문)
+            writer.WriteLine("skill_id,//skill_name,behavior_type,base_damage,cooldown,range,projectile_speed,aoe_radius,duration,//description");
+            // 타입 정의
+            writer.WriteLine("int,//string,string,float,float,float,float,float,float,//string");
+
+            // 스킬 데이터
+            foreach (var skill in csvSkills.OrderBy(s => s.skill_id))
+            {
+                string line = $"{skill.skill_id},{skill.skill_name},{skill.behavior_type}," +
+                              $"{skill.base_damage},{skill.cooldown},{skill.range}," +
+                              $"{skill.projectile_speed},{skill.aoe_radius},{skill.duration}," +
+                              $"{skill.description}";
+                writer.WriteLine(line);
+            }
+        }
+
+        AssetDatabase.Refresh();
+        Debug.Log($"[SkillEditor] CSV 저장됨: {csvPath}");
+    }
+
+    private void AssignVFXToSkill(int skillId, GameObject vfxPrefab, GameObject hitPrefab, float hitScale = 1f, float baseRadius = 1f)
+    {
+        if (vfxDatabase == null) return;
+
+        var field = typeof(SkillVFXDatabase).GetField("entries",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var entries = field?.GetValue(vfxDatabase) as List<SkillVFXDatabase.Entry>;
+
+        if (entries == null) return;
+
+        var entry = entries.FirstOrDefault(e => e.skillId == skillId);
+        if (entry == null)
+        {
+            entry = new SkillVFXDatabase.Entry { skillId = skillId };
+            entries.Add(entry);
+        }
+
+        if (vfxPrefab != null) entry.vfxPrefab = vfxPrefab;
+        if (hitPrefab != null) entry.hitPrefab = hitPrefab;
+        if (hitScale > 0) entry.hitScale = hitScale;
+        if (baseRadius > 0) entry.baseRadius = baseRadius;
+
+        EditorUtility.SetDirty(vfxDatabase);
+        AssetDatabase.SaveAssets();
+        vfxDatabase.RefreshCache();
+        Debug.Log($"[SkillEditor] VFX 할당됨: [{skillId}] hitScale: {hitScale}, baseRadius: {baseRadius}");
+    }
+
+    #endregion
 
     #region VFX Database Tab
 
@@ -792,10 +1590,18 @@ public class SkillEditorWindow : EditorWindow
                     entry.behavior_type = GetValue(values, typeIdx);
                 if (headerIndex.TryGetValue("base_damage", out int dmgIdx))
                     float.TryParse(GetValue(values, dmgIdx), out entry.base_damage);
-                if (headerIndex.TryGetValue("range", out int rangeIdx))
-                    float.TryParse(GetValue(values, rangeIdx), out entry.range);
                 if (headerIndex.TryGetValue("cooldown", out int cdIdx))
                     float.TryParse(GetValue(values, cdIdx), out entry.cooldown);
+                if (headerIndex.TryGetValue("range", out int rangeIdx))
+                    float.TryParse(GetValue(values, rangeIdx), out entry.range);
+                if (headerIndex.TryGetValue("projectile_speed", out int speedIdx))
+                    float.TryParse(GetValue(values, speedIdx), out entry.projectile_speed);
+                if (headerIndex.TryGetValue("aoe_radius", out int aoeIdx))
+                    float.TryParse(GetValue(values, aoeIdx), out entry.aoe_radius);
+                if (headerIndex.TryGetValue("duration", out int durIdx))
+                    float.TryParse(GetValue(values, durIdx), out entry.duration);
+                if (headerIndex.TryGetValue("description", out int descIdx))
+                    entry.description = GetValue(values, descIdx);
 
                 if (entry.skill_id > 0)
                 {
@@ -1308,8 +2114,12 @@ public class SkillEditorWindow : EditorWindow
         public string skill_name = "";
         public string behavior_type = "";
         public float base_damage;
-        public float range;
         public float cooldown;
+        public float range;
+        public float projectile_speed;
+        public float aoe_radius;
+        public float duration;
+        public string description = "";
     }
 
     #endregion
@@ -1323,33 +2133,26 @@ public class SkillEditorWindow : EditorWindow
         EditorGUILayout.Space(5);
 
         EditorGUILayout.HelpBox(
-            "SpecialSkillsEffectsPack 등 외부 에셋을 스킬 시스템에 연동합니다.\n" +
+            "VFX 에셋 폴더를 드래그 앤 드롭으로 추가하세요.\n" +
             "• NotScriptBased: VFXDatabase에 직접 등록\n" +
             "• ScriptBased: SkillVFXContainer로 래핑 후 등록",
             MessageType.Info);
 
         EditorGUILayout.Space(10);
 
-        // 에셋 경로 설정
-        EditorGUILayout.BeginHorizontal();
-        externalAssetPath = EditorGUILayout.TextField("에셋 경로", externalAssetPath);
-        if (GUILayout.Button("...", GUILayout.Width(30)))
-        {
-            string path = EditorUtility.OpenFolderPanel("VFX 에셋 폴더 선택", "Assets", "");
-            if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
-            {
-                externalAssetPath = "Assets" + path.Substring(Application.dataPath.Length);
-            }
-        }
-        EditorGUILayout.EndHorizontal();
+        // 스캔 경로 관리 섹션
+        DrawScanPathsSection();
 
-        EditorGUILayout.Space(5);
+        EditorGUILayout.Space(10);
 
+        // 스캔 버튼
         EditorGUILayout.BeginHorizontal();
+        GUI.enabled = scanPaths.Count > 0;
         if (GUILayout.Button("에셋 스캔", GUILayout.Height(25)))
         {
             ScanExternalAssets();
         }
+        GUI.enabled = true;
         GUI.color = externalAssetsLoaded ? Color.green : Color.yellow;
         EditorGUILayout.LabelField(externalAssetsLoaded ? $"✓ {externalEffects.Count}개 발견" : "스캔 필요", GUILayout.Width(120));
         GUI.color = Color.white;
@@ -1542,28 +2345,201 @@ public class SkillEditorWindow : EditorWindow
         EditorGUILayout.EndVertical();
     }
 
+    #region Scan Paths Management
+
+    private void DrawScanPathsSection()
+    {
+        EditorGUILayout.LabelField("스캔 경로", EditorStyles.boldLabel);
+
+        // 드래그 앤 드롭 영역
+        Rect dropArea = GUILayoutUtility.GetRect(0, 50, GUILayout.ExpandWidth(true));
+        GUI.Box(dropArea, "폴더를 여기에 드래그 앤 드롭", EditorStyles.helpBox);
+
+        // 드래그 앤 드롭 이벤트 처리
+        Event evt = Event.current;
+        switch (evt.type)
+        {
+            case EventType.DragUpdated:
+            case EventType.DragPerform:
+                if (!dropArea.Contains(evt.mousePosition))
+                    break;
+
+                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+
+                if (evt.type == EventType.DragPerform)
+                {
+                    DragAndDrop.AcceptDrag();
+                    foreach (var draggedObject in DragAndDrop.objectReferences)
+                    {
+                        string path = AssetDatabase.GetAssetPath(draggedObject);
+                        if (AssetDatabase.IsValidFolder(path) && !scanPaths.Contains(path))
+                        {
+                            scanPaths.Add(path);
+                            SaveScanPaths();
+                            externalAssetsLoaded = false; // 재스캔 필요
+                        }
+                    }
+                }
+                evt.Use();
+                break;
+        }
+
+        EditorGUILayout.Space(5);
+
+        // 경로 목록 표시
+        if (scanPaths.Count > 0)
+        {
+            scanPathsScrollPosition = EditorGUILayout.BeginScrollView(scanPathsScrollPosition, GUILayout.Height(Mathf.Min(100, scanPaths.Count * 22 + 10)));
+
+            for (int i = scanPaths.Count - 1; i >= 0; i--)
+            {
+                EditorGUILayout.BeginHorizontal();
+
+                // 폴더 아이콘과 경로
+                EditorGUILayout.LabelField(EditorGUIUtility.IconContent("Folder Icon"), GUILayout.Width(20));
+                EditorGUILayout.LabelField(scanPaths[i], EditorStyles.miniLabel);
+
+                // 폴더 열기 버튼
+                if (GUILayout.Button("↗", GUILayout.Width(25)))
+                {
+                    var folder = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(scanPaths[i]);
+                    if (folder != null)
+                    {
+                        EditorGUIUtility.PingObject(folder);
+                        Selection.activeObject = folder;
+                    }
+                }
+
+                // 삭제 버튼
+                GUI.color = new Color(1f, 0.5f, 0.5f);
+                if (GUILayout.Button("✕", GUILayout.Width(25)))
+                {
+                    scanPaths.RemoveAt(i);
+                    SaveScanPaths();
+                    externalAssetsLoaded = false;
+                }
+                GUI.color = Color.white;
+
+                EditorGUILayout.EndHorizontal();
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
+        else
+        {
+            EditorGUILayout.HelpBox("스캔할 폴더가 없습니다. 위 영역에 폴더를 드래그하세요.", MessageType.Info);
+        }
+
+        // 경로 관리 버튼
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("폴더 추가...", GUILayout.Height(20)))
+        {
+            string path = EditorUtility.OpenFolderPanel("VFX 에셋 폴더 선택", "Assets", "");
+            if (!string.IsNullOrEmpty(path) && path.StartsWith(Application.dataPath))
+            {
+                string relativePath = "Assets" + path.Substring(Application.dataPath.Length);
+                if (!scanPaths.Contains(relativePath))
+                {
+                    scanPaths.Add(relativePath);
+                    SaveScanPaths();
+                    externalAssetsLoaded = false;
+                }
+            }
+        }
+
+        GUI.color = new Color(1f, 0.7f, 0.7f);
+        if (GUILayout.Button("전체 삭제", GUILayout.Width(70), GUILayout.Height(20)))
+        {
+            if (EditorUtility.DisplayDialog("확인", "모든 스캔 경로를 삭제하시겠습니까?", "예", "아니오"))
+            {
+                scanPaths.Clear();
+                SaveScanPaths();
+                externalAssetsLoaded = false;
+            }
+        }
+        GUI.color = Color.white;
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void LoadScanPaths()
+    {
+        scanPaths.Clear();
+        string savedPaths = EditorPrefs.GetString(SCAN_PATHS_PREF_KEY, "");
+        if (!string.IsNullOrEmpty(savedPaths))
+        {
+            string[] paths = savedPaths.Split('|');
+            foreach (string path in paths)
+            {
+                if (!string.IsNullOrEmpty(path) && AssetDatabase.IsValidFolder(path))
+                {
+                    scanPaths.Add(path);
+                }
+            }
+        }
+    }
+
+    private void SaveScanPaths()
+    {
+        string combined = string.Join("|", scanPaths);
+        EditorPrefs.SetString(SCAN_PATHS_PREF_KEY, combined);
+    }
+
+    #endregion
+
     private void ScanExternalAssets()
     {
         externalEffects.Clear();
         externalAssetsLoaded = false;
 
-        if (!AssetDatabase.IsValidFolder(externalAssetPath))
+        if (scanPaths.Count == 0)
         {
-            Debug.LogWarning($"[SkillEditor] 폴더를 찾을 수 없습니다: {externalAssetPath}");
+            Debug.LogWarning("[SkillEditor] 스캔할 폴더가 없습니다. 폴더를 추가하세요.");
             return;
         }
 
-        string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", new[] { externalAssetPath });
+        // 유효한 경로만 필터링
+        var validPaths = scanPaths.Where(p => AssetDatabase.IsValidFolder(p)).ToArray();
+        if (validPaths.Length == 0)
+        {
+            Debug.LogWarning("[SkillEditor] 유효한 스캔 경로가 없습니다.");
+            return;
+        }
+
+        // 모든 경로에서 프리팹 검색
+        string[] prefabGuids = AssetDatabase.FindAssets("t:Prefab", validPaths);
+
+        // 중복 제거를 위한 HashSet
+        var processedPaths = new HashSet<string>();
 
         foreach (string guid in prefabGuids)
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
+
+            // 중복 체크
+            if (processedPaths.Contains(path)) continue;
+            processedPaths.Add(path);
+
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
             if (prefab == null) continue;
 
             // Base 프리팹은 제외 (서브 컴포넌트)
             if (path.Contains("(Base)") || path.Contains("_Base")) continue;
+
+            // VFX 관련 프리팹인지 확인 (ParticleSystem 또는 TrailRenderer 포함)
+            bool hasVFXComponents = prefab.GetComponentInChildren<ParticleSystem>(true) != null ||
+                                    prefab.GetComponentInChildren<TrailRenderer>(true) != null ||
+                                    prefab.GetComponentInChildren<LineRenderer>(true) != null;
+
+            // VFX 관련 이름 패턴 확인
+            string lowerPath = path.ToLower();
+            bool hasVFXPath = lowerPath.Contains("vfx") || lowerPath.Contains("effect") ||
+                              lowerPath.Contains("fx") || lowerPath.Contains("particle") ||
+                              lowerPath.Contains("skill") || lowerPath.Contains("magic") ||
+                              lowerPath.Contains("spell");
+
+            // VFX 컴포넌트나 VFX 경로가 없으면 스킵
+            if (!hasVFXComponents && !hasVFXPath) continue;
 
             var effectInfo = new ExternalEffectInfo
             {
@@ -1581,9 +2557,10 @@ public class SkillEditorWindow : EditorWindow
                 if (comp == null) continue;
                 string typeName = comp.GetType().Name;
 
-                // 표준 Unity 컴포넌트 제외
+                // 표준 Unity 컴포넌트 및 우리 컴포넌트 제외
                 if (typeName == "Transform" || typeName == "ParticleSystem" ||
-                    typeName == "Animator" || typeName == "AudioSource") continue;
+                    typeName == "Animator" || typeName == "AudioSource" ||
+                    typeName == "SkillVFXContainer" || typeName == "SkillProjectile") continue;
 
                 if (!effectInfo.scripts.Contains(typeName))
                 {
@@ -1592,6 +2569,12 @@ public class SkillEditorWindow : EditorWindow
             }
 
             effectInfo.hasScripts = effectInfo.scripts.Count > 0;
+
+            // ScriptBased 판단 - 경로에 없어도 스크립트가 있으면 ScriptBased로 판단
+            if (!effectInfo.isScriptBased && effectInfo.hasScripts)
+            {
+                effectInfo.isScriptBased = true;
+            }
 
             // behavior_type 추천
             effectInfo.suggestedBehaviorType = GuessBehaviorType(prefab.name);
@@ -1604,7 +2587,7 @@ public class SkillEditorWindow : EditorWindow
 
         externalEffects = externalEffects.OrderBy(e => e.name).ToList();
         externalAssetsLoaded = true;
-        Debug.Log($"[SkillEditor] 외부 에셋 스캔 완료: {externalEffects.Count}개");
+        Debug.Log($"[SkillEditor] 외부 에셋 스캔 완료: {externalEffects.Count}개 ({validPaths.Length}개 폴더)");
     }
 
     private string GuessBehaviorType(string effectName)
@@ -1922,56 +2905,733 @@ public class SkillEditorWindow : EditorWindow
     }
 
     #endregion
+
+    #region Combination Rules Tab
+
+    private void DrawCombinationRulesTab()
+    {
+        EditorGUILayout.LabelField("메인 스킬 × 서포트 스킬 조합 규칙", headerStyle);
+        EditorGUILayout.Space(5);
+
+        // 에셋 로드/생성
+        if (combinationRuleData == null)
+        {
+            combinationRuleData = AssetDatabase.LoadAssetAtPath<SkillCombinationRuleData>(COMBINATION_RULES_ASSET_PATH);
+        }
+
+        if (combinationRuleData == null)
+        {
+            EditorGUILayout.BeginHorizontal();
+            GUI.color = new Color(0.5f, 1f, 0.5f);
+            if (GUILayout.Button("규칙 데이터 생성", GUILayout.Height(25)))
+            {
+                CreateCombinationRuleAsset();
+            }
+            GUI.color = Color.white;
+            EditorGUILayout.EndHorizontal();
+
+            EditorGUILayout.HelpBox("조합 규칙 데이터가 없습니다. '규칙 데이터 생성' 버튼을 눌러 새로 만드세요.", MessageType.Info);
+            return;
+        }
+
+        // CSV 로드/저장 버튼 (첫 번째 줄)
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.LabelField("CSV 파일:", GUILayout.Width(60));
+        EditorGUILayout.SelectableLabel(SkillCombinationRuleData.CSV_PATH, EditorStyles.textField, GUILayout.Height(18));
+
+        GUI.color = new Color(0.7f, 1f, 0.7f);
+        if (GUILayout.Button("CSV 로드", GUILayout.Width(80), GUILayout.Height(20)))
+        {
+            LoadCombinationRulesFromCSV();
+        }
+        GUI.color = Color.white;
+
+        GUI.color = new Color(1f, 0.85f, 0.6f);
+        if (GUILayout.Button("CSV 저장", GUILayout.Width(80), GUILayout.Height(20)))
+        {
+            SaveCombinationRulesToCSV();
+        }
+        GUI.color = Color.white;
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(5);
+
+        // 에셋 저장 및 기타 버튼 (두 번째 줄)
+        EditorGUILayout.BeginHorizontal();
+
+        // 에셋 저장 버튼
+        GUI.color = new Color(0.5f, 0.8f, 1f);
+        if (GUILayout.Button("에셋 저장", GUILayout.Width(80), GUILayout.Height(25)))
+        {
+            SaveCombinationRules();
+        }
+        GUI.color = Color.white;
+
+        // 기본값 초기화 버튼
+        GUI.color = new Color(1f, 0.8f, 0.5f);
+        if (GUILayout.Button("기본값으로 초기화", GUILayout.Width(120), GUILayout.Height(25)))
+        {
+            if (EditorUtility.DisplayDialog("기본값 초기화",
+                "모든 조합 규칙을 기본값으로 초기화하시겠습니까?\n\n현재 설정은 덮어씌워집니다.",
+                "초기화", "취소"))
+            {
+                InitializeDefaultCombinationRules();
+            }
+        }
+        GUI.color = Color.white;
+
+        // 모두 선택 버튼
+        if (GUILayout.Button("모두 선택", GUILayout.Width(80), GUILayout.Height(25)))
+        {
+            SetAllCombinationRules(true);
+        }
+
+        // 모두 해제 버튼
+        if (GUILayout.Button("모두 해제", GUILayout.Width(80), GUILayout.Height(25)))
+        {
+            SetAllCombinationRules(false);
+        }
+
+        GUILayout.FlexibleSpace();
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.Space(10);
+
+        // 체크박스 그리드 표시
+        DrawCombinationRulesGrid();
+    }
+
+    private void DrawCombinationRulesGrid()
+    {
+        // 셀 크기 설정
+        float labelWidth = 130f;
+        float cellWidth = 45f;
+        float cellHeight = 22f;
+        float headerHeight = 80f;
+
+        combinationRulesScrollPosition = EditorGUILayout.BeginScrollView(combinationRulesScrollPosition);
+
+        // 헤더 행 (서포트 타입)
+        EditorGUILayout.BeginHorizontal();
+        GUILayout.Space(labelWidth); // 좌측 빈 공간
+
+        for (int i = 0; i < supportTypes.Length; i++)
+        {
+            // 세로 텍스트 표시를 위해 Matrix 회전 사용
+            Rect cellRect = GUILayoutUtility.GetRect(cellWidth, headerHeight);
+
+            // 배경색 설정 (카테고리별)
+            Color bgColor = GetSupportCategoryColor(i);
+            EditorGUI.DrawRect(cellRect, bgColor);
+
+            // 세로 텍스트 그리기
+            Matrix4x4 matrixBackup = GUI.matrix;
+            GUIUtility.RotateAroundPivot(-60f, new Vector2(cellRect.x + cellWidth / 2, cellRect.y + headerHeight / 2));
+
+            GUIStyle verticalStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                fontSize = 10
+            };
+
+            string labelText = $"{supportTypeNames[i]}\n({supportTypes[i]})";
+            GUI.Label(new Rect(cellRect.x - 10, cellRect.y + 20, 100, 40), labelText, verticalStyle);
+
+            GUI.matrix = matrixBackup;
+        }
+        EditorGUILayout.EndHorizontal();
+
+        // 각 behavior_type 행
+        for (int row = 0; row < creatableBehaviorTypes.Length; row++)
+        {
+            string behaviorType = creatableBehaviorTypes[row];
+
+            EditorGUILayout.BeginHorizontal();
+
+            // behavior_type 라벨
+            Color rowColor = GetBehaviorCategoryColor(row);
+            Rect labelRect = GUILayoutUtility.GetRect(labelWidth, cellHeight);
+            EditorGUI.DrawRect(labelRect, rowColor);
+
+            GUIStyle labelStyle = new GUIStyle(EditorStyles.label)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                fontStyle = FontStyle.Bold,
+                fontSize = 11
+            };
+            GUI.Label(labelRect, " " + behaviorType, labelStyle);
+
+            // 각 서포트 타입에 대한 체크박스
+            for (int col = 0; col < supportTypes.Length; col++)
+            {
+                string supportType = supportTypes[col];
+                bool isAllowed = combinationRuleData.GetRule(behaviorType, supportType);
+
+                Rect checkRect = GUILayoutUtility.GetRect(cellWidth, cellHeight);
+
+                // 배경색
+                Color cellColor = isAllowed ? new Color(0.3f, 0.7f, 0.3f, 0.3f) : new Color(0.5f, 0.5f, 0.5f, 0.2f);
+                EditorGUI.DrawRect(checkRect, cellColor);
+
+                // 체크박스 (중앙 정렬)
+                Rect toggleRect = new Rect(checkRect.x + (cellWidth - 16) / 2, checkRect.y + (cellHeight - 16) / 2, 16, 16);
+                bool newValue = EditorGUI.Toggle(toggleRect, isAllowed);
+
+                if (newValue != isAllowed)
+                {
+                    combinationRuleData.SetRule(behaviorType, supportType, newValue);
+                    EditorUtility.SetDirty(combinationRuleData);
+                }
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        EditorGUILayout.EndScrollView();
+
+        // 범례
+        EditorGUILayout.Space(10);
+        DrawCombinationRulesLegend();
+    }
+
+    private void DrawCombinationRulesLegend()
+    {
+        EditorGUILayout.BeginHorizontal("box");
+        EditorGUILayout.LabelField("범례:", EditorStyles.boldLabel, GUILayout.Width(50));
+
+        // 서포트 카테고리 범례
+        DrawLegendItem("투사체", new Color(0.4f, 0.6f, 0.9f, 0.5f));
+        DrawLegendItem("CC", new Color(0.9f, 0.5f, 0.5f, 0.5f));
+        DrawLegendItem("스탯", new Color(0.5f, 0.9f, 0.5f, 0.5f));
+        DrawLegendItem("AOE", new Color(0.9f, 0.7f, 0.4f, 0.5f));
+
+        GUILayout.FlexibleSpace();
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawLegendItem(string label, Color color)
+    {
+        Rect rect = GUILayoutUtility.GetRect(60, 18);
+        EditorGUI.DrawRect(new Rect(rect.x, rect.y + 2, 14, 14), color);
+        GUI.Label(new Rect(rect.x + 18, rect.y, 50, 18), label, EditorStyles.miniLabel);
+    }
+
+    private Color GetSupportCategoryColor(int index)
+    {
+        // 0-4: 투사체 (Chain, Pierce, Split, Homing, MultiShot)
+        // 5-9: CC (Slow, Stun, DOT, Knockback, PullIn)
+        // 10-12: 스탯 (AreaUp, DamageUp, CooldownDown)
+        // 13-15: AOE (Linger, Moving, Expand)
+
+        if (index < 5) return new Color(0.4f, 0.6f, 0.9f, 0.3f);  // 투사체 - 파랑
+        if (index < 10) return new Color(0.9f, 0.5f, 0.5f, 0.3f); // CC - 빨강
+        if (index < 13) return new Color(0.5f, 0.9f, 0.5f, 0.3f); // 스탯 - 초록
+        return new Color(0.9f, 0.7f, 0.4f, 0.3f);                  // AOE - 주황
+    }
+
+    private Color GetBehaviorCategoryColor(int index)
+    {
+        string behaviorType = creatableBehaviorTypes[index];
+
+        // 투사체 타입
+        if (behaviorType.Contains("Projectile"))
+            return new Color(0.4f, 0.6f, 0.9f, 0.2f);
+
+        // 빔 타입
+        if (behaviorType == "BeamRay")
+            return new Color(0.7f, 0.4f, 0.9f, 0.2f);
+
+        // AOE 타입
+        if (behaviorType.Contains("AOE"))
+            return new Color(0.9f, 0.7f, 0.4f, 0.2f);
+
+        // 유틸리티 타입
+        return new Color(0.5f, 0.5f, 0.5f, 0.2f);
+    }
+
+    private void CreateCombinationRuleAsset()
+    {
+        // 폴더 확인/생성
+        string folderPath = Path.GetDirectoryName(COMBINATION_RULES_ASSET_PATH);
+        if (!AssetDatabase.IsValidFolder(folderPath))
+        {
+            string[] folders = folderPath.Split('/');
+            string currentPath = folders[0];
+            for (int i = 1; i < folders.Length; i++)
+            {
+                string nextPath = currentPath + "/" + folders[i];
+                if (!AssetDatabase.IsValidFolder(nextPath))
+                {
+                    AssetDatabase.CreateFolder(currentPath, folders[i]);
+                }
+                currentPath = nextPath;
+            }
+        }
+
+        // 에셋 생성
+        combinationRuleData = ScriptableObject.CreateInstance<SkillCombinationRuleData>();
+        combinationRuleData.InitializeDefaultRules(creatableBehaviorTypes, supportTypes);
+
+        AssetDatabase.CreateAsset(combinationRuleData, COMBINATION_RULES_ASSET_PATH);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log($"[스킬 에디터] 조합 규칙 데이터 생성됨: {COMBINATION_RULES_ASSET_PATH}");
+    }
+
+    private void SaveCombinationRules()
+    {
+        if (combinationRuleData == null) return;
+
+        EditorUtility.SetDirty(combinationRuleData);
+        AssetDatabase.SaveAssets();
+
+        Debug.Log("[스킬 에디터] 조합 규칙이 저장되었습니다.");
+    }
+
+    private void InitializeDefaultCombinationRules()
+    {
+        if (combinationRuleData == null) return;
+
+        combinationRuleData.InitializeDefaultRules(creatableBehaviorTypes, supportTypes);
+        EditorUtility.SetDirty(combinationRuleData);
+        AssetDatabase.SaveAssets();
+
+        Debug.Log("[스킬 에디터] 조합 규칙이 기본값으로 초기화되었습니다.");
+    }
+
+    private void SetAllCombinationRules(bool value)
+    {
+        if (combinationRuleData == null) return;
+
+        foreach (var behaviorType in creatableBehaviorTypes)
+        {
+            foreach (var supportType in supportTypes)
+            {
+                combinationRuleData.SetRule(behaviorType, supportType, value);
+            }
+        }
+
+        EditorUtility.SetDirty(combinationRuleData);
+    }
+
+    private void LoadCombinationRulesFromCSV()
+    {
+        if (combinationRuleData == null) return;
+
+        if (combinationRuleData.LoadFromCSV())
+        {
+            EditorUtility.SetDirty(combinationRuleData);
+            AssetDatabase.SaveAssets();
+            Repaint();
+        }
+    }
+
+    private void SaveCombinationRulesToCSV()
+    {
+        if (combinationRuleData == null) return;
+
+        if (combinationRuleData.SaveToCSV(supportTypes))
+        {
+            AssetDatabase.Refresh();
+        }
+    }
+
+    #endregion
 }
 
 /// <summary>
 /// 스킬 - VFX 매핑 도우미 윈도우
+/// 드래그 앤 드롭으로 스킬에 VFX 프리팹 할당
 /// </summary>
 public class SkillVFXMappingWindow : EditorWindow
 {
+    #region Data
     private SkillVFXDatabase database;
-    private List<object> skills;
-    private List<object> effects;
+    private List<SkillMappingEntry> skillEntries = new List<SkillMappingEntry>();
     private Vector2 scrollPos;
+    private string skillSearchFilter = "";
+    private string behaviorTypeFilter = "All";
+    private bool showUnmappedOnly = false;
+
+    // 신규 시스템: 3개 behavior_type + Legacy 호환
+    private readonly string[] behaviorTypes = {
+        "All", "Projectile", "BeamRay", "AOE",
+        // Legacy (이전 스킬 데이터 호환용)
+        "SingleProjectile", "ExplosiveProjectile", "FallingProjectile",
+        "TargetAOE", "LinearAOE", "GroundAOE", "MovingAOE",
+        "Barrier", "Buff", "Debuff", "Trap", "Instant"
+    };
+
+    [Serializable]
+    private class SkillMappingEntry
+    {
+        public int skillId;
+        public string skillName;
+        public string behaviorType;
+        public float baseDamage;
+        public GameObject vfxPrefab;
+        public GameObject hitPrefab;
+        public bool hasVFX;
+    }
+    #endregion
+
+    #region Styles
+    private GUIStyle headerStyle;
+    private GUIStyle dropAreaStyle;
+    private bool stylesInitialized = false;
+    #endregion
 
     public static void ShowWindow(SkillVFXDatabase db, object csvSkills, object externalEffects)
     {
         var window = GetWindow<SkillVFXMappingWindow>("VFX 매핑 도우미");
         window.database = db;
-        window.minSize = new Vector2(500, 400);
+        window.minSize = new Vector2(700, 500);
+
+        // CSV 스킬 데이터 복사
+        if (csvSkills is System.Collections.IList list)
+        {
+            window.skillEntries.Clear();
+            foreach (var item in list)
+            {
+                // Reflection으로 private class 접근
+                var type = item.GetType();
+                var entry = new SkillMappingEntry
+                {
+                    skillId = (int)type.GetField("skill_id").GetValue(item),
+                    skillName = (string)type.GetField("skill_name").GetValue(item) ?? "",
+                    behaviorType = (string)type.GetField("behavior_type").GetValue(item) ?? "",
+                    baseDamage = (float)type.GetField("base_damage").GetValue(item)
+                };
+
+                // 현재 VFX 할당 상태 확인
+                if (db != null)
+                {
+                    var dbEntry = db.GetEntry(entry.skillId);
+                    if (dbEntry != null)
+                    {
+                        entry.vfxPrefab = dbEntry.vfxPrefab;
+                        entry.hitPrefab = dbEntry.hitPrefab;
+                        entry.hasVFX = dbEntry.vfxPrefab != null;
+                    }
+                }
+
+                window.skillEntries.Add(entry);
+            }
+        }
+
         window.Show();
+    }
+
+    private void InitStyles()
+    {
+        if (stylesInitialized) return;
+
+        headerStyle = new GUIStyle(EditorStyles.boldLabel)
+        {
+            fontSize = 14,
+            alignment = TextAnchor.MiddleCenter
+        };
+
+        dropAreaStyle = new GUIStyle("box")
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontStyle = FontStyle.Italic
+        };
+
+        stylesInitialized = true;
     }
 
     private void OnGUI()
     {
-        EditorGUILayout.LabelField("스킬 - VFX 매핑 도우미", EditorStyles.boldLabel);
-        EditorGUILayout.Space(10);
+        InitStyles();
+
+        EditorGUILayout.LabelField("스킬 - VFX 매핑 도우미", headerStyle);
+        EditorGUILayout.Space(5);
 
         EditorGUILayout.HelpBox(
-            "드래그 앤 드롭으로 스킬과 VFX를 매핑할 수 있습니다.\n" +
-            "왼쪽: 스킬 목록 | 오른쪽: VFX 목록",
+            "VFX 프리팹을 드래그하여 스킬의 드롭 영역에 놓으세요.\n" +
+            "Project 창에서 프리팹을 직접 드래그할 수 있습니다.",
             MessageType.Info);
 
         EditorGUILayout.Space(10);
 
-        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+        // 필터 섹션
+        DrawFilterSection();
 
+        EditorGUILayout.Space(10);
+
+        // 스킬 목록
+        DrawSkillList();
+
+        EditorGUILayout.Space(10);
+
+        // 하단 버튼
+        DrawBottomButtons();
+    }
+
+    private void DrawFilterSection()
+    {
         EditorGUILayout.BeginHorizontal();
 
-        // 스킬 목록 (왼쪽)
-        EditorGUILayout.BeginVertical("box", GUILayout.Width(200));
-        EditorGUILayout.LabelField("스킬 목록", EditorStyles.boldLabel);
-        EditorGUILayout.LabelField("(구현 예정)");
-        EditorGUILayout.EndVertical();
+        EditorGUILayout.LabelField("검색:", GUILayout.Width(40));
+        skillSearchFilter = EditorGUILayout.TextField(skillSearchFilter, GUILayout.Width(150));
 
-        // VFX 목록 (오른쪽)
-        EditorGUILayout.BeginVertical("box", GUILayout.Width(200));
-        EditorGUILayout.LabelField("VFX 목록", EditorStyles.boldLabel);
-        EditorGUILayout.LabelField("(구현 예정)");
-        EditorGUILayout.EndVertical();
+        EditorGUILayout.LabelField("타입:", GUILayout.Width(35));
+        int typeIndex = System.Array.IndexOf(behaviorTypes, behaviorTypeFilter);
+        typeIndex = EditorGUILayout.Popup(typeIndex, behaviorTypes, GUILayout.Width(130));
+        behaviorTypeFilter = behaviorTypes[Mathf.Max(0, typeIndex)];
+
+        showUnmappedOnly = EditorGUILayout.ToggleLeft("미할당만", showUnmappedOnly, GUILayout.Width(80));
 
         EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawSkillList()
+    {
+        // 필터링
+        var filtered = skillEntries.Where(e =>
+        {
+            if (showUnmappedOnly && e.hasVFX) return false;
+            if (behaviorTypeFilter != "All" && e.behaviorType != behaviorTypeFilter) return false;
+            if (!string.IsNullOrEmpty(skillSearchFilter))
+            {
+                if (!e.skillName.ToLower().Contains(skillSearchFilter.ToLower()) &&
+                    !e.skillId.ToString().Contains(skillSearchFilter))
+                    return false;
+            }
+            return true;
+        }).ToList();
+
+        EditorGUILayout.LabelField($"스킬 목록 ({filtered.Count}/{skillEntries.Count})", EditorStyles.boldLabel);
+
+        // 헤더
+        EditorGUILayout.BeginHorizontal("box");
+        EditorGUILayout.LabelField("ID", EditorStyles.boldLabel, GUILayout.Width(50));
+        EditorGUILayout.LabelField("스킬명", EditorStyles.boldLabel, GUILayout.Width(100));
+        EditorGUILayout.LabelField("타입", EditorStyles.boldLabel, GUILayout.Width(120));
+        EditorGUILayout.LabelField("VFX 프리팹 (드래그 앤 드롭)", EditorStyles.boldLabel, GUILayout.Width(200));
+        EditorGUILayout.LabelField("Hit 프리팹", EditorStyles.boldLabel, GUILayout.Width(150));
+        EditorGUILayout.LabelField("", GUILayout.Width(50)); // 버튼 공간
+        EditorGUILayout.EndHorizontal();
+
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos);
+
+        foreach (var entry in filtered)
+        {
+            DrawSkillRow(entry);
+        }
 
         EditorGUILayout.EndScrollView();
+    }
+
+    private void DrawSkillRow(SkillMappingEntry entry)
+    {
+        EditorGUILayout.BeginHorizontal("box");
+
+        // ID
+        EditorGUILayout.LabelField(entry.skillId.ToString(), GUILayout.Width(50));
+
+        // 스킬명
+        EditorGUILayout.LabelField(entry.skillName, GUILayout.Width(100));
+
+        // 타입
+        EditorGUILayout.LabelField(entry.behaviorType, GUILayout.Width(120));
+
+        // VFX 프리팹 드롭 영역
+        Rect vfxDropRect = GUILayoutUtility.GetRect(200, 20);
+        DrawVFXDropArea(vfxDropRect, entry, isHit: false);
+
+        // Hit 프리팹 드롭 영역
+        Rect hitDropRect = GUILayoutUtility.GetRect(150, 20);
+        DrawVFXDropArea(hitDropRect, entry, isHit: true);
+
+        // 클리어 버튼
+        if (entry.hasVFX)
+        {
+            GUI.color = new Color(1f, 0.5f, 0.5f);
+            if (GUILayout.Button("✕", GUILayout.Width(25)))
+            {
+                ClearVFXMapping(entry);
+            }
+            GUI.color = Color.white;
+        }
+        else
+        {
+            GUILayout.Space(29);
+        }
+
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void DrawVFXDropArea(Rect rect, SkillMappingEntry entry, bool isHit)
+    {
+        GameObject currentPrefab = isHit ? entry.hitPrefab : entry.vfxPrefab;
+
+        // 배경색 설정
+        Color bgColor = currentPrefab != null ? new Color(0.5f, 0.8f, 0.5f, 0.3f) : new Color(0.8f, 0.8f, 0.8f, 0.3f);
+        EditorGUI.DrawRect(rect, bgColor);
+
+        // 현재 할당된 프리팹 또는 안내 텍스트
+        string displayText = currentPrefab != null ? currentPrefab.name : (isHit ? "Hit VFX 드롭" : "VFX 드롭");
+        GUI.Label(rect, displayText, EditorStyles.centeredGreyMiniLabel);
+
+        // 드래그 앤 드롭 처리
+        Event evt = Event.current;
+        switch (evt.type)
+        {
+            case EventType.DragUpdated:
+            case EventType.DragPerform:
+                if (!rect.Contains(evt.mousePosition))
+                    break;
+
+                // GameObject 프리팹인지 확인
+                bool hasValidPrefab = false;
+                foreach (var obj in DragAndDrop.objectReferences)
+                {
+                    if (obj is GameObject go && PrefabUtility.IsPartOfPrefabAsset(go))
+                    {
+                        hasValidPrefab = true;
+                        break;
+                    }
+                }
+
+                if (!hasValidPrefab) break;
+
+                DragAndDrop.visualMode = DragAndDropVisualMode.Link;
+
+                if (evt.type == EventType.DragPerform)
+                {
+                    DragAndDrop.AcceptDrag();
+
+                    foreach (var obj in DragAndDrop.objectReferences)
+                    {
+                        if (obj is GameObject go && PrefabUtility.IsPartOfPrefabAsset(go))
+                        {
+                            AssignVFXToSkill(entry, go, isHit);
+                            break; // 첫 번째 유효한 프리팹만 사용
+                        }
+                    }
+                }
+                evt.Use();
+                break;
+        }
+    }
+
+    private void AssignVFXToSkill(SkillMappingEntry entry, GameObject prefab, bool isHit)
+    {
+        if (database == null)
+        {
+            EditorUtility.DisplayDialog("오류", "VFX Database가 설정되지 않았습니다.", "확인");
+            return;
+        }
+
+        // Database entries 접근
+        var field = typeof(SkillVFXDatabase).GetField("entries",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var entries = field?.GetValue(database) as List<SkillVFXDatabase.Entry>;
+
+        if (entries == null) return;
+
+        // 해당 스킬 Entry 찾기 또는 생성
+        var dbEntry = entries.FirstOrDefault(e => e.skillId == entry.skillId);
+        if (dbEntry == null)
+        {
+            dbEntry = new SkillVFXDatabase.Entry { skillId = entry.skillId };
+            entries.Add(dbEntry);
+        }
+
+        // 프리팹 할당
+        if (isHit)
+        {
+            dbEntry.hitPrefab = prefab;
+            entry.hitPrefab = prefab;
+        }
+        else
+        {
+            dbEntry.vfxPrefab = prefab;
+            entry.vfxPrefab = prefab;
+            entry.hasVFX = true;
+        }
+
+        EditorUtility.SetDirty(database);
+        Debug.Log($"[VFX Mapping] [{entry.skillId}] {entry.skillName} ← {prefab.name} ({(isHit ? "Hit" : "VFX")})");
+    }
+
+    private void ClearVFXMapping(SkillMappingEntry entry)
+    {
+        if (database == null) return;
+
+        var field = typeof(SkillVFXDatabase).GetField("entries",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var entries = field?.GetValue(database) as List<SkillVFXDatabase.Entry>;
+
+        if (entries == null) return;
+
+        var dbEntry = entries.FirstOrDefault(e => e.skillId == entry.skillId);
+        if (dbEntry != null)
+        {
+            dbEntry.vfxPrefab = null;
+            dbEntry.hitPrefab = null;
+            entry.vfxPrefab = null;
+            entry.hitPrefab = null;
+            entry.hasVFX = false;
+
+            EditorUtility.SetDirty(database);
+            Debug.Log($"[VFX Mapping] [{entry.skillId}] {entry.skillName} VFX 매핑 해제됨");
+        }
+    }
+
+    private void DrawBottomButtons()
+    {
+        EditorGUILayout.BeginHorizontal();
+
+        if (GUILayout.Button("변경사항 저장", GUILayout.Height(30)))
+        {
+            if (database != null)
+            {
+                EditorUtility.SetDirty(database);
+                AssetDatabase.SaveAssets();
+                EditorUtility.DisplayDialog("저장 완료", "VFX 매핑이 저장되었습니다.", "확인");
+            }
+        }
+
+        if (GUILayout.Button("새로고침", GUILayout.Height(30)))
+        {
+            RefreshMappingStatus();
+        }
+
+        // 통계
+        int total = skillEntries.Count;
+        int mapped = skillEntries.Count(e => e.hasVFX);
+        float percent = total > 0 ? (float)mapped / total * 100 : 0;
+
+        EditorGUILayout.LabelField($"매핑 현황: {mapped}/{total} ({percent:F0}%)", GUILayout.Width(150));
+
+        EditorGUILayout.EndHorizontal();
+    }
+
+    private void RefreshMappingStatus()
+    {
+        if (database == null) return;
+
+        foreach (var entry in skillEntries)
+        {
+            var dbEntry = database.GetEntry(entry.skillId);
+            if (dbEntry != null)
+            {
+                entry.vfxPrefab = dbEntry.vfxPrefab;
+                entry.hitPrefab = dbEntry.hitPrefab;
+                entry.hasVFX = dbEntry.vfxPrefab != null;
+            }
+            else
+            {
+                entry.vfxPrefab = null;
+                entry.hitPrefab = null;
+                entry.hasVFX = false;
+            }
+        }
+
+        Repaint();
     }
 }

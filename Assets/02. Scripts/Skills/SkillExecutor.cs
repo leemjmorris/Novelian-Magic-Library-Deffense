@@ -47,6 +47,9 @@ namespace Novelian.Combat
         #region Inspector References
         [Header("VFX Database (인스펙터에서 직접 참조)")]
         [SerializeField] private SkillVFXDatabase vfxDatabase;
+
+        [Header("조합 규칙 데이터")]
+        [SerializeField] private SkillCombinationRuleData combinationRuleData;
         #endregion
 
         #region Constants
@@ -99,7 +102,10 @@ namespace Novelian.Combat
                 return;
             }
 
-            await ExecuteByBehaviorType(caster, target, mainSkill, supportSkill, prefab, hitPrefab);
+            // 조합 규칙 검증 - 유효하지 않으면 서포트 스킬 없이 실행
+            SupportSkillData validSupport = GetValidSupportSkill(mainSkill, supportSkill);
+
+            await ExecuteByBehaviorType(caster, target, mainSkill, validSupport, prefab, hitPrefab);
         }
 
         #endregion
@@ -134,6 +140,48 @@ namespace Novelian.Combat
             return true;
         }
 
+        /// <summary>
+        /// 메인 스킬과 서포트 스킬의 조합이 유효한지 검증
+        /// </summary>
+        /// <param name="mainSkill">메인 스킬 데이터</param>
+        /// <param name="supportSkill">서포트 스킬 데이터 (null이면 검증 통과)</param>
+        /// <returns>조합이 유효하면 true, 아니면 false</returns>
+        public bool IsValidCombination(MainSkillData mainSkill, SupportSkillData supportSkill)
+        {
+            // 서포트 스킬이 없으면 검증 통과
+            if (supportSkill == null) return true;
+
+            // 조합 규칙 데이터가 없으면 모든 조합 허용 (경고 출력)
+            if (combinationRuleData == null)
+            {
+                Debug.LogWarning("[SkillExecutor] CombinationRuleData가 할당되지 않았습니다. 모든 조합이 허용됩니다.");
+                return true;
+            }
+
+            bool isValid = combinationRuleData.IsValidCombination(mainSkill.behavior_type, supportSkill.support_type);
+
+            if (!isValid)
+            {
+                Debug.LogWarning($"[SkillExecutor] 유효하지 않은 스킬 조합: {mainSkill.behavior_type} + {supportSkill.support_type}");
+            }
+
+            return isValid;
+        }
+
+        /// <summary>
+        /// 조합 규칙에 따라 유효한 서포트 스킬만 필터링하여 반환
+        /// </summary>
+        public SupportSkillData GetValidSupportSkill(MainSkillData mainSkill, SupportSkillData supportSkill)
+        {
+            if (IsValidCombination(mainSkill, supportSkill))
+            {
+                return supportSkill;
+            }
+
+            // 유효하지 않은 조합이면 null 반환 (서포트 없이 메인만 실행)
+            return null;
+        }
+
         private async UniTask ExecuteByBehaviorType(
             Transform caster,
             ITargetable target,
@@ -144,6 +192,26 @@ namespace Novelian.Combat
         {
             switch (mainSkill.behavior_type)
             {
+                // ============================================
+                // 신규 시스템: 3개 behavior_type
+                // ============================================
+                case "Projectile":
+                    // 폭발 여부는 aoe_radius로 판단
+                    bool isExplosive = mainSkill.aoe_radius > 0;
+                    ExecuteProjectile(caster, target, mainSkill, supportSkill, prefab, hitPrefab, isExplosive);
+                    break;
+
+                case "BeamRay":
+                    await ExecuteBeamAsync(caster, target, mainSkill, supportSkill, prefab);
+                    break;
+
+                case "AOE":
+                    await ExecuteAOEAsync(caster, target, mainSkill, supportSkill, prefab, hitPrefab);
+                    break;
+
+                // ============================================
+                // Legacy 호환성 (이전 타입들도 지원)
+                // ============================================
                 case "SingleProjectile":
                     ExecuteProjectile(caster, target, mainSkill, supportSkill, prefab, hitPrefab, false);
                     break;
@@ -154,10 +222,6 @@ namespace Novelian.Combat
 
                 case "FallingProjectile":
                     await ExecuteFallingProjectileAsync(caster, target, mainSkill, supportSkill, prefab, hitPrefab);
-                    break;
-
-                case "BeamRay":
-                    await ExecuteBeamAsync(caster, target, mainSkill, supportSkill, prefab);
                     break;
 
                 case "TargetAOE":
@@ -199,6 +263,48 @@ namespace Novelian.Combat
                 default:
                     Debug.LogWarning($"[SkillExecutor] Unknown behavior_type: {mainSkill.behavior_type}");
                     break;
+            }
+        }
+
+        /// <summary>
+        /// 신규 통합 AOE 실행 - 파라미터 기반으로 동작 결정
+        /// duration > 0: 지속형 장판 (기존 GroundAOE)
+        /// duration == 0: 즉발형 AOE (기존 TargetAOE/Instant)
+        /// </summary>
+        private async UniTask ExecuteAOEAsync(
+            Transform caster,
+            ITargetable target,
+            MainSkillData mainSkill,
+            SupportSkillData supportSkill,
+            GameObject prefab,
+            GameObject hitPrefab)
+        {
+            Vector3 targetPos = GetTargetOrForwardPosition(caster, target);
+            float radius = mainSkill.aoe_radius > 0 ? mainSkill.aoe_radius : DEFAULT_AOE_RADIUS;
+
+            // 지속형 장판인지 즉발형인지 판단
+            if (mainSkill.duration > 0)
+            {
+                // 지속형 장판 AOE (범위 표시 후 지속)
+                AOERangeIndicator.Show(targetPos, radius, AOERangeIndicator.IndicatorType.Damage);
+                GameObject aoeObj = Instantiate(prefab, targetPos, Quaternion.identity);
+                GetOrAddComponent<SkillAOE>(aoeObj).Initialize(mainSkill, supportSkill, isGround: true);
+            }
+            else
+            {
+                // 즉발형 AOE (경고 → 폭발)
+                AOERangeIndicator.ShowWithWarning(targetPos, radius, DEFAULT_AOE_FALL_DURATION);
+                GameObject aoeObj = Instantiate(prefab, targetPos, Quaternion.identity);
+
+                await UniTask.Delay((int)(DEFAULT_AOE_FALL_DURATION * 1000));
+
+                float hitScale = vfxDatabase != null ? vfxDatabase.GetHitScale(mainSkill.skill_id) : 1f;
+                SpawnHitEffect(hitPrefab, targetPos, hitScale);
+
+                float damage = CalculateDamage(mainSkill, supportSkill);
+                TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage);
+
+                if (aoeObj != null) Destroy(aoeObj, 2f);
             }
         }
 
@@ -299,7 +405,10 @@ namespace Novelian.Combat
                 projectile = projectileObj.AddComponent<SkillProjectile>();
             }
 
-            projectile.Initialize(mainSkill, supportSkill, target, isExplosive, hitPrefab);
+            // Hit 스케일 가져오기
+            float hitScale = vfxDatabase != null ? vfxDatabase.GetHitScale(mainSkill.skill_id) : 1f;
+
+            projectile.Initialize(mainSkill, supportSkill, target, isExplosive, hitPrefab, hitScale);
         }
 
         /// <summary>
@@ -371,6 +480,14 @@ namespace Novelian.Combat
 
             // 경고 시간 대기 (duration 필드를 경고 시간으로 활용)
             float warningDuration = mainSkill.duration > 0 ? mainSkill.duration : DEFAULT_WARNING_DURATION;
+
+            // 범위가 있으면 경고 범위 표시
+            float radius = mainSkill.aoe_radius > 0 ? mainSkill.aoe_radius : DEFAULT_AOE_RADIUS;
+            if (mainSkill.aoe_radius > 0)
+            {
+                AOERangeIndicator.ShowWithWarning(landingPos, radius, warningDuration);
+            }
+
             await UniTask.Delay((int)(warningDuration * 1000));
 
             // 경고 VFX 제거
@@ -407,12 +524,14 @@ namespace Novelian.Combat
                 projectileObj.transform.position = landingPos;
             }
 
+            // Hit 스케일 가져오기
+            float hitScale = vfxDatabase != null ? vfxDatabase.GetHitScale(mainSkill.skill_id) : 1f;
+
             // 피격 이펙트 스폰
-            SpawnHitEffect(hitPrefab, landingPos);
+            SpawnHitEffect(hitPrefab, landingPos, hitScale);
 
             // 데미지 적용
             float damage = CalculateDamage(mainSkill, supportSkill);
-            float radius = mainSkill.aoe_radius > 0 ? mainSkill.aoe_radius : DEFAULT_AOE_RADIUS;
 
             // 폭발형인지 확인
             if (mainSkill.aoe_radius > 0)
@@ -721,13 +840,19 @@ namespace Novelian.Combat
         {
             Vector3 targetPos = GetTargetOrForwardPosition(caster, target);
 
+            float radius = mainSkill.aoe_radius > 0 ? mainSkill.aoe_radius : DEFAULT_AOE_RADIUS;
+
+            // 경고 범위 표시 (낙하 전)
+            AOERangeIndicator.ShowWithWarning(targetPos, radius, DEFAULT_AOE_FALL_DURATION);
+
             GameObject aoeObj = Instantiate(prefab, targetPos, Quaternion.identity);
 
             await UniTask.Delay((int)(DEFAULT_AOE_FALL_DURATION * 1000));
 
-            SpawnHitEffect(hitPrefab, targetPos);
+            // Hit 스케일 가져오기
+            float hitScale = vfxDatabase != null ? vfxDatabase.GetHitScale(mainSkill.skill_id) : 1f;
+            SpawnHitEffect(hitPrefab, targetPos, hitScale);
 
-            float radius = mainSkill.aoe_radius > 0 ? mainSkill.aoe_radius : DEFAULT_AOE_RADIUS;
             float damage = CalculateDamage(mainSkill, supportSkill);
 
             TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage);
@@ -764,6 +889,12 @@ namespace Novelian.Combat
         {
             Vector3 targetPos = GetTargetOrForwardPosition(caster, target);
 
+            // 범위 표시
+            if (mainSkill.aoe_radius > 0)
+            {
+                AOERangeIndicator.Show(targetPos, mainSkill.aoe_radius, AOERangeIndicator.IndicatorType.Damage);
+            }
+
             GameObject aoeObj = Instantiate(prefab, targetPos, Quaternion.identity);
             GetOrAddComponent<SkillAOE>(aoeObj).Initialize(mainSkill, supportSkill, isGround: true);
         }
@@ -788,6 +919,12 @@ namespace Novelian.Combat
             Vector3 moveDirection = target != null
                 ? (target.GetTransform().position - caster.position).normalized
                 : caster.forward;
+
+            // 범위 표시
+            if (mainSkill.aoe_radius > 0)
+            {
+                AOERangeIndicator.Show(spawnPos, mainSkill.aoe_radius, AOERangeIndicator.IndicatorType.Damage);
+            }
 
             GameObject aoeObj = Instantiate(prefab, spawnPos, Quaternion.identity);
 
@@ -942,11 +1079,18 @@ namespace Novelian.Combat
             return obj;
         }
 
-        private void SpawnHitEffect(GameObject hitPrefab, Vector3 position)
+        private void SpawnHitEffect(GameObject hitPrefab, Vector3 position, float scale = 1f)
         {
             if (hitPrefab == null) return;
 
             GameObject hitEffect = Instantiate(hitPrefab, position, Quaternion.identity);
+
+            // 스케일 적용
+            if (scale != 1f && scale > 0f)
+            {
+                hitEffect.transform.localScale = Vector3.one * scale;
+            }
+
             Destroy(hitEffect, 3f);
         }
 

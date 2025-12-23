@@ -90,7 +90,7 @@ namespace Novelian.Combat
                 monster.ApplySlow(supportSkill.slow_rate, supportSkill.duration);
             }
 
-            if (supportSkill.IsStunSupport || supportSkill.IsFreezeSupport)
+            if (supportSkill.IsStunSupport)
             {
                 monster.ApplyDizzy(supportSkill.duration);
             }
