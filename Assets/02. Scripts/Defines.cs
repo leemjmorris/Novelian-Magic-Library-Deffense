@@ -139,9 +139,30 @@ public static class AddressableKey
         return $"CardSprite_{characterId}";
     }
 
+    /// <summary>
+    /// Item_ID로 아이템 아이콘 어드레서블 키 반환
+    /// IngredientTable의 Path_ID → PathTable의 Addressable_Key 참조
+    /// </summary>
     public static string GetItemIconKey(int itemId)
     {
-        return $"ItemIcon_{itemId}";
+        if (CSVLoader.Instance == null)
+        {
+            return $"ItemIcon_{itemId}";
+        }
+
+        var ingredientData = CSVLoader.Instance.GetData<IngredientData>(itemId);
+        if (ingredientData == null || ingredientData.Path_ID == 0)
+        {
+            return $"ItemIcon_{itemId}";
+        }
+
+        var pathData = CSVLoader.Instance.GetData<PathData>(ingredientData.Path_ID);
+        if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
+        {
+            return $"ItemIcon_{itemId}";
+        }
+
+        return pathData.Addressable_Key;
     }
 
     /// <summary>
