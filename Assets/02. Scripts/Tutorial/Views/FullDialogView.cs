@@ -1,8 +1,11 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.AddressableAssets;
 using TMPro;
 
 namespace Tutorial
@@ -28,9 +31,18 @@ namespace Tutorial
         [SerializeField] private Color activeColor = Color.white;
         [SerializeField] private Color inactiveColor = new Color(1f, 1f, 1f, 0.33f);
 
-        private Coroutine typingCoroutine;
+        private CancellationTokenSource typingCts;
         private bool isTyping = false;
         private string fullText = "";
+
+        /// <summary>
+        /// 외부에서 TutorialEvents 인스턴스를 주입받는 메서드
+        /// </summary>
+        public void SetTutorialEvents(TutorialEvents events)
+        {
+            tutorialEvents = events;
+            Debug.Log($"[FullDialogView] TutorialEvents injected: {events != null}");
+        }
 
         [System.Serializable]
         public class CharacterSlot
@@ -41,6 +53,9 @@ namespace Tutorial
 
         public void Show(TutorialStep step, string text, float typingSpeed)
         {
+            // 먼저 GameObject 활성화
+            gameObject.SetActive(true);
+
             if (viewRoot != null)
                 viewRoot.SetActive(true);
 
@@ -49,10 +64,13 @@ namespace Tutorial
 
             // 텍스트 설정
             fullText = text;
-            if (typingCoroutine != null)
-                StopCoroutine(typingCoroutine);
 
-            typingCoroutine = StartCoroutine(TypeTextCoroutine(text, typingSpeed));
+            // 이전 타이핑 취소
+            typingCts?.Cancel();
+            typingCts?.Dispose();
+            typingCts = new CancellationTokenSource();
+
+            TypeTextAsync(text, typingSpeed, typingCts.Token).Forget();
 
             // 화살표 숨기기
             if (dialogArrow != null)
@@ -61,20 +79,27 @@ namespace Tutorial
 
         public void Hide()
         {
-            if (typingCoroutine != null)
-            {
-                StopCoroutine(typingCoroutine);
-                typingCoroutine = null;
-            }
+            typingCts?.Cancel();
+            typingCts?.Dispose();
+            typingCts = null;
 
             if (viewRoot != null)
                 viewRoot.SetActive(false);
 
+            gameObject.SetActive(false);
             isTyping = false;
+        }
+
+        private void OnDestroy()
+        {
+            typingCts?.Cancel();
+            typingCts?.Dispose();
         }
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            Debug.Log($"[FullDialogView] OnPointerClick called! isTyping={isTyping}, tutorialEvents={tutorialEvents != null}");
+
             if (isTyping)
             {
                 // 타이핑 중이면 즉시 완료
@@ -118,8 +143,11 @@ namespace Tutorial
                         slot.illustrationImage.color = inactiveColor;
                     }
 
-                    // TODO: Addressables로 일러스트 로드
-                    // LoadIllustration(slot.illustrationImage, charInfo.IllustrationKey);
+                    // Addressables로 일러스트 로드
+                    if (!string.IsNullOrEmpty(charInfo.IllustrationKey))
+                    {
+                        LoadIllustrationAsync(slot.illustrationImage, charInfo.IllustrationKey).Forget();
+                    }
                 }
 
                 // 화자 이름 설정
@@ -130,38 +158,73 @@ namespace Tutorial
             }
         }
 
-        private IEnumerator TypeTextCoroutine(string text, float speed)
+        private async UniTaskVoid TypeTextAsync(string text, float speed, CancellationToken token)
         {
             isTyping = true;
             dialogText.text = "";
 
-            foreach (char c in text)
+            try
             {
-                dialogText.text += c;
-                yield return new WaitForSecondsRealtime(speed);
+                foreach (char c in text)
+                {
+                    token.ThrowIfCancellationRequested();
+                    dialogText.text += c;
+                    await UniTask.Delay(TimeSpan.FromSeconds(speed), ignoreTimeScale: true, cancellationToken: token);
+                }
+
+                isTyping = false;
+
+                // 타이핑 완료 후 화살표 표시
+                if (dialogArrow != null)
+                    dialogArrow.gameObject.SetActive(true);
             }
-
-            isTyping = false;
-            typingCoroutine = null;
-
-            // 타이핑 완료 후 화살표 표시
-            if (dialogArrow != null)
-                dialogArrow.gameObject.SetActive(true);
+            catch (OperationCanceledException)
+            {
+                // 취소됨 - 정상 동작
+            }
         }
 
         private void CompleteTyping()
         {
-            if (typingCoroutine != null)
-            {
-                StopCoroutine(typingCoroutine);
-                typingCoroutine = null;
-            }
+            typingCts?.Cancel();
 
             dialogText.text = fullText;
             isTyping = false;
 
             if (dialogArrow != null)
                 dialogArrow.gameObject.SetActive(true);
+        }
+
+        private async UniTaskVoid LoadIllustrationAsync(Image targetImage, string pathIdString)
+        {
+            try
+            {
+                // IllustrationKey는 실제로 Path_ID이므로 PathData를 조회하여 실제 Addressable_Key를 얻어야 함
+                if (int.TryParse(pathIdString, out int pathId))
+                {
+                    var pathData = CSVLoader.Instance.GetData<PathData>(pathId);
+                    if (pathData != null && !string.IsNullOrEmpty(pathData.Addressable_Key))
+                    {
+                        var sprite = await Addressables.LoadAssetAsync<Sprite>(pathData.Addressable_Key).ToUniTask();
+                        if (sprite != null && targetImage != null)
+                        {
+                            targetImage.sprite = sprite;
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[FullDialogView] PathData not found for Path_ID: {pathId}");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"[FullDialogView] Invalid Path_ID format: {pathIdString}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[FullDialogView] Failed to load illustration: {pathIdString}, Error: {e.Message}");
+            }
         }
     }
 }

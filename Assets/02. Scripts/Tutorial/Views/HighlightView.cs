@@ -1,4 +1,6 @@
-using System.Collections;
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -33,22 +35,37 @@ namespace Tutorial
         [SerializeField] private Vector2 unmaskPadding = new Vector2(20f, 20f);
         [SerializeField] private float textBoxOffset = 100f;
 
-        private Coroutine typingCoroutine;
+        private CancellationTokenSource typingCts;
         private bool isTyping = false;
         private string fullText = "";
         private RectTransform currentTarget;
 
+        /// <summary>
+        /// 외부에서 TutorialEvents 인스턴스를 주입받는 메서드
+        /// </summary>
+        public void SetTutorialEvents(TutorialEvents events)
+        {
+            tutorialEvents = events;
+            Debug.Log($"[HighlightView] TutorialEvents injected: {events != null}");
+        }
+
         public void Show(TutorialStep step, string text, float typingSpeed)
         {
+            // 먼저 GameObject 활성화
+            gameObject.SetActive(true);
+
             if (viewRoot != null)
                 viewRoot.SetActive(true);
 
             // 텍스트 설정
             fullText = text;
-            if (typingCoroutine != null)
-                StopCoroutine(typingCoroutine);
 
-            typingCoroutine = StartCoroutine(TypeTextCoroutine(text, typingSpeed));
+            // 이전 타이핑 취소
+            typingCts?.Cancel();
+            typingCts?.Dispose();
+            typingCts = new CancellationTokenSource();
+
+            TypeTextAsync(text, typingSpeed, typingCts.Token).Forget();
         }
 
         public void Show(TutorialStep step, string text, RectTransform target, float typingSpeed)
@@ -72,11 +89,9 @@ namespace Tutorial
 
         public void Hide()
         {
-            if (typingCoroutine != null)
-            {
-                StopCoroutine(typingCoroutine);
-                typingCoroutine = null;
-            }
+            typingCts?.Cancel();
+            typingCts?.Dispose();
+            typingCts = null;
 
             if (viewRoot != null)
                 viewRoot.SetActive(false);
@@ -86,8 +101,15 @@ namespace Tutorial
 
             HideIndicators();
 
+            gameObject.SetActive(false);
             isTyping = false;
             currentTarget = null;
+        }
+
+        private void OnDestroy()
+        {
+            typingCts?.Cancel();
+            typingCts?.Dispose();
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -196,28 +218,31 @@ namespace Tutorial
                 indicatorBottom.SetActive(false);
         }
 
-        private IEnumerator TypeTextCoroutine(string text, float speed)
+        private async UniTaskVoid TypeTextAsync(string text, float speed, CancellationToken token)
         {
             isTyping = true;
             dialogText.text = "";
 
-            foreach (char c in text)
+            try
             {
-                dialogText.text += c;
-                yield return new WaitForSecondsRealtime(speed);
-            }
+                foreach (char c in text)
+                {
+                    token.ThrowIfCancellationRequested();
+                    dialogText.text += c;
+                    await UniTask.Delay(TimeSpan.FromSeconds(speed), ignoreTimeScale: true, cancellationToken: token);
+                }
 
-            isTyping = false;
-            typingCoroutine = null;
+                isTyping = false;
+            }
+            catch (OperationCanceledException)
+            {
+                // 취소됨 - 정상 동작
+            }
         }
 
         private void CompleteTyping()
         {
-            if (typingCoroutine != null)
-            {
-                StopCoroutine(typingCoroutine);
-                typingCoroutine = null;
-            }
+            typingCts?.Cancel();
 
             dialogText.text = fullText;
             isTyping = false;

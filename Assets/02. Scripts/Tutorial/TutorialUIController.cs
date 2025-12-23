@@ -55,10 +55,31 @@ namespace Tutorial
 
             tutorialEvents = events;
             AutoFindViews();
+
+            // 각 View에 TutorialEvents 주입 (동일한 인스턴스 공유)
+            InjectEventsToViews(events);
+
             HideAll();
 
             isInitialized = true;
-            Debug.Log("[TutorialUIController] Initialized");
+            Debug.Log("[TutorialUIController] Initialized with TutorialEvents injection");
+        }
+
+        /// <summary>
+        /// 모든 View에 TutorialEvents 인스턴스를 주입
+        /// </summary>
+        private void InjectEventsToViews(TutorialEvents events)
+        {
+            if (fullDialogView != null)
+                fullDialogView.SetTutorialEvents(events);
+
+            if (compactDialogView != null)
+                compactDialogView.SetTutorialEvents(events);
+
+            if (highlightView != null)
+                highlightView.SetTutorialEvents(events);
+
+            Debug.Log("[TutorialUIController] TutorialEvents injected to all views");
         }
 
         private void AutoFindViews()

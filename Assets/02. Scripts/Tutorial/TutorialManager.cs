@@ -104,11 +104,39 @@ namespace Tutorial
                 eventsHandle = Addressables.LoadAssetAsync<TutorialEvents>(tutorialEventsKey);
                 tutorialEvents = await eventsHandle;
                 Debug.Log("[TutorialManager] TutorialEvents loaded");
+
+                // 이벤트 리스너 등록 (OnEnable에서는 tutorialEvents가 null이므로 여기서 등록)
+                SubscribeToEvents();
             }
             catch (Exception e)
             {
                 Debug.LogError($"[TutorialManager] Failed to load TutorialEvents: {e.Message}");
             }
+        }
+
+        /// <summary>
+        /// TutorialEvents 이벤트 구독
+        /// </summary>
+        private void SubscribeToEvents()
+        {
+            if (tutorialEvents == null) return;
+
+            tutorialEvents.AddDialogTouchedListener(OnDialogTouched);
+            tutorialEvents.AddSkipRequestedListener(OnSkipRequested);
+            tutorialEvents.AddStepActionCompletedListener(OnStepActionCompleted);
+            Debug.Log("[TutorialManager] Event listeners subscribed");
+        }
+
+        /// <summary>
+        /// TutorialEvents 이벤트 구독 해제
+        /// </summary>
+        private void UnsubscribeFromEvents()
+        {
+            if (tutorialEvents == null) return;
+
+            tutorialEvents.RemoveDialogTouchedListener(OnDialogTouched);
+            tutorialEvents.RemoveSkipRequestedListener(OnSkipRequested);
+            tutorialEvents.RemoveStepActionCompletedListener(OnStepActionCompleted);
         }
 
         private async UniTask LoadTutorialCanvasAsync()
@@ -160,25 +188,9 @@ namespace Tutorial
 
         #endregion
 
-        private void OnEnable()
-        {
-            if (tutorialEvents != null)
-            {
-                tutorialEvents.AddDialogTouchedListener(OnDialogTouched);
-                tutorialEvents.AddSkipRequestedListener(OnSkipRequested);
-                tutorialEvents.AddStepActionCompletedListener(OnStepActionCompleted);
-            }
-        }
-
         private void OnDisable()
         {
-            if (tutorialEvents != null)
-            {
-                tutorialEvents.RemoveDialogTouchedListener(OnDialogTouched);
-                tutorialEvents.RemoveSkipRequestedListener(OnSkipRequested);
-                tutorialEvents.RemoveStepActionCompletedListener(OnStepActionCompleted);
-            }
-
+            UnsubscribeFromEvents();
             CancelCurrentTutorial();
         }
 
@@ -534,9 +546,11 @@ namespace Tutorial
 
         private void OnDialogTouched()
         {
+            Debug.Log($"[TutorialManager] OnDialogTouched called! waitingForTouch={waitingForTouch}");
             if (waitingForTouch)
             {
                 touchReceived = true;
+                Debug.Log("[TutorialManager] touchReceived set to true");
             }
         }
 
