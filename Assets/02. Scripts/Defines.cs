@@ -77,11 +77,11 @@ public static class AddressableKey
     public static readonly string BossDungeonTable = "BossDungeonTable";
     
     // JML: Icon Addressable Keys
-    public static readonly string Icon_Mystery = "Icon_Mystery";
-    public static readonly string IconAdventure = "Icon_Adventure";
-    public static readonly string IconRomance = "Icon_Romance";
-    public static readonly string IconHorror = "Icon_Horror";
-    public static readonly string IconComedy = "Icon_Comedy";
+    public static readonly string Icon_Mystery = "Mystery_Icon";
+    public static readonly string IconAdventure = "Adventure_Icon";
+    public static readonly string IconRomance = "Romance_Icon";
+    public static readonly string IconHorror = "Horror_Icon";
+    public static readonly string IconComedy = "Comic_Icon";
     public static readonly string Icon_Character = "ChaIcon";
     public static readonly string Icon_Plus = "Plus";
     public static readonly string Icon_LegendaryBookmark = "LegendaryBookmark";

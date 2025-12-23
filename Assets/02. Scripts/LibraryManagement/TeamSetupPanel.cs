@@ -780,15 +780,15 @@ public class TeamSetupPanel : MonoBehaviour
         // 효과값 포맷팅 (정수면 소수점 제거)
         string valueText = effectValue % 1 == 0 ? ((int)effectValue).ToString() : effectValue.ToString("F1");
 
-        // 플레이스홀더 {0}이 있으면 대체, 없으면 그대로 반환
+        // 플레이스홀더 {0}이 있으면 대체, 없으면 개행 후 +N% 형식으로 표시
         string description = descriptionString.Text;
         if (description.Contains("{0}"))
         {
-            return string.Format(description, valueText);
+            return string.Format(description, valueText + "%");
         }
         else
         {
-            return $"{description} {valueText}";
+            return $"{description}\n+{valueText}%";
         }
     }
 
