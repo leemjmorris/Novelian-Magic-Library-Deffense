@@ -18,9 +18,6 @@ public class LibraryCharacterSlot : MonoBehaviour
     [SerializeField] private Button characterInfoButton;
     [SerializeField] private CanvasGroup canvasGroup;
 
-    [Header("Ownership Settings")]
-    [SerializeField] private float unownedAlpha = 0.4f;
-
     private int currentLevel;
     private CharacterInfoPanel infoPanel;
     private bool isOwned = true;

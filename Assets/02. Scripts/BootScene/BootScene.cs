@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using Firebase.Data;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
+using Tutorial;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -26,10 +27,11 @@ public class BootScene : MonoBehaviour
     [SerializeField] private CharacterEnhancementManager characterEnhancementManager;
     [SerializeField] private StageProgressManager stageProgressManager;
     [SerializeField] private CharacterOwnershipManager characterOwnershipManager;
-    [SerializeField] private WarningUIManager warningUIManager; 
+    [SerializeField] private WarningUIManager warningUIManager;
     [SerializeField] private LoadingUIManager loadingUIManager;
     [SerializeField] private InputManager inputManager;
     [SerializeField] private PartySynergyManager partySynergyManager;
+    [SerializeField] private TutorialManager tutorialManager;
 
     [Header("Loading Progress")]
     [SerializeField] private float minimumLoadTime = 1.0f; // JML: Minimum time to show loading screen
@@ -95,7 +97,8 @@ public class BootScene : MonoBehaviour
             InitializeWarningUIManager(),
             InitializeInputManager(),
             InitializePartySynergyManager(),
-            InitializeSkillEffectDatabase() // LMJ: 스킬 이펙트 데이터베이스 초기화
+            InitializeSkillEffectDatabase(), // LMJ: 스킬 이펙트 데이터베이스 초기화
+            InitializeTutorialManager() // 튜토리얼 매니저 초기화
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -347,6 +350,35 @@ public class BootScene : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogError($"✗ SkillEffectDatabase initialization failed: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 튜토리얼 매니저 초기화 (다른 매니저들과 병렬로 실행)
+    /// </summary>
+    private async UniTask InitializeTutorialManager()
+    {
+        Log("Initializing TutorialManager...");
+
+        if (tutorialManager == null)
+        {
+            Debug.LogError("✗ TutorialManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+
+        // Awake 완료 대기
+        await UniTask.WaitUntil(() => TutorialManager.Instance != null);
+
+        // Addressables 리소스 로드 (TutorialCanvas, TutorialEvents)
+        await TutorialManager.Instance.InitializeAsync();
+
+        if (TutorialManager.Instance.IsInitialized)
+        {
+            Log("✓ TutorialManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ TutorialManager failed to initialize!");
         }
     }
 
