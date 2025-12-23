@@ -75,6 +75,9 @@ public static class AddressableKey
 
     // Issue #476 - 도전던전 테이블
     public static readonly string BossDungeonTable = "BossDungeonTable";
+
+    // Tutorial 테이블
+    public static readonly string TutorialTable = "TutorialTable";
     
     // JML: Icon Addressable Keys
     public static readonly string Icon_Mystery = "Icon_Mystery";

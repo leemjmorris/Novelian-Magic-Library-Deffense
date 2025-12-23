@@ -70,6 +70,9 @@ public class CSVLoader : MonoBehaviour
         // BossDungeon 폴더 (Issue #476)
         { AddressableKey.BossDungeonTable, "BossDungeon/BossDungeonTable.csv" },
 
+        // Tutorial 폴더
+        { AddressableKey.TutorialTable, "Tutorial/TutorialTable.csv" },
+
         // 루트 폴더 (하위 폴더 없음)
         { AddressableKey.GradeTable, "GradeTable.csv" },
         { AddressableKey.CurrencyTable, "CurrencyTable.csv" },
@@ -153,7 +156,10 @@ public class CSVLoader : MonoBehaviour
                 // 인게임 카드 시스템 테이블 (3행 헤더 형식) - Card/Stage 폴더
                 RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "Card/CardTable.csv", x => x.Card_ID),
                 RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "Card/CardLevelTable.csv", x => x.Card_Level_ID),
-                RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID)
+                RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID),
+
+                // 튜토리얼 테이블 (3행 헤더 형식)
+                RegisterSkillTableAsync<TutorialData>(AddressableKey.TutorialTable, "Tutorial/TutorialTable.csv", x => x.Tutorial_Text_ID)
             );
 
             IsInit = true;
@@ -475,7 +481,10 @@ public class CSVLoader : MonoBehaviour
                 // 인게임 카드 시스템 테이블 (3행 헤더) - Card/Stage 폴더
                 RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "Card/CardTable.csv", x => x.Card_ID),
                 RegisterSkillTableAsync<CardLevelData>(AddressableKey.CardLevelTable, "Card/CardLevelTable.csv", x => x.Card_Level_ID),
-                RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID)
+                RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID),
+
+                // 튜토리얼 테이블 (3행 헤더)
+                RegisterSkillTableAsync<TutorialData>(AddressableKey.TutorialTable, "Tutorial/TutorialTable.csv", x => x.Tutorial_Text_ID)
             );
 
             Debug.Log("[CSVLoader] All CSV tables reloaded successfully!");
