@@ -1,7 +1,14 @@
 {
   "mcpServers": {
     "UnityMCP": {
-      "url": "http://localhost:8080/mcp"
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "unity-mcp-server@latest",
+        "--port",
+        "6400"
+      ]
     }
   }
 }

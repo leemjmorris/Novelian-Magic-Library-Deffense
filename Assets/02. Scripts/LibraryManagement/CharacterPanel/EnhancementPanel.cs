@@ -228,7 +228,13 @@ public class EnhancementPanel : MonoBehaviour
     /// </summary>
     private async UniTaskVoid LoadMaterialIcon(int materialId, Image iconImage, int slotIndex)
     {
-        if (iconImage == null) return;
+        Debug.Log($"[EnhancementPanel] LoadMaterialIcon - Slot {slotIndex}, MaterialID: {materialId}, IconImage: {(iconImage != null ? iconImage.name : "NULL")}");
+
+        if (iconImage == null)
+        {
+            Debug.LogWarning($"[EnhancementPanel] Slot {slotIndex} - iconImage is NULL!");
+            return;
+        }
 
         // 이전에 로드한 아이콘 해제
         ReleaseMaterialIcon(slotIndex);
@@ -236,6 +242,7 @@ public class EnhancementPanel : MonoBehaviour
         // materialId가 0이면 재료 없음
         if (materialId == 0)
         {
+            Debug.Log($"[EnhancementPanel] Slot {slotIndex} - materialId is 0, disabling icon");
             iconImage.enabled = false;
             return;
         }
@@ -244,6 +251,7 @@ public class EnhancementPanel : MonoBehaviour
         var ingredientData = CSVLoader.Instance?.GetData<IngredientData>(materialId);
         if (ingredientData == null || ingredientData.Path_ID == 0)
         {
+            Debug.LogWarning($"[EnhancementPanel] Slot {slotIndex} - IngredientData null or Path_ID is 0. IngredientData: {(ingredientData != null ? $"exists, Path_ID={ingredientData.Path_ID}" : "NULL")}");
             iconImage.enabled = false;
             return;
         }
@@ -252,6 +260,7 @@ public class EnhancementPanel : MonoBehaviour
         var pathData = CSVLoader.Instance?.GetData<PathData>(ingredientData.Path_ID);
         if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
         {
+            Debug.LogWarning($"[EnhancementPanel] Slot {slotIndex} - PathData issue. PathData: {(pathData != null ? $"exists, Addressable_Key={pathData.Addressable_Key}" : "NULL")}");
             iconImage.enabled = false;
             return;
         }
