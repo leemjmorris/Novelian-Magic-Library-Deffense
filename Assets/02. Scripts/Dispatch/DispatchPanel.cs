@@ -40,6 +40,9 @@ namespace Dispatch
         [Header("패널 타입 설정")]
         [SerializeField] private DispatchType panelDispatchType = DispatchType.Combat; // 이 패널의 파견 타입 (Inspector에서 고정)
 
+        [Header("프리셋 선택")]
+        [SerializeField] private DispatchPresetSelector presetSelector; // 프리셋 선택 컴포넌트
+
         [Header("파견 매니저 참조")]
         [SerializeField] private DispatchManager dispatchManager;
         [SerializeField] private CombatDispatchController combatDispatchController;
@@ -155,6 +158,21 @@ namespace Dispatch
         {
             // 저장된 파견 상태 복원
             LoadDispatchState();
+
+            // 프리셋 변경 이벤트 구독
+            if (presetSelector != null)
+            {
+                presetSelector.OnPresetSelected += OnPresetChanged;
+            }
+        }
+
+        /// <summary>
+        /// 프리셋 변경 시 호출 - 덱 캐릭터 이미지 갱신
+        /// </summary>
+        private void OnPresetChanged(int newPresetIndex)
+        {
+            AddLog($"프리셋 변경됨: {newPresetIndex + 1}");
+            LoadDeckCharacters();
         }
 
         private void Start()
@@ -1952,18 +1970,22 @@ namespace Dispatch
                     continue;
                 }
 
+                // 항상 활성화 (레이아웃 유지)
+                targetImage.gameObject.SetActive(true);
+
                 if (characterId > 0)
                 {
-                    // 캐릭터가 있으면 이미지 로드
+                    // 캐릭터가 있으면 이미지 로드 및 불투명하게
                     LoadCharacterImageForSlot(i, characterId, targetImage);
-                    targetImage.gameObject.SetActive(true);
+                    targetImage.color = Color.white;
                     AddLog($"✓ 슬롯 {i + 1}: 캐릭터 ID {characterId} 로드");
                 }
                 else
                 {
-                    // 빈 슬롯 처리 (비활성화)
-                    targetImage.gameObject.SetActive(false);
-                    AddLog($"✓ 슬롯 {i + 1}: 빈 슬롯 (비활성화)");
+                    // 빈 슬롯 처리 (투명하게 - 레이아웃 유지)
+                    targetImage.sprite = null;
+                    targetImage.color = new Color(1f, 1f, 1f, 0f);
+                    AddLog($"✓ 슬롯 {i + 1}: 빈 슬롯 (투명)");
                 }
             }
 
@@ -2377,6 +2399,12 @@ namespace Dispatch
 
         private void OnDisable()
         {
+            // 프리셋 변경 이벤트 구독 해제
+            if (presetSelector != null)
+            {
+                presetSelector.OnPresetSelected -= OnPresetChanged;
+            }
+
             // 보상 정보 패널이 열려있으면 닫기
             CloseInfoPanelIfOpen();
 
