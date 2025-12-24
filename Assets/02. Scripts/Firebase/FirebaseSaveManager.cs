@@ -143,8 +143,10 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "application", currencies.application },
                 { "recommendation", currencies.recommendation },
                 { "magicStone", currencies.magicStone },
+                { "dungeonPass", currencies.dungeonPass },
                 { "ap", currencies.ap },
-                { "apRecoveryTime", currencies.apRecoveryTime }
+                { "apLastSyncTimeMs", currencies.apLastSyncTimeMs },
+                { "apRecoveryTime", currencies.apRecoveryTime } // 레거시 호환
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("currencies").UpdateChildrenAsync(data);
@@ -476,7 +478,8 @@ public class FirebaseSaveManager : MonoBehaviour
                     { "magicStone", data.currencies.magicStone },
                     { "dungeonPass", data.currencies.dungeonPass },
                     { "ap", data.currencies.ap },
-                    { "apRecoveryTime", data.currencies.apRecoveryTime }
+                    { "apLastSyncTimeMs", data.currencies.apLastSyncTimeMs },
+                    { "apRecoveryTime", data.currencies.apRecoveryTime } // 레거시 호환
                 }
             },
             { "progression", new Dictionary<string, object>
@@ -588,8 +591,9 @@ public class FirebaseSaveManager : MonoBehaviour
             data.currencies.magicStone = GetIntValue(currenciesSnap.Child("magicStone"));
             data.currencies.dungeonPass = GetIntValue(currenciesSnap.Child("dungeonPass"));
             data.currencies.ap = GetIntValue(currenciesSnap.Child("ap"));
+            data.currencies.apLastSyncTimeMs = GetLongValue(currenciesSnap.Child("apLastSyncTimeMs"));
             if (currenciesSnap.Child("apRecoveryTime").Exists)
-                data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value.ToString();
+                data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value?.ToString() ?? "";
         }
 
         // progression
@@ -758,6 +762,12 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         if (snap.Value == null) return 0f;
         return Convert.ToSingle(snap.Value);
+    }
+
+    private long GetLongValue(DataSnapshot snap)
+    {
+        if (snap.Value == null) return 0L;
+        return Convert.ToInt64(snap.Value);
     }
 
     #endregion

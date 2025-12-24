@@ -36,6 +36,7 @@ public class BootScene : MonoBehaviour
 
     [Header("Firebase")]
     [SerializeField] private FirebaseSaveManager firebaseSaveManager;
+    [SerializeField] private ServerTimeManager serverTimeManager;
 
     private async void Start()
     {
@@ -551,6 +552,25 @@ public class BootScene : MonoBehaviour
             return;
         }
 
+        // ServerTimeManager 초기화 (서버 시간 동기화)
+        if (serverTimeManager != null)
+        {
+            await UniTask.WaitUntil(() => ServerTimeManager.Instance != null);
+            bool syncSuccess = await ServerTimeManager.Instance.InitializeAsync();
+
+            if (!syncSuccess)
+            {
+                Log("❌ 서버 시간 동기화 실패 - 게임 진입 차단");
+                await ShowNetworkErrorAndRetry();
+                return;
+            }
+            Log("✓ ServerTimeManager 초기화 완료");
+        }
+        else
+        {
+            Log("⚠️ ServerTimeManager 참조 없음 - 서버 시간 동기화 건너뜀");
+        }
+
         // 유저 데이터 로드
         string userId = FirebaseManager.Instance.CurrentUserId;
         var userData = await FirebaseSaveManager.Instance.LoadUserDataAsync(userId);
@@ -563,10 +583,73 @@ public class BootScene : MonoBehaviour
 
         Log("✓ 유저 데이터 로드 완료");
 
+        // 레거시 데이터 마이그레이션
+        MigrateLegacyData(userData, userId);
+
         // 각 매니저에 데이터 적용
         ApplyDataToManagers(userData);
 
         Log("--- Firebase Data Applied ---");
+    }
+
+    /// <summary>
+    /// 네트워크 오류 표시 및 자동 재시도
+    /// </summary>
+    private async UniTask ShowNetworkErrorAndRetry()
+    {
+        Log("네트워크 연결 오류 - 3초 후 재시도");
+
+        // 토스트 경고 표시
+        if (WarningUIManager.Instance != null)
+        {
+            WarningUIManager.Instance.ShowWarning("네트워크 오류 - 3초 후 재시도합니다.");
+        }
+
+        // 3초 후 재시도
+        await UniTask.Delay(3000);
+        await LoadFirebaseDataAndApplyToManagers();
+    }
+
+    /// <summary>
+    /// 레거시 데이터 마이그레이션 (시간 필드 string → long)
+    /// </summary>
+    private void MigrateLegacyData(UserData userData, string userId)
+    {
+        bool needsSave = false;
+
+        // AP 레거시 데이터 마이그레이션
+        if (!string.IsNullOrEmpty(userData.currencies.apRecoveryTime) && userData.currencies.apLastSyncTimeMs == 0)
+        {
+            if (DateTime.TryParse(userData.currencies.apRecoveryTime, out DateTime apDt))
+            {
+                userData.currencies.apLastSyncTimeMs = new DateTimeOffset(apDt.ToUniversalTime()).ToUnixTimeMilliseconds();
+                userData.currencies.apRecoveryTime = "";
+                Log($"✓ AP 시간 데이터 마이그레이션 완료: {userData.currencies.apLastSyncTimeMs}");
+                needsSave = true;
+            }
+        }
+
+        // 파견 레거시 데이터 마이그레이션
+        if (userData.dispatch.combat.HasLegacyData())
+        {
+            userData.dispatch.combat.MigrateLegacyData();
+            Log("✓ 전투 파견 시간 데이터 마이그레이션 완료");
+            needsSave = true;
+        }
+
+        if (userData.dispatch.gathering.HasLegacyData())
+        {
+            userData.dispatch.gathering.MigrateLegacyData();
+            Log("✓ 채집 파견 시간 데이터 마이그레이션 완료");
+            needsSave = true;
+        }
+
+        // 마이그레이션된 데이터 저장
+        if (needsSave && FirebaseSaveManager.Instance != null)
+        {
+            FirebaseSaveManager.Instance.SaveAllAsync(userId).Forget();
+            Log("✓ 마이그레이션 데이터 Firebase 저장 요청");
+        }
     }
 
     /// <summary>

@@ -1003,11 +1003,19 @@ namespace Dispatch
             AddLog("\n==============================================");
             AddLog($"🚀 파견 시작 버튼 클릭!");
 
+            // 서버 시간 체크
+            if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
+            {
+                AddLog("❌ 서버 시간이 동기화되지 않아 파견을 시작할 수 없습니다.");
+                return;
+            }
+
             // 파견 실행 및 보상 로직 콘솔 출력
             ExecuteDispatch(currentSelectedLocation);
 
-            // 파견 시작 시간 기록
-            dispatchStartTime = System.DateTime.Now;
+            // 파견 시작 시간 기록 (서버 시간 기준)
+            dispatchStartTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
+            dispatchStartTime = ServerTimeManager.Instance.GetServerDateTime();
 
             // 파견 시작 상태로 전환
             isDispatching = true;
@@ -2129,6 +2137,7 @@ namespace Dispatch
 
         // 파견 시작 시간 저장용
         private System.DateTime dispatchStartTime;
+        private long dispatchStartTimeMs; // 서버 시간 (밀리초)
 
         /// <summary>
         /// 파견 상태 저장 (Firebase)
@@ -2143,7 +2152,7 @@ namespace Dispatch
 
             // 종료 시간 계산 (북마크 파견 시간 감소 modifier 적용)
             float reducedDispatchTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
-            System.DateTime endTime = dispatchStartTime.AddSeconds(reducedDispatchTime);
+            long endTimeMs = dispatchStartTimeMs + (long)(reducedDispatchTime * 1000); // 밀리초 단위
 
             var state = new Firebase.Data.DispatchStateData
             {
@@ -2191,53 +2200,62 @@ namespace Dispatch
                 return;
             }
 
-            // 레거시 형식으로 변환하여 처리
-            DispatchSaveData saveData = new DispatchSaveData
-            {
-                isDispatching = state.isActive,
-                totalDispatchTime = state.hours,
-                startTimeString = state.startTime,
-                selectedLocation = state.locationId,
-                selectedHours = state.hours,
-                selectedTimeID = GetTimeIDFromHours(state.hours),
-                dispatchType = (int)panelDispatchType
-            };
-
-            if (saveData == null || !saveData.isDispatching)
-            {
-                AddLog($"📂 파견 중이 아님 ({panelDispatchType})");
-                return;
-            }
-
             // 현재 파견 타입을 패널 타입으로 설정
             currentDispatchType = panelDispatchType;
 
-            // 시작 시간 파싱
-            if (!System.DateTime.TryParse(saveData.startTimeString, out dispatchStartTime))
+            float elapsedSeconds = 0f;
+
+            // 새 형식 (밀리초) 우선 확인
+            if (state.startTimeMs > 0 && state.endTimeMs > 0)
             {
-                AddLog("❌ 파견 시작 시간 파싱 실패");
-                ClearDispatchState();
-                return;
+                // ServerTimeManager가 초기화되지 않은 경우
+                if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
+                {
+                    AddLog("❌ 서버 시간이 동기화되지 않아 파견 상태 복원 불가");
+                    return;
+                }
+
+                dispatchStartTimeMs = state.startTimeMs;
+                dispatchStartTime = System.DateTimeOffset.FromUnixTimeMilliseconds(state.startTimeMs).UtcDateTime;
+
+                // 서버 시간 기준 경과 시간 계산
+                long elapsedMs = ServerTimeManager.Instance.GetElapsedMs(state.startTimeMs);
+                elapsedSeconds = elapsedMs / 1000f;
+
+                AddLog($"📂 새 형식으로 파견 복원 (서버 시간 기준)");
             }
+            else
+            {
+                // 레거시 형식 (string) - 하위 호환
+                if (string.IsNullOrEmpty(state.startTime))
+                {
+                    AddLog("❌ 파견 시작 시간 없음");
+                    ClearDispatchState();
+                    return;
+                }
 
-            // 경과 시간 계산
-            System.TimeSpan elapsed = System.DateTime.Now - dispatchStartTime;
-            float elapsedSeconds = (float)elapsed.TotalSeconds;
+                if (!System.DateTime.TryParse(state.startTime, out dispatchStartTime))
+                {
+                    AddLog("❌ 파견 시작 시간 파싱 실패");
+                    ClearDispatchState();
+                    return;
+                }
 
-            // 남은 시간 계산
-            remainingTime = saveData.totalDispatchTime - elapsedSeconds;
+                // 로컬 시간 기준 경과 시간 계산 (레거시)
+                System.TimeSpan elapsed = System.DateTime.Now - dispatchStartTime;
+                elapsedSeconds = (float)elapsed.TotalSeconds;
 
-            // 파견 타입 복원
-            currentDispatchType = (DispatchType)saveData.dispatchType;
+                AddLog("⚠️ 레거시 형식으로 파견 복원 (로컬 시간 기준 - 마이그레이션 필요)");
+            }
 
             // 이미 파견 완료된 경우
             if (remainingTime <= 0f)
             {
                 remainingTime = 0f;
                 isDispatching = true; // 완료 상태로 설정
-                currentSelectedLocation = (DispatchLocation)saveData.selectedLocation;
-                currentSelectedHours = saveData.selectedHours;
-                currentSelectedTimeID = saveData.selectedTimeID;
+                currentSelectedLocation = (DispatchLocation)state.locationId;
+                currentSelectedHours = state.hours;
+                currentSelectedTimeID = GetTimeIDFromHours(state.hours);
 
                 AddLog($"📂 파견 완료! 보상을 획득하세요.");
 
@@ -2247,10 +2265,10 @@ namespace Dispatch
             else
             {
                 // 저장된 상태 복원
-                isDispatching = saveData.isDispatching;
-                currentSelectedLocation = (DispatchLocation)saveData.selectedLocation;
-                currentSelectedHours = saveData.selectedHours;
-                currentSelectedTimeID = saveData.selectedTimeID;
+                isDispatching = state.isActive;
+                currentSelectedLocation = (DispatchLocation)state.locationId;
+                currentSelectedHours = state.hours;
+                currentSelectedTimeID = GetTimeIDFromHours(state.hours);
 
                 AddLog($"📂 파견 상태 복원됨 - 장소: {GetLocationName(currentSelectedLocation)}, 남은 시간: {remainingTime:F0}초");
 
