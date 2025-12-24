@@ -2153,6 +2153,7 @@ namespace Dispatch
             // 종료 시간 계산 (북마크 파견 시간 감소 modifier 적용)
             float reducedDispatchTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
             long endTimeMs = dispatchStartTimeMs + (long)(reducedDispatchTime * 1000); // 밀리초 단위
+            System.DateTime endTime = System.DateTimeOffset.FromUnixTimeMilliseconds(endTimeMs).LocalDateTime;
 
             var state = new Firebase.Data.DispatchStateData
             {

@@ -116,6 +116,9 @@ namespace Novelian.Combat
         // 속성(장르) 강화 modifier
         private Dictionary<GenreType, float> genreModifiers = new Dictionary<GenreType, float>();
 
+        // 투사체 템플릿 (TrainingScene 등 Pool 없는 환경용)
+        private GameObject projectileTemplate;
+
         #endregion
 
         #region Lifecycle
