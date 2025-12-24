@@ -959,8 +959,8 @@ namespace Dispatch
             }
             else
             {
-                // 다른 파견에서 사용 중인 프리셋이면 파견 불가
-                if (presetSelector != null && presetSelector.IsCurrentPresetUsedByOtherDispatch())
+                // 다른 파견에서 사용 중인 프리셋이면 파견 불가 (로컬 선택 기준)
+                if (presetSelector != null && presetSelector.IsLocalSelectedPresetUsedByOtherDispatch())
                 {
                     // 토스트 메시지 표시
                     if (WarningUIManager.Instance != null)
@@ -1020,9 +1020,22 @@ namespace Dispatch
             // 파견 시작 상태로 전환
             isDispatching = true;
 
-            // 프리셋 변경 잠금
+            // 프리셋 선택 적용 (로컬 선택을 DeckManager에 저장), 변경 잠금
             if (presetSelector != null)
+            {
+                presetSelector.ApplyPresetSelection();
                 presetSelector.Lock();
+            }
+
+            // 파견 상태 Firebase에 저장 (프리셋 인덱스 포함)
+            SaveDispatchState();
+
+            // Firebase 저장 후 UI 갱신 (프리셋 정보 텍스트 표시)
+            if (presetSelector != null)
+            {
+                presetSelector.RefreshPresetMarks();
+            }
+
             // 테스트용: 초 단위로 시간 설정 (실제 게임에서는 시간 * 3600)
             // 북마크 파견 시간 감소 modifier 적용
             float reducedTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
@@ -1169,11 +1182,11 @@ namespace Dispatch
                 }
             }
 
+            // 저장된 파견 상태 삭제 (먼저 삭제해야 RefreshPresetMarks에서 파견 중이 아님을 인식)
+            ClearDispatchState();
+
             // 파견 상태 초기화
             ResetDispatchUI();
-
-            // 저장된 파견 상태 삭제
-            ClearDispatchState();
 
             AddLog("==============================================\n");
             // 슬라이더 다시 표시
@@ -1197,9 +1210,12 @@ namespace Dispatch
             isDispatching = false;
             remainingTime = 0f;
 
-            // 프리셋 변경 잠금 해제
+            // 프리셋 변경 잠금 해제 및 UI 갱신
             if (presetSelector != null)
+            {
                 presetSelector.Unlock();
+                presetSelector.RefreshPresetMarks();
+            }
 
             // 파견 횟수 텍스트 업데이트 (1/1 → 0/1)
             UpdateDispatchCountText();
@@ -1987,17 +2003,20 @@ namespace Dispatch
 
             AddLog("=== 덱 캐릭터 로드 시작 ===");
 
-            // 현재 프리셋이 다른 파견에서 사용 중인지 확인
-            bool isUsedByOtherDispatch = presetSelector != null && presetSelector.IsCurrentPresetUsedByOtherDispatch();
+            // 현재 프리셋이 다른 파견에서 사용 중인지 확인 (로컬 선택 기준)
+            bool isUsedByOtherDispatch = presetSelector != null && presetSelector.IsLocalSelectedPresetUsedByOtherDispatch();
             if (isUsedByOtherDispatch)
             {
                 AddLog("⚠️ 현재 프리셋이 다른 파견에서 사용 중 - 캐릭터 아이콘 비활성화");
             }
 
+            // 로컬 선택 프리셋의 덱 가져오기
+            var localDeck = presetSelector != null ? presetSelector.GetLocalSelectedDeck() : DeckManager.Instance.GetDeck();
+
             // 덱의 4개 슬롯 순회
             for (int i = 0; i < 4; i++)
             {
-                int characterId = DeckManager.Instance.GetCharacterAtIndex(i);
+                int characterId = (i < localDeck.Count) ? localDeck[i] : -1;
                 Image targetImage = GetDeckImageByIndex(i);
 
                 if (targetImage == null)
@@ -2160,6 +2179,8 @@ namespace Dispatch
                 isActive = isDispatching,
                 locationId = (int)currentSelectedLocation,
                 hours = currentSelectedHours,
+                startTimeMs = dispatchStartTimeMs,
+                endTimeMs = endTimeMs,
                 startTime = dispatchStartTime.ToString("o"),
                 endTime = endTime.ToString("o"),
                 presetIndex = presetSelector != null ? presetSelector.LockedPresetIndex : (DeckManager.Instance != null ? DeckManager.Instance.GetCurrentPresetIndex() : -1)
@@ -2292,9 +2313,12 @@ namespace Dispatch
             // 파견 UI 상태 복원
             UpdateDispatchUI();
 
-            // 파견 중이면 프리셋 잠금
+            // 파견 중이면 프리셋 잠금 및 UI 갱신
             if (isDispatching && presetSelector != null)
+            {
                 presetSelector.Lock();
+                presetSelector.RefreshPresetMarks();
+            }
 
             // 파견 완료 상태라면 획득하기 버튼 활성화 + Red Dot 활성화
             if (isDispatching && remainingTime <= 0f)
