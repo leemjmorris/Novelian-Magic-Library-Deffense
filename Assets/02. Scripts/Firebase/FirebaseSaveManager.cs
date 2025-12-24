@@ -398,10 +398,9 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "isActive", state.isActive },
                 { "locationId", state.locationId },
                 { "hours", state.hours },
-                { "startTimeMs", state.startTimeMs },
-                { "endTimeMs", state.endTimeMs },
-                { "startTime", state.startTime }, // 레거시 호환
-                { "endTime", state.endTime }      // 레거시 호환
+                { "startTime", state.startTime },
+                { "endTime", state.endTime },
+                { "presetIndex", state.presetIndex }
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("dispatch").Child(dispatchType).SetValueAsync(data);
@@ -515,10 +514,9 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "isActive", data.dispatch.combat.isActive },
                             { "locationId", data.dispatch.combat.locationId },
                             { "hours", data.dispatch.combat.hours },
-                            { "startTimeMs", data.dispatch.combat.startTimeMs },
-                            { "endTimeMs", data.dispatch.combat.endTimeMs },
-                            { "startTime", data.dispatch.combat.startTime }, // 레거시 호환
-                            { "endTime", data.dispatch.combat.endTime }      // 레거시 호환
+                            { "startTime", data.dispatch.combat.startTime },
+                            { "endTime", data.dispatch.combat.endTime },
+                            { "presetIndex", data.dispatch.combat.presetIndex }
                         }
                     },
                     { "gathering", new Dictionary<string, object>
@@ -526,10 +524,9 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "isActive", data.dispatch.gathering.isActive },
                             { "locationId", data.dispatch.gathering.locationId },
                             { "hours", data.dispatch.gathering.hours },
-                            { "startTimeMs", data.dispatch.gathering.startTimeMs },
-                            { "endTimeMs", data.dispatch.gathering.endTimeMs },
-                            { "startTime", data.dispatch.gathering.startTime }, // 레거시 호환
-                            { "endTime", data.dispatch.gathering.endTime }      // 레거시 호환
+                            { "startTime", data.dispatch.gathering.startTime },
+                            { "endTime", data.dispatch.gathering.endTime },
+                            { "presetIndex", data.dispatch.gathering.presetIndex }
                         }
                     }
                 }
@@ -728,10 +725,9 @@ public class FirebaseSaveManager : MonoBehaviour
             state.isActive = snap.Child("isActive").Value != null && (bool)snap.Child("isActive").Value;
             state.locationId = GetIntValue(snap.Child("locationId"));
             state.hours = GetIntValue(snap.Child("hours"));
-            state.startTimeMs = GetLongValue(snap.Child("startTimeMs"));
-            state.endTimeMs = GetLongValue(snap.Child("endTimeMs"));
-            state.startTime = snap.Child("startTime").Value?.ToString() ?? ""; // 레거시 호환
-            state.endTime = snap.Child("endTime").Value?.ToString() ?? "";     // 레거시 호환
+            state.startTime = snap.Child("startTime").Value?.ToString() ?? "";
+            state.endTime = snap.Child("endTime").Value?.ToString() ?? "";
+            state.presetIndex = GetIntValue(snap.Child("presetIndex"), -1); // 기본값 -1
         }
         return state;
     }

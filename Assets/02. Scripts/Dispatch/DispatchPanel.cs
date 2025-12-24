@@ -4,6 +4,7 @@ using TMPro;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace Dispatch
 {
@@ -958,6 +959,18 @@ namespace Dispatch
             }
             else
             {
+                // 다른 파견에서 사용 중인 프리셋이면 파견 불가
+                if (presetSelector != null && presetSelector.IsCurrentPresetUsedByOtherDispatch())
+                {
+                    // 토스트 메시지 표시
+                    if (WarningUIManager.Instance != null)
+                    {
+                        WarningUIManager.Instance.ShowWarning("이 프리셋은 다른 파견에서 사용 중입니다.");
+                    }
+                    Debug.LogWarning("[DispatchPanel] 다른 파견에서 사용 중인 프리셋으로는 파견할 수 없습니다.");
+                    return;
+                }
+
                 // 파견 시작
                 StartDispatch();
             }
@@ -1006,6 +1019,10 @@ namespace Dispatch
 
             // 파견 시작 상태로 전환
             isDispatching = true;
+
+            // 프리셋 변경 잠금
+            if (presetSelector != null)
+                presetSelector.Lock();
             // 테스트용: 초 단위로 시간 설정 (실제 게임에서는 시간 * 3600)
             // 북마크 파견 시간 감소 modifier 적용
             float reducedTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
@@ -1179,6 +1196,10 @@ namespace Dispatch
         {
             isDispatching = false;
             remainingTime = 0f;
+
+            // 프리셋 변경 잠금 해제
+            if (presetSelector != null)
+                presetSelector.Unlock();
 
             // 파견 횟수 텍스트 업데이트 (1/1 → 0/1)
             UpdateDispatchCountText();
@@ -1966,6 +1987,13 @@ namespace Dispatch
 
             AddLog("=== 덱 캐릭터 로드 시작 ===");
 
+            // 현재 프리셋이 다른 파견에서 사용 중인지 확인
+            bool isUsedByOtherDispatch = presetSelector != null && presetSelector.IsCurrentPresetUsedByOtherDispatch();
+            if (isUsedByOtherDispatch)
+            {
+                AddLog("⚠️ 현재 프리셋이 다른 파견에서 사용 중 - 캐릭터 아이콘 비활성화");
+            }
+
             // 덱의 4개 슬롯 순회
             for (int i = 0; i < 4; i++)
             {
@@ -1983,10 +2011,19 @@ namespace Dispatch
 
                 if (characterId > 0)
                 {
-                    // 캐릭터가 있으면 이미지 로드 및 불투명하게
+                    // 캐릭터가 있으면 이미지 로드
                     LoadCharacterImageForSlot(i, characterId, targetImage);
-                    targetImage.color = Color.white;
-                    AddLog($"✓ 슬롯 {i + 1}: 캐릭터 ID {characterId} 로드");
+
+                    // 다른 파견에서 사용 중이면 약간 어둡게 표시
+                    if (isUsedByOtherDispatch)
+                    {
+                        targetImage.color = new Color(0.65f, 0.65f, 0.65f, 1f); // 약간 어두운 색
+                    }
+                    else
+                    {
+                        targetImage.color = Color.white;
+                    }
+                    AddLog($"✓ 슬롯 {i + 1}: 캐릭터 ID {characterId} 로드{(isUsedByOtherDispatch ? " (비활성화)" : "")}");
                 }
                 else
                 {
@@ -2122,10 +2159,9 @@ namespace Dispatch
                 isActive = isDispatching,
                 locationId = (int)currentSelectedLocation,
                 hours = currentSelectedHours,
-                startTimeMs = dispatchStartTimeMs,
-                endTimeMs = endTimeMs,
-                startTime = "", // 레거시 필드 (더 이상 사용 안 함)
-                endTime = ""    // 레거시 필드 (더 이상 사용 안 함)
+                startTime = dispatchStartTime.ToString("o"),
+                endTime = endTime.ToString("o"),
+                presetIndex = presetSelector != null ? presetSelector.LockedPresetIndex : (DeckManager.Instance != null ? DeckManager.Instance.GetCurrentPresetIndex() : -1)
             };
 
             string dispatchType = panelDispatchType == DispatchType.Combat ? "combat" : "gathering";
@@ -2254,6 +2290,10 @@ namespace Dispatch
 
             // 파견 UI 상태 복원
             UpdateDispatchUI();
+
+            // 파견 중이면 프리셋 잠금
+            if (isDispatching && presetSelector != null)
+                presetSelector.Lock();
 
             // 파견 완료 상태라면 획득하기 버튼 활성화 + Red Dot 활성화
             if (isDispatching && remainingTime <= 0f)
