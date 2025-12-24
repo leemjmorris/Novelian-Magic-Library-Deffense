@@ -86,11 +86,14 @@ public class SupportSkillData
     #region Helper Properties
 
     // ============================================
-    // 신규 시스템: 8개 서포트 타입
-    // Pierce, Homing, MultiShot, CC, DOT, Enhance, Bounce, Split
+    // 신규 시스템: 9개 서포트 타입
+    // Chain, Pierce, Homing, MultiShot, Bounce, Split, CC, DOT, Enhance
     // ============================================
 
-    // === 투사체 전용 서포트 (5개) ===
+    // === 투사체 전용 서포트 (6개) ===
+    /// <summary>연쇄 서포트인지 확인 - 적에게 맞으면 주변 적에게 튕김</summary>
+    public bool IsChainSupport => support_type == "Chain";
+
     /// <summary>관통 서포트인지 확인</summary>
     public bool IsPierceSupport => support_type == "Pierce";
 
@@ -107,21 +110,18 @@ public class SupportSkillData
     public bool IsSplitSupport => support_type == "Split";
 
     // === 범용 서포트 (3개) ===
-    /// <summary>CC(군중 제어) 서포트인지 확인 - Slow, Stun 통합</summary>
-    public bool IsCCSupport => support_type == "CC" || support_type == "Slow" || support_type == "Stun";
+    /// <summary>CC(군중 제어) 서포트인지 확인</summary>
+    public bool IsCCSupport => support_type == "CC";
 
     /// <summary>도트(지속 데미지) 서포트인지 확인</summary>
     public bool IsDOTSupport => support_type == "DOT";
 
-    /// <summary>강화(Enhance) 서포트인지 확인 - AreaUp, DamageUp, CooldownDown 통합</summary>
-    public bool IsEnhanceSupport => support_type == "Enhance" ||
-                                    support_type == "AreaUp" ||
-                                    support_type == "DamageUp" ||
-                                    support_type == "CooldownDown";
+    /// <summary>강화(Enhance) 서포트인지 확인</summary>
+    public bool IsEnhanceSupport => support_type == "Enhance";
 
     // === 복합 체크 ===
     /// <summary>투사체 전용 서포트인지 확인</summary>
-    public bool IsProjectileOnlySupport => IsPierceSupport || IsHomingSupport ||
+    public bool IsProjectileOnlySupport => IsChainSupport || IsPierceSupport || IsHomingSupport ||
                                            IsMultiShotSupport || IsBounceSupport || IsSplitSupport;
 
     /// <summary>틱 데미지가 있는 서포트인지 확인</summary>
@@ -132,52 +132,6 @@ public class SupportSkillData
 
     /// <summary>횟수 기반 서포트인지 확인</summary>
     public bool HasCount => count > 0;
-
-    #region Legacy Compatibility - Deprecated (이전 시스템 호환성)
-    /// <summary>[Deprecated] 연쇄 서포트 - 제거됨</summary>
-    [Obsolete("Chain support has been removed. Use Pierce or Split instead.")]
-    public bool IsChainSupport => support_type == "Chain";
-
-    /// <summary>[Deprecated] 둔화 서포트 - CC로 통합됨</summary>
-    [Obsolete("Use IsCCSupport instead. Slow is now part of CC.")]
-    public bool IsSlowSupport => support_type == "Slow" || support_type == "CC";
-
-    /// <summary>[Deprecated] 기절 서포트 - CC로 통합됨</summary>
-    [Obsolete("Use IsCCSupport instead. Stun is now part of CC.")]
-    public bool IsStunSupport => support_type == "Stun" || support_type == "CC";
-
-    /// <summary>[Deprecated] 넉백 서포트 - 제거됨</summary>
-    [Obsolete("Knockback support has been removed from the new skill system.")]
-    public bool IsKnockbackSupport => support_type == "Knockback";
-
-    /// <summary>[Deprecated] 끌어당김 서포트 - 제거됨</summary>
-    [Obsolete("PullIn support has been removed from the new skill system.")]
-    public bool IsPullInSupport => support_type == "PullIn";
-
-    /// <summary>[Deprecated] 범위증가 서포트 - Enhance로 통합됨</summary>
-    [Obsolete("Use IsEnhanceSupport instead. AreaUp is now part of Enhance.")]
-    public bool IsAreaUpSupport => support_type == "AreaUp" || support_type == "Enhance";
-
-    /// <summary>[Deprecated] 데미지증가 서포트 - Enhance로 통합됨</summary>
-    [Obsolete("Use IsEnhanceSupport instead. DamageUp is now part of Enhance.")]
-    public bool IsDamageUpSupport => support_type == "DamageUp" || support_type == "Enhance";
-
-    /// <summary>[Deprecated] 쿨다운감소 서포트 - Enhance로 통합됨</summary>
-    [Obsolete("Use IsEnhanceSupport instead. CooldownDown is now part of Enhance.")]
-    public bool IsCooldownDownSupport => support_type == "CooldownDown" || support_type == "Enhance";
-
-    /// <summary>[Deprecated] 잔류 서포트 - 제거됨</summary>
-    [Obsolete("Linger support has been removed from the new skill system.")]
-    public bool IsLingerSupport => support_type == "Linger";
-
-    /// <summary>[Deprecated] 이동 서포트 - 제거됨</summary>
-    [Obsolete("Moving support has been removed from the new skill system.")]
-    public bool IsMovingSupport => support_type == "Moving";
-
-    /// <summary>[Deprecated] 확장 서포트 - 제거됨</summary>
-    [Obsolete("Expand support has been removed from the new skill system.")]
-    public bool IsExpandSupport => support_type == "Expand";
-    #endregion
 
     #endregion
 
@@ -190,21 +144,16 @@ public class SupportSkillData
     {
         if (IsCCSupport) return StatusEffectType.CC;
         if (IsDOTSupport) return StatusEffectType.DOT;
-        if (IsChainSupport) return StatusEffectType.Chain;
         return StatusEffectType.None;
     }
 
     /// <summary>
-    /// CC 타입 반환
+    /// CC 타입 반환 (slow_rate가 있으면 Slow, 없으면 Stun)
     /// </summary>
     public CCType GetCCType()
     {
-        return support_type switch
-        {
-            "Slow" => CCType.Slow,
-            "Stun" => CCType.Stun,
-            _ => CCType.None
-        };
+        if (!IsCCSupport) return CCType.None;
+        return slow_rate > 0 ? CCType.Slow : CCType.Stun;
     }
 
     // 호환성을 위한 프로퍼티 별칭

@@ -26,14 +26,10 @@ namespace Novelian.Combat
         private bool isGround;
         private bool isLinear;
         private bool isFalling;
-        private bool isExpanding;
-        private bool isMoving;
         private Vector3 moveDirection;
         private Vector3 fallTarget;
         private float moveSpeed;
         private float fallSpeed;
-        private float expandSpeed;
-        private float initialRadius;
         #endregion
 
         #region Tick Tracking
@@ -48,11 +44,10 @@ namespace Novelian.Combat
         private const float DEFAULT_MOVE_SPEED = 8f;
         private const float DEFAULT_FALL_SPEED = 25f;
         private const float DEFAULT_TICK_DAMAGE_RATIO = 0.2f;
-        private const float DEFAULT_EXPAND_SPEED = 2f;
         private const int FALLING_LAND_DELAY_MS = 1500;
         #endregion
 
-        public void Initialize(MainSkillData main, SupportSkillData support, bool isGround = false, bool isLinear = false, Vector3 moveDirection = default, bool isFalling = false, Vector3 fallTarget = default, bool isMoving = false)
+        public void Initialize(MainSkillData main, SupportSkillData support, bool isGround = false, bool isLinear = false, Vector3 moveDirection = default, bool isFalling = false, Vector3 fallTarget = default)
         {
             mainSkill = main;
             supportSkill = support;
@@ -61,7 +56,6 @@ namespace Novelian.Combat
             this.moveDirection = moveDirection;
             this.isFalling = isFalling;
             this.fallTarget = fallTarget;
-            this.isMoving = isMoving;
 
             // 기본 값 설정
             damage = SkillExecutor.CalculateDamage(main, support);
@@ -93,8 +87,8 @@ namespace Novelian.Combat
         {
             if (support == null) return;
 
-            // 범위 증가
-            if (support.IsAreaUpSupport && support.scale_multiplier > 0)
+            // 범위 증가 (Enhance 서포트의 scale_multiplier 사용)
+            if (support.IsEnhanceSupport && support.scale_multiplier > 0)
             {
                 radius *= support.scale_multiplier;
                 transform.localScale *= support.scale_multiplier;
@@ -104,27 +98,6 @@ namespace Novelian.Combat
             if (support.HasTickDamage)
             {
                 tickInterval = support.tick_interval;
-            }
-
-            // Linger 서포트 - 잔류 효과
-            if (support.IsLingerSupport && support.duration > 0)
-            {
-                duration += support.duration;
-            }
-
-            // Expand 서포트 - 시간에 따라 범위 확장
-            if (support.IsExpandSupport)
-            {
-                isExpanding = true;
-                initialRadius = radius;
-                expandSpeed = support.speed > 0 ? support.speed : DEFAULT_EXPAND_SPEED;
-            }
-
-            // Moving 서포트 - AOE가 이동하며 공격
-            if (support.IsMovingSupport)
-            {
-                isMoving = true;
-                moveSpeed = support.speed > 0 ? support.speed : DEFAULT_MOVE_SPEED;
             }
         }
 
@@ -154,39 +127,18 @@ namespace Novelian.Combat
             float elapsed = 0f;
 
             // 즉시 데미지 (TargetAOE, LinearAOE의 경우)
-            if (!isGround && !isMoving)
+            if (!isGround)
             {
                 TargetableUtils.ApplyDamageInRadius(transform.position, radius, damage);
             }
 
-            // 지속 장판 또는 이동 AOE
+            // 지속 장판 또는 직선 이동 AOE
             while (elapsed < duration && isInitialized)
             {
                 // 직선 이동 (LinearAOE)
                 if (isLinear)
                 {
                     transform.position += moveDirection * moveSpeed * Time.deltaTime;
-                }
-
-                // 이동 AOE - 천천히 이동하며 틱 데미지
-                if (isMoving)
-                {
-                    transform.position += moveDirection * moveSpeed * Time.deltaTime;
-
-                    tickTimer += Time.deltaTime;
-                    if (tickTimer >= tickInterval)
-                    {
-                        tickTimer = 0f;
-                        ApplyTickDamage();
-                    }
-                }
-
-                // Expand 서포트 - 시간에 따라 범위 확장
-                if (isExpanding)
-                {
-                    radius += expandSpeed * Time.deltaTime;
-                    float scaleRatio = radius / initialRadius;
-                    transform.localScale = Vector3.one * scaleRatio;
                 }
 
                 // 지속 장판 틱 데미지 (GroundAOE)

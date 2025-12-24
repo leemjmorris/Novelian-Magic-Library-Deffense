@@ -75,7 +75,7 @@ namespace Novelian.Combat
 
         private void ApplyCCEffects(ITargetable target)
         {
-            if (supportSkill == null) return;
+            if (supportSkill == null || !supportSkill.IsCCSupport) return;
 
             Transform targetTransform = target.GetTransform();
 
@@ -85,19 +85,16 @@ namespace Novelian.Combat
             Monster monster = targetTransform.GetComponent<Monster>();
             if (monster == null) return;
 
-            if (supportSkill.IsSlowSupport)
+            // CC 타입에 따라 효과 적용
+            CCType ccType = supportSkill.GetCCType();
+            switch (ccType)
             {
-                monster.ApplySlow(supportSkill.slow_rate, supportSkill.duration);
-            }
-
-            if (supportSkill.IsStunSupport)
-            {
-                monster.ApplyDizzy(supportSkill.duration);
-            }
-
-            if (supportSkill.IsKnockbackSupport)
-            {
-                monster.ApplyKnockback(transform.position, supportSkill.distance);
+                case CCType.Slow:
+                    monster.ApplySlow(supportSkill.slow_rate, supportSkill.duration);
+                    break;
+                case CCType.Stun:
+                    monster.ApplyDizzy(supportSkill.duration);
+                    break;
             }
         }
 

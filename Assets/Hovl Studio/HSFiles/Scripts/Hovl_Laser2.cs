@@ -14,6 +14,9 @@ public class Hovl_Laser2 : MonoBehaviour
 
     public float MaxLength;
 
+    [Tooltip("Raycast에서 무시할 레이어 마스크 (관통)")]
+    public LayerMask ignoreLayers;
+
     private bool UpdateSaver = false;
     private ParticleSystem laserPS;
     private ParticleSystem[] Flash;
@@ -42,7 +45,9 @@ public class Hovl_Laser2 : MonoBehaviour
             laserMat.SetVector("_StartPoint", transform.position);
             //Set end laser point
             RaycastHit hit;
-            if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, MaxLength))
+            // ignoreLayers를 제외한 레이어만 충돌 감지 (관통 레이저용)
+            int hitLayers = ignoreLayers.value != 0 ? ~ignoreLayers.value : -1;
+            if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, MaxLength, hitLayers))
             {
                 particleCount = Mathf.RoundToInt(hit.distance / (2 * laserScale));
                 if (particleCount < hit.distance / (2 * laserScale))

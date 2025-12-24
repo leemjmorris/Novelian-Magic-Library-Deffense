@@ -62,7 +62,6 @@ namespace Novelian.Combat
         private const float DEFAULT_BARRIER_DURATION = 5f;
         private const float DEFAULT_DEBUFF_DURATION = 5f;
         private const float DEFAULT_INSTANT_DURATION = 2f;
-        private const float DEFAULT_CHAIN_RANGE = 5f;
         private const float BEAM_TICK_INTERVAL = 0.5f;
         private const int BEAM_CLEANUP_DELAY_MS = 500;
         private const float FORWARD_OFFSET = 5f;
@@ -556,8 +555,7 @@ namespace Novelian.Combat
         }
 
         /// <summary>
-        /// 빔 스킬 실행 - Monster 레이어에서만 멈춤
-        /// SkillExecutor가 직접 위치/방향 제어 (외부 에셋 수정 없이)
+        /// 빔 스킬 실행 - 관통형 (화면 경계까지 발사, 모든 몬스터에 틱 데미지)
         /// </summary>
         private async UniTask ExecuteBeamAsync(
             Transform caster,
@@ -566,240 +564,142 @@ namespace Novelian.Combat
             SupportSkillData supportSkill,
             GameObject prefab)
         {
-            Vector3 spawnPos = GetCasterAimPosition(caster);
-            Vector3 targetPos = target != null
-                ? TargetableUtils.GetAimPosition(target)
-                : caster.position + caster.forward * 10f;
-            Vector3 direction = (targetPos - spawnPos).normalized;
+            // 프로젝타일과 동일한 발사 위치 (캐스터 위치 + 높이 오프셋)
+            Vector3 spawnPos = caster.position + Vector3.up * DEFAULT_SPAWN_HEIGHT;
+
+            // 빔 방향 계산 (타겟 방향, Y축 고정)
+            Vector3 direction = CalculateBeamDirection(caster, target, spawnPos);
 
             GameObject beamObj = Instantiate(prefab, spawnPos, Quaternion.LookRotation(direction));
 
-            float maxRange = mainSkill.range > 0 ? mainSkill.range : DEFAULT_BEAM_RANGE;
-            ConfigureHovlLaser(beamObj, maxRange);
+            // 화면 경계까지의 빔 길이 계산
+            float beamLength = CalculateBeamLengthToScreenBoundary(spawnPos, direction);
+            ConfigureHovlLaser(beamObj, beamLength);
 
             float duration = mainSkill.duration > 0 ? mainSkill.duration : DEFAULT_BEAM_DURATION;
             float damage = CalculateDamage(mainSkill, supportSkill);
             int monsterLayerMask = LayerMask.GetMask("Monster");
 
-            // 연쇄 레이저 설정
-            int chainCount = 0;
-            float chainRange = DEFAULT_CHAIN_RANGE;
-            float chainDecay = 0.8f;
-            if (supportSkill != null && supportSkill.IsChainSupport)
-            {
-                chainCount = supportSkill.count;
-                chainRange = supportSkill.range > 0 ? supportSkill.range : DEFAULT_CHAIN_RANGE;
-                chainDecay = supportSkill.chain_decay > 0 ? supportSkill.chain_decay : 0.8f;
-            }
-
-            // 연쇄 레이저 오브젝트 리스트
-            var chainBeams = new System.Collections.Generic.List<GameObject>();
-            var chainTargetIds = new System.Collections.Generic.HashSet<int>();
-
             float elapsed = 0f;
             while (elapsed < duration && beamObj != null)
             {
-                // 메인 레이저 위치/방향 업데이트 (SkillExecutor가 직접 제어)
-                UpdateBeamTransform(beamObj, caster, target);
+                // 빔 위치 업데이트 (캐스터 위치 따라감, 방향은 고정)
+                UpdateBeamPositionOnly(beamObj, caster, direction);
 
-                // 메인 레이저 데미지 적용 및 연쇄 처리
-                ITargetable hitTarget = ApplyBeamDamageAndGetTarget(beamObj, maxRange, damage, monsterLayerMask);
-
-                // 연쇄 레이저 처리
-                if (chainCount > 0 && hitTarget != null)
-                {
-                    UpdateChainBeams(hitTarget, prefab, chainCount, chainRange, chainDecay, damage, monsterLayerMask, chainBeams, chainTargetIds);
-                }
+                // 관통형 데미지 적용 (RaycastAll)
+                ApplyPenetratingBeamDamage(beamObj, beamLength, damage, monsterLayerMask);
 
                 await UniTask.Delay((int)(BEAM_TICK_INTERVAL * 1000));
                 elapsed += BEAM_TICK_INTERVAL;
             }
 
-            // 순차적 종료: 메인 레이저 → 연쇄 레이저 순서대로
+            // 레이저 종료
             await CleanupBeam(beamObj);
+        }
 
-            foreach (var chainBeam in chainBeams)
+        /// <summary>
+        /// 빔 방향 계산 (타겟 기준, XZ 평면에서 수평 발사)
+        /// </summary>
+        private Vector3 CalculateBeamDirection(Transform caster, ITargetable target, Vector3 spawnPos)
+        {
+            Vector3 targetPos;
+            if (target != null && target.IsAlive())
             {
-                if (chainBeam != null)
+                targetPos = TargetableUtils.GetAimPosition(target);
+            }
+            else
+            {
+                targetPos = caster.position + caster.forward * 10f;
+            }
+
+            // XZ 평면에서만 방향 계산 (Y축 무시하여 수평 빔)
+            Vector3 direction = new Vector3(targetPos.x - spawnPos.x, 0f, targetPos.z - spawnPos.z);
+            return direction.normalized;
+        }
+
+        /// <summary>
+        /// 화면 경계까지의 빔 길이 계산
+        /// </summary>
+        private float CalculateBeamLengthToScreenBoundary(Vector3 startPos, Vector3 direction)
+        {
+            Camera mainCamera = Camera.main;
+            if (mainCamera == null)
+            {
+                GameObject camObj = GameObject.FindWithTag("MainCamera");
+                if (camObj != null)
                 {
-                    await CleanupBeam(chainBeam);
+                    mainCamera = camObj.GetComponent<Camera>();
                 }
             }
-        }
 
-        /// <summary>
-        /// 캐스터의 조준 위치 (Collider 중심 또는 position + offset)
-        /// </summary>
-        private Vector3 GetCasterAimPosition(Transform caster)
-        {
-            Collider col = caster.GetComponent<Collider>();
-            if (col != null)
+            if (mainCamera == null)
             {
-                return col.bounds.center;
+                return DEFAULT_BEAM_RANGE * 3f; // 카메라 없으면 기본값 * 3
             }
-            return caster.position + Vector3.up * DEFAULT_SPAWN_HEIGHT;
+
+            const float maxSearchDistance = 100f;
+            const float stepSize = 2f;
+            const float margin = 0.05f;
+
+            float distance = 0f;
+            while (distance < maxSearchDistance)
+            {
+                Vector3 checkPos = startPos + direction * distance;
+                Vector3 viewportPos = mainCamera.WorldToViewportPoint(checkPos);
+
+                // 화면 밖으로 나갔는지 체크
+                if (viewportPos.x < -margin || viewportPos.x > 1f + margin ||
+                    viewportPos.y < -margin || viewportPos.y > 1f + margin ||
+                    viewportPos.z < 0)
+                {
+                    return distance;
+                }
+
+                distance += stepSize;
+            }
+
+            return maxSearchDistance;
         }
 
         /// <summary>
-        /// 레이저 위치/방향 업데이트 (매 틱마다 호출)
+        /// 빔 위치만 업데이트 (방향은 고정)
         /// </summary>
-        private void UpdateBeamTransform(GameObject beamObj, Transform source, ITargetable target)
+        private void UpdateBeamPositionOnly(GameObject beamObj, Transform caster, Vector3 direction)
+        {
+            if (beamObj == null || caster == null) return;
+
+            // 프로젝타일과 동일한 발사 위치 (캐스터 위치 + 높이 오프셋)
+            Vector3 startPos = caster.position + Vector3.up * DEFAULT_SPAWN_HEIGHT;
+            beamObj.transform.position = startPos;
+            beamObj.transform.rotation = Quaternion.LookRotation(direction);
+        }
+
+        /// <summary>
+        /// 관통형 빔 데미지 적용 (RaycastAll로 경로상 모든 몬스터)
+        /// </summary>
+        private void ApplyPenetratingBeamDamage(GameObject beamObj, float beamLength, float damage, int layerMask)
         {
             if (beamObj == null) return;
 
-            // 시작점: 캐스터 위치
-            Vector3 startPos = GetCasterAimPosition(source);
-            beamObj.transform.position = startPos;
+            // RaycastAll로 경로상의 모든 몬스터 감지
+            RaycastHit[] hits = Physics.RaycastAll(
+                beamObj.transform.position,
+                beamObj.transform.forward,
+                beamLength,
+                layerMask
+            );
 
-            // 끝점: 타겟 방향으로 LookAt
-            if (target != null && target.IsAlive())
-            {
-                Vector3 targetPos = TargetableUtils.GetAimPosition(target);
-                beamObj.transform.LookAt(targetPos);
-            }
-        }
+            // 틱당 데미지 계산
+            float tickDamage = damage * BEAM_TICK_INTERVAL;
 
-        private void UpdateChainBeams(
-            ITargetable firstTarget,
-            GameObject prefab,
-            int chainCount,
-            float chainRange,
-            float chainDecay,
-            float baseDamage,
-            int layerMask,
-            System.Collections.Generic.List<GameObject> chainBeams,
-            System.Collections.Generic.HashSet<int> chainTargetIds)
-        {
-            // 이전 연쇄 타겟 초기화 (매 틱마다 새로 계산)
-            chainTargetIds.Clear();
-            chainTargetIds.Add(firstTarget.GetTransform().GetInstanceID());
-
-            // 현재 틱의 연쇄 타겟들 (위치 계산용)
-            var currentChainTargets = new System.Collections.Generic.List<ITargetable>();
-            currentChainTargets.Add(firstTarget);
-
-            float currentDamage = baseDamage;
-            int activeChainCount = 0;
-
-            for (int i = 0; i < chainCount; i++)
-            {
-                // 마지막 타겟에서 다음 타겟 찾기
-                ITargetable lastTarget = currentChainTargets[currentChainTargets.Count - 1];
-                if (lastTarget == null || !lastTarget.IsAlive()) break;
-
-                Vector3 lastPos = TargetableUtils.GetAimPosition(lastTarget);
-
-                // 이미 맞은 타겟 제외하고 가장 가까운 적 찾기
-                ITargetable nextTarget = FindNextChainTargetById(lastPos, chainRange, chainTargetIds);
-                if (nextTarget == null || !nextTarget.IsAlive()) break;
-
-                // 타겟 추가
-                chainTargetIds.Add(nextTarget.GetTransform().GetInstanceID());
-                currentChainTargets.Add(nextTarget);
-                currentDamage *= chainDecay;
-                activeChainCount++;
-
-                // 시작점(lastTarget) → 끝점(nextTarget)
-                Vector3 startPos = TargetableUtils.GetAimPosition(lastTarget);
-                Vector3 endPos = TargetableUtils.GetAimPosition(nextTarget);
-                Vector3 dir = (endPos - startPos).normalized;
-                if (dir.sqrMagnitude < 0.001f) dir = Vector3.forward;
-
-                // 연쇄 레이저 생성 또는 업데이트
-                if (i >= chainBeams.Count)
-                {
-                    // 새 연쇄 레이저 생성
-                    GameObject chainBeam = Instantiate(prefab, startPos, Quaternion.LookRotation(dir));
-                    ConfigureHovlLaser(chainBeam, chainRange);
-                    chainBeams.Add(chainBeam);
-                }
-                else if (chainBeams[i] != null)
-                {
-                    // 비활성화된 레이저 재활성화
-                    if (!chainBeams[i].activeSelf)
-                    {
-                        chainBeams[i].SetActive(true);
-                    }
-                }
-
-                // 연쇄 레이저 위치/방향 직접 업데이트
-                if (i < chainBeams.Count && chainBeams[i] != null)
-                {
-                    UpdateChainBeamTransform(chainBeams[i], lastTarget, nextTarget);
-                }
-
-                // 연쇄 데미지 적용
-                float tickDamage = currentDamage * BEAM_TICK_INTERVAL;
-                nextTarget.TakeDamage(tickDamage);
-            }
-
-            // 사용하지 않는 연쇄 레이저 비활성화
-            for (int i = activeChainCount; i < chainBeams.Count; i++)
-            {
-                if (chainBeams[i] != null)
-                {
-                    chainBeams[i].SetActive(false);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 연쇄 레이저 위치/방향 업데이트 (매 틱마다 호출)
-        /// </summary>
-        private void UpdateChainBeamTransform(GameObject beamObj, ITargetable source, ITargetable target)
-        {
-            if (beamObj == null) return;
-
-            // 시작점: source의 Collider 중심
-            Vector3 startPos = TargetableUtils.GetAimPosition(source);
-            beamObj.transform.position = startPos;
-
-            // 끝점: target 방향으로 LookAt
-            if (target != null && target.IsAlive())
-            {
-                Vector3 targetPos = TargetableUtils.GetAimPosition(target);
-                beamObj.transform.LookAt(targetPos);
-            }
-        }
-
-        private ITargetable FindNextChainTargetById(Vector3 position, float range, System.Collections.Generic.HashSet<int> excludeTargetIds)
-        {
-            var allTargets = TargetableUtils.GetTargetsInRadius(position, range);
-
-            ITargetable nearest = null;
-            float nearestDist = float.MaxValue;
-
-            foreach (var target in allTargets)
-            {
-                if (!target.IsAlive()) continue;
-
-                int targetId = target.GetTransform().GetInstanceID();
-                if (excludeTargetIds.Contains(targetId)) continue;
-
-                float dist = Vector3.Distance(position, TargetableUtils.GetAimPosition(target));
-                if (dist < nearestDist)
-                {
-                    nearestDist = dist;
-                    nearest = target;
-                }
-            }
-
-            return nearest;
-        }
-
-        private ITargetable ApplyBeamDamageAndGetTarget(GameObject beamObj, float maxRange, float damage, int layerMask)
-        {
-            if (Physics.Raycast(beamObj.transform.position, beamObj.transform.forward, out RaycastHit hit, maxRange, layerMask))
+            foreach (RaycastHit hit in hits)
             {
                 ITargetable hitTarget = TargetableUtils.GetTargetable(hit.collider);
                 if (hitTarget != null && hitTarget.IsAlive())
                 {
-                    float tickDamage = damage * BEAM_TICK_INTERVAL;
                     hitTarget.TakeDamage(tickDamage);
-                    return hitTarget;
                 }
             }
-            return null;
         }
 
         private void ConfigureHovlLaser(GameObject beamObj, float maxRange)
@@ -807,8 +707,19 @@ namespace Novelian.Combat
             var hovlLaser = beamObj.GetComponent<Hovl_Laser>();
             var hovlLaser2 = beamObj.GetComponent<Hovl_Laser2>();
 
-            if (hovlLaser != null) hovlLaser.MaxLength = maxRange;
-            if (hovlLaser2 != null) hovlLaser2.MaxLength = maxRange;
+            // Monster 레이어 마스크 (관통용)
+            int monsterLayerMask = LayerMask.GetMask("Monster");
+
+            if (hovlLaser != null)
+            {
+                hovlLaser.MaxLength = maxRange;
+                hovlLaser.ignoreLayers = monsterLayerMask; // Monster 레이어 무시 (관통)
+            }
+            if (hovlLaser2 != null)
+            {
+                hovlLaser2.MaxLength = maxRange;
+                hovlLaser2.ignoreLayers = monsterLayerMask; // Monster 레이어 무시 (관통)
+            }
         }
 
         private async UniTask CleanupBeam(GameObject beamObj)
@@ -928,16 +839,15 @@ namespace Novelian.Combat
 
             GameObject aoeObj = Instantiate(prefab, spawnPos, Quaternion.identity);
 
-            // AOE 컴포넌트 초기화 - isMoving: true
+            // AOE 컴포넌트 초기화 - Linear로 대체 (이동하며 데미지)
             GetOrAddComponent<SkillAOE>(aoeObj).Initialize(
                 mainSkill,
                 supportSkill,
                 isGround: false,
-                isLinear: false,
+                isLinear: true,
                 moveDirection: moveDirection,
                 isFalling: false,
-                fallTarget: default,
-                isMoving: true
+                fallTarget: default
             );
         }
 
@@ -1124,7 +1034,8 @@ namespace Novelian.Combat
         {
             float damage = mainSkill.base_damage;
 
-            if (supportSkill != null && supportSkill.IsDamageUpSupport && supportSkill.explosion_ratio > 0)
+            // Enhance 서포트의 explosion_ratio를 데미지 배율로 사용
+            if (supportSkill != null && supportSkill.IsEnhanceSupport && supportSkill.explosion_ratio > 0)
             {
                 damage *= supportSkill.explosion_ratio;
             }

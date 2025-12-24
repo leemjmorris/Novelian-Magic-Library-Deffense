@@ -13,132 +13,27 @@ MonoBehaviour:
   m_Name: SkillCombinationRules
   m_EditorClassIdentifier: 
   rules:
-  - behaviorType: SingleProjectile
+  - behaviorType: Projectile
     allowedSupportTypes:
-    - Chain
     - Pierce
-    - Split
     - Homing
     - MultiShot
-    - Slow
-    - Stun
+    - CC
     - DOT
-    - Knockback
-    - DamageUp
-    - CooldownDown
-  - behaviorType: ExplosiveProjectile
-    allowedSupportTypes:
-    - Chain
-    - Pierce
+    - Enhance
+    - Bounce
     - Split
-    - Homing
-    - MultiShot
-    - Slow
-    - Stun
-    - DOT
-    - Knockback
-    - DamageUp
-    - CooldownDown
-    - Linger
-    - Moving
-    - Expand
-    - PullIn
-  - behaviorType: FallingProjectile
-    allowedSupportTypes:
-    - Slow
-    - Stun
-    - DOT
-    - DamageUp
-    - CooldownDown
-    - AreaUp
-    - Moving
+    - Chain
   - behaviorType: BeamRay
     allowedSupportTypes:
-    - Chain
-    - Pierce
-    - Slow
-    - Stun
+    - CC
     - DOT
-    - DamageUp
-    - CooldownDown
-  - behaviorType: TargetAOE
+    - Enhance
+    - Bounce
+    - MultiShot
+    - Split
+  - behaviorType: AOE
     allowedSupportTypes:
-    - Slow
-    - Stun
+    - CC
     - DOT
-    - Knockback
-    - PullIn
-    - AreaUp
-    - DamageUp
-    - CooldownDown
-    - Linger
-    - Moving
-    - Expand
-  - behaviorType: LinearAOE
-    allowedSupportTypes:
-    - Slow
-    - Stun
-    - DOT
-    - Knockback
-    - PullIn
-    - AreaUp
-    - DamageUp
-    - CooldownDown
-    - Linger
-    - Moving
-    - Expand
-  - behaviorType: GroundAOE
-    allowedSupportTypes:
-    - Slow
-    - Stun
-    - DOT
-    - Knockback
-    - PullIn
-    - AreaUp
-    - DamageUp
-    - CooldownDown
-    - Linger
-    - Moving
-    - Expand
-  - behaviorType: MovingAOE
-    allowedSupportTypes:
-    - Slow
-    - Stun
-    - DOT
-    - Knockback
-    - PullIn
-    - AreaUp
-    - DamageUp
-    - CooldownDown
-    - Linger
-    - Moving
-    - Expand
-  - behaviorType: Barrier
-    allowedSupportTypes:
-    - CooldownDown
-    - AreaUp
-  - behaviorType: Buff
-    allowedSupportTypes:
-    - DamageUp
-    - CooldownDown
-  - behaviorType: Debuff
-    allowedSupportTypes:
-    - Slow
-    - Stun
-    - DOT
-    - Knockback
-    - DamageUp
-    - CooldownDown
-  - behaviorType: Trap
-    allowedSupportTypes:
-    - Slow
-    - Stun
-    - DOT
-    - Knockback
-  - behaviorType: Instant
-    allowedSupportTypes:
-    - Slow
-    - Stun
-    - DOT
-    - DamageUp
-    - CooldownDown
+    - Enhance

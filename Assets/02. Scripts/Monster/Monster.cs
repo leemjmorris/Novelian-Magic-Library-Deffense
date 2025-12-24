@@ -132,6 +132,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
     private static List<Transform> cachedWallTransforms = new List<Transform>();
     private static List<Collider> cachedWallColliders = new List<Collider>();
 
+    // Status Effect VFX Config (static 캐싱 - 모든 몬스터가 공유)
+    private static StatusEffectVFXConfig cachedVFXConfig;
+
+    // 현재 활성화된 상태 효과 VFX 참조 (중복 스폰 방지)
+    private GameObject currentStunVFX;
+    private GameObject currentDOTVFX;
+
     // 인스턴스별 타겟 Wall (가장 가까운 Wall로 설정됨)
     private Wall targetWall;
     private Transform targetWallTransform;
@@ -334,6 +341,11 @@ public class Monster : BaseEntity, ITargetable, IMovable
         dizzyTimer = duration;
         monsterAnimator.SetBool(ANIM_DIZZY, true);
 
+        Debug.Log($"[CC] {gameObject.name} 기절(Stun) 적용! 지속시간: {duration:F1}초");
+
+        // 스턴 VFX 스폰
+        SpawnStunVFX(duration);
+
         // Dizzy 상태에서는 NavMeshAgent 비활성화
         if (monsterMove != null)
         {
@@ -345,6 +357,44 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             rb.linearVelocity = Vector3.zero;
         }
+    }
+
+    /// <summary>
+    /// 스턴 VFX 스폰 (Collider 상단에 배치)
+    /// </summary>
+    private void SpawnStunVFX(float duration)
+    {
+        EnsureVFXConfig();
+        if (cachedVFXConfig == null) return;
+
+        GameObject prefab = cachedVFXConfig.GetStunVFX();
+        if (prefab == null) return;
+
+        // 기존 VFX가 있으면 제거
+        if (currentStunVFX != null)
+        {
+            Destroy(currentStunVFX);
+        }
+
+        // VFX 위치 계산 (Collider 상단 + 오프셋)
+        Vector3 vfxPosition = cachedVFXConfig.CalculateVFXPosition(collider3D, transform);
+
+        // VFX 생성 - 몬스터를 부모로 설정하여 따라다니게 함
+        currentStunVFX = Instantiate(prefab, vfxPosition, Quaternion.identity, transform);
+
+        // 로컬 위치 설정 (부모 기준 상대 위치)
+        if (collider3D != null)
+        {
+            float colliderTopLocalY = collider3D.bounds.max.y - transform.position.y;
+            currentStunVFX.transform.localPosition = new Vector3(0f, colliderTopLocalY + cachedVFXConfig.GetHeightOffset(), 0f);
+        }
+        else
+        {
+            currentStunVFX.transform.localPosition = Vector3.up * (2f + cachedVFXConfig.GetHeightOffset());
+        }
+
+        // 지속시간 후 자동 파괴
+        Destroy(currentStunVFX, duration);
     }
 
     /// <summary>
@@ -361,6 +411,8 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         isSlowed = true;
         slowMultiplier = 1f - (slowPercent / 100f); // 50% slow = 0.5 multiplier
+
+        Debug.Log($"[CC] {gameObject.name} 둔화(Slow) 적용! {slowPercent * 100:F0}% 감속, 지속시간: {duration:F1}초");
 
         // Start slow duration
         SlowDurationAsync(duration, slowCts.Token).Forget();
@@ -530,9 +582,10 @@ public class Monster : BaseEntity, ITargetable, IMovable
     {
         if (isDead) return;
 
-        // Start DOT (틱마다 이펙트 재생)
-        StartDOT(dotType, damagePerTick, tickInterval, duration, dotEffectPrefab).Forget();
-        // DOT 이펙트 생성 (몬스터를 따라다니면서 재생)
+        // DOT VFX 스폰 (Config 기반)
+        SpawnDOTVFX(dotType, duration);
+
+        // 외부에서 전달받은 DOT 이펙트가 있으면 추가로 생성
         if (dotEffectPrefab != null)
         {
             GameObject dotEffect = Instantiate(dotEffectPrefab, transform.position, Quaternion.identity, transform);
@@ -541,6 +594,64 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         // Start DOT coroutine
         StartDOT(dotType, damagePerTick, tickInterval, duration, dotEffectPrefab).Forget();
+    }
+
+    /// <summary>
+    /// DOT VFX 스폰 (Collider 상단에 배치)
+    /// </summary>
+    private void SpawnDOTVFX(DOTType dotType, float duration)
+    {
+        EnsureVFXConfig();
+        if (cachedVFXConfig == null) return;
+
+        GameObject prefab = cachedVFXConfig.GetDOTVFX();
+        if (prefab == null) return;
+
+        // 기존 VFX가 있으면 제거
+        if (currentDOTVFX != null)
+        {
+            Destroy(currentDOTVFX);
+        }
+
+        // VFX 위치 계산 (Collider 상단 + 오프셋)
+        Vector3 vfxPosition = cachedVFXConfig.CalculateVFXPosition(collider3D, transform);
+
+        // VFX 생성 - 몬스터를 부모로 설정하여 따라다니게 함
+        currentDOTVFX = Instantiate(prefab, vfxPosition, Quaternion.identity, transform);
+
+        // 로컬 위치 설정 (부모 기준 상대 위치)
+        if (collider3D != null)
+        {
+            float colliderTopLocalY = collider3D.bounds.max.y - transform.position.y;
+            currentDOTVFX.transform.localPosition = new Vector3(0f, colliderTopLocalY + cachedVFXConfig.GetHeightOffset(), 0f);
+        }
+        else
+        {
+            currentDOTVFX.transform.localPosition = Vector3.up * (2f + cachedVFXConfig.GetHeightOffset());
+        }
+
+        // 지속시간 후 자동 파괴
+        Destroy(currentDOTVFX, duration);
+
+        Debug.Log($"[DOT] {gameObject.name} DOT VFX 스폰: {prefab.name}, 지속시간: {duration:F1}초");
+    }
+
+    /// <summary>
+    /// 상태 효과 VFX 정리 (OnSpawn, OnDespawn에서 호출)
+    /// </summary>
+    private void CleanupStatusEffectVFX()
+    {
+        if (currentStunVFX != null)
+        {
+            Destroy(currentStunVFX);
+            currentStunVFX = null;
+        }
+
+        if (currentDOTVFX != null)
+        {
+            Destroy(currentDOTVFX);
+            currentDOTVFX = null;
+        }
     }
 
     private async Cysharp.Threading.Tasks.UniTaskVoid StartDOT(DOTType dotType, float damagePerTick, float tickInterval, float duration, GameObject dotEffectPrefab)
@@ -850,6 +961,25 @@ public class Monster : BaseEntity, ITargetable, IMovable
         cachedWalls.Clear();
         cachedWallTransforms.Clear();
         cachedWallColliders.Clear();
+    }
+
+    /// <summary>
+    /// StatusEffectVFXConfig 설정 (StageManager 등에서 호출)
+    /// </summary>
+    public static void SetVFXConfig(StatusEffectVFXConfig config)
+    {
+        cachedVFXConfig = config;
+    }
+
+    /// <summary>
+    /// StatusEffectVFXConfig 초기화 (Resources 폴더에서 로드)
+    /// </summary>
+    private static void EnsureVFXConfig()
+    {
+        if (cachedVFXConfig == null)
+        {
+            cachedVFXConfig = Resources.Load<StatusEffectVFXConfig>("StatusEffectVFXConfig");
+        }
     }
 
     /// <summary>
@@ -1300,6 +1430,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
         currentMarkType = MarkType.None;
         markDamageMultiplier = 0f;
 
+        // 상태 효과 VFX 정리
+        CleanupStatusEffectVFX();
+
         // 애니메이션 상태 초기화 - 애니메이터 활성화
         if (monsterAnimator != null)
         {
@@ -1426,6 +1559,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         // Dissolve Tween 정리
         ResetDissolveMaterials();
+
+        // 상태 효과 VFX 정리
+        CleanupStatusEffectVFX();
 
         // MonsterMove 상태 초기화
         if (monsterMove != null)

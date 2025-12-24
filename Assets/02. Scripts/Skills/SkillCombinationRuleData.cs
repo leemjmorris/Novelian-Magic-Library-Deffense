@@ -164,13 +164,8 @@ namespace Novelian.Combat
                 // Projectile은 모든 투사체 전용 서포트 사용 가능
                 if (behaviorType == "Projectile") return true;
 
-                // BeamRay는 Pierce, Bounce만 사용 가능
-                if (behaviorType == "BeamRay")
-                {
-                    return supportType == "Pierce" || supportType == "Bounce";
-                }
-
-                // AOE는 투사체 전용 서포트 사용 불가
+                // BeamRay는 투사체 전용 서포트 사용 불가 (이미 관통형으로 구현됨)
+                // AOE도 투사체 전용 서포트 사용 불가
                 return false;
             }
 

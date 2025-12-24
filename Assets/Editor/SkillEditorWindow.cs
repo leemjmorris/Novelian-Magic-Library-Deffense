@@ -24,10 +24,11 @@ public class SkillEditorWindow : EditorWindow
         CombinationRules,
         Preview,
         Test,
-        ExternalAssets
+        ExternalAssets,
+        StatusEffectVFX
     }
     private Tab currentTab = Tab.SkillCreator;
-    private readonly string[] tabNames = { "스킬 제작", "VFX Database", "CSV 동기화", "조합 규칙", "프리뷰", "테스트", "외부 에셋" };
+    private readonly string[] tabNames = { "스킬 제작", "VFX Database", "CSV 동기화", "조합 규칙", "프리뷰", "테스트", "외부 에셋", "상태 효과 VFX" };
     #endregion
 
     #region References
@@ -163,15 +164,21 @@ public class SkillEditorWindow : EditorWindow
     private Vector2 combinationRulesScrollPosition;
     private const string COMBINATION_RULES_ASSET_PATH = "Assets/Data/SkillCombinationRules.asset";
 
-    // 서포트 타입 목록 - 신규 시스템: 8개 타입
+    // 서포트 타입 목록 - 신규 시스템: 9개 타입
     private readonly string[] supportTypes = {
-        "Pierce", "Homing", "MultiShot", "CC", "DOT", "Enhance", "Bounce", "Split"
+        "Chain", "Pierce", "Homing", "MultiShot", "CC", "DOT", "Enhance", "Bounce", "Split"
     };
 
     // 서포트 타입 한글명 (툴팁용)
     private readonly string[] supportTypeNames = {
-        "관통", "유도", "다중발사", "군중제어", "도트", "강화", "바운스", "분열"
+        "연쇄", "관통", "유도", "다중발사", "군중제어", "도트", "강화", "바운스", "분열"
     };
+    #endregion
+
+    #region Status Effect VFX
+    private StatusEffectVFXConfig statusEffectVFXConfig;
+    private const string STATUS_EFFECT_VFX_CONFIG_PATH = "Assets/Resources/StatusEffectVFXConfig.asset";
+    private Vector2 statusEffectVFXScrollPosition;
     #endregion
 
     [MenuItem("Tools/Novelian/스킬 에디터 %#k")]
@@ -249,6 +256,9 @@ public class SkillEditorWindow : EditorWindow
                 break;
             case Tab.ExternalAssets:
                 DrawExternalAssetsTab();
+                break;
+            case Tab.StatusEffectVFX:
+                DrawStatusEffectVFXTab();
                 break;
         }
     }
@@ -2902,6 +2912,101 @@ public class SkillEditorWindow : EditorWindow
         public List<string> scripts;
         public string suggestedBehaviorType;
         public bool isAddedToDatabase;
+    }
+
+    #endregion
+
+    #region Status Effect VFX Tab
+
+    private void DrawStatusEffectVFXTab()
+    {
+        EditorGUILayout.LabelField("상태 효과 VFX 설정", headerStyle);
+        EditorGUILayout.Space(5);
+
+        EditorGUILayout.HelpBox(
+            "스턴(CC), DOT(도트 데미지) 등 상태 효과 시 몬스터 머리 위에 표시되는 VFX를 설정합니다.\n" +
+            "VFX 프리팹을 드래그 앤 드롭하여 설정하세요.",
+            MessageType.Info);
+
+        EditorGUILayout.Space(10);
+
+        // Config 에셋 로드/생성
+        if (statusEffectVFXConfig == null)
+        {
+            statusEffectVFXConfig = AssetDatabase.LoadAssetAtPath<StatusEffectVFXConfig>(STATUS_EFFECT_VFX_CONFIG_PATH);
+        }
+
+        statusEffectVFXScrollPosition = EditorGUILayout.BeginScrollView(statusEffectVFXScrollPosition);
+
+        if (statusEffectVFXConfig == null)
+        {
+            EditorGUILayout.HelpBox("StatusEffectVFXConfig 에셋이 없습니다.", MessageType.Warning);
+
+            if (GUILayout.Button("StatusEffectVFXConfig 생성", GUILayout.Height(30)))
+            {
+                CreateStatusEffectVFXConfig();
+            }
+        }
+        else
+        {
+            // Config 에셋을 직접 편집할 수 있도록 Inspector 스타일로 표시
+            EditorGUI.BeginChangeCheck();
+
+            // SerializedObject 사용하여 Inspector처럼 표시
+            var serializedConfig = new SerializedObject(statusEffectVFXConfig);
+            serializedConfig.Update();
+
+            EditorGUILayout.LabelField("CC 효과 (스턴)", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedConfig.FindProperty("stunVFXPrefab"), new GUIContent("스턴 VFX", "기절 효과 시 표시되는 VFX"));
+
+            EditorGUILayout.Space(10);
+
+            EditorGUILayout.LabelField("DOT 효과 (지속 데미지)", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedConfig.FindProperty("dotVFXPrefab"), new GUIContent("DOT VFX", "지속 데미지 효과 시 표시되는 VFX"));
+
+            EditorGUILayout.Space(10);
+
+            EditorGUILayout.LabelField("위치 설정", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedConfig.FindProperty("heightOffset"), new GUIContent("높이 오프셋", "Collider 상단으로부터의 추가 높이"));
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                serializedConfig.ApplyModifiedProperties();
+                EditorUtility.SetDirty(statusEffectVFXConfig);
+            }
+
+            EditorGUILayout.Space(20);
+
+            // 에셋 직접 선택 버튼
+            if (GUILayout.Button("Config 에셋 선택", GUILayout.Height(25)))
+            {
+                Selection.activeObject = statusEffectVFXConfig;
+                EditorGUIUtility.PingObject(statusEffectVFXConfig);
+            }
+        }
+
+        EditorGUILayout.EndScrollView();
+    }
+
+    /// <summary>
+    /// StatusEffectVFXConfig 에셋 생성
+    /// </summary>
+    private void CreateStatusEffectVFXConfig()
+    {
+        // Resources 폴더 확인/생성
+        string resourcesPath = "Assets/Resources";
+        if (!AssetDatabase.IsValidFolder(resourcesPath))
+        {
+            AssetDatabase.CreateFolder("Assets", "Resources");
+        }
+
+        // ScriptableObject 생성
+        statusEffectVFXConfig = ScriptableObject.CreateInstance<StatusEffectVFXConfig>();
+        AssetDatabase.CreateAsset(statusEffectVFXConfig, STATUS_EFFECT_VFX_CONFIG_PATH);
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+
+        Debug.Log($"[SkillEditor] StatusEffectVFXConfig 에셋 생성됨: {STATUS_EFFECT_VFX_CONFIG_PATH}");
     }
 
     #endregion

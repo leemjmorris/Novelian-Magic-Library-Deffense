@@ -13,6 +13,10 @@ public class Hovl_Laser : MonoBehaviour
     public bool useLaserRotation = false;
 
     public float MaxLength;
+
+    [Tooltip("Raycast에서 무시할 레이어 마스크 (관통)")]
+    public LayerMask ignoreLayers;
+
     private LineRenderer Laser;
 
     public float MainTextureLength = 1f;
@@ -51,7 +55,9 @@ public class Hovl_Laser : MonoBehaviour
             Laser.SetPosition(0, transform.position);
             RaycastHit hit; //DELETE THIS IF YOU WANT USE LASERS IN 2D
             //ADD THIS IF YOU WANNT TO USE LASERS IN 2D: RaycastHit2D hit = Physics2D.Raycast(transform.position, transform.forward, MaxLength);
-            if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, MaxLength))//CHANGE THIS IF YOU WANT TO USE LASERRS IN 2D: if (hit.collider != null)
+            // ignoreLayers를 제외한 레이어만 충돌 감지 (관통 레이저용)
+            int hitLayers = ignoreLayers.value != 0 ? ~ignoreLayers.value : -1;
+            if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, MaxLength, hitLayers))//CHANGE THIS IF YOU WANT TO USE LASERRS IN 2D: if (hit.collider != null)
             {
                 //End laser position if collides with object
                 Laser.SetPosition(1, hit.point);

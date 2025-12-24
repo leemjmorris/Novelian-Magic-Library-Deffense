@@ -255,7 +255,6 @@ public class CSVLoader : MonoBehaviour
                 // 스킬 테이블 (3행 헤더 형식) - Skill 폴더
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
                 RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "Skill/SupportCompatibilityTable.csv", x => x.support_id),
 
                 // 인게임 카드 시스템 테이블 (3행 헤더 형식) - Card/Stage 폴더
                 RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "Card/CardTable.csv", x => x.Card_ID),
@@ -508,8 +507,7 @@ public class CSVLoader : MonoBehaviour
 
         await UniTask.WhenAll(
             RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
-            RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
-            RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "Skill/SupportCompatibilityTable.csv", x => x.support_id)
+            RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id)
         );
 
         Debug.Log("[CSVLoader] Skill tables reloaded!");
@@ -556,7 +554,6 @@ public class CSVLoader : MonoBehaviour
                 // 스킬 테이블 (3행 헤더) - Skill 폴더
                 RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
                 RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id),
-                RegisterSkillTableAsync<SupportCompatibilityData>(AddressableKey.SupportCompatibilityTable, "Skill/SupportCompatibilityTable.csv", x => x.support_id),
 
                 // 인게임 카드 시스템 테이블 (3행 헤더) - Card/Stage 폴더
                 RegisterSkillTableAsync<CardData>(AddressableKey.CardTable, "Card/CardTable.csv", x => x.Card_ID),

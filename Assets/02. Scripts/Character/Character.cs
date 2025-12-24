@@ -241,12 +241,10 @@ namespace Novelian.Combat
             float cooldownReduction = 1f - (cooldownModifier / 100f);
             float interval = baseCooldown * cooldownReduction;
 
-            // CooldownDown 서포트 - 직접적인 쿨다운 감소
-            if (supportData != null && supportData.IsCooldownDownSupport)
+            // Enhance 서포트 - 쿨다운 감소 (scale_multiplier가 0.8이면 80%로 감소)
+            if (supportData != null && supportData.IsEnhanceSupport && supportData.scale_multiplier > 0)
             {
-                // CooldownDown은 쿨다운을 직접 감소 (예: scale_multiplier가 0.8이면 80%로 감소)
-                float cooldownMultiplier = supportData.scale_multiplier > 0 ? supportData.scale_multiplier : 0.8f;
-                interval *= cooldownMultiplier;
+                interval *= supportData.scale_multiplier;
             }
 
             return Mathf.Max(0.1f, interval);

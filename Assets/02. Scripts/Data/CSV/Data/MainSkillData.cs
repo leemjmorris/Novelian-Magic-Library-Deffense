@@ -146,7 +146,7 @@ public class MainSkillData
     #region Compatibility Helpers
 
     /// <summary>
-    /// SupportCompatibilityData.IsCompatibleWith()와 호환되는 스킬 타입 반환
+    /// 스킬 타입 (behavior_type) 반환
     /// </summary>
     public string GetSkillType() => behavior_type;
 
