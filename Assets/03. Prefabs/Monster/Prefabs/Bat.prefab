@@ -706,6 +706,7 @@ GameObject:
   - component: {fileID: 1162074717673543219}
   - component: {fileID: 6369113061108908697}
   - component: {fileID: 1233883231449382756}
+  - component: {fileID: 4461833444130580110}
   - component: {fileID: 4665110143672269145}
   - component: {fileID: 1607132858360185472}
   m_Layer: 7
@@ -813,8 +814,30 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.4224082, y: 2.065568, z: 0.65765446}
-  m_Center: {x: -0.00000012336044, y: 1.2202854, z: 0.023214996}
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 1.18, z: 0}
+--- !u!195 &4461833444130580110
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1162074717683033587}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 10
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0.5
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!114 &4665110143672269145
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -827,6 +850,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 068ef2c38d6093243aa0dd5c99c86450, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  navAgent: {fileID: 4461833444130580110}
   monsterAnimator: {fileID: 1162074717673543219}
 --- !u!114 &1607132858360185472
 MonoBehaviour:

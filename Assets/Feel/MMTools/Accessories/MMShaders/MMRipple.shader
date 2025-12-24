@@ -1,3 +1,4 @@
+// URP Compatible - Force Recompile 2025-12-19
 Shader "MoreMountains/MMRipple"
 {
     Properties
@@ -9,83 +10,83 @@ Shader "MoreMountains/MMRipple"
         _Density("Soft Particles Factor", Range(0, 3)) = 1
     }
 
+    // URP SubShader
     SubShader
     {
         Tags
         {
-            "Queue" = "Transparent+1" "RenderType" = "Transparent"
+            "Queue" = "Transparent+1" "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline"
         }
-        Zwrite Off
+        ZWrite Off
         Blend SrcAlpha OneMinusSrcAlpha
-        GrabPass
-        {
-            "_BackgroundTexture"
-        }
+
         Pass
         {
-            CGPROGRAM
-            #include "UnityCG.cginc"
-
-            #pragma multi_compile_particles
-            #pragma fragment frag
+            HLSLPROGRAM
             #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_particles
 
-            float _RippleAlpha;
-            float _RippleIntensity;
-            fixed4 _Hue;
-            sampler2D _BackgroundTexture;
-            sampler2D _NormalMap;
-            sampler2D_float _CameraDepthTexture;
-            float _Density;
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareOpaqueTexture.hlsl"
+
+            struct appdata_t
+            {
+                float4 vertex : POSITION;
+                half4 color : COLOR;
+                float2 texcoord : TEXCOORD0;
+            };
 
             struct v2f
             {
-                float4 grabScreenPosition : TEXCOORD0;
                 float4 position : SV_POSITION;
-                fixed4 color : COLOR;
-                float2 normalMap : TEXCOORD1;
-
-                #ifdef SOFTPARTICLES_ON
-					float4 computedScreenPosition : TEXCOORD2;
-                #endif
+                half4 color : COLOR;
+                float2 normalMapUV : TEXCOORD0;
+                float4 screenPos : TEXCOORD1;
             };
 
-            v2f vert(appdata_full v)
+            TEXTURE2D(_NormalMap);
+            SAMPLER(sampler_NormalMap);
+
+            CBUFFER_START(UnityPerMaterial)
+                float _RippleAlpha;
+                float _RippleIntensity;
+                half4 _Hue;
+                float _Density;
+            CBUFFER_END
+
+            v2f vert(appdata_t v)
             {
                 v2f o;
-                o.position = UnityObjectToClipPos(v.vertex);
-
-                #ifdef SOFTPARTICLES_ON
-					o.computedScreenPosition = ComputeScreenPos(o.position);
-					COMPUTE_EYEDEPTH(o.computedScreenPosition.z);
-                #endif
-
-                o.grabScreenPosition = ComputeGrabScreenPos(o.position);
-
+                o.position = TransformObjectToHClip(v.vertex.xyz);
+                o.screenPos = ComputeScreenPos(o.position);
                 o.color = v.color;
-                o.normalMap = v.texcoord;
-
+                o.normalMapUV = v.texcoord;
                 return o;
             }
 
             half4 frag(v2f i) : SV_Target
             {
-                #ifdef SOFTPARTICLES_ON
-					float sceneZ = LinearEyeDepth(SAMPLE_DEPTH_TEXTURE_PROJ(_CameraDepthTexture, UNITY_PROJ_COORD(i.computedScreenPosition)));
-					float partZ = i.computedScreenPosition.z;
-					float fade = saturate(_Density * (sceneZ - partZ));
-					i.color.a *= fade;
-                #endif
+                // Screen UV 계산
+                float2 screenUV = i.screenPos.xy / i.screenPos.w;
 
-                half3 ripple = UnpackNormal(tex2D(_NormalMap, i.normalMap.xy));
-                i.grabScreenPosition.xy += ripple.xy / ripple.z * _RippleIntensity * i.color.a;
-                half4 backgroundColor = tex2Dproj(_BackgroundTexture, i.grabScreenPosition);
-                _Hue.a = _RippleAlpha;
-                return backgroundColor * _Hue;
+                // Normal map에서 ripple 값 추출
+                half4 normalTex = SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, i.normalMapUV);
+                half3 ripple = normalTex.xyz * 2.0 - 1.0;
+
+                // Ripple distortion 적용
+                float2 distortedUV = screenUV + ripple.xy / ripple.z * _RippleIntensity * i.color.a * 0.1;
+
+                // Scene color 샘플링
+                half3 backgroundColor = SampleSceneColor(distortedUV);
+
+                half4 result = half4(backgroundColor, 1.0) * _Hue;
+                result.a = _RippleAlpha;
+                return result;
             }
-            ENDCG
+            ENDHLSL
         }
-
     }
-    FallBack "Particle/AlphaBlended"
+
+    Fallback "Particles/Standard Unlit"
 }

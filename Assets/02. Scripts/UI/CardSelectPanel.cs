@@ -5,6 +5,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using TMPro;
 using NovelianMagicLibraryDefense.Managers;
+using Novelian.Combat;
 
 namespace NovelianMagicLibraryDefense.UI
 {
@@ -1516,11 +1517,11 @@ namespace NovelianMagicLibraryDefense.UI
 
             Debug.Log($"[CardSelectPanel] 서포트 스킬 카드: CardID={cardId} → SupportID={supportId}");
 
-            // 호환성 데이터 조회
-            var compatibilityData = CSVLoader.Instance?.GetTable<SupportCompatibilityData>()?.GetId(supportId);
-            if (compatibilityData == null)
+            // 서포트 스킬 데이터 조회
+            var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
+            if (supportData == null)
             {
-                Debug.LogWarning($"[CardSelectPanel] SupportCompatibilityData not found for ID: {supportId}");
+                Debug.LogWarning($"[CardSelectPanel] SupportSkillData not found for ID: {supportId}");
                 return;
             }
 
@@ -1538,12 +1539,11 @@ namespace NovelianMagicLibraryDefense.UI
                 var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(mainSkillId);
                 if (mainSkillData == null) continue;
 
-                // 호환성 검증
-                SkillAssetType skillType = mainSkillData.GetSkillType();
-                if (compatibilityData.IsCompatibleWith(skillType))
+                // 호환성 검증 (SkillExecutor 사용)
+                if (SkillExecutor.Instance != null && SkillExecutor.Instance.IsValidCombination(mainSkillData, supportData))
                 {
                     targetCharacter = character;
-                    Debug.Log($"[CardSelectPanel] 호환 캐릭터 발견: {character.GetCharacterId()}, 스킬타입: {skillType}");
+                    Debug.Log($"[CardSelectPanel] 호환 캐릭터 발견: {character.GetCharacterId()}, 스킬타입: {mainSkillData.GetSkillType()}");
                     break;
                 }
             }
@@ -1559,7 +1559,6 @@ namespace NovelianMagicLibraryDefense.UI
             bool success = targetCharacter.EquipSupportSkill(supportId);
             if (success)
             {
-                var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
                 string skillName = supportData?.support_name ?? $"Support_{supportId}";
                 Debug.Log($"[CardSelectPanel] 서포트 스킬 '{skillName}' 장착 완료! (캐릭터 ID: {targetCharacter.GetCharacterId()})");
             }
@@ -1576,8 +1575,8 @@ namespace NovelianMagicLibraryDefense.UI
         {
             var compatibleCharacters = new List<Novelian.Combat.Character>();
 
-            var compatibilityData = CSVLoader.Instance?.GetTable<SupportCompatibilityData>()?.GetId(supportId);
-            if (compatibilityData == null) return compatibleCharacters;
+            var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
+            if (supportData == null) return compatibleCharacters;
 
             var fieldCharacters = placementManager?.GetAllCharacters() ?? new List<Novelian.Combat.Character>();
 
@@ -1587,7 +1586,7 @@ namespace NovelianMagicLibraryDefense.UI
                 var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(mainSkillId);
                 if (mainSkillData == null) continue;
 
-                if (compatibilityData.IsCompatibleWith(mainSkillData.GetSkillType()))
+                if (SkillExecutor.Instance != null && SkillExecutor.Instance.IsValidCombination(mainSkillData, supportData))
                 {
                     compatibleCharacters.Add(character);
                 }
@@ -1610,11 +1609,11 @@ namespace NovelianMagicLibraryDefense.UI
             // CardTable ID → Support_ID 변환 (081029 → 40001, 081030 → 40002, ...)
             int supportId = (cardId - 81029) + 40001;
 
-            // 호환성 데이터 조회
-            var compatibilityData = CSVLoader.Instance?.GetTable<SupportCompatibilityData>()?.GetId(supportId);
-            if (compatibilityData == null)
+            // 서포트 스킬 데이터 조회
+            var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
+            if (supportData == null)
             {
-                Debug.LogWarning($"[CardSelectPanel] SupportCompatibilityData not found for Support_ID: {supportId}");
+                Debug.LogWarning($"[CardSelectPanel] SupportSkillData not found for Support_ID: {supportId}");
                 return true;  // 데이터 없으면 통과 (fallback)
             }
 
@@ -1636,8 +1635,8 @@ namespace NovelianMagicLibraryDefense.UI
                 var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(mainSkillId);
                 if (mainSkillData == null) continue;
 
-                // 호환성 검증
-                if (compatibilityData.IsCompatibleWith(mainSkillData.GetSkillType()))
+                // 호환성 검증 (SkillExecutor 사용)
+                if (SkillExecutor.Instance != null && SkillExecutor.Instance.IsValidCombination(mainSkillData, supportData))
                 {
                     return true;  // 호환 가능한 캐릭터 존재
                 }

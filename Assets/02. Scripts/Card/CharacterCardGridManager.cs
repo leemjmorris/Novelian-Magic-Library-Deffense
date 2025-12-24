@@ -278,11 +278,11 @@ public class CharacterCardGridManager : MonoBehaviour
     {
         linkedCardSelectPanel = cardSelectPanel;
 
-        // 호환성 데이터 조회
-        var compatibilityData = CSVLoader.Instance?.GetTable<SupportCompatibilityData>()?.GetId(supportId);
-        if (compatibilityData == null)
+        // 서포트 스킬 데이터 조회
+        var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
+        if (supportData == null)
         {
-            Debug.LogWarning($"[CharacterCardGridManager] SupportCompatibilityData not found for ID: {supportId}");
+            Debug.LogWarning($"[CharacterCardGridManager] SupportSkillData not found for ID: {supportId}");
             ResetCharacterAnimations();
             return;
         }
@@ -320,8 +320,8 @@ public class CharacterCardGridManager : MonoBehaviour
                 continue;
             }
 
-            // 호환성 검증
-            if (compatibilityData.IsCompatibleWith(mainSkillData.GetSkillType()))
+            // 호환성 검증 (SkillExecutor 사용)
+            if (SkillExecutor.Instance != null && SkillExecutor.Instance.IsValidCombination(mainSkillData, supportData))
             {
                 card.PlaySelectableAnimation();
                 compatibleCount++;

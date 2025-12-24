@@ -67,7 +67,6 @@ public class CSVBalancingTool : EditorWindow
     private List<WaveData> waveDataList = new List<WaveData>();
     private List<StageData> stageDataList = new List<StageData>();
     private List<LevelData> levelDataList = new List<LevelData>();
-    private List<SkillLevelData> skillLevelDataList = new List<SkillLevelData>();
     private List<MonsterLevelData> monsterLevelDataList = new List<MonsterLevelData>();
     private List<CardData> cardDataList = new List<CardData>();
     private List<CardLevelData> cardLevelDataList = new List<CardLevelData>();
@@ -661,8 +660,7 @@ public class CSVBalancingTool : EditorWindow
         skill.cooldown = EditorGUILayout.Slider("쿨다운", skill.cooldown, 0.1f, 30f);
         skill.range = EditorGUILayout.Slider("사거리", skill.range, 1, 200);
         skill.projectile_speed = EditorGUILayout.Slider("투사체 속도", skill.projectile_speed, 1, 100);
-        skill.projectile_count = EditorGUILayout.IntSlider("투사체 수", skill.projectile_count, 1, 10);
-        skill.pierce_count = EditorGUILayout.IntSlider("관통 수", skill.pierce_count, 0, 10);
+        // projectile_count, pierce_count는 새 시스템에서 서포트 스킬로 이동됨
         skill.aoe_radius = EditorGUILayout.Slider("범위 반경", skill.aoe_radius, 0, 20);
         if (EditorGUI.EndChangeCheck())
             MarkModified("MainSkillTable");
@@ -674,62 +672,10 @@ public class CSVBalancingTool : EditorWindow
 
         rightPanelScroll = EditorGUILayout.BeginScrollView(rightPanelScroll);
         {
-            var skillLevels = skillLevelDataList.Where(sl => sl.skill_id == skill.skill_id).OrderBy(sl => sl.level).ToList();
+            // 새 시스템에서는 SkillLevelData가 제거됨 - 레벨별 강화 UI 비활성화
+            EditorGUILayout.HelpBox("새 스킬 시스템에서는 레벨별 강화가 서포트 스킬로 대체되었습니다.", MessageType.Info);
 
-            foreach (var levelData in skillLevels)
-            {
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                {
-                    EditorGUILayout.LabelField($"강화 {levelData.level}단계", EditorStyles.boldLabel);
-
-                    EditorGUI.BeginChangeCheck();
-
-                    // 데미지 배율
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("데미지 배율", GUILayout.Width(100));
-                    levelData.damage_mult = EditorGUILayout.FloatField(levelData.damage_mult);
-                    EditorGUILayout.EndHorizontal();
-
-                    // 쿨다운 배율
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("쿨다운 배율", GUILayout.Width(100));
-                    levelData.cooldown_mult = EditorGUILayout.FloatField(levelData.cooldown_mult);
-                    EditorGUILayout.EndHorizontal();
-
-                    // 사거리 배율
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("사거리 배율", GUILayout.Width(100));
-                    levelData.range_mult = EditorGUILayout.FloatField(levelData.range_mult);
-                    EditorGUILayout.EndHorizontal();
-
-                    // 범위 배율
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("범위 배율", GUILayout.Width(100));
-                    levelData.aoe_mult = EditorGUILayout.FloatField(levelData.aoe_mult);
-                    EditorGUILayout.EndHorizontal();
-
-                    // 추가 투사체
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("추가 투사체", GUILayout.Width(100));
-                    levelData.projectile_add = EditorGUILayout.IntField(levelData.projectile_add);
-                    EditorGUILayout.EndHorizontal();
-
-                    // 추가 관통
-                    EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField("추가 관통", GUILayout.Width(100));
-                    levelData.pierce_add = EditorGUILayout.IntField(levelData.pierce_add);
-                    EditorGUILayout.EndHorizontal();
-
-                    if (EditorGUI.EndChangeCheck())
-                        MarkModified("SkillLevelTable");
-
-                    // 계산된 값 표시
-                    float calcDamage = skill.base_damage * levelData.damage_mult;
-                    float calcCooldown = skill.cooldown * levelData.cooldown_mult;
-                    EditorGUILayout.LabelField($"→ 데미지: {calcDamage:F1}, 쿨다운: {calcCooldown:F2}초", EditorStyles.miniLabel);
-                }
-                EditorGUILayout.EndVertical();
-            }
+            // 기존 코드 비활성화 - 새 시스템에서는 SkillLevelData가 제거됨
         }
         EditorGUILayout.EndScrollView();
     }
@@ -907,8 +853,11 @@ public class CSVBalancingTool : EditorWindow
             {
                 EditorGUI.BeginChangeCheck();
                 EditorGUILayout.LabelField($"{data.support_id} - {data.support_name}", EditorStyles.boldLabel);
-                data.damage_mult = EditorGUILayout.FloatField("Damage Mult", data.damage_mult);
-                data.attack_speed_mult = EditorGUILayout.FloatField("ATK Speed Mult", data.attack_speed_mult);
+                EditorGUILayout.LabelField($"타입: {data.support_type}");
+                // 새 SupportSkillData 필드로 변경
+                EditorGUILayout.FloatField("폭발 비율", data.explosion_ratio);
+                EditorGUILayout.FloatField("둔화율", data.slow_rate);
+                EditorGUILayout.FloatField("지속시간", data.duration);
                 if (EditorGUI.EndChangeCheck())
                     MarkModified("SupportSkillTable");
             }
@@ -1020,27 +969,8 @@ public class CSVBalancingTool : EditorWindow
 
     private void DrawSkillEnhancementTable()
     {
-        if (skillLevelDataList == null || skillLevelDataList.Count == 0)
-        {
-            EditorGUILayout.HelpBox("No Skill Level data loaded", MessageType.Warning);
-            return;
-        }
-
-        GUILayout.Label($"Skill Enhancement Table ({skillLevelDataList.Count} entries)", EditorStyles.boldLabel);
-
-        foreach (var data in skillLevelDataList)
-        {
-            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            {
-                EditorGUI.BeginChangeCheck();
-                EditorGUILayout.LabelField($"Skill {data.skill_id} - Lv {data.level}", EditorStyles.boldLabel);
-                data.damage_mult = EditorGUILayout.FloatField("Damage Mult", data.damage_mult);
-                data.cooldown_mult = EditorGUILayout.FloatField("Cooldown Mult", data.cooldown_mult);
-                if (EditorGUI.EndChangeCheck())
-                    MarkModified("SkillLevelTable");
-            }
-            EditorGUILayout.EndVertical();
-        }
+        // 새 스킬 시스템에서는 SkillLevelData가 제거됨
+        EditorGUILayout.HelpBox("새 스킬 시스템에서는 레벨별 강화가 서포트 스킬로 대체되었습니다.", MessageType.Info);
     }
 
     private void DrawMonsterTierTable()
@@ -1234,7 +1164,6 @@ public class CSVBalancingTool : EditorWindow
             waveDataList = CSVLoader.Instance.GetTable<WaveData>()?.GetAll() ?? new List<WaveData>();
             stageDataList = CSVLoader.Instance.GetTable<StageData>()?.GetAll() ?? new List<StageData>();
             levelDataList = CSVLoader.Instance.GetTable<LevelData>()?.GetAll() ?? new List<LevelData>();
-            skillLevelDataList = CSVLoader.Instance.GetTable<SkillLevelData>()?.GetAll() ?? new List<SkillLevelData>();
             monsterLevelDataList = CSVLoader.Instance.GetTable<MonsterLevelData>()?.GetAll() ?? new List<MonsterLevelData>();
             cardDataList = CSVLoader.Instance.GetTable<CardData>()?.GetAll() ?? new List<CardData>();
             cardLevelDataList = CSVLoader.Instance.GetTable<CardLevelData>()?.GetAll() ?? new List<CardLevelData>();
@@ -1326,7 +1255,8 @@ public class CSVBalancingTool : EditorWindow
                         SaveStandardCSV("LevelTable.csv", levelDataList);
                         break;
                     case "SkillLevelTable":
-                        SaveSkillCSV("SkillLevelTable.csv", skillLevelDataList);
+                        // 새 시스템에서 SkillLevelData 제거됨
+                        Debug.LogWarning("[CSVBalancingTool] SkillLevelTable is deprecated in new skill system");
                         break;
                     case "MonsterLevelTable":
                         SaveStandardCSV("MonsterLevelTable.csv", monsterLevelDataList);

@@ -109,6 +109,45 @@ namespace Novelian.Combat
 
         #endregion
 
+        #region Single Target Selection
+
+        /// <summary>
+        /// 범위 내 가장 가까운 타겟 반환 (부채꼴 AOE 등에서 방향 결정용)
+        /// </summary>
+        /// <param name="range">탐색 범위</param>
+        /// <returns>가장 가까운 타겟 (없으면 null)</returns>
+        private ITargetable GetFirstTargetInRange(float range)
+        {
+            Vector3 characterPos = transform.position;
+            Collider[] hits = Physics.OverlapSphere(characterPos, range);
+
+            ITargetable closestTarget = null;
+            float closestDistance = float.MaxValue;
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                Collider hit = hits[i];
+
+                if (!hit.CompareTag(Tag.Monster) && !hit.CompareTag(Tag.BossMonster))
+                    continue;
+
+                ITargetable target = hit.GetComponent<ITargetable>();
+                if (target == null || !target.IsAlive())
+                    continue;
+
+                float distance = Vector3.Distance(characterPos, target.GetPosition());
+                if (distance < closestDistance)
+                {
+                    closestDistance = distance;
+                    closestTarget = target;
+                }
+            }
+
+            return closestTarget;
+        }
+
+        #endregion
+
         #region AOE Targeting
 
         /// <summary>

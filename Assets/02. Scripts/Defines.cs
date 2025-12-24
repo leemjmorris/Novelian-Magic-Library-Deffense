@@ -63,7 +63,6 @@ public static class AddressableKey
     public static readonly string DispatchTimeTable = "DispatchTimeTable";
     public static readonly string MainSkillTable = "MainSkillTable";
     public static readonly string SupportSkillTable = "SupportSkillTable";
-    public static readonly string SupportCompatibilityTable = "SupportCompatibilityTable";
     public static readonly string SkillLevelTable = "SkillLevelTable";
     public static readonly string PlayerLevelTable = "PlayerLevelTable";
     public static readonly string SkillTypeTable = "SkillTypeTable";

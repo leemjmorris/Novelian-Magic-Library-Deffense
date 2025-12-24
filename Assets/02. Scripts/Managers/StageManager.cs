@@ -57,6 +57,9 @@ namespace NovelianMagicLibraryDefense.Managers
         private int currentExp = 0;
         private int level = 0;
 
+        // Battle_Exp_UP 버프 배율 (1.0 = 기본값, 1.5 = 50% 증가)
+        private float expMultiplier = 1.0f;
+
         /// <summary>
         /// 다음 레벨업에 필요한 경험치를 CSV에서 가져오기
         /// </summary>
@@ -769,8 +772,19 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             int maxExp = GetRequiredExpForNextLevel();
-            currentExp += monster.Exp;
-            Debug.Log($"[StageManager] Exp +{monster.Exp} -> {currentExp}/{maxExp}");
+
+            // Battle_Exp_UP 버프 배율 적용
+            int expToAdd = Mathf.RoundToInt(monster.Exp * expMultiplier);
+            currentExp += expToAdd;
+
+            if (expMultiplier > 1.0f)
+            {
+                Debug.Log($"[StageManager] Exp +{expToAdd} (base {monster.Exp} x{expMultiplier:F2}) -> {currentExp}/{maxExp}");
+            }
+            else
+            {
+                Debug.Log($"[StageManager] Exp +{expToAdd} -> {currentExp}/{maxExp}");
+            }
             GameManager.Instance?.UI?.UpdateExperience(currentExp, maxExp);
             if (currentExp >= maxExp)
             {
@@ -857,6 +871,28 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             int maxExp = GetRequiredExpForNextLevel();
             return (float)currentExp / maxExp;
+        }
+
+        /// <summary>
+        /// Battle_Exp_UP 버프: 경험치 획득 배율 설정
+        /// 버프 적용 시 percentage를 더하고, 버프 종료 시 빼면 됨
+        /// </summary>
+        /// <param name="percentage">추가 배율 (예: 0.5f = 50% 증가)</param>
+        public void AddExpMultiplier(float percentage)
+        {
+            expMultiplier += percentage;
+            Debug.Log($"[StageManager] Exp multiplier changed: {expMultiplier:F2} (+{percentage:F2})");
+        }
+
+        /// <summary>
+        /// Battle_Exp_UP 버프 종료: 경험치 획득 배율 원복
+        /// </summary>
+        /// <param name="percentage">제거할 배율 (예: 0.5f)</param>
+        public void RemoveExpMultiplier(float percentage)
+        {
+            expMultiplier -= percentage;
+            if (expMultiplier < 1.0f) expMultiplier = 1.0f; // 최소값 보장
+            Debug.Log($"[StageManager] Exp multiplier changed: {expMultiplier:F2} (-{percentage:F2})");
         }
 
         /// <summary>

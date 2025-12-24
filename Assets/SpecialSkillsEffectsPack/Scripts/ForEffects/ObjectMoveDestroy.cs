@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -25,24 +24,20 @@ public class ObjectMoveDestroy : MonoBehaviour
     bool ishit;
     float m_scalefactor;
 
-    /// <summary>
-    /// 충돌 시 발생하는 이벤트 (래퍼에서 구독)
-    /// </summary>
-    public event Action<RaycastHit> OnHit;
-
     private void Start()
     {
-        m_scalefactor = VariousEffectsScene.m_gaph_scenesizefactor;//transform.parent.localScale.x;
+        m_scalefactor = transform.parent != null ? transform.parent.localScale.x : 1f;
         time = Time.time;
     }
 
     void LateUpdate()
     {
         transform.Translate(Vector3.forward * Time.deltaTime * MoveSpeed * m_scalefactor);
-        if (!ishit)
+
+        RaycastHit hit;
+        if (Physics.Raycast(transform.position, transform.forward, out hit, maxLength * m_scalefactor))
         {
-            RaycastHit hit;
-            if (Physics.Raycast(transform.position, transform.forward, out hit, maxLength))
+            if (ishit == false)
                 HitObj(hit);
         }
 
@@ -62,7 +57,7 @@ public class ObjectMoveDestroy : MonoBehaviour
             return;
         m_makedObject = Instantiate(m_hitObject, hit.point, Quaternion.LookRotation(hit.normal)).gameObject;
         m_makedObject.transform.parent = transform.parent;
-        m_makedObject.transform.localScale = new Vector3(1, 1, 1);
+        m_makedObject.transform.localScale = Vector3.one * m_scalefactor;
     }
 
     void MakeHitObject(Transform point)
@@ -71,7 +66,7 @@ public class ObjectMoveDestroy : MonoBehaviour
             return;
         m_makedObject = Instantiate(m_hitObject, point.transform.position, point.rotation).gameObject;
         m_makedObject.transform.parent = transform.parent;
-        m_makedObject.transform.localScale = new Vector3(1, 1, 1);
+        m_makedObject.transform.localScale = Vector3.one * m_scalefactor;
     }
 
     void HitObj(RaycastHit hit)
@@ -80,9 +75,6 @@ public class ObjectMoveDestroy : MonoBehaviour
             if (hit.transform.tag != mtag)
                 return;
         ishit = true;
-
-        // 래퍼에 충돌 이벤트 전달
-        OnHit?.Invoke(hit);
 
         if(m_gameObjectTail)
             m_gameObjectTail.transform.parent = null;

@@ -1,9 +1,10 @@
 using System;
 using CsvHelper.Configuration.Attributes;
+using Novelian.Combat;
 
 /// <summary>
 /// SupportSkillTable.csv 데이터 클래스
-/// 새로운 보조 스킬 시스템 - ID 기반 타입
+/// 간소화된 새 서포트 스킬 시스템 - 명확한 컬럼명 기반
 /// </summary>
 [Serializable]
 public class SupportSkillData
@@ -11,222 +12,181 @@ public class SupportSkillData
     [Name("support_id")]
     public int support_id { get; set; }
 
-    [Name("support_category")]
-    public int support_category { get; set; }
-
-    [Name("compatible_types")]
-    public int compatible_types { get; set; }
-
-    [Name("add_projectiles")]
-    public int add_projectiles { get; set; }
-
-    [Name("add_pierce")]
-    public int add_pierce { get; set; }
-
-    [Name("damage_mult")]
-    public float damage_mult { get; set; }
-
-    [Name("speed_mult")]
-    public float speed_mult { get; set; }
-
-    [Name("aoe_mult")]
-    public float aoe_mult { get; set; }
-
-    [Name("cooldown_mult")]
-    public float cooldown_mult { get; set; }
-
-    [Name("attack_speed_mult")]
-    public float attack_speed_mult { get; set; }
-
-    [Name("cast_time_mult")]
-    public float cast_time_mult { get; set; }
-
-    [Name("status_effect")]
-    public int status_effect { get; set; }
-
-    [Name("cc_duration")]
-    public float cc_duration { get; set; }
-
-    [Name("cc_slow_amount")]
-    public float cc_slow_amount { get; set; }
-
-    [Name("dot_duration")]
-    public float dot_duration { get; set; }
-
-    [Name("dot_tick_interval")]
-    public float dot_tick_interval { get; set; }
-
-    [Name("dot_damage_per_tick")]
-    public float dot_damage_per_tick { get; set; }
-
-    [Name("mark_duration")]
-    public float mark_duration { get; set; }
-
-    [Name("mark_damage_mult")]
-    public float mark_damage_mult { get; set; }
-
-    [Name("chain_count")]
-    public int chain_count { get; set; }
-
-    [Name("chain_range")]
-    public float chain_range { get; set; }
-
-    [Name("chain_damage_reduction")]
-    public float chain_damage_reduction { get; set; }
-
-    // 새 컬럼 추가 (Issue #362 - 보조스킬 밸런스 개편)
-    [Name("buff_value_mult")]
-    public float buff_value_mult { get; set; } = 1f;
-
-    [Name("debuff_value_mult")]
-    public float debuff_value_mult { get; set; } = 1f;
-
-    [Name("channel_duration_mult")]
-    public float channel_duration_mult { get; set; } = 1f;
-
-    [Name("low_hp_bonus_damage_mult")]
-    public float low_hp_bonus_damage_mult { get; set; } = 1f;
-
-    // CSV의 //로 시작하는 주석 컬럼 (선택적)
     [Name("//support_name")]
     [Optional]
     public string support_name { get; set; }
+
+    [Name("support_type")]
+    public string support_type { get; set; }
+
+    /// <summary>횟수 (연쇄 횟수, 분열 개수, 다중발사 개수 등)</summary>
+    [Name("count")]
+    public int count { get; set; }
+
+    /// <summary>연쇄 시 데미지 유지율 (0.8 = 80%)</summary>
+    [Name("chain_decay")]
+    public float chain_decay { get; set; }
+
+    /// <summary>폭발/데미지 배율</summary>
+    [Name("explosion_ratio")]
+    public float explosion_ratio { get; set; }
+
+    /// <summary>잔류 데미지 비율</summary>
+    [Name("linger_ratio")]
+    public float linger_ratio { get; set; }
+
+    /// <summary>둔화율 (0.3 = 30% 감소)</summary>
+    [Name("slow_rate")]
+    public float slow_rate { get; set; }
+
+    /// <summary>디버프율 (방어력 감소 등)</summary>
+    [Name("debuff_rate")]
+    public float debuff_rate { get; set; }
+
+    /// <summary>틱당 데미지 (독, 화상, 끌어당김 등)</summary>
+    [Name("tick_damage")]
+    public float tick_damage { get; set; }
+
+    /// <summary>틱 주기 (초)</summary>
+    [Name("tick_interval")]
+    public float tick_interval { get; set; }
+
+    /// <summary>범위 (연쇄 탐지 범위, 끌어당김 범위 등)</summary>
+    [Name("range")]
+    public float range { get; set; }
+
+    /// <summary>거리 (넉백 거리 등)</summary>
+    [Name("distance")]
+    public float distance { get; set; }
+
+    /// <summary>속도 (끌어당김 속도, 이동 AOE 속도 등)</summary>
+    [Name("speed")]
+    public float speed { get; set; }
+
+    /// <summary>확산 각도 (분열, 다중발사 등)</summary>
+    [Name("spread_angle")]
+    public float spread_angle { get; set; }
+
+    /// <summary>유도 강도 (0~1)</summary>
+    [Name("homing_strength")]
+    public float homing_strength { get; set; }
+
+    /// <summary>크기 배율 (범위증가, 분열 시 크기 등)</summary>
+    [Name("scale_multiplier")]
+    public float scale_multiplier { get; set; }
+
+    /// <summary>지속시간 (초)</summary>
+    [Name("duration")]
+    public float duration { get; set; }
 
     [Name("//description")]
     [Optional]
     public string description { get; set; }
 
-    #region Helper Properties (Enum 변환 - 새 ID 체계)
+    #region Helper Properties
+
+    // ============================================
+    // 신규 시스템: 9개 서포트 타입
+    // Chain, Pierce, Homing, MultiShot, Bounce, Split, CC, DOT, Enhance
+    // ============================================
+
+    // === 투사체 전용 서포트 (6개) ===
+    /// <summary>연쇄 서포트인지 확인 - 적에게 맞으면 주변 적에게 튕김</summary>
+    public bool IsChainSupport => support_type == "Chain";
+
+    /// <summary>관통 서포트인지 확인</summary>
+    public bool IsPierceSupport => support_type == "Pierce";
+
+    /// <summary>유도 서포트인지 확인</summary>
+    public bool IsHomingSupport => support_type == "Homing";
+
+    /// <summary>다중발사 서포트인지 확인</summary>
+    public bool IsMultiShotSupport => support_type == "MultiShot";
+
+    /// <summary>바운스(벽 튕김) 서포트인지 확인</summary>
+    public bool IsBounceSupport => support_type == "Bounce";
+
+    /// <summary>분열 서포트인지 확인</summary>
+    public bool IsSplitSupport => support_type == "Split";
+
+    // === 범용 서포트 (3개) ===
+    /// <summary>CC(군중 제어) 서포트인지 확인</summary>
+    public bool IsCCSupport => support_type == "CC";
+
+    /// <summary>도트(지속 데미지) 서포트인지 확인</summary>
+    public bool IsDOTSupport => support_type == "DOT";
+
+    /// <summary>강화(Enhance) 서포트인지 확인</summary>
+    public bool IsEnhanceSupport => support_type == "Enhance";
+
+    // === 복합 체크 ===
+    /// <summary>투사체 전용 서포트인지 확인</summary>
+    public bool IsProjectileOnlySupport => IsChainSupport || IsPierceSupport || IsHomingSupport ||
+                                           IsMultiShotSupport || IsBounceSupport || IsSplitSupport;
+
+    /// <summary>틱 데미지가 있는 서포트인지 확인</summary>
+    public bool HasTickDamage => tick_damage > 0 && tick_interval > 0;
+
+    /// <summary>지속시간이 있는 서포트인지 확인</summary>
+    public bool HasDuration => duration > 0;
+
+    /// <summary>횟수 기반 서포트인지 확인</summary>
+    public bool HasCount => count > 0;
+
+    #endregion
+
+    #region Status Effect Helpers (for Character.StatusEffects.cs compatibility)
 
     /// <summary>
-    /// support_category를 SupportCategory로 변환
-    /// Issue #362 - 새 SupportCategory 체계 적용
-    /// </summary>
-    public SupportCategory GetSupportCategory()
-    {
-        return support_category switch
-        {
-            3503801 => SupportCategory.Projectile,
-            3503902 => SupportCategory.AOE,
-            3504003 => SupportCategory.StatusEffect,
-            3504104 => SupportCategory.Chain,
-            3504205 => SupportCategory.SkillDamageUp,
-            3504306 => SupportCategory.ShootingTypeChange,
-            3504407 => SupportCategory.Universal,
-            3504508 => SupportCategory.BuffEnhance,
-            3504609 => SupportCategory.DOTEnhance,
-            3504710 => SupportCategory.TrapMineEnhance,
-            3504811 => SupportCategory.InstantEnhance,
-            3504912 => SupportCategory.ChannelingEnhance,
-            3505013 => SupportCategory.DebuffEnhance,
-            _ => SupportCategory.Projectile
-        };
-    }
-
-    /// <summary>
-    /// status_effect를 StatusEffectType으로 변환
-    /// Issue #362 - 새 ID 체계 적용
-    /// 3201600=None, 3201701=CC, 3201802=DOT, 3201903=Mark, 3202004=Chain
+    /// 상태효과 타입 반환 (CC, DOT 등)
     /// </summary>
     public StatusEffectType GetStatusEffectType()
     {
-        return status_effect switch
-        {
-            3201600 => StatusEffectType.None,
-            3201701 => StatusEffectType.CC,
-            3201802 => StatusEffectType.DOT,
-            3201903 => StatusEffectType.Mark,
-            3202004 => StatusEffectType.Chain,
-            _ => StatusEffectType.None
-        };
+        if (IsCCSupport) return StatusEffectType.CC;
+        if (IsDOTSupport) return StatusEffectType.DOT;
+        return StatusEffectType.None;
     }
 
     /// <summary>
-    /// CC 타입 반환
-    /// Issue #362 - 새 CSV에서는 cc_type 컬럼이 제거됨
-    /// cc_slow_amount > 0 이면 Slow, cc_duration > 0 이면 Stun
+    /// CC 타입 반환 (slow_rate가 있으면 Slow, 없으면 Stun)
     /// </summary>
     public CCType GetCCType()
     {
-        if (cc_slow_amount > 0) return CCType.Slow;
-        if (cc_duration > 0) return CCType.Stun;
-        return CCType.None;
+        if (!IsCCSupport) return CCType.None;
+        return slow_rate > 0 ? CCType.Slow : CCType.Stun;
     }
 
-    /// <summary>
-    /// 저체력 보너스 데미지 서포트인지 확인 (처형 등)
-    /// </summary>
-    public bool IsLowHpBonusSupport => low_hp_bonus_damage_mult > 1f;
+    // 호환성을 위한 프로퍼티 별칭
+    /// <summary>CC 슬로우 비율 (slow_rate와 동일)</summary>
+    public float cc_slow_amount => slow_rate;
 
-    /// <summary>
-    /// 버프 강화 서포트인지 확인
-    /// </summary>
-    public bool IsBuffEnhanceSupport => buff_value_mult > 1f;
+    /// <summary>CC 지속시간 (duration과 동일)</summary>
+    public float cc_duration => duration;
 
-    /// <summary>
-    /// 디버프 강화 서포트인지 확인
-    /// </summary>
-    public bool IsDebuffEnhanceSupport => debuff_value_mult > 1f;
+    /// <summary>DOT 틱당 데미지 (tick_damage와 동일)</summary>
+    public float dot_damage_per_tick => tick_damage;
 
-    /// <summary>
-    /// 채널링 강화 서포트인지 확인
-    /// </summary>
-    public bool IsChannelEnhanceSupport => channel_duration_mult > 1f;
+    /// <summary>DOT 지속시간 (duration과 동일)</summary>
+    public float dot_duration => duration;
 
-    /// <summary>
-    /// 체이닝 지원 스킬인지 확인
-    /// </summary>
-    public bool IsChainSupport => status_effect == 3302004;
+    /// <summary>DOT 틱 간격 (tick_interval과 동일)</summary>
+    public float dot_tick_interval => tick_interval;
 
-    /// <summary>
-    /// 표식 지원 스킬인지 확인
-    /// </summary>
-    public bool IsMarkSupport => status_effect == 3301903;
+    /// <summary>표식 데미지 배율 (explosion_ratio를 사용)</summary>
+    public float mark_damage_mult => explosion_ratio;
 
-    /// <summary>
-    /// DOT 지원 스킬인지 확인
-    /// </summary>
-    public bool IsDOTSupport => status_effect == 3301802;
+    /// <summary>표식 지속시간 (duration과 동일)</summary>
+    public float mark_duration => duration;
 
-    /// <summary>
-    /// DOT 타입 반환 (새 CSV 구조에서는 DOT 여부만 판단, 기본 Burn 반환)
-    /// </summary>
-    public DOTType GetDOTType()
-    {
-        // 새 CSV 구조에서는 별도 DOT 타입 필드가 없음
-        // DOT 서포트 스킬이면 기본 Burn 타입 반환
-        return IsDOTSupport ? DOTType.Burn : DOTType.None;
-    }
+    /// <summary>디버프 값 배율</summary>
+    public float debuff_value_mult => debuff_rate;
 
-    /// <summary>
-    /// Mark 타입 반환 (새 CSV 구조에서는 Mark 여부만 판단, 기본 Romance 반환)
-    /// </summary>
-    public MarkType GetMarkType()
-    {
-        // 새 CSV 구조에서는 별도 Mark 타입 필드가 없음
-        // Mark 서포트 스킬이면 기본 Romance 타입 반환
-        return IsMarkSupport ? MarkType.Romance : MarkType.None;
-    }
+    // Character.Targeting.cs 호환성
+    /// <summary>체인 횟수 (count와 동일)</summary>
+    public int chain_count => count;
+
+    /// <summary>체인 범위 (range와 동일)</summary>
+    public float chain_range => range;
 
     #endregion
-}
-
-/// <summary>
-/// 서포트 스킬 카테고리 (Issue #362 - 새 ID 체계)
-/// </summary>
-public enum SupportCategory
-{
-    Projectile = 1,         // 발사체 변형 (3503801)
-    AOE = 2,                // 범위 변형 (3503902)
-    StatusEffect = 3,       // 상태이상 부여 (3504003)
-    Chain = 4,              // 연쇄 효과 (3504104)
-    SkillDamageUp = 5,      // 스킬 데미지 증가 (3504205)
-    ShootingTypeChange = 6, // 발사 형식 변경 (3504306)
-    Universal = 7,          // 범용 강화 (3504407)
-    BuffEnhance = 8,        // 버프 강화 (3504508)
-    DOTEnhance = 9,         // DOT 강화 (3504609)
-    TrapMineEnhance = 10,   // 함정/지뢰 강화 (3504710)
-    InstantEnhance = 11,    // 즉발 강화 (3504811)
-    ChannelingEnhance = 12, // 채널링 강화 (3504912)
-    DebuffEnhance = 13      // 디버프 강화 (3505013)
 }

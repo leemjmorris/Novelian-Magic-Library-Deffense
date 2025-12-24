@@ -1,3 +1,4 @@
+// LMJ: SkillEffectDatabase 초기화 제거됨 (스킬 시스템 리팩토링)
 using System;
 using Cysharp.Threading.Tasks;
 using Firebase.Data;
@@ -95,8 +96,8 @@ public class BootScene : MonoBehaviour
             InitializeCharacterOwnershipManager(),
             InitializeWarningUIManager(),
             InitializeInputManager(),
-            InitializePartySynergyManager(),
-            InitializeSkillEffectDatabase() // LMJ: 스킬 이펙트 데이터베이스 초기화
+            InitializePartySynergyManager()
+            // LMJ: SkillEffectDatabase 초기화 제거됨 (스킬 시스템 리팩토링 예정)
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -324,32 +325,7 @@ public class BootScene : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// LMJ: Initialize SkillEffectDatabase (runs in parallel with other managers)
-    /// LMJ: CRITICAL: Must be loaded before GameScene to avoid sync load in Character.Awake()
-    /// </summary>
-    private async UniTask InitializeSkillEffectDatabase()
-    {
-        Log("Initializing SkillEffectDatabase...");
-
-        try
-        {
-            await SkillEffectDatabase.LoadInstanceAsync();
-
-            if (SkillEffectDatabase.Instance != null)
-            {
-                Log("✓ SkillEffectDatabase ready");
-            }
-            else
-            {
-                Debug.LogWarning("⚠️ SkillEffectDatabase not found - skill effects may not work properly");
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"✗ SkillEffectDatabase initialization failed: {e.Message}");
-        }
-    }
+    // LMJ: InitializeSkillEffectDatabase 제거됨 (스킬 시스템 리팩토링 예정)
 
     /// <summary>
     /// JML: Initialize CurrencyManager (runs in parallel with other managers)
