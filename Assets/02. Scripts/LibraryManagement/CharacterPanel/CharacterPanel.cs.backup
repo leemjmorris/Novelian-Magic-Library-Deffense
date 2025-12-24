@@ -1,0 +1,74 @@
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using Cysharp.Threading.Tasks;
+
+public class CharacterPanel : MonoBehaviour
+{
+    [SerializeField] private const int MAX_CHARACTERS = 20;
+    [SerializeField] private Transform contentParent;
+    [SerializeField] private GameObject characterSlotPrefab;
+    [SerializeField] private GameObject characterInfoPanel;
+    [SerializeField] private CharacterInfoPanel infoPanel;
+
+    private List<LibraryCharacterSlot> characterSlots = new List<LibraryCharacterSlot>();
+
+    private async UniTaskVoid Start()
+    {
+        Debug.Log("[CharacterPanel] Start() called - Waiting for CSVLoader...");
+
+        // CSV 로딩 완료될 때까지 대기
+        await UniTask.WaitUntil(() => CSVLoader.Instance != null && CSVLoader.Instance.IsInit);
+
+        Debug.Log("[CharacterPanel] CSVLoader ready - Getting CharacterTable...");
+
+        CsvTable<CharacterData> characterTable = CSVLoader.Instance.GetTable<CharacterData>();
+
+        // null 체크도 추가
+        if (characterTable == null)
+        {
+            Debug.LogError("[CharacterPanel] CharacterTable is null after loading! CSV data may have failed to load.");
+            return;
+        }
+
+        Debug.Log($"[CharacterPanel] CharacterTable loaded with {characterTable.Count} entries");
+
+        // 보유 캐릭터가 앞에 오도록 정렬
+        var sortedCharacters = characterTable.GetAll()
+            .OrderByDescending(c => IsCharacterOwned(c.Character_ID)) // 보유 캐릭터 먼저
+            .ThenBy(c => c.Character_ID) // 그 다음 ID순
+            .ToList();
+
+        int slotIndex = 0;
+        foreach (var characterData in sortedCharacters)
+        {
+            if (slotIndex >= MAX_CHARACTERS) break;
+
+            var slot = Instantiate(characterSlotPrefab, contentParent);
+            var characterSlot = slot.GetComponent<LibraryCharacterSlot>();
+
+            // InfoPanel 연결
+            characterSlot.SetInfoPanelObj(characterInfoPanel);
+
+            // 테이블 데이터로 초기화
+            characterSlot.InitSlot(characterData);
+
+            characterSlots.Add(characterSlot);
+            slotIndex++;
+        }
+
+        Debug.Log($"[CharacterPanel] Created {slotIndex} character slots");
+        characterInfoPanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// 캐릭터 보유 여부 확인 (정렬용)
+    /// </summary>
+    private bool IsCharacterOwned(int characterId)
+    {
+        if (CharacterOwnershipManager.Instance == null)
+            return true; // Manager 없으면 전부 보유로 처리
+
+        return CharacterOwnershipManager.Instance.IsOwned(characterId);
+    }
+}

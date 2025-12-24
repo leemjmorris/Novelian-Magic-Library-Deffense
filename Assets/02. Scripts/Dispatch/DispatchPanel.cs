@@ -4,6 +4,7 @@ using TMPro;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace Dispatch
 {
@@ -39,6 +40,9 @@ namespace Dispatch
         }
         [Header("패널 타입 설정")]
         [SerializeField] private DispatchType panelDispatchType = DispatchType.Combat; // 이 패널의 파견 타입 (Inspector에서 고정)
+
+        [Header("프리셋 선택")]
+        [SerializeField] private DispatchPresetSelector presetSelector; // 프리셋 선택 컴포넌트
 
         [Header("파견 매니저 참조")]
         [SerializeField] private DispatchManager dispatchManager;
@@ -155,6 +159,21 @@ namespace Dispatch
         {
             // 저장된 파견 상태 복원
             LoadDispatchState();
+
+            // 프리셋 변경 이벤트 구독
+            if (presetSelector != null)
+            {
+                presetSelector.OnPresetSelected += OnPresetChanged;
+            }
+        }
+
+        /// <summary>
+        /// 프리셋 변경 시 호출 - 덱 캐릭터 이미지 갱신
+        /// </summary>
+        private void OnPresetChanged(int newPresetIndex)
+        {
+            AddLog($"프리셋 변경됨: {newPresetIndex + 1}");
+            LoadDeckCharacters();
         }
 
         private void Start()
@@ -231,6 +250,12 @@ namespace Dispatch
                     ref scrollVelocity,
                     0.1f
                 );
+
+                // 스크롤 이동 중일 때 창고 변경 감지 (화살표 클릭으로 이동 시)
+                if (!isDispatching)
+                {
+                    CheckAndUpdateWarehouse();
+                }
             }
 
             // 스와이프 중일 때 실시간으로 창고 변경 감지 (파견 중이 아닐 때만)
@@ -349,8 +374,79 @@ namespace Dispatch
                 eventTrigger.triggers.Add(endDragEntry);
             }
 
+            // 화살표 버튼 클릭 이벤트 등록
+            SetupArrowButtonEvents();
+
             // 아이템 슬롯 버튼 이벤트 등록 (각 슬롯 클릭 시 해당 파견의 보상 정보 패널 표시)
             SetupItemSlotButtons();
+        }
+
+        /// <summary>
+        /// 화살표 버튼 클릭 이벤트 설정
+        /// </summary>
+        private void SetupArrowButtonEvents()
+        {
+            // 왼쪽 화살표 버튼 설정
+            if (leftArrowImage != null)
+            {
+                var leftButton = leftArrowImage.GetComponent<Button>();
+                if (leftButton == null)
+                {
+                    leftButton = leftArrowImage.gameObject.AddComponent<Button>();
+                    leftButton.transition = Selectable.Transition.None;
+                }
+                leftButton.onClick.AddListener(OnLeftArrowClicked);
+            }
+
+            // 오른쪽 화살표 버튼 설정
+            if (rightArrowImage != null)
+            {
+                var rightButton = rightArrowImage.GetComponent<Button>();
+                if (rightButton == null)
+                {
+                    rightButton = rightArrowImage.gameObject.AddComponent<Button>();
+                    rightButton.transition = Selectable.Transition.None;
+                }
+                rightButton.onClick.AddListener(OnRightArrowClicked);
+            }
+        }
+
+        /// <summary>
+        /// 왼쪽 화살표 클릭 - 이전 파견 위치로 이동
+        /// </summary>
+        private void OnLeftArrowClicked()
+        {
+            // 파견 중에는 이동 불가
+            if (isDispatching) return;
+
+            int totalButtons = panelDispatchType == DispatchType.Combat ? totalCombatButtons : totalGatheringButtons;
+
+            if (currentButtonIndex > 0)
+            {
+                currentButtonIndex--;
+                // 스와이프와 동일하게 targetScrollPosition 설정
+                targetScrollPosition = (float)currentButtonIndex / (totalButtons - 1);
+                AddLog($"⬅️ 왼쪽 화살표 클릭: 인덱스 {currentButtonIndex}");
+            }
+        }
+
+        /// <summary>
+        /// 오른쪽 화살표 클릭 - 다음 파견 위치로 이동
+        /// </summary>
+        private void OnRightArrowClicked()
+        {
+            // 파견 중에는 이동 불가
+            if (isDispatching) return;
+
+            int totalButtons = panelDispatchType == DispatchType.Combat ? totalCombatButtons : totalGatheringButtons;
+
+            if (currentButtonIndex < totalButtons - 1)
+            {
+                currentButtonIndex++;
+                // 스와이프와 동일하게 targetScrollPosition 설정
+                targetScrollPosition = (float)currentButtonIndex / (totalButtons - 1);
+                AddLog($"➡️ 오른쪽 화살표 클릭: 인덱스 {currentButtonIndex}");
+            }
         }
 
         /// <summary>
@@ -401,14 +497,26 @@ namespace Dispatch
             DispatchLocation location = GetLocationBySlotIndex(slotIndex);
             Debug.Log($"[DispatchPanel] 파견 장소: {location}");
 
+            // 파견 중일 때는 현재 파견 중인 장소의 보상 정보만 표시
+            if (isDispatching)
+            {
+                location = currentSelectedLocation;
+            }
+
             // 해당 장소의 보상 정보로 패널 업데이트
             UpdateRewardInfoForLocation(location);
+
+            // 파견 중이면 rewardInfoText 활성화 (UpdateDispatchUI에서 숨겨졌으므로)
+            if (isDispatching && rewardInfoText != null)
+            {
+                rewardInfoText.gameObject.SetActive(true);
+            }
 
             // 보상 정보 패널 표시
             if (infoPanel != null)
             {
                 infoPanel.SetActive(true);
-                AddLog($"ℹ️ 아이템 슬롯 {slotIndex + 1} 클릭 - {GetLocationName(location)} 보상 정보 표시");
+                AddLog($" 아이템 슬롯 {slotIndex + 1} 클릭 - {GetLocationName(location)} 보상 정보 표시");
             }
             else
             {
@@ -457,20 +565,25 @@ namespace Dispatch
             var locationData = GetLocationData(location);
             if (locationData == null)
             {
+                Debug.LogError($"[DispatchPanel] locationData null - location: {location}");
                 rewardInfoText.text = "보상 정보를 불러올 수 없습니다.";
                 return;
             }
 
-            // 기본 시간(4시간, Time_ID=5201)의 보상 데이터 사용
-            var rewardTableData = GetRewardData(locationData.Dispatch_Location_ID, 5201);
+            // 현재 선택된 시간의 보상 데이터 사용 (파견 중이면 파견 시작 시의 시간)
+            int timeID = currentSelectedTimeID > 0 ? currentSelectedTimeID : 5201;
+            Debug.Log($"[DispatchPanel] UpdateRewardInfoForLocation - location: {location}, locationID: {locationData.Dispatch_Location_ID}, timeID: {timeID}, hours: {currentSelectedHours}");
+
+            var rewardTableData = GetRewardData(locationData.Dispatch_Location_ID, timeID);
             if (rewardTableData == null)
             {
-                rewardInfoText.text = "보상 정보를 불러올 수 없습니다.";
+                Debug.LogError($"[DispatchPanel] rewardTableData null - locationID: {locationData.Dispatch_Location_ID}, timeID: {timeID}");
+                rewardInfoText.text = $"보상 정보를 불러올 수 없습니다.\n(Location: {locationData.Dispatch_Location_ID}, TimeID: {timeID})";
                 return;
             }
 
-            // 보상 정보 표시
-            DisplayRewardInfoForLocation(location, rewardTableData, 1f);
+            // 보상 정보 표시 (Reward_Multiplier 적용: 4시간=1배, 8시간=1.8배, 12시간=2.6배, 23시간=5배)
+            DisplayRewardInfoForLocation(location, rewardTableData, rewardTableData.Reward_Multiplier);
         }
 
         /// <summary>
@@ -490,6 +603,7 @@ namespace Dispatch
             string locationName = GetLocationName(location);
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             sb.AppendLine($"<b>{locationName}</b>");
+            sb.AppendLine($"<color=#88CCFF> {currentSelectedHours}시간</color>");
             sb.AppendLine("<color=#AAAAAA>───────────────</color>");
             sb.AppendLine("<b>예상 보상:</b>");
 
@@ -537,8 +651,20 @@ namespace Dispatch
             // 버튼 인덱스에 해당하는 파견 장소 결정
             DispatchLocation location = GetLocationBySlotIndex(buttonIndex);
 
+            // 파견 중일 때는 현재 파견 중인 장소의 보상 정보만 표시
+            if (isDispatching)
+            {
+                location = currentSelectedLocation;
+            }
+
             // 해당 장소의 보상 정보로 패널 업데이트
             UpdateRewardInfoForLocation(location);
+
+            // 파견 중이면 rewardInfoText 활성화 (UpdateDispatchUI에서 숨겨졌으므로)
+            if (isDispatching && rewardInfoText != null)
+            {
+                rewardInfoText.gameObject.SetActive(true);
+            }
 
             // 보상 정보 패널 표시
             infoPanel.SetActive(true);
@@ -553,6 +679,13 @@ namespace Dispatch
             if (infoPanel != null && infoPanel.activeSelf)
             {
                 infoPanel.SetActive(false);
+
+                // 파견 중이면 rewardInfoText 다시 숨기기
+                if (isDispatching && rewardInfoText != null)
+                {
+                    rewardInfoText.gameObject.SetActive(false);
+                }
+
                 AddLog("ℹ️ 보상 정보 패널 닫힘 (패널 클릭)");
             }
         }
@@ -816,6 +949,9 @@ namespace Dispatch
         /// </summary>
         private void OnDispatchStartButtonClicked()
         {
+            // 보상 정보 패널이 열려있으면 닫기
+            CloseInfoPanelIfOpen();
+
             if (isDispatching)
             {
                 // 파견 완료 - 보상 획득
@@ -823,8 +959,39 @@ namespace Dispatch
             }
             else
             {
+                // 다른 파견에서 사용 중인 프리셋이면 파견 불가
+                if (presetSelector != null && presetSelector.IsCurrentPresetUsedByOtherDispatch())
+                {
+                    // 토스트 메시지 표시
+                    if (WarningUIManager.Instance != null)
+                    {
+                        WarningUIManager.Instance.ShowWarning("이 프리셋은 다른 파견에서 사용 중입니다.");
+                    }
+                    Debug.LogWarning("[DispatchPanel] 다른 파견에서 사용 중인 프리셋으로는 파견할 수 없습니다.");
+                    return;
+                }
+
                 // 파견 시작
                 StartDispatch();
+            }
+        }
+
+        /// <summary>
+        /// 보상 정보 패널이 열려있으면 닫기
+        /// </summary>
+        private void CloseInfoPanelIfOpen()
+        {
+            if (infoPanel != null && infoPanel.activeSelf)
+            {
+                infoPanel.SetActive(false);
+
+                // 파견 중이면 rewardInfoText도 숨기기
+                if (isDispatching && rewardInfoText != null)
+                {
+                    rewardInfoText.gameObject.SetActive(false);
+                }
+
+                AddLog("ℹ️ 보상 정보 패널 닫힘 (버튼 클릭)");
             }
         }
 
@@ -836,14 +1003,26 @@ namespace Dispatch
             AddLog("\n==============================================");
             AddLog($"🚀 파견 시작 버튼 클릭!");
 
+            // 서버 시간 체크
+            if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
+            {
+                AddLog("❌ 서버 시간이 동기화되지 않아 파견을 시작할 수 없습니다.");
+                return;
+            }
+
             // 파견 실행 및 보상 로직 콘솔 출력
             ExecuteDispatch(currentSelectedLocation);
 
-            // 파견 시작 시간 기록
-            dispatchStartTime = System.DateTime.Now;
+            // 파견 시작 시간 기록 (서버 시간 기준)
+            dispatchStartTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
+            dispatchStartTime = ServerTimeManager.Instance.GetServerDateTime();
 
             // 파견 시작 상태로 전환
             isDispatching = true;
+
+            // 프리셋 변경 잠금
+            if (presetSelector != null)
+                presetSelector.Lock();
             // 테스트용: 초 단위로 시간 설정 (실제 게임에서는 시간 * 3600)
             // 북마크 파견 시간 감소 modifier 적용
             float reducedTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
@@ -1018,6 +1197,10 @@ namespace Dispatch
             isDispatching = false;
             remainingTime = 0f;
 
+            // 프리셋 변경 잠금 해제
+            if (presetSelector != null)
+                presetSelector.Unlock();
+
             // 파견 횟수 텍스트 업데이트 (1/1 → 0/1)
             UpdateDispatchCountText();
 
@@ -1057,6 +1240,12 @@ namespace Dispatch
         {
             int index = Mathf.RoundToInt(value);
             UpdateTimeDisplay(index);
+
+            // 정보 패널이 열려있으면 자동으로 업데이트
+            if (infoPanel != null && infoPanel.activeSelf)
+            {
+                UpdateRewardInfoForLocation(currentSelectedLocation);
+            }
         }
 
         /// <summary>
@@ -1395,6 +1584,46 @@ namespace Dispatch
                 x.Dispatch_Location_ID == locationID &&
                 x.Dispatch_Time_ID == timeID
             ).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// 시간(hours)으로부터 Time_ID 조회
+        /// </summary>
+        private int GetTimeIDFromHours(int hours)
+        {
+            // availableTimes에서 먼저 찾기
+            if (availableTimes != null && availableTimes.Count > 0)
+            {
+                var timeData = availableTimes.FirstOrDefault(x => (int)x.Required_Hours == hours);
+                if (timeData != null)
+                {
+                    return timeData.Dispatch_Time_ID;
+                }
+            }
+
+            // availableTimes가 없으면 직접 CSV에서 조회
+            if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
+            {
+                var timeTable = CSVLoader.Instance.GetTable<DispatchTimeTableData>();
+                if (timeTable != null)
+                {
+                    var timeData = timeTable.FindAll(x => (int)x.Required_Hours == hours).FirstOrDefault();
+                    if (timeData != null)
+                    {
+                        return timeData.Dispatch_Time_ID;
+                    }
+                }
+            }
+
+            // 하드코딩 fallback (CSV 로드 전에도 동작하도록)
+            return hours switch
+            {
+                4 => 5201,
+                8 => 5202,
+                12 => 5203,
+                23 => 5204,
+                _ => 5201
+            };
         }
 
         /// <summary>
@@ -1758,6 +1987,13 @@ namespace Dispatch
 
             AddLog("=== 덱 캐릭터 로드 시작 ===");
 
+            // 현재 프리셋이 다른 파견에서 사용 중인지 확인
+            bool isUsedByOtherDispatch = presetSelector != null && presetSelector.IsCurrentPresetUsedByOtherDispatch();
+            if (isUsedByOtherDispatch)
+            {
+                AddLog("⚠️ 현재 프리셋이 다른 파견에서 사용 중 - 캐릭터 아이콘 비활성화");
+            }
+
             // 덱의 4개 슬롯 순회
             for (int i = 0; i < 4; i++)
             {
@@ -1770,18 +2006,31 @@ namespace Dispatch
                     continue;
                 }
 
+                // 항상 활성화 (레이아웃 유지)
+                targetImage.gameObject.SetActive(true);
+
                 if (characterId > 0)
                 {
                     // 캐릭터가 있으면 이미지 로드
                     LoadCharacterImageForSlot(i, characterId, targetImage);
-                    targetImage.gameObject.SetActive(true);
-                    AddLog($"✓ 슬롯 {i + 1}: 캐릭터 ID {characterId} 로드");
+
+                    // 다른 파견에서 사용 중이면 약간 어둡게 표시
+                    if (isUsedByOtherDispatch)
+                    {
+                        targetImage.color = new Color(0.65f, 0.65f, 0.65f, 1f); // 약간 어두운 색
+                    }
+                    else
+                    {
+                        targetImage.color = Color.white;
+                    }
+                    AddLog($"✓ 슬롯 {i + 1}: 캐릭터 ID {characterId} 로드{(isUsedByOtherDispatch ? " (비활성화)" : "")}");
                 }
                 else
                 {
-                    // 빈 슬롯 처리 (비활성화)
-                    targetImage.gameObject.SetActive(false);
-                    AddLog($"✓ 슬롯 {i + 1}: 빈 슬롯 (비활성화)");
+                    // 빈 슬롯 처리 (투명하게 - 레이아웃 유지)
+                    targetImage.sprite = null;
+                    targetImage.color = new Color(1f, 1f, 1f, 0f);
+                    AddLog($"✓ 슬롯 {i + 1}: 빈 슬롯 (투명)");
                 }
             }
 
@@ -1888,6 +2137,7 @@ namespace Dispatch
 
         // 파견 시작 시간 저장용
         private System.DateTime dispatchStartTime;
+        private long dispatchStartTimeMs; // 서버 시간 (밀리초)
 
         /// <summary>
         /// 파견 상태 저장 (Firebase)
@@ -1902,7 +2152,7 @@ namespace Dispatch
 
             // 종료 시간 계산 (북마크 파견 시간 감소 modifier 적용)
             float reducedDispatchTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
-            System.DateTime endTime = dispatchStartTime.AddSeconds(reducedDispatchTime);
+            long endTimeMs = dispatchStartTimeMs + (long)(reducedDispatchTime * 1000); // 밀리초 단위
 
             var state = new Firebase.Data.DispatchStateData
             {
@@ -1910,7 +2160,8 @@ namespace Dispatch
                 locationId = (int)currentSelectedLocation,
                 hours = currentSelectedHours,
                 startTime = dispatchStartTime.ToString("o"),
-                endTime = endTime.ToString("o")
+                endTime = endTime.ToString("o"),
+                presetIndex = presetSelector != null ? presetSelector.LockedPresetIndex : (DeckManager.Instance != null ? DeckManager.Instance.GetCurrentPresetIndex() : -1)
             };
 
             string dispatchType = panelDispatchType == DispatchType.Combat ? "combat" : "gathering";
@@ -1928,6 +2179,12 @@ namespace Dispatch
         /// </summary>
         private void LoadDispatchState()
         {
+            // CSV 데이터가 로드되지 않았으면 먼저 로드
+            if (availableTimes == null || availableTimes.Count == 0)
+            {
+                LoadCSVData();
+            }
+
             // Firebase 캐시 데이터에서 로드
             var dispatchData = FirebaseSaveManager.Instance?.CachedData?.dispatch;
             if (dispatchData == null)
@@ -1943,53 +2200,62 @@ namespace Dispatch
                 return;
             }
 
-            // 레거시 형식으로 변환하여 처리
-            DispatchSaveData saveData = new DispatchSaveData
-            {
-                isDispatching = state.isActive,
-                totalDispatchTime = state.hours,
-                startTimeString = state.startTime,
-                selectedLocation = state.locationId,
-                selectedHours = state.hours,
-                selectedTimeID = state.hours,
-                dispatchType = (int)panelDispatchType
-            };
-
-            if (saveData == null || !saveData.isDispatching)
-            {
-                AddLog($"📂 파견 중이 아님 ({panelDispatchType})");
-                return;
-            }
-
             // 현재 파견 타입을 패널 타입으로 설정
             currentDispatchType = panelDispatchType;
 
-            // 시작 시간 파싱
-            if (!System.DateTime.TryParse(saveData.startTimeString, out dispatchStartTime))
+            float elapsedSeconds = 0f;
+
+            // 새 형식 (밀리초) 우선 확인
+            if (state.startTimeMs > 0 && state.endTimeMs > 0)
             {
-                AddLog("❌ 파견 시작 시간 파싱 실패");
-                ClearDispatchState();
-                return;
+                // ServerTimeManager가 초기화되지 않은 경우
+                if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
+                {
+                    AddLog("❌ 서버 시간이 동기화되지 않아 파견 상태 복원 불가");
+                    return;
+                }
+
+                dispatchStartTimeMs = state.startTimeMs;
+                dispatchStartTime = System.DateTimeOffset.FromUnixTimeMilliseconds(state.startTimeMs).UtcDateTime;
+
+                // 서버 시간 기준 경과 시간 계산
+                long elapsedMs = ServerTimeManager.Instance.GetElapsedMs(state.startTimeMs);
+                elapsedSeconds = elapsedMs / 1000f;
+
+                AddLog($"📂 새 형식으로 파견 복원 (서버 시간 기준)");
             }
+            else
+            {
+                // 레거시 형식 (string) - 하위 호환
+                if (string.IsNullOrEmpty(state.startTime))
+                {
+                    AddLog("❌ 파견 시작 시간 없음");
+                    ClearDispatchState();
+                    return;
+                }
 
-            // 경과 시간 계산
-            System.TimeSpan elapsed = System.DateTime.Now - dispatchStartTime;
-            float elapsedSeconds = (float)elapsed.TotalSeconds;
+                if (!System.DateTime.TryParse(state.startTime, out dispatchStartTime))
+                {
+                    AddLog("❌ 파견 시작 시간 파싱 실패");
+                    ClearDispatchState();
+                    return;
+                }
 
-            // 남은 시간 계산
-            remainingTime = saveData.totalDispatchTime - elapsedSeconds;
+                // 로컬 시간 기준 경과 시간 계산 (레거시)
+                System.TimeSpan elapsed = System.DateTime.Now - dispatchStartTime;
+                elapsedSeconds = (float)elapsed.TotalSeconds;
 
-            // 파견 타입 복원
-            currentDispatchType = (DispatchType)saveData.dispatchType;
+                AddLog("⚠️ 레거시 형식으로 파견 복원 (로컬 시간 기준 - 마이그레이션 필요)");
+            }
 
             // 이미 파견 완료된 경우
             if (remainingTime <= 0f)
             {
                 remainingTime = 0f;
                 isDispatching = true; // 완료 상태로 설정
-                currentSelectedLocation = (DispatchLocation)saveData.selectedLocation;
-                currentSelectedHours = saveData.selectedHours;
-                currentSelectedTimeID = saveData.selectedTimeID;
+                currentSelectedLocation = (DispatchLocation)state.locationId;
+                currentSelectedHours = state.hours;
+                currentSelectedTimeID = GetTimeIDFromHours(state.hours);
 
                 AddLog($"📂 파견 완료! 보상을 획득하세요.");
 
@@ -1999,10 +2265,10 @@ namespace Dispatch
             else
             {
                 // 저장된 상태 복원
-                isDispatching = saveData.isDispatching;
-                currentSelectedLocation = (DispatchLocation)saveData.selectedLocation;
-                currentSelectedHours = saveData.selectedHours;
-                currentSelectedTimeID = saveData.selectedTimeID;
+                isDispatching = state.isActive;
+                currentSelectedLocation = (DispatchLocation)state.locationId;
+                currentSelectedHours = state.hours;
+                currentSelectedTimeID = GetTimeIDFromHours(state.hours);
 
                 AddLog($"📂 파견 상태 복원됨 - 장소: {GetLocationName(currentSelectedLocation)}, 남은 시간: {remainingTime:F0}초");
 
@@ -2024,6 +2290,10 @@ namespace Dispatch
 
             // 파견 UI 상태 복원
             UpdateDispatchUI();
+
+            // 파견 중이면 프리셋 잠금
+            if (isDispatching && presetSelector != null)
+                presetSelector.Lock();
 
             // 파견 완료 상태라면 획득하기 버튼 활성화 + Red Dot 활성화
             if (isDispatching && remainingTime <= 0f)
@@ -2170,10 +2440,34 @@ namespace Dispatch
                 if (infoPanelButton != null)
                     infoPanelButton.onClick.RemoveListener(OnInfoPanelClicked);
             }
+
+            // 화살표 버튼 이벤트 리스너 제거
+            if (leftArrowImage != null)
+            {
+                var leftButton = leftArrowImage.GetComponent<Button>();
+                if (leftButton != null)
+                    leftButton.onClick.RemoveListener(OnLeftArrowClicked);
+            }
+
+            if (rightArrowImage != null)
+            {
+                var rightButton = rightArrowImage.GetComponent<Button>();
+                if (rightButton != null)
+                    rightButton.onClick.RemoveListener(OnRightArrowClicked);
+            }
         }
 
         private void OnDisable()
         {
+            // 프리셋 변경 이벤트 구독 해제
+            if (presetSelector != null)
+            {
+                presetSelector.OnPresetSelected -= OnPresetChanged;
+            }
+
+            // 보상 정보 패널이 열려있으면 닫기
+            CloseInfoPanelIfOpen();
+
             // 파견 중일 때만 상태 저장
             if (isDispatching)
             {

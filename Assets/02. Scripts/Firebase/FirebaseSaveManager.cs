@@ -143,8 +143,10 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "application", currencies.application },
                 { "recommendation", currencies.recommendation },
                 { "magicStone", currencies.magicStone },
+                { "dungeonPass", currencies.dungeonPass },
                 { "ap", currencies.ap },
-                { "apRecoveryTime", currencies.apRecoveryTime }
+                { "apLastSyncTimeMs", currencies.apLastSyncTimeMs },
+                { "apRecoveryTime", currencies.apRecoveryTime } // 레거시 호환
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("currencies").UpdateChildrenAsync(data);
@@ -232,7 +234,62 @@ public class FirebaseSaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 덱 저장
+    /// 덱 프리셋 전체 저장
+    /// </summary>
+    public async UniTask SaveDeckPresetsAsync(string userId, DeckData deckData)
+    {
+        if (!isInitialized) return;
+
+        try
+        {
+            // 캐시 업데이트
+            cachedUserData.deck = deckData;
+
+            var data = new Dictionary<string, object>
+            {
+                { "currentPreset", deckData.currentPreset },
+                { "preset0", ConvertPresetToDict(deckData.preset0) },
+                { "preset1", ConvertPresetToDict(deckData.preset1) },
+                { "preset2", ConvertPresetToDict(deckData.preset2) },
+                { "preset3", ConvertPresetToDict(deckData.preset3) }
+            };
+
+            await databaseRef.Child(USERS_PATH).Child(userId).Child("deck").SetValueAsync(data);
+            Debug.Log($"{LOG_PREFIX} 덱 프리셋 저장 완료 (현재 프리셋: {deckData.currentPreset + 1})");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 덱 프리셋 저장 실패: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 프리셋 데이터를 Dictionary로 변환
+    /// </summary>
+    private Dictionary<string, object> ConvertPresetToDict(DeckPresetData preset)
+    {
+        if (preset == null)
+        {
+            return new Dictionary<string, object>
+            {
+                { "slot0", -1 },
+                { "slot1", -1 },
+                { "slot2", -1 },
+                { "slot3", -1 }
+            };
+        }
+
+        return new Dictionary<string, object>
+        {
+            { "slot0", preset.slot0 },
+            { "slot1", preset.slot1 },
+            { "slot2", preset.slot2 },
+            { "slot3", preset.slot3 }
+        };
+    }
+
+    /// <summary>
+    /// 덱 저장 (하위 호환용 - 현재 프리셋에 저장)
     /// </summary>
     public async UniTask SaveDeckAsync(string userId, List<int> deck)
     {
@@ -241,16 +298,9 @@ public class FirebaseSaveManager : MonoBehaviour
         try
         {
             cachedUserData.deck.FromList(deck);
-            var data = new Dictionary<string, object>
-            {
-                { "slot0", cachedUserData.deck.slot0 },
-                { "slot1", cachedUserData.deck.slot1 },
-                { "slot2", cachedUserData.deck.slot2 },
-                { "slot3", cachedUserData.deck.slot3 }
-            };
 
-            await databaseRef.Child(USERS_PATH).Child(userId).Child("deck").SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 덱 저장 완료");
+            // 전체 프리셋 데이터로 저장
+            await SaveDeckPresetsAsync(userId, cachedUserData.deck);
         }
         catch (Exception e)
         {
@@ -349,7 +399,8 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "locationId", state.locationId },
                 { "hours", state.hours },
                 { "startTime", state.startTime },
-                { "endTime", state.endTime }
+                { "endTime", state.endTime },
+                { "presetIndex", state.presetIndex }
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("dispatch").Child(dispatchType).SetValueAsync(data);
@@ -425,8 +476,10 @@ public class FirebaseSaveManager : MonoBehaviour
                     { "application", data.currencies.application },
                     { "recommendation", data.currencies.recommendation },
                     { "magicStone", data.currencies.magicStone },
+                    { "dungeonPass", data.currencies.dungeonPass },
                     { "ap", data.currencies.ap },
-                    { "apRecoveryTime", data.currencies.apRecoveryTime }
+                    { "apLastSyncTimeMs", data.currencies.apLastSyncTimeMs },
+                    { "apRecoveryTime", data.currencies.apRecoveryTime } // 레거시 호환
                 }
             },
             { "progression", new Dictionary<string, object>
@@ -445,10 +498,11 @@ public class FirebaseSaveManager : MonoBehaviour
             },
             { "deck", new Dictionary<string, object>
                 {
-                    { "slot0", data.deck.slot0 },
-                    { "slot1", data.deck.slot1 },
-                    { "slot2", data.deck.slot2 },
-                    { "slot3", data.deck.slot3 }
+                    { "currentPreset", data.deck.currentPreset },
+                    { "preset0", ConvertPresetToDict(data.deck.preset0) },
+                    { "preset1", ConvertPresetToDict(data.deck.preset1) },
+                    { "preset2", ConvertPresetToDict(data.deck.preset2) },
+                    { "preset3", ConvertPresetToDict(data.deck.preset3) }
                 }
             },
             { "ingredients", data.ingredients },
@@ -461,7 +515,8 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "locationId", data.dispatch.combat.locationId },
                             { "hours", data.dispatch.combat.hours },
                             { "startTime", data.dispatch.combat.startTime },
-                            { "endTime", data.dispatch.combat.endTime }
+                            { "endTime", data.dispatch.combat.endTime },
+                            { "presetIndex", data.dispatch.combat.presetIndex }
                         }
                     },
                     { "gathering", new Dictionary<string, object>
@@ -470,7 +525,8 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "locationId", data.dispatch.gathering.locationId },
                             { "hours", data.dispatch.gathering.hours },
                             { "startTime", data.dispatch.gathering.startTime },
-                            { "endTime", data.dispatch.gathering.endTime }
+                            { "endTime", data.dispatch.gathering.endTime },
+                            { "presetIndex", data.dispatch.gathering.presetIndex }
                         }
                     }
                 }
@@ -533,9 +589,11 @@ public class FirebaseSaveManager : MonoBehaviour
             data.currencies.application = GetIntValue(currenciesSnap.Child("application"));
             data.currencies.recommendation = GetIntValue(currenciesSnap.Child("recommendation"));
             data.currencies.magicStone = GetIntValue(currenciesSnap.Child("magicStone"));
+            data.currencies.dungeonPass = GetIntValue(currenciesSnap.Child("dungeonPass"));
             data.currencies.ap = GetIntValue(currenciesSnap.Child("ap"));
+            data.currencies.apLastSyncTimeMs = GetLongValue(currenciesSnap.Child("apLastSyncTimeMs"));
             if (currenciesSnap.Child("apRecoveryTime").Exists)
-                data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value.ToString();
+                data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value?.ToString() ?? "";
         }
 
         // progression
@@ -571,14 +629,29 @@ public class FirebaseSaveManager : MonoBehaviour
             }
         }
 
-        // deck
+        // deck (프리셋 시스템 지원 + 하위 호환 마이그레이션)
         var deckSnap = snapshot.Child("deck");
         if (deckSnap.Exists)
         {
-            data.deck.slot0 = GetIntValue(deckSnap.Child("slot0"));
-            data.deck.slot1 = GetIntValue(deckSnap.Child("slot1"));
-            data.deck.slot2 = GetIntValue(deckSnap.Child("slot2"));
-            data.deck.slot3 = GetIntValue(deckSnap.Child("slot3"));
+            // 새 프리셋 형식 확인 (preset0이 존재하면 새 형식)
+            if (deckSnap.Child("preset0").Exists)
+            {
+                // 새 프리셋 형식
+                data.deck.currentPreset = GetIntValue(deckSnap.Child("currentPreset"));
+                data.deck.preset0 = ParseDeckPreset(deckSnap.Child("preset0"));
+                data.deck.preset1 = ParseDeckPreset(deckSnap.Child("preset1"));
+                data.deck.preset2 = ParseDeckPreset(deckSnap.Child("preset2"));
+                data.deck.preset3 = ParseDeckPreset(deckSnap.Child("preset3"));
+            }
+            else
+            {
+                // 레거시 형식 (slot0~3만 있는 경우) - 마이그레이션용
+                data.deck.slot0 = GetIntValue(deckSnap.Child("slot0"));
+                data.deck.slot1 = GetIntValue(deckSnap.Child("slot1"));
+                data.deck.slot2 = GetIntValue(deckSnap.Child("slot2"));
+                data.deck.slot3 = GetIntValue(deckSnap.Child("slot3"));
+                // DeckManager.SetDeckFromFirebase에서 MigrateLegacyData 호출됨
+            }
         }
 
         // ingredients
@@ -654,8 +727,22 @@ public class FirebaseSaveManager : MonoBehaviour
             state.hours = GetIntValue(snap.Child("hours"));
             state.startTime = snap.Child("startTime").Value?.ToString() ?? "";
             state.endTime = snap.Child("endTime").Value?.ToString() ?? "";
+            state.presetIndex = GetIntValue(snap.Child("presetIndex"), -1); // 기본값 -1
         }
         return state;
+    }
+
+    private DeckPresetData ParseDeckPreset(DataSnapshot snap)
+    {
+        var preset = new DeckPresetData();
+        if (snap.Exists)
+        {
+            preset.slot0 = GetIntValue(snap.Child("slot0"));
+            preset.slot1 = GetIntValue(snap.Child("slot1"));
+            preset.slot2 = GetIntValue(snap.Child("slot2"));
+            preset.slot3 = GetIntValue(snap.Child("slot3"));
+        }
+        return preset;
     }
 
     private int GetIntValue(DataSnapshot snap)
@@ -675,6 +762,12 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         if (snap.Value == null) return 0f;
         return Convert.ToSingle(snap.Value);
+    }
+
+    private long GetLongValue(DataSnapshot snap)
+    {
+        if (snap.Value == null) return 0L;
+        return Convert.ToInt64(snap.Value);
     }
 
     #endregion

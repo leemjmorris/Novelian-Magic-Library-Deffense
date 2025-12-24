@@ -217,6 +217,12 @@ namespace Novelian.Combat
 
         private async UniTaskVoid AttackLoopAsync(CancellationToken ct)
         {
+            // 첫 공격은 즉시 실행
+            if (!ct.IsCancellationRequested && Time.timeScale > 0f)
+            {
+                TryAttack();
+            }
+
             while (!ct.IsCancellationRequested)
             {
                 float interval = CalculateAttackInterval();
@@ -485,6 +491,15 @@ namespace Novelian.Combat
             supportSkillId = skillId;
             supportData = skill;
             return true;
+        }
+
+        /// <summary>
+        /// 투사체 템플릿 설정 (TrainingScene 등 Pool 없는 환경용)
+        /// </summary>
+        public void SetProjectileTemplate(GameObject template)
+        {
+            projectileTemplate = template;
+            Debug.Log($"[Character] ProjectileTemplate 설정됨: {(template != null ? template.name : "null")}");
         }
 
         #endregion

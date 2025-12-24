@@ -20,6 +20,7 @@ public static class SceneName
     public static readonly string DispatchSystemScene = "DispatchSystemScene";
     public static readonly string BookMarkCraftScene = "BookMarkCraftScene";
     public static readonly string BossDungeonScene = "BossDungeonScene";  // Issue #476 - 도전던전 씬
+    public static readonly string TrainingScene = "TrainingScene"; // Test Scene
 }
 
 public static class AddressableKey
@@ -75,11 +76,11 @@ public static class AddressableKey
     public static readonly string BossDungeonTable = "BossDungeonTable";
     
     // JML: Icon Addressable Keys
-    public static readonly string Icon_Mystery = "Icon_Mystery";
-    public static readonly string IconAdventure = "Icon_Adventure";
-    public static readonly string IconRomance = "Icon_Romance";
-    public static readonly string IconHorror = "Icon_Horror";
-    public static readonly string IconComedy = "Icon_Comedy";
+    public static readonly string Icon_Mystery = "Mystery_Icon";
+    public static readonly string IconAdventure = "Adventure_Icon";
+    public static readonly string IconRomance = "Romance_Icon";
+    public static readonly string IconHorror = "Horror_Icon";
+    public static readonly string IconComedy = "Comic_Icon";
     public static readonly string Icon_Character = "ChaIcon";
     public static readonly string Icon_Plus = "Plus";
     public static readonly string Icon_LegendaryBookmark = "LegendaryBookmark";
@@ -137,9 +138,30 @@ public static class AddressableKey
         return $"CardSprite_{characterId}";
     }
 
+    /// <summary>
+    /// Item_ID로 아이템 아이콘 어드레서블 키 반환
+    /// IngredientTable의 Path_ID → PathTable의 Addressable_Key 참조
+    /// </summary>
     public static string GetItemIconKey(int itemId)
     {
-        return $"ItemIcon_{itemId}";
+        if (CSVLoader.Instance == null)
+        {
+            return $"ItemIcon_{itemId}";
+        }
+
+        var ingredientData = CSVLoader.Instance.GetData<IngredientData>(itemId);
+        if (ingredientData == null || ingredientData.Path_ID == 0)
+        {
+            return $"ItemIcon_{itemId}";
+        }
+
+        var pathData = CSVLoader.Instance.GetData<PathData>(ingredientData.Path_ID);
+        if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
+        {
+            return $"ItemIcon_{itemId}";
+        }
+
+        return pathData.Addressable_Key;
     }
 
     /// <summary>

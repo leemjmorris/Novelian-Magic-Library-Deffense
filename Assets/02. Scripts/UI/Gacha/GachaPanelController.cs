@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Video;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Managers;
@@ -38,10 +39,13 @@ public class GachaPanelController : MonoBehaviour
     [Header("Animation Settings")]
     [SerializeField] private float slotRevealDelay = 0.15f;
 
-    [Header("Fade Effect")]
+    [Header("Video Effect")]
     [SerializeField] private GameObject resultPanel;        // Gacha Result Panel
-    [SerializeField] private CanvasGroup coverImage;        // Image (커버 이미지, CanvasGroup 필요)
-    [SerializeField] private float fadeDuration = 0.8f;     // 페이드 아웃 시간
+    [SerializeField] private VideoPlayer videoPlayer;       // VideoPlayer 컴포넌트
+    [SerializeField] private RawImage videoRawImage;        // 동영상 표시용 RawImage
+    [SerializeField] private VideoClip gachaVideoClip;      // 가챠 연출 동영상 (Assets/05. Videos/Gacha/GachaOpen.mp4)
+
+    private RenderTexture videoRenderTexture;               // 런타임 생성 RenderTexture
 
     // 뽑기 비용
     private const int PULL_COST_APPLICATION = 1;      // 지원서 1개당 1회
@@ -89,8 +93,45 @@ public class GachaPanelController : MonoBehaviour
         if (tenSummonPanel != null)
             tenSummonPanel.SetActive(false);
 
+        // 비디오 초기화
+        InitializeVideoPlayer();
+
         // 비용 텍스트 초기화
         UpdateCostText();
+    }
+
+    /// <summary>
+    /// VideoPlayer 및 RenderTexture 초기화
+    /// </summary>
+    private void InitializeVideoPlayer()
+    {
+        if (videoPlayer == null || videoRawImage == null)
+        {
+            Debug.LogWarning("[GachaPanelController] VideoPlayer 또는 VideoRawImage가 설정되지 않았습니다!");
+            return;
+        }
+
+        // RenderTexture 런타임 생성 (1920x1080)
+        videoRenderTexture = new RenderTexture(1920, 1080, 0);
+        videoRenderTexture.Create();
+
+        // VideoPlayer에 RenderTexture 연결
+        videoPlayer.targetTexture = videoRenderTexture;
+        videoPlayer.renderMode = VideoRenderMode.RenderTexture;
+
+        // RawImage에 RenderTexture 연결
+        videoRawImage.texture = videoRenderTexture;
+
+        // 비디오 클립 설정
+        if (gachaVideoClip != null)
+        {
+            videoPlayer.clip = gachaVideoClip;
+        }
+
+        // 초기에는 비디오 UI 숨김
+        videoRawImage.gameObject.SetActive(false);
+
+        Debug.Log("[GachaPanelController] VideoPlayer 초기화 완료");
     }
 
     private void OnEnable()
@@ -121,6 +162,14 @@ public class GachaPanelController : MonoBehaviour
 
         if (resultPanelCloseButton != null)
             resultPanelCloseButton.onClick.RemoveListener(CloseResultPanel);
+
+        // RenderTexture 정리
+        if (videoRenderTexture != null)
+        {
+            videoRenderTexture.Release();
+            Destroy(videoRenderTexture);
+            videoRenderTexture = null;
+        }
     }
 
     #region Button Handlers
@@ -342,8 +391,8 @@ public class GachaPanelController : MonoBehaviour
         // 슬롯 초기화
         singleSlot.gameObject.SetActive(false);
 
-        // 페이드 연출 후 패널 열기
-        await PlayFadeTransition(true);
+        // 비디오 연출 후 패널 열기
+        await PlayVideoTransition(true);
 
         // 잠시 대기 후 슬롯 표시
         await UniTask.Delay(100);
@@ -376,8 +425,8 @@ public class GachaPanelController : MonoBehaviour
                 slot.gameObject.SetActive(false);
         }
 
-        // 페이드 연출 후 패널 열기
-        await PlayFadeTransition(false);
+        // 비디오 연출 후 패널 열기
+        await PlayVideoTransition(false);
 
         // 잠시 대기
         await UniTask.Delay(100);
@@ -466,9 +515,9 @@ public class GachaPanelController : MonoBehaviour
     }
 
     /// <summary>
-    /// 페이드 연출 시작 (커버 이미지 표시 → 페이드 아웃 → 결과 패널 표시)
+    /// 비디오 연출 시작 (동영상 재생 → 재생 완료 → 결과 패널 표시)
     /// </summary>
-    private async UniTask PlayFadeTransition(bool isSinglePull)
+    private async UniTask PlayVideoTransition(bool isSinglePull)
     {
         // 0. 닫기 버튼 숨기기
         HideResultCloseButton();
@@ -477,37 +526,48 @@ public class GachaPanelController : MonoBehaviour
         if (resultPanel != null)
             resultPanel.SetActive(true);
 
-        // 2. 커버 이미지 활성화 및 알파 1로 설정
-        if (coverImage != null)
-        {
-            coverImage.gameObject.SetActive(true);
-            coverImage.alpha = 1f;
-        }
-
-        // 3. 결과 패널은 아직 숨김
+        // 2. 결과 패널은 아직 숨김
         if (singleSummonPanel != null)
             singleSummonPanel.SetActive(false);
         if (tenSummonPanel != null)
             tenSummonPanel.SetActive(false);
 
-        // 4. 잠시 대기 (연출 시작 전)
-        await UniTask.Delay(200);
-
-        // 5. 페이드 아웃 (알파 1 → 0)
-        if (coverImage != null)
+        // 3. 비디오 재생
+        if (videoPlayer != null && videoRawImage != null && gachaVideoClip != null)
         {
-            float elapsed = 0f;
-            while (elapsed < fadeDuration)
+            // 비디오 UI 활성화
+            videoRawImage.gameObject.SetActive(true);
+
+            // 비디오 클립 설정 및 준비
+            videoPlayer.clip = gachaVideoClip;
+            videoPlayer.Prepare();
+
+            // 비디오 준비 완료 대기
+            while (!videoPlayer.isPrepared)
             {
-                elapsed += Time.deltaTime;
-                coverImage.alpha = Mathf.Lerp(1f, 0f, elapsed / fadeDuration);
                 await UniTask.Yield();
             }
-            coverImage.alpha = 0f;
-            coverImage.gameObject.SetActive(false);
+
+            // 비디오 재생 시작
+            videoPlayer.Play();
+
+            // 비디오 재생 완료 대기
+            while (videoPlayer.isPlaying)
+            {
+                await UniTask.Yield();
+            }
+
+            // 비디오 UI 숨김
+            videoRawImage.gameObject.SetActive(false);
+        }
+        else
+        {
+            // 비디오가 설정되지 않은 경우 잠시 대기 후 진행
+            Debug.LogWarning("[GachaPanelController] 비디오가 설정되지 않아 기본 대기로 진행합니다.");
+            await UniTask.Delay(500);
         }
 
-        // 6. 결과 패널 활성화
+        // 4. 결과 패널 활성화
         if (isSinglePull)
         {
             if (singleSummonPanel != null)
@@ -563,11 +623,15 @@ public class GachaPanelController : MonoBehaviour
         if (tenSummonPanel != null)
             tenSummonPanel.SetActive(false);
 
-        // 커버 이미지 초기화 (다음 연출을 위해 알파 1로 리셋)
-        if (coverImage != null)
+        // 비디오 초기화
+        if (videoPlayer != null)
         {
-            coverImage.alpha = 1f;
-            coverImage.gameObject.SetActive(true);
+            videoPlayer.Stop();
+        }
+
+        if (videoRawImage != null)
+        {
+            videoRawImage.gameObject.SetActive(false);
         }
 
         // 결과 패널 비활성화

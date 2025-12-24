@@ -410,6 +410,7 @@ namespace NovelianMagicLibraryDefense.UI
         private void OnRetryButton()
         {
             Debug.Log("[BossDungeonResultPopup] 재도전 버튼 클릭");
+            Time.timeScale = 1f;
 
             // 같은 던전 다시 시작
             LoadSceneAsync(SceneName.BossDungeonScene).Forget();
@@ -421,6 +422,7 @@ namespace NovelianMagicLibraryDefense.UI
         private void OnLobbyButton()
         {
             Debug.Log("[BossDungeonResultPopup] 로비 버튼 클릭");
+            Time.timeScale = 1f;
 
             // 선택 데이터 초기화
             SelectedBossDungeon.Clear();
@@ -436,6 +438,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (currentDungeonData == null) return;
 
             Debug.Log("[BossDungeonResultPopup] 다음 층 버튼 클릭");
+            Time.timeScale = 1f;
 
             // 다음 층 데이터 설정
             int nextFloorIndex = currentDungeonData.Floor_Index + 1;

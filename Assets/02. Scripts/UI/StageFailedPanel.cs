@@ -15,8 +15,11 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Panel")]
         [SerializeField] private GameObject panel;
 
+        [Header("Rank Image")]
+        [SerializeField] private Image rankImage;
+        [SerializeField] private Sprite rankFSprite; // F 랭크 이미지
+
         [Header("Text Fields")]
-        [SerializeField] private TextMeshProUGUI rankText;
         [SerializeField] private TextMeshProUGUI stageNameText;
         [SerializeField] private TextMeshProUGUI progressTimeText;
 
@@ -101,10 +104,10 @@ namespace NovelianMagicLibraryDefense.UI
                 stageNameText.text = $"스테이지 {SelectedStage.Data.Chapter_Number}";
             }
 
-            // 랭크 (실패는 항상 F)
-            if (rankText != null)
+            // 랭크 이미지 (실패는 항상 F)
+            if (rankImage != null && rankFSprite != null)
             {
-                rankText.text = "F";
+                rankImage.sprite = rankFSprite;
             }
 
             // 남은 몬스터 + 게임 진행 시간

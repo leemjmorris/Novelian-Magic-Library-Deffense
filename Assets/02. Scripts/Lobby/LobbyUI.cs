@@ -41,6 +41,9 @@ public class LobbyUI : MonoBehaviour
 
     private void OnEnable()
     {
+        // 로비 진입 시 타임스케일 복구 (도전던전 등에서 일시정지 상태로 넘어올 경우 대비)
+        Time.timeScale = 1f;
+
         InitializeAP();
         RefreshNickname();
 
@@ -185,7 +188,7 @@ public class LobbyUI : MonoBehaviour
 
     public void OnTrainingGroundButton()
     {
-        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+        LoadSceneWithFadeOnly(SceneName.TrainingScene).Forget();
     }
 
     /// <summary>

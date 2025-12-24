@@ -1,103 +1,86 @@
 using UnityEngine;
-using UnityEngine.AI;
 
-//JML: NavMesh-based movement controller for monsters
+//JML: Rigidbody-based straight-line movement controller for monsters
 public class MonsterMove : MonoBehaviour
 {
-    [SerializeField] private NavMeshAgent navAgent;
     [SerializeField] private Animator monsterAnimator;
 
-    private const float DESTINATION_THRESHOLD = 0.5f;
+    // Rigidbody reference (injected from Monster)
+    private Rigidbody rb;
 
-    private Vector3 targetPosition;
-    private bool hasTarget = false;
+    // Movement state
+    private Vector3 moveDirection;
+    private float currentSpeed;
+    private bool isActive = false;
+    private bool isStopped = false;
+
+    // 이동 보간 설정
+    private const float VELOCITY_LERP_SPEED = 5f; // 속도 보간 (낮을수록 부드러움, 높을수록 즉각 반응)
+    private const float ROTATION_LERP_SPEED = 10f; // 회전 보간
 
     // 애니메이터 파라미터 해시 (성능 최적화)
     private static readonly int ANIM_IS_MOVING = Animator.StringToHash("IsMoving");
 
-    private void Awake()
+    /// <summary>
+    /// Initialize movement controller with Rigidbody and target direction
+    /// Called from Monster.OnSpawn()
+    /// </summary>
+    /// <param name="rigidbody">Monster's Rigidbody component</param>
+    /// <param name="targetPosition">Wall position to move towards</param>
+    public void Initialize(Rigidbody rigidbody, Vector3 targetPosition)
     {
-        // Auto-setup NavMeshAgent if not assigned
-        if (navAgent == null)
-        {
-            navAgent = GetComponent<NavMeshAgent>();
-        }
+        rb = rigidbody;
 
-        // Configure NavMeshAgent for monster behavior
-        if (navAgent != null)
+        // Calculate direction to target (horizontal only)
+        Vector3 direction = (targetPosition - transform.position);
+        direction.y = 0f;
+        moveDirection = direction.normalized;
+
+        isActive = true;
+        isStopped = false;
+
+        // Face toward target
+        if (moveDirection.sqrMagnitude > 0.001f)
         {
-            navAgent.updateRotation = true;  // NavMesh handles rotation
-            navAgent.updateUpAxis = false;   // Don't update Y axis (use gravity)
+            transform.rotation = Quaternion.LookRotation(moveDirection);
         }
     }
 
     /// <summary>
-    /// 목적지 설정 (NavMesh 경로 계산)
+    /// Physics-based movement in FixedUpdate
+    /// Called from Monster.FixedUpdate()
     /// </summary>
-    public void SetDestination(Vector3 destination)
-    {
-        targetPosition = destination;
-        hasTarget = true;
-
-        if (navAgent != null && navAgent.isOnNavMesh)
-        {
-            navAgent.SetDestination(destination);
-        }
-    }
-
-    /// <summary>
-    /// 리스폰 시 상태 초기화
-    /// </summary>
-    public void ResetState()
-    {
-        hasTarget = false;
-        targetPosition = Vector3.zero;
-
-        if (navAgent != null && navAgent.isOnNavMesh)
-        {
-            navAgent.ResetPath();
-            navAgent.velocity = Vector3.zero;
-        }
-    }
-
-    //JML: NavMesh-based movement method
+    /// <param name="entity">Monster entity implementing IMovable</param>
+    /// <param name="speed">Movement speed</param>
     public void Move<T>(T entity, float speed) where T : IMovable
     {
-        if (navAgent == null)
-        {
-            Debug.LogError("[MonsterMove] NavMeshAgent is null!");
-            return;
-        }
+        if (rb == null || !isActive) return;
 
-        // Set NavMeshAgent speed
-        navAgent.speed = speed;
+        currentSpeed = speed;
 
-        if (!entity.IsWallHit)
+        if (!entity.IsWallHit && !isStopped)
         {
-            // Enable NavMeshAgent when not hitting wall
-            if (!navAgent.enabled)
+            // 목표 속도 직접 설정 (Y축만 0 고정)
+            Vector3 targetVelocity = moveDirection * speed;
+            targetVelocity.y = 0f;
+
+            rb.linearVelocity = targetVelocity;
+
+            // Wall 방향 바라보기 (즉시 회전)
+            if (moveDirection.sqrMagnitude > 0.001f)
             {
-                navAgent.enabled = true;
+                transform.rotation = Quaternion.LookRotation(moveDirection);
             }
-
-            // NavMeshAgent is moving if it has a path and remaining distance > threshold
-            bool isMoving = hasTarget &&
-                           navAgent.hasPath &&
-                           navAgent.remainingDistance > navAgent.stoppingDistance;
 
             if (monsterAnimator != null)
             {
-                monsterAnimator.SetBool(ANIM_IS_MOVING, isMoving);
+                monsterAnimator.SetBool(ANIM_IS_MOVING, true);
             }
         }
         else
         {
-            // Stop NavMeshAgent when hitting wall
-            if (navAgent.enabled && navAgent.isOnNavMesh)
-            {
-                navAgent.ResetPath();
-                navAgent.velocity = Vector3.zero;
-            }
+            // 정지
+            rb.linearVelocity = Vector3.zero;
 
             if (monsterAnimator != null)
             {
@@ -107,50 +90,109 @@ public class MonsterMove : MonoBehaviour
     }
 
     /// <summary>
-    /// Navigate to a target transform (updates destination every frame)
+    /// Set destination (updates move direction)
     /// </summary>
-    public void Navigate(Transform target)
+    public void SetDestination(Vector3 destination)
     {
-        if (target != null && navAgent != null && navAgent.isOnNavMesh)
+        Vector3 direction = (destination - transform.position);
+        direction.y = 0f;
+        moveDirection = direction.normalized;
+
+        isStopped = false;
+
+        // Face toward destination
+        if (moveDirection.sqrMagnitude > 0.001f)
         {
-            SetDestination(target.position);
+            transform.rotation = Quaternion.LookRotation(moveDirection);
         }
     }
 
     /// <summary>
-    /// Enable/Disable NavMeshAgent (used when Dizzy or stunned)
+    /// Update move direction toward target (called every FixedUpdate for tracking)
+    /// </summary>
+    public void UpdateDirection(Vector3 targetPosition)
+    {
+        Vector3 direction = (targetPosition - transform.position);
+        direction.y = 0f;
+        if (direction.sqrMagnitude > 0.01f)
+        {
+            moveDirection = direction.normalized;
+        }
+    }
+
+    /// <summary>
+    /// Enable/Disable movement (used for CC states like Dizzy, Root)
     /// </summary>
     public void SetEnabled(bool enabled)
     {
-        if (navAgent != null)
+        isStopped = !enabled;
+
+        if (isStopped && rb != null)
         {
-            navAgent.enabled = enabled;
+            rb.linearVelocity = Vector3.zero;
         }
     }
 
     /// <summary>
-    /// NavMesh 위로 Warp (스폰 시 호출)
+    /// Stop movement immediately
+    /// </summary>
+    public void Stop()
+    {
+        isStopped = true;
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+        }
+
+        if (monsterAnimator != null)
+        {
+            monsterAnimator.SetBool(ANIM_IS_MOVING, false);
+        }
+    }
+
+    /// <summary>
+    /// Reset state for pooling reuse
+    /// </summary>
+    public void ResetState()
+    {
+        moveDirection = Vector3.zero;
+        currentSpeed = 0f;
+        isActive = false;
+        isStopped = false;
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+        }
+    }
+
+    /// <summary>
+    /// Set position directly (replaces NavMesh Warp)
     /// </summary>
     public void WarpToPosition(Vector3 position)
     {
-        if (navAgent != null && navAgent.enabled)
-        {
-            navAgent.Warp(position);
+        transform.position = position;
 
-            // Avoidance Priority 랜덤화 (0~99)
-            // 같은 priority면 서로 비키다가 멈춤 → 랜덤으로 우선순위 분배
-            navAgent.avoidancePriority = Random.Range(0, 100);
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
         }
     }
 
     /// <summary>
-    /// Check if agent has reached destination
+    /// Get current move direction
     /// </summary>
-    public bool HasReachedDestination()
+    public Vector3 GetMoveDirection()
     {
-        if (navAgent == null || !navAgent.hasPath)
-            return false;
+        return moveDirection;
+    }
 
-        return navAgent.remainingDistance <= navAgent.stoppingDistance;
+    /// <summary>
+    /// Check if currently moving
+    /// </summary>
+    public bool IsMoving()
+    {
+        return isActive && !isStopped && moveDirection.sqrMagnitude > 0.001f;
     }
 }

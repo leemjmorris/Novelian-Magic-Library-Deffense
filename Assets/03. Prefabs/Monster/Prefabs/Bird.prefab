@@ -1281,7 +1281,6 @@ GameObject:
   - component: {fileID: 2361259873796597274}
   - component: {fileID: 5640878199560344715}
   - component: {fileID: 148658948680813542}
-  - component: {fileID: 4138376424403407492}
   - component: {fileID: 1215303927966698301}
   - component: {fileID: 146437658442275889}
   m_Layer: 7
@@ -1379,30 +1378,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!195 &4138376424403407492
-NavMeshAgent:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2361259873805981146}
-  m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.5
-  m_Speed: 10
-  m_Acceleration: 8
-  avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 0.5
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 2
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
+  m_Size: {x: 2.9572742, y: 4.281615, z: 1.8934282}
+  m_Center: {x: -0.001420676, y: 0.48123726, z: -0.14367335}
 --- !u!114 &1215303927966698301
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1415,7 +1392,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 068ef2c38d6093243aa0dd5c99c86450, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  navAgent: {fileID: 4138376424403407492}
   monsterAnimator: {fileID: 2361259873796597274}
 --- !u!114 &146437658442275889
 MonoBehaviour:
@@ -1437,9 +1413,7 @@ MonoBehaviour:
   collider3D: {fileID: 148658948680813542}
   renderers:
   - {fileID: 2361259873800706266}
-  ragdollDuration: 5
   dissolveDuration: 2
-  deathKnockbackForce: 8
   dustParticlePrefab: {fileID: 0}
   dissolveSettings: {fileID: 11400000, guid: f2353f89a7bbdbf4fa23df2d7bc3f92f, type: 2}
   moveSpeed: 10

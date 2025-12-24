@@ -16,8 +16,11 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Panel")]
         [SerializeField] private GameObject panel;
 
+        [Header("Rank Image")]
+        [SerializeField] private Image rankImage;
+        [SerializeField] private Sprite[] rankSprites; // 순서: S(0), A(1), B(2), F(3)
+
         [Header("Text Fields")]
-        [SerializeField] private TextMeshProUGUI rankText;
         [SerializeField] private TextMeshProUGUI stageNameText;
         [SerializeField] private TextMeshProUGUI progressTimeText;
         [SerializeField] private TextMeshProUGUI rewardText;
@@ -111,10 +114,14 @@ namespace NovelianMagicLibraryDefense.UI
                 stageNameText.text = $"스테이지 {SelectedStage.Data.Chapter_Number}";
             }
 
-            // 랭크 계산 및 표시
-            if (rankText != null)
+            // 랭크 계산 및 이미지 표시
+            if (rankImage != null && rankSprites != null && rankSprites.Length > 0)
             {
-                rankText.text = CalculateRank();
+                int rankIndex = CalculateRankIndex();
+                if (rankIndex >= 0 && rankIndex < rankSprites.Length)
+                {
+                    rankImage.sprite = rankSprites[rankIndex];
+                }
             }
 
             // 진행시간 + 처치 몬스터
@@ -133,16 +140,31 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// 랭크 계산 (Wall HP 비율 기반)
-        /// S: 91~100%, A: 71~90%, B: 51~70%, C: 0~50%
+        /// 랭크 인덱스 계산 (Wall HP 비율 기반)
+        /// S(0): 91~100%, A(1): 71~90%, B(2): 51~70%, F(3): 0~50%
         /// </summary>
-        private string CalculateRank()
+        private int CalculateRankIndex()
         {
             // Wall HP 비율에 따른 랭크 (HP가 많이 남을수록 높은 랭크)
-            if (cachedWallHpRatio >= 0.91f) return "S";
-            if (cachedWallHpRatio >= 0.71f) return "A";
-            if (cachedWallHpRatio >= 0.51f) return "B";
-            return "C";
+            if (cachedWallHpRatio >= 0.91f) return 0; // S
+            if (cachedWallHpRatio >= 0.71f) return 1; // A
+            if (cachedWallHpRatio >= 0.51f) return 2; // B
+            return 3; // F
+        }
+
+        /// <summary>
+        /// 랭크 문자열 반환 (로그용)
+        /// </summary>
+        private string GetRankString(int rankIndex)
+        {
+            return rankIndex switch
+            {
+                0 => "S",
+                1 => "A",
+                2 => "B",
+                3 => "F",
+                _ => "?"
+            };
         }
 
         /// <summary>

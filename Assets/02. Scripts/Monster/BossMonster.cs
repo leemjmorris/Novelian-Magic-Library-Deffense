@@ -155,7 +155,27 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
             return;
         }
 
-        monsterMove.Move(this, moveSpeed);
+        // Wall의 ClosestPoint 방향으로 계속 조준 (원형 Wall 대응)
+        if (targetWallCollider != null && monsterMove != null)
+        {
+            Vector3 closestPoint = targetWallCollider.ClosestPoint(transform.position);
+            monsterMove.UpdateDirection(closestPoint);
+        }
+
+        // 디버그: 이동 상태 확인
+        if (Time.frameCount % 120 == 0)
+        {
+            Debug.Log($"[BossMonster] 이동 중: moveSpeed={moveSpeed}, monsterMove={monsterMove != null}, targetWallCollider={targetWallCollider != null}, rb={rb != null}");
+        }
+
+        if (monsterMove != null)
+        {
+            monsterMove.Move(this, moveSpeed);
+        }
+        else
+        {
+            Debug.LogError("[BossMonster] monsterMove가 null입니다!");
+        }
     }
 
     //JML: Game logic in Update
@@ -228,7 +248,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         bool wasInRange = isInAttackRange;
         isInAttackRange = distanceToWall <= attackRange;
 
-        // 공격 범위 진입 시 NavMeshAgent 정지
+        // 공격 범위 진입 시 이동 정지
         if (isInAttackRange && !wasInRange)
         {
             if (monsterMove != null)
@@ -236,7 +256,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
                 monsterMove.SetEnabled(false);
             }
         }
-        // 공격 범위 이탈 시 NavMeshAgent 재활성화 (Dead나 Stunned가 아닐 때)
+        // 공격 범위 이탈 시 이동 재활성화 (Dead나 Stunned가 아닐 때)
         else if (!isInAttackRange && wasInRange && !isDead && !isStunned)
         {
             // Issue #476: 거리 기반 체크가 물리 충돌보다 우선
@@ -246,8 +266,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
             if (monsterMove != null)
             {
                 monsterMove.SetEnabled(true);
-                // NavMeshAgent 목적지 재설정 (넉백 후 다시 Wall로 이동)
-                // targetWallCollider 사용 (wall은 OnCollisionExit에서 null 될 수 있음)
+                // 목적지 재설정 (넉백 후 다시 Wall로 이동)
                 if (targetWallCollider != null)
                 {
                     monsterMove.SetDestination(targetWallCollider.transform.position);
@@ -691,6 +710,30 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         {
             wall = collision.gameObject.GetComponent<Wall>();
             isWallHit = true;
+
+            // Wall에 닿으면 이동 비활성화
+            if (monsterMove != null)
+            {
+                monsterMove.SetEnabled(false);
+            }
+
+            // Rigidbody velocity 초기화
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+            }
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        // Wall과 충돌 중일 때 뒤로 밀리지 않도록 처리
+        if (collision.gameObject.CompareTag(Tag.Wall) && isWallHit)
+        {
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+            }
         }
     }
 
@@ -700,6 +743,12 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         {
             isWallHit = false;
             wall = null;
+
+            // Wall에서 떨어지면 이동 다시 활성화 (Dead나 Stunned가 아닐 때)
+            if (monsterMove != null && !isDead && !isStunned)
+            {
+                monsterMove.SetEnabled(true);
+            }
         }
     }
 
@@ -725,7 +774,26 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         stunCts?.Dispose();
         stunCts = null;
 
-        // 목적지는 WaveManager에서 SetDestination()으로 설정됨
+        // Rigidbody 초기 상태 설정 (물리 기반 이동)
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+            rb.useGravity = false;
+            rb.mass = 20f; // 보스는 더 무거움 - 밀림 감소
+            rb.linearDamping = 5f; // 저항 추가 - 밀림 후 빠른 정지
+            rb.interpolation = RigidbodyInterpolation.Interpolate; // 부드러운 이동
+            rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
+        // MonsterMove 초기화 (Rigidbody + Wall 방향)
+        // targetWallCollider가 설정되어 있으면 해당 위치로, 없으면 전방으로
+        if (monsterMove != null && rb != null)
+        {
+            Vector3 targetPos = targetWallCollider != null ? targetWallCollider.transform.position : transform.position + transform.forward * 10f;
+            monsterMove.Initialize(rb, targetPos);
+        }
 
         TargetRegistry.Instance.RegisterTarget(this);
     }

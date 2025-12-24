@@ -407,6 +407,7 @@ GameObject:
   - component: {fileID: 729743816}
   - component: {fileID: 729743817}
   - component: {fileID: 729743818}
+  - component: {fileID: 729743819}
   m_Layer: 0
   m_Name: ManagerObj
   m_TagString: Untagged
@@ -612,6 +613,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b5243fcaa40ebfb4592bf0d314c90aeb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &729743819
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 729743801}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6aa6a74355726647a02e9a0585af90e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugMode: 0
+  debugTimeOffsetMs: 0
 --- !u!1 &1456735814
 GameObject:
   m_ObjectHideFlags: 0
@@ -737,6 +752,7 @@ MonoBehaviour:
   partySynergyManager: {fileID: 729743818}
   minimumLoadTime: 1
   firebaseSaveManager: {fileID: 729743815}
+  serverTimeManager: {fileID: 729743819}
 --- !u!4 &1862903903
 Transform:
   m_ObjectHideFlags: 0
@@ -847,6 +863,10 @@ PrefabInstance:
     - target: {fileID: 7931553648996063658, guid: 848230388df16b74dac31cde524f91fc, type: 3}
       propertyPath: m_Name
       value: Warning Panel
+      objectReference: {fileID: 0}
+    - target: {fileID: 7931553648996063658, guid: 848230388df16b74dac31cde524f91fc, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -48,7 +48,7 @@ public class CharacterPanel : MonoBehaviour
             var characterSlot = slot.GetComponent<LibraryCharacterSlot>();
 
             // InfoPanel 연결
-            characterSlot.SetInfoPanelObj(characterInfoPanel);
+            characterSlot.SetInfoPanel(infoPanel);
 
             // 테이블 데이터로 초기화
             characterSlot.InitSlot(characterData);

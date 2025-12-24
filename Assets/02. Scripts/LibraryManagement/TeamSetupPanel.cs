@@ -32,6 +32,9 @@ public class TeamSetupPanel : MonoBehaviour
     [Header("Deck Slots")]
     [SerializeField] private List<DeckSlot> deckSlots = new List<DeckSlot>();
 
+    [Header("Preset Marks")]
+    [SerializeField] private List<PresetMark> presetMarks = new List<PresetMark>();
+
     [Header("Deck Unset Panel")]
     [SerializeField] private GameObject deckUnsetPanel;
     [SerializeField] private GameObject raycastPanel;
@@ -56,6 +59,15 @@ public class TeamSetupPanel : MonoBehaviour
         for (int i = 0; i < deckSlots.Count; i++)
         {
             deckSlots[i].SetSlotIndex(i);
+        }
+
+        // 프리셋 마크 초기화
+        InitializePresetMarks();
+
+        // DeckManager 프리셋 변경 이벤트 구독
+        if (DeckManager.Instance != null)
+        {
+            DeckManager.Instance.OnPresetChanged += OnPresetChangedFromManager;
         }
 
         // 모든 캐릭터 데이터 가져오기
@@ -94,6 +106,9 @@ public class TeamSetupPanel : MonoBehaviour
     {
         // Start 이후에만 복원 (첫 실행 시 Start에서 처리)
         if (!isInitialized) return;
+
+        // 프리셋 마크 상태 갱신
+        RefreshPresetMarks();
 
         // 패널 활성화 시 DeckManager에서 덱 복원
         RestoreDeckFromManager();
@@ -397,6 +412,113 @@ public class TeamSetupPanel : MonoBehaviour
 
     #endregion
 
+    #region Preset Management
+
+    /// <summary>
+    /// 프리셋 마크 초기화
+    /// </summary>
+    private void InitializePresetMarks()
+    {
+        for (int i = 0; i < presetMarks.Count; i++)
+        {
+            if (presetMarks[i] != null)
+            {
+                presetMarks[i].Initialize(i, this);
+            }
+        }
+
+        // 현재 프리셋에 맞게 UI 업데이트
+        RefreshPresetMarks();
+        Debug.Log($"[TeamSetupPanel] 프리셋 마크 초기화 완료. 현재 프리셋: {GetCurrentPresetIndex() + 1}");
+    }
+
+    /// <summary>
+    /// 프리셋 마크 클릭 시 호출 (PresetMark에서 호출)
+    /// </summary>
+    public void OnPresetMarkClicked(int presetIndex)
+    {
+        if (DeckManager.Instance == null)
+        {
+            Debug.LogWarning("[TeamSetupPanel] DeckManager.Instance가 null입니다.");
+            return;
+        }
+
+        int currentPreset = DeckManager.Instance.GetCurrentPresetIndex();
+        if (presetIndex == currentPreset)
+        {
+            Debug.Log($"[TeamSetupPanel] 이미 프리셋 {presetIndex + 1}이 선택되어 있습니다.");
+            return;
+        }
+
+        // 현재 덱 상태를 먼저 저장
+        SaveCurrentDeckToPreset();
+
+        // 프리셋 전환
+        DeckManager.Instance.SwitchPreset(presetIndex);
+
+        Debug.Log($"[TeamSetupPanel] 프리셋 {currentPreset + 1} → {presetIndex + 1} 전환");
+    }
+
+    /// <summary>
+    /// DeckManager에서 프리셋 변경 이벤트 수신
+    /// </summary>
+    private void OnPresetChangedFromManager(int newPresetIndex)
+    {
+        // UI 업데이트
+        RefreshPresetMarks();
+        RestoreDeckFromManager();
+        RefreshAllSlots();
+        RefreshActiveSynergies();
+
+        Debug.Log($"[TeamSetupPanel] 프리셋 변경 이벤트 수신: {newPresetIndex + 1}");
+    }
+
+    /// <summary>
+    /// 프리셋 마크 UI 갱신
+    /// </summary>
+    private void RefreshPresetMarks()
+    {
+        int currentPreset = GetCurrentPresetIndex();
+
+        for (int i = 0; i < presetMarks.Count; i++)
+        {
+            if (presetMarks[i] != null)
+            {
+                presetMarks[i].SetSelected(i == currentPreset);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 현재 선택된 프리셋 인덱스 반환
+    /// </summary>
+    private int GetCurrentPresetIndex()
+    {
+        if (DeckManager.Instance != null)
+        {
+            return DeckManager.Instance.GetCurrentPresetIndex();
+        }
+        return 0;
+    }
+
+    /// <summary>
+    /// 현재 UI 덱 상태를 현재 프리셋에 저장
+    /// </summary>
+    private void SaveCurrentDeckToPreset()
+    {
+        if (DeckManager.Instance == null) return;
+
+        for (int i = 0; i < deckSlots.Count; i++)
+        {
+            int characterId = deckSlots[i].IsSet ? deckSlots[i].CharacterId : -1;
+            DeckManager.Instance.SetCharacterAtIndex(i, characterId);
+        }
+
+        Debug.Log($"[TeamSetupPanel] 현재 덱을 프리셋 {GetCurrentPresetIndex() + 1}에 저장");
+    }
+
+    #endregion
+
     private void OnDisable()
     {
         // JML: 덱 상태 디버그 로그
@@ -658,15 +780,15 @@ public class TeamSetupPanel : MonoBehaviour
         // 효과값 포맷팅 (정수면 소수점 제거)
         string valueText = effectValue % 1 == 0 ? ((int)effectValue).ToString() : effectValue.ToString("F1");
 
-        // 플레이스홀더 {0}이 있으면 대체, 없으면 그대로 반환
+        // 플레이스홀더 {0}이 있으면 대체, 없으면 개행 후 +N% 형식으로 표시
         string description = descriptionString.Text;
         if (description.Contains("{0}"))
         {
-            return string.Format(description, valueText);
+            return string.Format(description, valueText + "%");
         }
         else
         {
-            return $"{description} {valueText}";
+            return $"{description}\n+{valueText}%";
         }
     }
 
@@ -679,5 +801,11 @@ public class TeamSetupPanel : MonoBehaviour
             partySynergyButton.onClick.RemoveListener(OnTabPartySynergyButtonClicked);
         if (characterSelectionButton != null)
             characterSelectionButton.onClick.RemoveListener(OnTabCharacterButtonClicked);
+
+        // DeckManager 이벤트 구독 해제
+        if (DeckManager.Instance != null)
+        {
+            DeckManager.Instance.OnPresetChanged -= OnPresetChangedFromManager;
+        }
     }
 }

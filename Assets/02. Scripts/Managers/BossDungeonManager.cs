@@ -369,10 +369,11 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
             }
 
-            // 스폰 위치
+            // 스폰 위치 (Y값은 지면 높이로 고정)
             Vector3 spawnPos = bossSpawner != null
                 ? bossSpawner.GetRandomSpawnPosition()
                 : Vector3.zero;
+            spawnPos.y = 1f;
 
             // Monster로 스폰 (모든 프리팹에 Monster 컴포넌트가 있음)
             Monster monsterComponent = poolManager.SpawnByKey<Monster>(bossAddressableKey, spawnPos);

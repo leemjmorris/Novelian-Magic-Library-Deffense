@@ -298,14 +298,19 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
     /// </summary>
     public void ShowPanel()
     {
-        if (panel != null)
-        {
-            panel.SetActive(true);
-        }
-        else
+        // 먼저 게임 오브젝트 자체를 활성화
+        if (!gameObject.activeSelf)
         {
             gameObject.SetActive(true);
         }
+
+        // panel이 지정되어 있으면 추가로 활성화
+        if (panel != null && !panel.activeSelf)
+        {
+            panel.SetActive(true);
+        }
+
+        Debug.Log($"[PartySynergyEnhancementPanel] ShowPanel - gameObject.active: {gameObject.activeSelf}, panel: {(panel != null ? panel.activeSelf.ToString() : "null")}");
     }
 
     /// <summary>
@@ -313,14 +318,19 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
     /// </summary>
     public void HidePanel()
     {
+        // panel이 지정되어 있으면 비활성화
         if (panel != null)
         {
             panel.SetActive(false);
         }
-        else
+
+        // 게임 오브젝트 자체도 비활성화
+        if (gameObject.activeSelf)
         {
             gameObject.SetActive(false);
         }
+
+        Debug.Log($"[PartySynergyEnhancementPanel] HidePanel - gameObject.active: {gameObject.activeSelf}");
     }
 
     /// <summary>

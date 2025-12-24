@@ -1,8 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Cysharp.Threading.Tasks;
-using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.UI
@@ -26,6 +24,9 @@ namespace NovelianMagicLibraryDefense.UI
 
         [Header("Settings")]
         [SerializeField] private int floorIndex;         // 스테이지 번호 (1~100)
+
+        [Header("PopUp Panel (Issue #511)")]
+        [SerializeField] private BossDungeonPopUpPanel popUpPanel;
 
         private bool isLocked = true;
 
@@ -123,25 +124,16 @@ namespace NovelianMagicLibraryDefense.UI
             Debug.Log($"[BossDungeonButton] Dungeon_ID={cachedDungeonData.Dungeon_ID}, " +
                       $"Floor={cachedDungeonData.Floor_Index}, Boss_ID={cachedDungeonData.Boss_ID}, " +
                       $"Time_Limit={cachedDungeonData.Time_Limit}초");
-            Debug.Log($"[BossDungeonButton] SelectedBossDungeon.HasSelection = {SelectedBossDungeon.HasSelection}");
-            Debug.Log($"[BossDungeonButton] 씬 전환 시작: BossDungeonScene으로 이동...");
 
-            // 씬 전환
-            LoadBossDungeonSceneAsync().Forget();
-        }
-
-        /// <summary>
-        /// 보스 던전 씬으로 전환 (페이드 효과 포함)
-        /// </summary>
-        private async UniTaskVoid LoadBossDungeonSceneAsync()
-        {
-            if (FadeController.Instance != null)
+            // Issue #511: 씬 직접 전환 대신 확인 패널 표시
+            if (popUpPanel != null)
             {
-                await FadeController.Instance.LoadSceneWithFade(SceneName.BossDungeonScene);
+                popUpPanel.Show();
+                Debug.Log("[BossDungeonButton] 확인 패널 표시");
             }
             else
             {
-                await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(SceneName.BossDungeonScene);
+                Debug.LogWarning("[BossDungeonButton] popUpPanel이 연결되지 않음! Inspector에서 연결해주세요.");
             }
         }
 

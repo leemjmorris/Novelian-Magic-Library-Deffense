@@ -21,12 +21,17 @@ public class CurrencyManager : MonoBehaviour
     public const int APPLICATION_ID = 1603; // 지원서
     public const int RECOMMENDATION_ID = 1604; // 추천서
     public const int MAGIC_STONE_ID = 1605; // 마석
+    public const int DUNGEON_PASS_ID = 1606; // 던전 출입증
     public const int AP_ID = 1607;          // AP (행동력)
 
     // AP 회복 설정
     public const float AP_RECOVERY_INTERVAL_SECONDS = 900f; // 15분 = 900초
+    public const long AP_RECOVERY_INTERVAL_MS = 900 * 1000; // 15분 (밀리초)
     private float apRecoveryTimer = 0f;
     private int maxAP = 30;
+
+    // 마지막 AP 동기화 시간 (서버 시간, 밀리초)
+    private long lastAPSyncTimeMs = 0;
 
     // 기존 Gold 호환용
     public int Gold => GetCurrency(GOLD_ID);
@@ -58,7 +63,7 @@ public class CurrencyManager : MonoBehaviour
         currencies[APPLICATION_ID] = 0;     // 지원서
         currencies[RECOMMENDATION_ID] = 0;  // 추천서
         currencies[MAGIC_STONE_ID] = 0;     // 마석
-        currencies[1606] = 0;               // 추가 재화 (StringTable 미등록)
+        currencies[DUNGEON_PASS_ID] = 0;    // 던전 출입증
         currencies[AP_ID] = 30;             // AP (테스트용 최대치 30)
 
         // CurrencyTable에서 최대 AP 조회
@@ -221,6 +226,7 @@ public class CurrencyManager : MonoBehaviour
 
     /// <summary>
     /// Firebase 데이터로 재화 설정 (BootScene에서 호출)
+    /// 오프라인 AP 회복 계산 포함
     /// </summary>
     public void SetCurrenciesFromFirebase(CurrencySaveData data)
     {
@@ -231,9 +237,84 @@ public class CurrencyManager : MonoBehaviour
         currencies[APPLICATION_ID] = data.application;
         currencies[RECOMMENDATION_ID] = data.recommendation;
         currencies[MAGIC_STONE_ID] = data.magicStone;
-        currencies[AP_ID] = data.ap;
+        currencies[DUNGEON_PASS_ID] = data.dungeonPass;
 
-        Debug.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase에서 재화 로드 완료 - 골드: {data.gold}, AP: {data.ap}");
+        // AP 오프라인 회복 계산
+        int loadedAP = data.ap;
+        lastAPSyncTimeMs = data.apLastSyncTimeMs;
+
+        int offlineRecoveredAP = CalculateOfflineAPRecovery(loadedAP, lastAPSyncTimeMs);
+        int finalAP = Mathf.Min(loadedAP + offlineRecoveredAP, maxAP); // 최대치 제한
+        currencies[AP_ID] = finalAP;
+
+        // 현재 서버 시간으로 동기화 시간 업데이트
+        if (ServerTimeManager.Instance != null && ServerTimeManager.Instance.IsSynced)
+        {
+            lastAPSyncTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
+        }
+
+        Debug.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase에서 재화 로드 완료 - 골드: {data.gold}, AP: {loadedAP}→{finalAP} (오프라인 +{offlineRecoveredAP}), 던전출입증: {data.dungeonPass}");
+
+        // 오프라인 회복이 있었거나 동기화 시간이 변경되었으면 Firebase에 저장
+        if (offlineRecoveredAP > 0 || lastAPSyncTimeMs != data.apLastSyncTimeMs)
+        {
+            SaveToFirebase();
+            Debug.Log($"<color=#3EB489>[CurrencyManager]</color> 동기화 시간 업데이트 저장: {lastAPSyncTimeMs}");
+        }
+    }
+
+    /// <summary>
+    /// 오프라인 AP 회복량 계산
+    /// </summary>
+    /// <param name="currentAP">현재 AP</param>
+    /// <param name="lastSyncTimeMs">마지막 동기화 시간 (서버 시간, 밀리초)</param>
+    /// <returns>회복할 AP 양</returns>
+    private int CalculateOfflineAPRecovery(int currentAP, long lastSyncTimeMs)
+    {
+        // ServerTimeManager 확인
+        if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
+        {
+            Debug.LogWarning("[CurrencyManager] ServerTimeManager가 초기화되지 않아 오프라인 회복 계산 불가");
+            return 0;
+        }
+
+        // 마지막 동기화 시간이 없으면 회복 없음
+        if (lastSyncTimeMs <= 0)
+        {
+            Debug.Log("[CurrencyManager] 마지막 동기화 시간 없음 - 오프라인 회복 0");
+            return 0;
+        }
+
+        // 시간 유효성 검증 (미래 시간이면 무효)
+        if (!ServerTimeManager.Instance.IsValidSavedTime(lastSyncTimeMs))
+        {
+            Debug.LogWarning("[CurrencyManager] 저장된 시간이 유효하지 않음 - 오프라인 회복 0 (시간 조작 의심)");
+            return 0;
+        }
+
+        // 이미 최대치면 회복 불필요
+        if (currentAP >= maxAP)
+        {
+            return 0;
+        }
+
+        // 오프라인 경과 시간 계산 (최대 24시간)
+        long offlineElapsedMs = ServerTimeManager.Instance.GetOfflineElapsedMs(lastSyncTimeMs);
+
+        // 회복량 계산 (15분당 1 AP)
+        int recoveryCount = (int)(offlineElapsedMs / AP_RECOVERY_INTERVAL_MS);
+
+        // 최대치까지만 회복
+        int maxRecovery = maxAP - currentAP;
+        int actualRecovery = Mathf.Min(recoveryCount, maxRecovery);
+
+        if (actualRecovery > 0)
+        {
+            float offlineHours = offlineElapsedMs / 3600000f;
+            Debug.Log($"[CurrencyManager] 오프라인 AP 회복: {offlineHours:F1}시간 경과, {actualRecovery} AP 회복");
+        }
+
+        return actualRecovery;
     }
 
     /// <summary>
@@ -251,6 +332,12 @@ public class CurrencyManager : MonoBehaviour
             return;
         }
 
+        // 서버 시간으로 동기화 시간 업데이트
+        if (ServerTimeManager.Instance != null && ServerTimeManager.Instance.IsSynced)
+        {
+            lastAPSyncTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
+        }
+
         var data = new CurrencySaveData
         {
             gold = currencies[GOLD_ID],
@@ -258,8 +345,10 @@ public class CurrencyManager : MonoBehaviour
             application = currencies[APPLICATION_ID],
             recommendation = currencies[RECOMMENDATION_ID],
             magicStone = currencies[MAGIC_STONE_ID],
+            dungeonPass = currencies[DUNGEON_PASS_ID],
             ap = currencies[AP_ID],
-            apRecoveryTime = DateTime.UtcNow.ToString("o")
+            apLastSyncTimeMs = lastAPSyncTimeMs,
+            apRecoveryTime = "" // 레거시 필드 (더 이상 사용 안 함)
         };
 
         FirebaseSaveManager.Instance.SaveCurrenciesAsync(FirebaseManager.Instance.CurrentUserId, data).Forget();
