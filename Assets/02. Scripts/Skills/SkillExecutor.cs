@@ -67,6 +67,12 @@ namespace Novelian.Combat
         private const float FORWARD_OFFSET = 5f;
         private const float TRAP_SPAWN_OFFSET = 3f;
 
+        // Beam 서포트 스킬 기본값
+        private const float DEFAULT_DOT_DAMAGE_RATIO = 0.1f;
+        private const float DEFAULT_DOT_DURATION = 5f;
+        private const float DEFAULT_DOT_TICK_INTERVAL = 0.5f;
+        private const float DEFAULT_CC_DURATION = 3f;
+
         // Falling Projectile Constants
         private const float DEFAULT_FALL_HEIGHT = 15f;
         private const float DEFAULT_FALL_DURATION = 0.5f;
@@ -301,7 +307,10 @@ namespace Novelian.Combat
                 SpawnHitEffect(hitPrefab, targetPos, hitScale);
 
                 float damage = CalculateDamage(mainSkill, supportSkill);
-                TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage);
+                TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, hitTarget =>
+                {
+                    ApplyAOEStatusEffects(hitTarget, supportSkill, damage);
+                });
 
                 if (aoeObj != null) Destroy(aoeObj, 2f);
             }
@@ -556,6 +565,8 @@ namespace Novelian.Combat
 
         /// <summary>
         /// 빔 스킬 실행 - 관통형 (화면 경계까지 발사, 모든 몬스터에 틱 데미지)
+        /// 서포트 스킬: MultiShot(다중 빔), CC, DOT, Enhance
+        /// (Bounce는 BeamRay에서 지원하지 않음 - Projectile만 지원)
         /// </summary>
         private async UniTask ExecuteBeamAsync(
             Transform caster,
@@ -568,26 +579,69 @@ namespace Novelian.Combat
             Vector3 spawnPos = caster.position + Vector3.up * DEFAULT_SPAWN_HEIGHT;
 
             // 빔 방향 계산 (타겟 방향, Y축 고정)
-            Vector3 direction = CalculateBeamDirection(caster, target, spawnPos);
+            Vector3 baseDirection = CalculateBeamDirection(caster, target, spawnPos);
 
-            GameObject beamObj = Instantiate(prefab, spawnPos, Quaternion.LookRotation(direction));
-
-            // 화면 경계까지의 빔 길이 계산
-            float beamLength = CalculateBeamLengthToScreenBoundary(spawnPos, direction);
-            ConfigureHovlLaser(beamObj, beamLength);
+            // MultiShot: 여러 방향으로 빔 발사
+            int beamCount = 1;
+            float spreadAngle = 15f;
+            if (supportSkill != null && supportSkill.IsMultiShotSupport)
+            {
+                beamCount = supportSkill.count > 0 ? supportSkill.count : 3;
+                spreadAngle = supportSkill.spread_angle > 0 ? supportSkill.spread_angle : 15f;
+            }
 
             float duration = mainSkill.duration > 0 ? mainSkill.duration : DEFAULT_BEAM_DURATION;
             float damage = CalculateDamage(mainSkill, supportSkill);
+
+            // 각 빔 방향 계산 및 실행
+            var beamTasks = new System.Collections.Generic.List<UniTask>();
+            for (int i = 0; i < beamCount; i++)
+            {
+                Vector3 direction = baseDirection;
+                if (beamCount > 1)
+                {
+                    float angleOffset = spreadAngle * (i - (beamCount - 1) / 2f);
+                    direction = Quaternion.Euler(0, angleOffset, 0) * baseDirection;
+                }
+
+                beamTasks.Add(ExecuteSingleBeamAsync(caster, spawnPos, direction, prefab, duration, damage, supportSkill));
+            }
+
+            await UniTask.WhenAll(beamTasks);
+        }
+
+        /// <summary>
+        /// 단일 빔 실행
+        /// </summary>
+        private async UniTask ExecuteSingleBeamAsync(
+            Transform caster,
+            Vector3 spawnPos,
+            Vector3 direction,
+            GameObject prefab,
+            float duration,
+            float damage,
+            SupportSkillData supportSkill)
+        {
+            GameObject beamObj = Instantiate(prefab, spawnPos, Quaternion.LookRotation(direction));
             int monsterLayerMask = LayerMask.GetMask("Monster");
+
+            float beamLength = CalculateBeamLengthToScreenBoundary(spawnPos, direction);
+            ConfigureHovlLaser(beamObj, beamLength);
 
             float elapsed = 0f;
             while (elapsed < duration && beamObj != null)
             {
-                // 빔 위치 업데이트 (캐스터 위치 따라감, 방향은 고정)
-                UpdateBeamPositionOnly(beamObj, caster, direction);
+                // 빔 시작 위치 업데이트 (캐스터 따라감)
+                Vector3 currentStartPos = caster.position + Vector3.up * DEFAULT_SPAWN_HEIGHT;
+                beamObj.transform.position = currentStartPos;
+                beamObj.transform.rotation = Quaternion.LookRotation(direction);
+
+                // 빔 길이 재계산
+                beamLength = CalculateBeamLengthToScreenBoundary(currentStartPos, direction);
+                ConfigureHovlLaser(beamObj, beamLength);
 
                 // 관통형 데미지 적용 (RaycastAll)
-                ApplyPenetratingBeamDamage(beamObj, beamLength, damage, monsterLayerMask);
+                ApplyPenetratingBeamDamage(beamObj, beamLength, damage, monsterLayerMask, supportSkill);
 
                 await UniTask.Delay((int)(BEAM_TICK_INTERVAL * 1000));
                 elapsed += BEAM_TICK_INTERVAL;
@@ -595,6 +649,37 @@ namespace Novelian.Combat
 
             // 레이저 종료
             await CleanupBeam(beamObj);
+        }
+
+        /// <summary>
+        /// 관통형 빔 데미지 적용 (RaycastAll로 경로상 모든 몬스터)
+        /// </summary>
+        private void ApplyPenetratingBeamDamage(GameObject beamObj, float beamLength, float damage, int layerMask, SupportSkillData supportSkill)
+        {
+            if (beamObj == null) return;
+
+            RaycastHit[] hits = Physics.RaycastAll(
+                beamObj.transform.position,
+                beamObj.transform.forward,
+                beamLength,
+                layerMask
+            );
+
+            float tickDamage = damage * BEAM_TICK_INTERVAL;
+
+            foreach (RaycastHit hit in hits)
+            {
+                ITargetable hitTarget = TargetableUtils.GetTargetable(hit.collider);
+                if (hitTarget != null && hitTarget.IsAlive())
+                {
+                    hitTarget.TakeDamage(tickDamage);
+
+                    if (supportSkill != null)
+                    {
+                        ApplyBeamStatusEffects(hitTarget, supportSkill, tickDamage);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -675,32 +760,178 @@ namespace Novelian.Combat
         }
 
         /// <summary>
-        /// 관통형 빔 데미지 적용 (RaycastAll로 경로상 모든 몬스터)
+        /// 빔 스킬의 서포트 스킬 상태효과 적용 (CC, DOT)
         /// </summary>
-        private void ApplyPenetratingBeamDamage(GameObject beamObj, float beamLength, float damage, int layerMask)
+        private void ApplyBeamStatusEffects(ITargetable target, SupportSkillData supportSkill, float baseDamage)
         {
-            if (beamObj == null) return;
+            if (supportSkill == null || target == null) return;
 
-            // RaycastAll로 경로상의 모든 몬스터 감지
-            RaycastHit[] hits = Physics.RaycastAll(
-                beamObj.transform.position,
-                beamObj.transform.forward,
-                beamLength,
-                layerMask
-            );
+            Transform targetTransform = target.GetTransform();
+            if (targetTransform == null) return;
 
-            // 틱당 데미지 계산
-            float tickDamage = damage * BEAM_TICK_INTERVAL;
-
-            foreach (RaycastHit hit in hits)
+            // CC 효과 (Stun/Slow)
+            if (supportSkill.IsCCSupport)
             {
-                ITargetable hitTarget = TargetableUtils.GetTargetable(hit.collider);
-                if (hitTarget != null && hitTarget.IsAlive())
+                ApplyBeamCCEffect(targetTransform, supportSkill);
+            }
+
+            // DOT 효과
+            if (supportSkill.IsDOTSupport)
+            {
+                ApplyBeamDOTEffect(targetTransform, supportSkill, baseDamage);
+            }
+        }
+
+        /// <summary>
+        /// 빔 CC 효과 적용
+        /// </summary>
+        private void ApplyBeamCCEffect(Transform targetTransform, SupportSkillData supportSkill)
+        {
+            float ccDuration = supportSkill.duration > 0 ? supportSkill.duration : DEFAULT_CC_DURATION;
+            CCType ccType = supportSkill.GetCCType();
+
+            if (targetTransform.CompareTag("Monster"))
+            {
+                Monster monster = targetTransform.GetComponent<Monster>();
+                if (monster != null)
                 {
-                    hitTarget.TakeDamage(tickDamage);
+                    if (ccType == CCType.Slow)
+                    {
+                        monster.ApplySlow(supportSkill.slow_rate, ccDuration);
+                    }
+                    else
+                    {
+                        monster.ApplyDizzy(ccDuration);
+                    }
+                }
+            }
+            else if (targetTransform.CompareTag("Boss"))
+            {
+                BossMonster boss = targetTransform.GetComponent<BossMonster>();
+                if (boss != null)
+                {
+                    boss.ApplyStun(ccDuration);
                 }
             }
         }
+
+        /// <summary>
+        /// 빔 DOT 효과 적용
+        /// </summary>
+        private void ApplyBeamDOTEffect(Transform targetTransform, SupportSkillData supportSkill, float baseDamage)
+        {
+            float dotDamage = supportSkill.tick_damage > 0
+                ? supportSkill.tick_damage
+                : baseDamage * DEFAULT_DOT_DAMAGE_RATIO;
+            float dotInterval = supportSkill.tick_interval > 0
+                ? supportSkill.tick_interval
+                : DEFAULT_DOT_TICK_INTERVAL;
+            float dotDuration = supportSkill.duration > 0
+                ? supportSkill.duration
+                : DEFAULT_DOT_DURATION;
+
+            if (targetTransform.CompareTag("Monster"))
+            {
+                Monster monster = targetTransform.GetComponent<Monster>();
+                monster?.ApplyDOT(DOTType.Poison, dotDamage, dotInterval, dotDuration, null);
+            }
+            else if (targetTransform.CompareTag("Boss"))
+            {
+                BossMonster boss = targetTransform.GetComponent<BossMonster>();
+                boss?.ApplyDOT(DOTType.Poison, dotDamage, dotInterval, dotDuration, null);
+            }
+        }
+
+        #endregion
+
+        #region AOE Status Effects
+
+        /// <summary>
+        /// AOE 스킬의 상태효과 적용 (CC, DOT)
+        /// </summary>
+        private void ApplyAOEStatusEffects(ITargetable target, SupportSkillData supportSkill, float baseDamage)
+        {
+            if (supportSkill == null || target == null) return;
+
+            Transform targetTransform = target.GetTransform();
+            if (targetTransform == null) return;
+
+            // CC 효과 (Stun/Slow)
+            if (supportSkill.IsCCSupport)
+            {
+                ApplyAOECCEffect(targetTransform, supportSkill);
+            }
+
+            // DOT 효과
+            if (supportSkill.IsDOTSupport)
+            {
+                ApplyAOEDOTEffect(targetTransform, supportSkill, baseDamage);
+            }
+        }
+
+        /// <summary>
+        /// AOE CC 효과 적용
+        /// </summary>
+        private void ApplyAOECCEffect(Transform targetTransform, SupportSkillData supportSkill)
+        {
+            float ccDuration = supportSkill.duration > 0 ? supportSkill.duration : DEFAULT_CC_DURATION;
+            CCType ccType = supportSkill.GetCCType();
+
+            if (targetTransform.CompareTag("Monster"))
+            {
+                Monster monster = targetTransform.GetComponent<Monster>();
+                if (monster != null)
+                {
+                    if (ccType == CCType.Slow)
+                    {
+                        monster.ApplySlow(supportSkill.slow_rate, ccDuration);
+                    }
+                    else
+                    {
+                        monster.ApplyDizzy(ccDuration);
+                    }
+                }
+            }
+            else if (targetTransform.CompareTag("Boss"))
+            {
+                BossMonster boss = targetTransform.GetComponent<BossMonster>();
+                if (boss != null)
+                {
+                    boss.ApplyStun(ccDuration);
+                }
+            }
+        }
+
+        /// <summary>
+        /// AOE DOT 효과 적용
+        /// </summary>
+        private void ApplyAOEDOTEffect(Transform targetTransform, SupportSkillData supportSkill, float baseDamage)
+        {
+            float dotDamage = supportSkill.tick_damage > 0
+                ? supportSkill.tick_damage
+                : baseDamage * DEFAULT_DOT_DAMAGE_RATIO;
+            float dotInterval = supportSkill.tick_interval > 0
+                ? supportSkill.tick_interval
+                : DEFAULT_DOT_TICK_INTERVAL;
+            float dotDuration = supportSkill.duration > 0
+                ? supportSkill.duration
+                : DEFAULT_DOT_DURATION;
+
+            if (targetTransform.CompareTag("Monster"))
+            {
+                Monster monster = targetTransform.GetComponent<Monster>();
+                monster?.ApplyDOT(DOTType.Poison, dotDamage, dotInterval, dotDuration, null);
+            }
+            else if (targetTransform.CompareTag("Boss"))
+            {
+                BossMonster boss = targetTransform.GetComponent<BossMonster>();
+                boss?.ApplyDOT(DOTType.Poison, dotDamage, dotInterval, dotDuration, null);
+            }
+        }
+
+        #endregion
+
+        #region Beam Utils
 
         private void ConfigureHovlLaser(GameObject beamObj, float maxRange)
         {

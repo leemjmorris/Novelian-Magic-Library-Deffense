@@ -45,6 +45,7 @@ namespace Novelian.Combat
         private const float DEFAULT_FALL_SPEED = 25f;
         private const float DEFAULT_TICK_DAMAGE_RATIO = 0.2f;
         private const int FALLING_LAND_DELAY_MS = 1500;
+        private const float DEFAULT_CC_DURATION = 3f;
         #endregion
 
         public void Initialize(MainSkillData main, SupportSkillData support, bool isGround = false, bool isLinear = false, Vector3 moveDirection = default, bool isFalling = false, Vector3 fallTarget = default)
@@ -165,8 +166,66 @@ namespace Novelian.Combat
 
             TargetableUtils.ApplyDamageInRadius(transform.position, radius, tickDamage, target =>
             {
-                ApplyDOTEffects(target);
+                ApplyStatusEffects(target);
             });
+        }
+
+        /// <summary>
+        /// 상태효과 적용 (CC, DOT)
+        /// </summary>
+        private void ApplyStatusEffects(ITargetable target)
+        {
+            if (supportSkill == null) return;
+
+            // CC 효과 적용
+            if (supportSkill.IsCCSupport)
+            {
+                ApplyCCEffects(target);
+            }
+
+            // DOT 효과 적용
+            if (supportSkill.IsDOTSupport)
+            {
+                ApplyDOTEffects(target);
+            }
+        }
+
+        /// <summary>
+        /// CC 효과 적용 (Slow/Stun)
+        /// </summary>
+        private void ApplyCCEffects(ITargetable target)
+        {
+            if (supportSkill == null || !supportSkill.IsCCSupport) return;
+
+            Transform targetTransform = target.GetTransform();
+            if (targetTransform == null) return;
+
+            float ccDuration = supportSkill.duration > 0 ? supportSkill.duration : DEFAULT_CC_DURATION;
+            CCType ccType = supportSkill.GetCCType();
+
+            if (targetTransform.CompareTag(Tag.Monster))
+            {
+                Monster monster = targetTransform.GetComponent<Monster>();
+                if (monster != null)
+                {
+                    if (ccType == CCType.Slow)
+                    {
+                        monster.ApplySlow(supportSkill.slow_rate, ccDuration);
+                    }
+                    else
+                    {
+                        monster.ApplyDizzy(ccDuration);
+                    }
+                }
+            }
+            else if (targetTransform.CompareTag(Tag.BossMonster))
+            {
+                BossMonster boss = targetTransform.GetComponent<BossMonster>();
+                if (boss != null)
+                {
+                    boss.ApplyStun(ccDuration);
+                }
+            }
         }
 
         private float CalculateTickDamage()

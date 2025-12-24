@@ -316,6 +316,9 @@ public class SkillTestManager : MonoBehaviour
             monster.OnSpawn(); // 체력 초기화
         }
 
+        // DevScene에서는 몬스터 이동 비활성화
+        DisableMonsterMovement(newMonster);
+
         spawnedMonsters.Add(newMonster);
         UpdateMonsterCount();
         Log($"몬스터 스폰됨 (총 {spawnedMonsters.Count}마리)");
@@ -517,7 +520,34 @@ public class SkillTestManager : MonoBehaviour
             monster.OnSpawn();
         }
 
+        // DevScene에서는 몬스터 이동 비활성화
+        DisableMonsterMovement(newMonster);
+
         spawnedMonsters.Add(newMonster);
+    }
+
+    /// <summary>
+    /// DevScene에서 몬스터 이동 비활성화
+    /// </summary>
+    private void DisableMonsterMovement(GameObject monsterObj)
+    {
+        if (monsterObj == null) return;
+
+        // MonsterMove 컴포넌트 비활성화
+        var monsterMove = monsterObj.GetComponent<MonsterMove>();
+        if (monsterMove != null)
+        {
+            monsterMove.SetEnabled(false);
+        }
+
+        // Rigidbody 정지
+        var rb = monsterObj.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.isKinematic = true;
+        }
     }
 
     private void ClearAllMonsters()

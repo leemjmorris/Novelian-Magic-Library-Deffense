@@ -15,6 +15,7 @@ MonoBehaviour:
   rules:
   - behaviorType: Projectile
     allowedSupportTypes:
+    - Chain
     - Pierce
     - Homing
     - MultiShot
@@ -23,15 +24,12 @@ MonoBehaviour:
     - Enhance
     - Bounce
     - Split
-    - Chain
   - behaviorType: BeamRay
     allowedSupportTypes:
+    - MultiShot
     - CC
     - DOT
     - Enhance
-    - Bounce
-    - MultiShot
-    - Split
   - behaviorType: AOE
     allowedSupportTypes:
     - CC
