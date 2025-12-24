@@ -829,7 +829,7 @@ namespace Novelian.Training
             int supportSkillIndex = supportSkillDropdown != null ? supportSkillDropdown.value - 1 : -1;
             if (supportSkillIndex >= 0 && supportSkillIndex < supportSkillDataList.Count)
             {
-                supportDamageMult = supportSkillDataList[supportSkillIndex].damage_mult;
+                supportDamageMult = supportSkillDataList[supportSkillIndex].explosion_ratio;
             }
 
             // 스탯 책갈피 보너스 계산
