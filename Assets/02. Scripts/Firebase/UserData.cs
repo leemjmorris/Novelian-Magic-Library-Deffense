@@ -70,7 +70,10 @@ namespace Firebase.Data
         public int magicStone;     // 1605: 마석
         public int dungeonPass;    // 1606: 던전 출입증
         public int ap;             // 1607: 행동력
-        public string apRecoveryTime; // AP 회복 시간
+        public long apLastSyncTimeMs; // AP 마지막 동기화 시간 (서버 시간, 밀리초)
+
+        // 하위 호환용 (마이그레이션용, deprecated)
+        public string apRecoveryTime;
 
         public CurrencySaveData()
         {
@@ -81,7 +84,8 @@ namespace Firebase.Data
             magicStone = 0;
             dungeonPass = 0;
             ap = 30; // 기본 AP
-            apRecoveryTime = DateTime.UtcNow.ToString("o");
+            apLastSyncTimeMs = 0;
+            apRecoveryTime = "";
         }
     }
 
@@ -366,6 +370,10 @@ namespace Firebase.Data
         public bool isActive;
         public int locationId;
         public int hours;
+        public long startTimeMs;  // 파견 시작 시간 (서버 시간, 밀리초)
+        public long endTimeMs;    // 파견 종료 시간 (서버 시간, 밀리초)
+
+        // 하위 호환용 (마이그레이션용, deprecated)
         public string startTime;
         public string endTime;
 
@@ -374,6 +382,40 @@ namespace Firebase.Data
             isActive = false;
             locationId = 0;
             hours = 0;
+            startTimeMs = 0;
+            endTimeMs = 0;
+            startTime = "";
+            endTime = "";
+        }
+
+        /// <summary>
+        /// 레거시 데이터(string)가 있는지 확인
+        /// </summary>
+        public bool HasLegacyData()
+        {
+            return !string.IsNullOrEmpty(startTime) || !string.IsNullOrEmpty(endTime);
+        }
+
+        /// <summary>
+        /// 레거시 데이터를 새 형식으로 마이그레이션
+        /// ServerTimeManager가 초기화된 후 호출해야 함
+        /// </summary>
+        public void MigrateLegacyData()
+        {
+            if (!HasLegacyData()) return;
+
+            // 레거시 string 시간을 파싱하여 밀리초로 변환
+            if (!string.IsNullOrEmpty(startTime) && DateTime.TryParse(startTime, out DateTime startDt))
+            {
+                startTimeMs = new DateTimeOffset(startDt.ToUniversalTime()).ToUnixTimeMilliseconds();
+            }
+
+            if (!string.IsNullOrEmpty(endTime) && DateTime.TryParse(endTime, out DateTime endDt))
+            {
+                endTimeMs = new DateTimeOffset(endDt.ToUniversalTime()).ToUnixTimeMilliseconds();
+            }
+
+            // 마이그레이션 후 레거시 데이터 초기화
             startTime = "";
             endTime = "";
         }

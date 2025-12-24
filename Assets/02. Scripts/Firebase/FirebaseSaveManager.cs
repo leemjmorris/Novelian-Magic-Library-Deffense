@@ -143,8 +143,10 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "application", currencies.application },
                 { "recommendation", currencies.recommendation },
                 { "magicStone", currencies.magicStone },
+                { "dungeonPass", currencies.dungeonPass },
                 { "ap", currencies.ap },
-                { "apRecoveryTime", currencies.apRecoveryTime }
+                { "apLastSyncTimeMs", currencies.apLastSyncTimeMs },
+                { "apRecoveryTime", currencies.apRecoveryTime } // 레거시 호환
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("currencies").UpdateChildrenAsync(data);
@@ -396,8 +398,10 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "isActive", state.isActive },
                 { "locationId", state.locationId },
                 { "hours", state.hours },
-                { "startTime", state.startTime },
-                { "endTime", state.endTime }
+                { "startTimeMs", state.startTimeMs },
+                { "endTimeMs", state.endTimeMs },
+                { "startTime", state.startTime }, // 레거시 호환
+                { "endTime", state.endTime }      // 레거시 호환
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("dispatch").Child(dispatchType).SetValueAsync(data);
@@ -475,7 +479,8 @@ public class FirebaseSaveManager : MonoBehaviour
                     { "magicStone", data.currencies.magicStone },
                     { "dungeonPass", data.currencies.dungeonPass },
                     { "ap", data.currencies.ap },
-                    { "apRecoveryTime", data.currencies.apRecoveryTime }
+                    { "apLastSyncTimeMs", data.currencies.apLastSyncTimeMs },
+                    { "apRecoveryTime", data.currencies.apRecoveryTime } // 레거시 호환
                 }
             },
             { "progression", new Dictionary<string, object>
@@ -510,8 +515,10 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "isActive", data.dispatch.combat.isActive },
                             { "locationId", data.dispatch.combat.locationId },
                             { "hours", data.dispatch.combat.hours },
-                            { "startTime", data.dispatch.combat.startTime },
-                            { "endTime", data.dispatch.combat.endTime }
+                            { "startTimeMs", data.dispatch.combat.startTimeMs },
+                            { "endTimeMs", data.dispatch.combat.endTimeMs },
+                            { "startTime", data.dispatch.combat.startTime }, // 레거시 호환
+                            { "endTime", data.dispatch.combat.endTime }      // 레거시 호환
                         }
                     },
                     { "gathering", new Dictionary<string, object>
@@ -519,8 +526,10 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "isActive", data.dispatch.gathering.isActive },
                             { "locationId", data.dispatch.gathering.locationId },
                             { "hours", data.dispatch.gathering.hours },
-                            { "startTime", data.dispatch.gathering.startTime },
-                            { "endTime", data.dispatch.gathering.endTime }
+                            { "startTimeMs", data.dispatch.gathering.startTimeMs },
+                            { "endTimeMs", data.dispatch.gathering.endTimeMs },
+                            { "startTime", data.dispatch.gathering.startTime }, // 레거시 호환
+                            { "endTime", data.dispatch.gathering.endTime }      // 레거시 호환
                         }
                     }
                 }
@@ -585,8 +594,9 @@ public class FirebaseSaveManager : MonoBehaviour
             data.currencies.magicStone = GetIntValue(currenciesSnap.Child("magicStone"));
             data.currencies.dungeonPass = GetIntValue(currenciesSnap.Child("dungeonPass"));
             data.currencies.ap = GetIntValue(currenciesSnap.Child("ap"));
+            data.currencies.apLastSyncTimeMs = GetLongValue(currenciesSnap.Child("apLastSyncTimeMs"));
             if (currenciesSnap.Child("apRecoveryTime").Exists)
-                data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value.ToString();
+                data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value?.ToString() ?? "";
         }
 
         // progression
@@ -718,8 +728,10 @@ public class FirebaseSaveManager : MonoBehaviour
             state.isActive = snap.Child("isActive").Value != null && (bool)snap.Child("isActive").Value;
             state.locationId = GetIntValue(snap.Child("locationId"));
             state.hours = GetIntValue(snap.Child("hours"));
-            state.startTime = snap.Child("startTime").Value?.ToString() ?? "";
-            state.endTime = snap.Child("endTime").Value?.ToString() ?? "";
+            state.startTimeMs = GetLongValue(snap.Child("startTimeMs"));
+            state.endTimeMs = GetLongValue(snap.Child("endTimeMs"));
+            state.startTime = snap.Child("startTime").Value?.ToString() ?? ""; // 레거시 호환
+            state.endTime = snap.Child("endTime").Value?.ToString() ?? "";     // 레거시 호환
         }
         return state;
     }
@@ -754,6 +766,12 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         if (snap.Value == null) return 0f;
         return Convert.ToSingle(snap.Value);
+    }
+
+    private long GetLongValue(DataSnapshot snap)
+    {
+        if (snap.Value == null) return 0L;
+        return Convert.ToInt64(snap.Value);
     }
 
     #endregion

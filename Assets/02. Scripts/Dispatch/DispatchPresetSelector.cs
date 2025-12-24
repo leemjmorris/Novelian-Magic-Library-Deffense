@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
 namespace Dispatch
@@ -72,6 +73,19 @@ namespace Dispatch
             if (presetIndex == currentPreset)
             {
                 Debug.Log($"[DispatchPresetSelector] 이미 프리셋 {presetIndex + 1}이 선택되어 있습니다.");
+                return;
+            }
+
+            // 파견 중일 때 프리셋 변경 차단
+            if (DispatchStateHelper.IsDispatching())
+            {
+                Debug.LogWarning("[DispatchPresetSelector] 파견 중에는 프리셋을 변경할 수 없습니다.");
+
+                // WarningUIManager를 통해 토스트 경고 표시
+                if (WarningUIManager.Instance != null)
+                {
+                    WarningUIManager.Instance.ShowWarning("파견 중에는 프리셋을 변경할 수 없습니다.");
+                }
                 return;
             }
 
