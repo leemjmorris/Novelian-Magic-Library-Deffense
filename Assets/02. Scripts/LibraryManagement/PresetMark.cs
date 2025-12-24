@@ -17,6 +17,7 @@ public class PresetMark : MonoBehaviour
 
     private int presetIndex = -1;
     private TeamSetupPanel panel;
+    private System.Action<int> onClickCallback;
     private bool isSelected = false;
 
     public int PresetIndex => presetIndex;
@@ -37,6 +38,26 @@ public class PresetMark : MonoBehaviour
     {
         presetIndex = index;
         panel = parentPanel;
+        onClickCallback = null;
+
+        if (button != null)
+        {
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(OnButtonClicked);
+        }
+
+        // 초기 색상 설정
+        UpdateVisual();
+    }
+
+    /// <summary>
+    /// 초기화 (콜백 방식 - 파견씬 등에서 사용)
+    /// </summary>
+    public void Initialize(int index, System.Action<int> clickCallback)
+    {
+        presetIndex = index;
+        panel = null;
+        onClickCallback = clickCallback;
 
         if (button != null)
         {
@@ -76,6 +97,10 @@ public class PresetMark : MonoBehaviour
         if (panel != null)
         {
             panel.OnPresetMarkClicked(presetIndex);
+        }
+        else if (onClickCallback != null)
+        {
+            onClickCallback.Invoke(presetIndex);
         }
     }
 
