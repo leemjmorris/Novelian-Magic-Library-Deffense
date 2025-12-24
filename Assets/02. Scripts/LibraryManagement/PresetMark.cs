@@ -14,8 +14,10 @@ public class PresetMark : MonoBehaviour
     [Header("Colors")]
     [SerializeField] private Color selectedColor = new Color(1f, 0.92f, 0.016f, 1f); // 노란색
     [SerializeField] private Color normalColor = new Color(0.5f, 0.5f, 0.5f, 1f);    // 회색
+    [SerializeField] private Color disabledColor = new Color(0.3f, 0.3f, 0.3f, 0.5f); // 비활성화 (어두운 회색 + 반투명)
 
     private int presetIndex = -1;
+    private bool isDisabled = false;
     private TeamSetupPanel panel;
     private System.Action<int> onClickCallback;
     private bool isSelected = false;
@@ -79,13 +81,38 @@ public class PresetMark : MonoBehaviour
     }
 
     /// <summary>
+    /// 버튼 비활성화 설정 (다른 파견에서 사용 중일 때)
+    /// </summary>
+    public void SetDisabled(bool disabled)
+    {
+        isDisabled = disabled;
+        if (button != null)
+        {
+            button.interactable = !disabled;
+        }
+        UpdateVisual();
+    }
+
+    /// <summary>
+    /// 비활성화 상태 반환
+    /// </summary>
+    public bool IsDisabled => isDisabled;
+
+    /// <summary>
     /// 비주얼 업데이트 (색상 변경)
     /// </summary>
     private void UpdateVisual()
     {
         if (markImage != null)
         {
-            markImage.color = isSelected ? selectedColor : normalColor;
+            if (isDisabled)
+            {
+                markImage.color = disabledColor;
+            }
+            else
+            {
+                markImage.color = isSelected ? selectedColor : normalColor;
+            }
         }
     }
 

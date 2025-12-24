@@ -368,6 +368,7 @@ namespace Firebase.Data
         public int hours;
         public string startTime;
         public string endTime;
+        public int presetIndex; // 파견에 사용 중인 프리셋 인덱스 (0~3, -1은 미사용)
 
         public DispatchStateData()
         {
@@ -376,6 +377,7 @@ namespace Firebase.Data
             hours = 0;
             startTime = "";
             endTime = "";
+            presetIndex = -1;
         }
     }
 

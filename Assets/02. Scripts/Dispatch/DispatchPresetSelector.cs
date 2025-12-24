@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Firebase.Data;
 
 namespace Dispatch
 {
@@ -13,10 +14,19 @@ namespace Dispatch
         [Header("프리셋 마크 (4개)")]
         [SerializeField] private List<PresetMark> presetMarks = new List<PresetMark>();
 
+        [Header("파견 타입")]
+        [SerializeField] private DispatchType dispatchType = DispatchType.Combat;
+
         /// <summary>
         /// 프리셋 변경 시 호출되는 이벤트 (새 프리셋 인덱스 전달)
         /// </summary>
         public event Action<int> OnPresetSelected;
+
+        // 프리셋 변경 잠금 상태 (파견 중일 때 true)
+        private bool isLocked = false;
+
+        // 현재 이 패널에서 사용 중인 프리셋 인덱스 (-1은 미사용)
+        private int lockedPresetIndex = -1;
 
         private void OnEnable()
         {
@@ -62,6 +72,13 @@ namespace Dispatch
         /// </summary>
         private void OnPresetMarkClicked(int presetIndex)
         {
+            // 파견 중이면 프리셋 변경 불가
+            if (isLocked)
+            {
+                Debug.Log("[DispatchPresetSelector] 파견 중에는 프리셋을 변경할 수 없습니다.");
+                return;
+            }
+
             if (DeckManager.Instance == null)
             {
                 Debug.LogWarning("[DispatchPresetSelector] DeckManager.Instance가 null입니다.");
@@ -80,6 +97,36 @@ namespace Dispatch
 
             Debug.Log($"[DispatchPresetSelector] 프리셋 {currentPreset + 1} → {presetIndex + 1} 전환");
         }
+
+        /// <summary>
+        /// 프리셋 변경 잠금 (파견 시작 시 호출)
+        /// </summary>
+        public void Lock()
+        {
+            isLocked = true;
+            lockedPresetIndex = GetCurrentPresetIndex();
+            Debug.Log($"[DispatchPresetSelector] 프리셋 변경 잠금 (프리셋 {lockedPresetIndex + 1})");
+        }
+
+        /// <summary>
+        /// 프리셋 변경 잠금 해제 (파견 완료 시 호출)
+        /// </summary>
+        public void Unlock()
+        {
+            isLocked = false;
+            lockedPresetIndex = -1;
+            Debug.Log("[DispatchPresetSelector] 프리셋 변경 잠금 해제");
+        }
+
+        /// <summary>
+        /// 현재 잠금 상태 반환
+        /// </summary>
+        public bool IsLocked => isLocked;
+
+        /// <summary>
+        /// 현재 잠긴 프리셋 인덱스 반환 (-1이면 잠금 없음)
+        /// </summary>
+        public int LockedPresetIndex => lockedPresetIndex;
 
         /// <summary>
         /// DeckManager에서 프리셋 변경 이벤트 수신
@@ -106,9 +153,44 @@ namespace Dispatch
             {
                 if (presetMarks[i] != null)
                 {
+                    // 프리셋 마크는 항상 선택 가능 (비활성화 해제)
+                    presetMarks[i].SetDisabled(false);
+
+                    // 선택 상태 업데이트
                     presetMarks[i].SetSelected(i == currentPreset);
                 }
             }
+        }
+
+        /// <summary>
+        /// 현재 선택된 프리셋이 다른 파견에서 사용 중인지 확인
+        /// </summary>
+        public bool IsCurrentPresetUsedByOtherDispatch()
+        {
+            int currentPreset = GetCurrentPresetIndex();
+            int otherDispatchPreset = GetOtherDispatchPresetIndex();
+            return otherDispatchPreset >= 0 && currentPreset == otherDispatchPreset;
+        }
+
+        /// <summary>
+        /// 다른 파견에서 사용 중인 프리셋 인덱스 반환 (-1이면 없음)
+        /// </summary>
+        private int GetOtherDispatchPresetIndex()
+        {
+            var dispatchData = FirebaseSaveManager.Instance?.CachedData?.dispatch;
+            if (dispatchData == null) return -1;
+
+            // 현재 패널이 전투형이면 채집형 파견의 프리셋 확인, 반대도 마찬가지
+            DispatchStateData otherState = dispatchType == DispatchType.Combat
+                ? dispatchData.gathering
+                : dispatchData.combat;
+
+            if (otherState != null && otherState.isActive)
+            {
+                return otherState.presetIndex;
+            }
+
+            return -1;
         }
 
         /// <summary>

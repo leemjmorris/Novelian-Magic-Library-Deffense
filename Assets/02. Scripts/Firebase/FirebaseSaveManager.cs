@@ -397,7 +397,8 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "locationId", state.locationId },
                 { "hours", state.hours },
                 { "startTime", state.startTime },
-                { "endTime", state.endTime }
+                { "endTime", state.endTime },
+                { "presetIndex", state.presetIndex }
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("dispatch").Child(dispatchType).SetValueAsync(data);
@@ -511,7 +512,8 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "locationId", data.dispatch.combat.locationId },
                             { "hours", data.dispatch.combat.hours },
                             { "startTime", data.dispatch.combat.startTime },
-                            { "endTime", data.dispatch.combat.endTime }
+                            { "endTime", data.dispatch.combat.endTime },
+                            { "presetIndex", data.dispatch.combat.presetIndex }
                         }
                     },
                     { "gathering", new Dictionary<string, object>
@@ -520,7 +522,8 @@ public class FirebaseSaveManager : MonoBehaviour
                             { "locationId", data.dispatch.gathering.locationId },
                             { "hours", data.dispatch.gathering.hours },
                             { "startTime", data.dispatch.gathering.startTime },
-                            { "endTime", data.dispatch.gathering.endTime }
+                            { "endTime", data.dispatch.gathering.endTime },
+                            { "presetIndex", data.dispatch.gathering.presetIndex }
                         }
                     }
                 }
@@ -720,6 +723,7 @@ public class FirebaseSaveManager : MonoBehaviour
             state.hours = GetIntValue(snap.Child("hours"));
             state.startTime = snap.Child("startTime").Value?.ToString() ?? "";
             state.endTime = snap.Child("endTime").Value?.ToString() ?? "";
+            state.presetIndex = GetIntValue(snap.Child("presetIndex"), -1); // 기본값 -1
         }
         return state;
     }
