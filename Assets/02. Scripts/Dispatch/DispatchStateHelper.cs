@@ -51,19 +51,42 @@ namespace Dispatch
 
         /// <summary>
         /// 파견 상태가 완료되었는지 확인
+        /// ServerTimeManager를 통한 서버 시간 기준으로 확인
         /// </summary>
         private static bool IsDispatchStateCompleted(DispatchStateData state)
         {
             if (state == null || !state.isActive)
                 return false;
 
+            // 새 형식 (밀리초) 우선 확인
+            if (state.endTimeMs > 0)
+            {
+                // ServerTimeManager가 초기화되지 않은 경우 false 반환 (보안)
+                if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
+                {
+                    Debug.LogWarning("[DispatchStateHelper] ServerTimeManager가 초기화되지 않음 - 파견 완료 확인 불가");
+                    return false;
+                }
+
+                // 시간 유효성 검증 (미래 시간이면 시간 조작 의심)
+                if (!ServerTimeManager.Instance.IsValidSavedTime(state.startTimeMs))
+                {
+                    Debug.LogWarning("[DispatchStateHelper] 저장된 시간이 유효하지 않음 - 시간 조작 의심");
+                    return false;
+                }
+
+                return ServerTimeManager.Instance.IsPast(state.endTimeMs);
+            }
+
+            // 레거시 형식 (string) - 하위 호환
             if (string.IsNullOrEmpty(state.endTime))
                 return false;
 
             if (!System.DateTime.TryParse(state.endTime, out System.DateTime endTime))
                 return false;
 
-            // 로컬 시간으로 비교 (endTime이 로컬 시간대 포함하여 저장됨)
+            // 레거시: 로컬 시간으로 비교 (보안 취약)
+            Debug.LogWarning("[DispatchStateHelper] 레거시 형식 사용 중 - 마이그레이션 필요");
             return System.DateTime.Now >= endTime;
         }
 
@@ -101,19 +124,34 @@ namespace Dispatch
 
         /// <summary>
         /// 특정 상태의 남은 파견 시간 계산 (초 단위)
+        /// ServerTimeManager를 통한 서버 시간 기준으로 계산
         /// </summary>
         private static float GetRemainingTimeForState(DispatchStateData state)
         {
             if (state == null || !state.isActive)
                 return -1f;
 
+            // 새 형식 (밀리초) 우선 확인
+            if (state.endTimeMs > 0)
+            {
+                // ServerTimeManager가 초기화되지 않은 경우
+                if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
+                {
+                    return -1f;
+                }
+
+                long remainingMs = ServerTimeManager.Instance.GetRemainingMs(state.endTimeMs);
+                return remainingMs / 1000f; // 밀리초 → 초
+            }
+
+            // 레거시 형식 (string) - 하위 호환
             if (string.IsNullOrEmpty(state.endTime))
                 return -1f;
 
             if (!System.DateTime.TryParse(state.endTime, out System.DateTime endTime))
                 return -1f;
 
-            // 로컬 시간으로 비교 (endTime이 로컬 시간대 포함하여 저장됨)
+            // 레거시: 로컬 시간으로 비교
             System.TimeSpan remaining = endTime - System.DateTime.Now;
             return Mathf.Max(0f, (float)remaining.TotalSeconds);
         }
