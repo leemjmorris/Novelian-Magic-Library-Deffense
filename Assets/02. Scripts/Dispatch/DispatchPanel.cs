@@ -965,7 +965,7 @@ namespace Dispatch
                     // 토스트 메시지 표시
                     if (WarningUIManager.Instance != null)
                     {
-                        WarningUIManager.Instance.ShowWarning("이 프리셋은 다른 파견에서 사용 중입니다.");
+                        WarningUIManager.Instance.ShowWarning("이 프리셋은\n다른 파견에서 사용 중입니다.");
                     }
                     Debug.LogWarning("[DispatchPanel] 다른 파견에서 사용 중인 프리셋으로는 파견할 수 없습니다.");
                     return;
