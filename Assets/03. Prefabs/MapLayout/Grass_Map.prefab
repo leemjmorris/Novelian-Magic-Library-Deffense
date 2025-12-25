@@ -14947,6 +14947,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   wallEvents: {fileID: 11400000, guid: 22ac61e9b3be8e1419bfbcb09a7470a5, type: 2}
+  bossDungeonManager: {fileID: 0}
   maxHealth: 200
   maxShield: 100
 --- !u!1 &4306108109587729107
@@ -29760,70 +29761,6 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -7460658455087918617, guid: d04d0ccdd1b27f14fae413c6d2d0f30c, type: 3}
---- !u!1 &6396770801444172993
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 8702679043398429545}
-  - component: {fileID: 6369461428028794141}
-  m_Layer: 0
-  m_Name: NavMesh Surface
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &8702679043398429545
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6396770801444172993}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1057275797316398419}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6369461428028794141
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6396770801444172993}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_SerializedVersion: 0
-  m_AgentTypeID: 0
-  m_CollectObjects: 0
-  m_Size: {x: 10, y: 10, z: 10}
-  m_Center: {x: 0, y: 2, z: 0}
-  m_LayerMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  m_UseGeometry: 0
-  m_DefaultArea: 0
-  m_GenerateLinks: 0
-  m_IgnoreNavMeshAgent: 1
-  m_IgnoreNavMeshObstacle: 1
-  m_OverrideTileSize: 0
-  m_TileSize: 256
-  m_OverrideVoxelSize: 0
-  m_VoxelSize: 0.16666667
-  m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 8026a3c88cd409842ae1354de11b4abb, type: 2}
-  m_BuildHeightMesh: 0
 --- !u!1 &6507618006148347083
 GameObject:
   m_ObjectHideFlags: 0
@@ -54372,7 +54309,6 @@ Transform:
   - {fileID: 1533238729112547534}
   - {fileID: 4398693463586505130}
   - {fileID: 5334033952372351083}
-  - {fileID: 8702679043398429545}
   - {fileID: 7529494554443412658}
   - {fileID: 479889381039153374}
   - {fileID: 40072754485732063}
@@ -54467,6 +54403,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spawnAreaSize: {x: 10, y: 1, z: 2}
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 512
+  raycastHeight: 50
+  spawnHeightOffset: 0.5
+  spawnCheckRadius: 1
+  monsterLayer:
+    serializedVersion: 2
+    m_Bits: 128
   gizmoColor: {r: 1, g: 0.5, b: 0, a: 0.3}
   wireColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!1001 &4354143084939311455
@@ -54520,6 +54465,10 @@ PrefabInstance:
     - target: {fileID: 9016379231851070350, guid: 63e626537c4f43840846d41d1c9487d4, type: 3}
       propertyPath: m_Name
       value: Terrain_Plane_Plain_20x20m (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9016379231851070350, guid: 63e626537c4f43840846d41d1c9487d4, type: 3}
+      propertyPath: m_Layer
+      value: 9
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -54646,6 +54595,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Terrain_Plane_Plain_20x20m (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 9016379231851070350, guid: 63e626537c4f43840846d41d1c9487d4, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -54708,6 +54661,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Terrain_Plane_Plain_20x20m
       objectReference: {fileID: 0}
+    - target: {fileID: 9016379231851070350, guid: 63e626537c4f43840846d41d1c9487d4, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -54769,6 +54726,10 @@ PrefabInstance:
     - target: {fileID: 9016379231851070350, guid: 63e626537c4f43840846d41d1c9487d4, type: 3}
       propertyPath: m_Name
       value: Terrain_Plane_Plain_20x20m (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9016379231851070350, guid: 63e626537c4f43840846d41d1c9487d4, type: 3}
+      propertyPath: m_Layer
+      value: 9
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -54862,6 +54823,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spawnAreaSize: {x: 10, y: 1, z: 2}
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 512
+  raycastHeight: 50
+  spawnHeightOffset: 0.5
+  spawnCheckRadius: 1
+  monsterLayer:
+    serializedVersion: 2
+    m_Bits: 128
   gizmoColor: {r: 1, g: 0.5, b: 0, a: 0.3}
   wireColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
 --- !u!4 &7529494554443412658 stripped

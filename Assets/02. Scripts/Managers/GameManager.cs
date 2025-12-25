@@ -59,6 +59,13 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             Debug.Log("[GameManager] InitializeManagers called");
 
+            // 몬스터끼리 물리 충돌 비활성화 (Layer 7 = Monster)
+            int monsterLayer = LayerMask.NameToLayer("Monster");
+            if (monsterLayer >= 0)
+            {
+                Physics.IgnoreLayerCollision(monsterLayer, monsterLayer, true);
+            }
+
             // Initialize in dependency order
             if (inputManager != null)
             {

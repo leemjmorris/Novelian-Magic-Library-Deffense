@@ -422,6 +422,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// JML: 단일 웨이브의 몬스터들 스폰
         /// MonsterLevelData를 가져와서 Monster.Initialize() 호출
         /// 키 기반 풀링 사용 (SpawnByKey)
+        /// 빈 공간 확인 후 스폰, 공간 없으면 대기
         /// </summary>
         private async UniTask SpawnWaveMonsters(WaveData waveData, System.Threading.CancellationToken cancellationToken)
         {
@@ -443,26 +444,47 @@ namespace NovelianMagicLibraryDefense.Managers
             int spawnedCount = 0;
             int targetCount = waveData.Monster_Count;
             bool useSpawner1 = true; // 두 스포너 번갈아 사용
+            const int SPAWN_RETRY_DELAY_MS = 100; // 빈 공간 없을 때 대기 시간
 
             while (spawnedCount < targetCount && isPoolReady && !cancellationToken.IsCancellationRequested)
             {
                 // Check if spawner still exists (scene not destroyed)
                 if (monsterSpawner == null) break;
 
-                // JML: 두 스포너가 있으면 번갈아가며 스폰
+                // JML: 빈 공간 찾기 (두 스포너가 있으면 번갈아가며 시도)
                 Vector3 spawnPos;
+                bool foundEmptySpace = false;
+
                 if (bossSpawner != null)
                 {
-                    // 두 스포너 번갈아 사용
-                    spawnPos = useSpawner1
-                        ? monsterSpawner.GetRandomSpawnPosition()
-                        : bossSpawner.GetRandomSpawnPosition();
+                    // 두 스포너 번갈아 시도
+                    MonsterSpawner currentSpawner = useSpawner1 ? monsterSpawner : bossSpawner;
+                    MonsterSpawner otherSpawner = useSpawner1 ? bossSpawner : monsterSpawner;
+
+                    // 현재 스포너에서 빈 공간 찾기
+                    if (currentSpawner.TryGetEmptySpawnPosition(out spawnPos))
+                    {
+                        foundEmptySpace = true;
+                    }
+                    // 실패하면 다른 스포너에서 시도
+                    else if (otherSpawner.TryGetEmptySpawnPosition(out spawnPos))
+                    {
+                        foundEmptySpace = true;
+                    }
+
                     useSpawner1 = !useSpawner1;
                 }
                 else
                 {
                     // 스포너 하나만 있으면 그것만 사용
-                    spawnPos = monsterSpawner.GetRandomSpawnPosition();
+                    foundEmptySpace = monsterSpawner.TryGetEmptySpawnPosition(out spawnPos);
+                }
+
+                // 빈 공간을 찾지 못했으면 잠시 대기 후 재시도
+                if (!foundEmptySpace)
+                {
+                    await UniTask.Delay(SPAWN_RETRY_DELAY_MS, cancellationToken: cancellationToken);
+                    continue; // spawnedCount 증가 없이 다시 시도
                 }
 
                 // JML: 키 기반 스폰 사용 (Addressable 프리팹)
