@@ -84,7 +84,6 @@ public class CSVLoader : MonoBehaviour
         { AddressableKey.IngredientTable, "IngredientTable.csv" },
         { AddressableKey.StringTable, "StringTable.csv" },
         { AddressableKey.PathTable, "PathTable.csv" },
-        { AddressableKey.LayoutPresetTable, "LayoutPresetTable.csv" },
     };
 
     private void Awake()
@@ -242,7 +241,6 @@ public class CSVLoader : MonoBehaviour
                 RegisterTableAsync<DispatchTimeTableData>(AddressableKey.DispatchTimeTable, x => x.Dispatch_Time_ID),
                 RegisterTableAsync<DispatchRewardTableData>(AddressableKey.DispatchRewardTable, x => x.Dispatch_Reward_ID),
                 RegisterTableAsync<PathData>(AddressableKey.PathTable, x => x.Addressable_ID),
-                RegisterTableAsync<LayoutPresetData>(AddressableKey.LayoutPresetTable, x => x.Layout_ID),  // Issue #420
 
                 // 파티 시너지 테이블
                 RegisterTableAsync<PartySynergyData>(AddressableKey.PartySynergyTable, x => x.Party_ID),

@@ -36,7 +36,8 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             // Simple singleton without DontDestroyOnLoad
             // Each scene has its own independent GameManager
-            if (instance != null && instance != this)
+            // 씬 재로드 시 이전 instance가 파괴되었을 수 있으므로 null 체크 추가
+            if (instance != null && instance != this && instance.gameObject != null)
             {
                 Destroy(gameObject);
                 return;

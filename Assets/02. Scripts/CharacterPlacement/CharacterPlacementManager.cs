@@ -24,25 +24,13 @@ public class CharacterPlacementManager : MonoBehaviour
     [SerializeField, Tooltip("2행 레이아웃에서 행 사이 간격 (ProtectionObj 공간)")]
     private float rowGap = 0f;
 
-    [Header("Layout Settings (Issue #420)")]
-    [SerializeField, Tooltip("true: StageManager에서 레이아웃 적용 후 그리드 생성, false: Awake에서 즉시 생성")]
-    private bool waitForLayoutPreset = true;
-
-    [Header("Dual Defense Layout (양방향 방어)")]
-    [SerializeField, Tooltip("true: 상단/하단 그리드 분리 모드 활성화")]
-    private bool splitGridMode = false;
-    [SerializeField, Tooltip("분리 모드에서 2번째 그리드 중심 위치")]
-    private Vector3 grid2CenterOffset = Vector3.zero;
 
     // Grid slot list
     private List<GridSlot> gridSlots = new List<GridSlot>();
-    private List<GridSlot> gridSlots2 = new List<GridSlot>();  // 2번째 그리드 (양방향 방어)
 
     // Loaded character prefabs cache
     private Dictionary<string, GameObject> loadedCharacterPrefabs = new Dictionary<string, GameObject>();
     private bool isPreloadComplete = false;
-
-    // Note: 자가 완결형 맵 시스템에서는 GridMarker에서 직접 설정을 읽어옴
 
     // Drag state management
     private GameObject draggingCharacter;
@@ -57,15 +45,8 @@ public class CharacterPlacementManager : MonoBehaviour
             Debug.LogError("[CharacterPlacementManager] Main camera not found!");
         }
 
-        // Issue #420: 레이아웃 프리셋 대기 모드가 아닐 때만 Awake에서 그리드 생성
-        if (!waitForLayoutPreset)
-        {
-            CreateGrid();
-        }
-        else
-        {
-            Debug.Log("[CharacterPlacementManager] Waiting for layout preset from StageManager...");
-        }
+        // 그리드 즉시 생성
+        CreateGrid();
 
         // Preload all character prefabs IMMEDIATELY in Awake
         await PreloadCharacterPrefabs();
@@ -393,7 +374,7 @@ public class CharacterPlacementManager : MonoBehaviour
         return $"Prefab_{pathData.Addressable_Key}";
     }
 
-    //JML: Check if there are any empty slots available (양방향 방어: 두 그리드 모두 체크)
+    //JML: Check if there are any empty slots available
     public bool HasEmptySlot()
     {
         foreach (GridSlot slot in gridSlots)
@@ -403,19 +384,6 @@ public class CharacterPlacementManager : MonoBehaviour
                 return true;
             }
         }
-
-        // 양방향 방어 모드일 때 그리드 2도 체크
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                if (slot.IsEmpty())
-                {
-                    return true;
-                }
-            }
-        }
-
         return false;
     }
 
@@ -446,29 +414,16 @@ public class CharacterPlacementManager : MonoBehaviour
         return emptySlots[randomIndex];
     }
 
-    //JML: Get list of empty slots (양방향 방어: 두 그리드 모두 포함)
+    //JML: Get list of empty slots
     private List<GridSlot> GetEmptySlots()
     {
         List<GridSlot> emptySlots = new List<GridSlot>();
 
-        // 그리드 1의 빈 슬롯
         foreach (GridSlot slot in gridSlots)
         {
             if (slot.IsEmpty())
             {
                 emptySlots.Add(slot);
-            }
-        }
-
-        // 그리드 2의 빈 슬롯 (양방향 방어 모드일 때)
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                if (slot.IsEmpty())
-                {
-                    emptySlots.Add(slot);
-                }
             }
         }
 
@@ -587,7 +542,7 @@ public class CharacterPlacementManager : MonoBehaviour
         HideAllGrids();
     }
 
-    //JML: Find GridSlot at specific position (양방향 방어: 두 그리드 모두 검색)
+    //JML: Find GridSlot at specific position
     private GridSlot FindSlotAtPosition(Vector3 worldPosition)
     {
         foreach (GridSlot slot in gridSlots)
@@ -598,24 +553,10 @@ public class CharacterPlacementManager : MonoBehaviour
                 return slot;
             }
         }
-
-        // 양방향 방어 모드일 때 그리드 2도 검색
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                float distance = Vector3.Distance(slot.GetWorldPosition(), worldPosition);
-                if (distance < gridSpacingX / 2f)
-                {
-                    return slot;
-                }
-            }
-        }
-
         return null;
     }
 
-    //JML: Find slot that contains the character (양방향 방어: 두 그리드 모두 검색)
+    //JML: Find slot that contains the character
     private GridSlot FindSlotByCharacter(GameObject character)
     {
         foreach (GridSlot slot in gridSlots)
@@ -625,57 +566,28 @@ public class CharacterPlacementManager : MonoBehaviour
                 return slot;
             }
         }
-
-        // 양방향 방어 모드일 때 그리드 2도 검색
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                if (slot.GetCurrentCharacter() == character)
-                {
-                    return slot;
-                }
-            }
-        }
-
         return null;
     }
 
-    //JML: Show all grids (양방향 방어: 두 그리드 모두)
+    //JML: Show all grids
     private void ShowAllGrids()
     {
         foreach (GridSlot slot in gridSlots)
         {
             slot.ShowGrid();
         }
-
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                slot.ShowGrid();
-            }
-        }
     }
 
-    //JML: Hide all grids (양방향 방어: 두 그리드 모두)
+    //JML: Hide all grids
     private void HideAllGrids()
     {
         foreach (GridSlot slot in gridSlots)
         {
             slot.HideGrid();
         }
-
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                slot.HideGrid();
-            }
-        }
     }
 
-    //JML: Clear all slots (양방향 방어: 두 그리드 모두)
+    //JML: Clear all slots
     public void ClearAllSlots()
     {
         foreach (GridSlot slot in gridSlots)
@@ -683,33 +595,17 @@ public class CharacterPlacementManager : MonoBehaviour
             GameObject characterObj = slot.GetCurrentCharacter();
             if (characterObj != null)
             {
-                // Destroy instantiated character
                 Destroy(characterObj);
             }
             slot.RemoveCharacter();
         }
-
-        // 양방향 방어 모드일 때 그리드 2도 정리
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                GameObject characterObj = slot.GetCurrentCharacter();
-                if (characterObj != null)
-                {
-                    Destroy(characterObj);
-                }
-                slot.RemoveCharacter();
-            }
-        }
-
         Debug.Log("[CharacterPlacementManager] All slots cleared (characters destroyed)");
     }
 
     #region Issue #349 - 전역 스텟 버프 시스템
 
     /// <summary>
-    /// JML: 현재 필드에 배치된 모든 캐릭터 조회 (양방향 방어: 두 그리드 모두)
+    /// JML: 현재 필드에 배치된 모든 캐릭터 조회
     /// StageManager.ApplyBuffToAllCharacters()에서 호출
     /// </summary>
     public List<Novelian.Combat.Character> GetAllCharacters()
@@ -732,31 +628,11 @@ public class CharacterPlacementManager : MonoBehaviour
             }
         }
 
-        // 양방향 방어 모드일 때 그리드 2도 포함
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                if (!slot.IsEmpty())
-                {
-                    GameObject characterObj = slot.GetCurrentCharacter();
-                    if (characterObj != null)
-                    {
-                        var character = characterObj.GetComponent<Novelian.Combat.Character>();
-                        if (character != null)
-                        {
-                            characters.Add(character);
-                        }
-                    }
-                }
-            }
-        }
-
         return characters;
     }
 
     /// <summary>
-    /// JML: 현재 필드에 배치된 캐릭터 ID 목록 조회 (양방향 방어: 두 그리드 모두)
+    /// JML: 현재 필드에 배치된 캐릭터 ID 목록 조회
     /// 카드 풀 로직에서 필드 캐릭터 포함 시 사용
     /// </summary>
     public List<int> GetAllCharacterIds()
@@ -784,35 +660,11 @@ public class CharacterPlacementManager : MonoBehaviour
             }
         }
 
-        // 양방향 방어 모드일 때 그리드 2도 포함
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                if (!slot.IsEmpty())
-                {
-                    GameObject characterObj = slot.GetCurrentCharacter();
-                    if (characterObj != null)
-                    {
-                        string name = characterObj.name;
-                        if (name.StartsWith("Character_"))
-                        {
-                            string[] parts = name.Split('_');
-                            if (parts.Length >= 2 && int.TryParse(parts[1], out int charId))
-                            {
-                                characterIds.Add(charId);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         return characterIds;
     }
 
     /// <summary>
-    /// JML: 특정 캐릭터 ID를 가진 Character 컴포넌트 조회 (양방향 방어: 두 그리드 모두)
+    /// JML: 특정 캐릭터 ID를 가진 Character 컴포넌트 조회
     /// 캐릭터 성급 업그레이드 시 사용
     /// </summary>
     public Novelian.Combat.Character GetCharacterById(int characterId)
@@ -828,23 +680,6 @@ public class CharacterPlacementManager : MonoBehaviour
                 }
             }
         }
-
-        // 양방향 방어 모드일 때 그리드 2도 검색
-        if (splitGridMode)
-        {
-            foreach (GridSlot slot in gridSlots2)
-            {
-                if (!slot.IsEmpty())
-                {
-                    GameObject characterObj = slot.GetCurrentCharacter();
-                    if (characterObj != null && characterObj.name.Contains($"Character_{characterId}_"))
-                    {
-                        return characterObj.GetComponent<Novelian.Combat.Character>();
-                    }
-                }
-            }
-        }
-
         return null;
     }
 
@@ -910,125 +745,6 @@ public class CharacterPlacementManager : MonoBehaviour
 
     #endregion
 
-    #region Issue #420 - 레이아웃 프리셋 시스템
-
-    /// <summary>
-    /// JML: GridMarker에서 직접 레이아웃 적용 (자가 완결형 맵용)
-    /// StageManager.ApplyGridFromMarker()에서 호출
-    ///
-    /// 단순화된 시스템:
-    /// - GridMarker 태그: Grid1 위치 (marker.transform.position)
-    /// - Grid2Marker 태그: Grid2 위치 (별도 오브젝트, 있으면 양방향 방어)
-    /// </summary>
-    public void ApplyLayoutFromMarker(GridMarker marker)
-    {
-        if (marker == null)
-        {
-            Debug.LogWarning("[CharacterPlacementManager] GridMarker is null!");
-            return;
-        }
-
-        Debug.Log($"[CharacterPlacementManager] Applying layout from GridMarker at {marker.transform.position}");
-
-        // 기존 그리드 슬롯 제거
-        ClearAllSlots();
-        foreach (var slot in gridSlots)
-        {
-            if (slot != null)
-            {
-                Destroy(slot.gameObject);
-            }
-        }
-        gridSlots.Clear();
-
-        // 그리드 2도 정리
-        ClearGrid2();
-
-        // 새 그리드 설정 적용
-        gridRows = marker.gridRows;
-        gridColumns = marker.gridColumns;
-        gridSpacingX = marker.gridSpacingX;
-        gridSpacingZ = marker.gridSpacingZ;
-        gridCenterOffset = marker.transform.position; // 마커 위치 = 그리드 중심
-        rowGap = marker.rowGap;
-
-        // 그리드 재생성
-        CreateGrid();
-
-        // Grid2Marker 태그로 Grid2 위치 찾기 (있으면 양방향 방어)
-        GameObject grid2MarkerObj = GameObject.FindWithTag("Grid2Marker");
-        if (grid2MarkerObj != null)
-        {
-            splitGridMode = true;
-            grid2CenterOffset = grid2MarkerObj.transform.position; // 프리펩에 배치된 그대로 사용
-            CreateGrid2();
-            Debug.Log($"[CharacterPlacementManager] Grid 2 created at {grid2CenterOffset} (Grid2Marker found)");
-        }
-        else
-        {
-            splitGridMode = false;
-        }
-
-        Debug.Log($"[CharacterPlacementManager] Layout applied: {marker.gridRows}x{marker.gridColumns} grid at {marker.transform.position}, splitMode={splitGridMode}");
-    }
-
-
-    /// <summary>
-    /// JML: 2번째 그리드 생성 (양방향 방어 - 하단용)
-    /// </summary>
-    private void CreateGrid2()
-    {
-        if (gridSlotPrefab == null) return;
-
-        float totalWidth = (gridColumns - 1) * gridSpacingX;
-        int slotIndex = gridSlots.Count;  // 1번째 그리드 이후 인덱스
-
-        // 1행 그리드로 생성 (하단)
-        Vector3 startPos = new Vector3(
-            -totalWidth / 2f + grid2CenterOffset.x,
-            grid2CenterOffset.y,
-            grid2CenterOffset.z
-        );
-
-        for (int col = 0; col < gridColumns; col++)
-        {
-            Vector3 position = startPos + new Vector3(col * gridSpacingX, 0f, 0f);
-
-            GameObject slotObj = Instantiate(gridSlotPrefab, position, gridSlotPrefab.transform.rotation, gridParent);
-            slotObj.name = $"GridSlot_Grid2_{slotIndex}";
-
-            GridSlot gridSlot = slotObj.GetComponent<GridSlot>();
-            if (gridSlot != null)
-            {
-                gridSlot.Initialize(slotIndex);
-                gridSlots2.Add(gridSlot);
-            }
-            slotIndex++;
-        }
-
-        Debug.Log($"[CharacterPlacementManager] Grid 2: {gridSlots2.Count} slots created");
-    }
-
-    /// <summary>
-    /// JML: 2번째 그리드 제거 (양방향 방어 비활성화 시)
-    /// </summary>
-    private void ClearGrid2()
-    {
-        foreach (var slot in gridSlots2)
-        {
-            if (slot != null)
-            {
-                GameObject characterObj = slot.GetCurrentCharacter();
-                if (characterObj != null)
-                {
-                    Destroy(characterObj);
-                }
-                Destroy(slot.gameObject);
-            }
-        }
-        gridSlots2.Clear();
-    }
-
     /// <summary>
     /// JML: 슬롯 위치에서 가장 가까운 스포너 방향을 바라보도록 회전값 반환
     /// SpawnArea1, SpawnArea2 태그로 스포너 위치를 찾아서 더 가까운 쪽을 바라봄
@@ -1075,25 +791,11 @@ public class CharacterPlacementManager : MonoBehaviour
             return Quaternion.LookRotation(dir);
         }
 
-        // 스포너를 못 찾으면 기본값 (Z- 방향)
-        return Quaternion.Euler(0f, 180f, 0f);
+        // 스포너를 못 찾으면 기본값 (Z+ 방향, 몬스터 스폰 방향)
+        return Quaternion.identity;
     }
 
-    /// <summary>
-    /// JML: 그리드 설정만 변경 (그리드 재생성 없이)
-    /// </summary>
-    public void SetGridSettings(int rows, int columns, float spacingX, float spacingZ, Vector3 centerOffset)
-    {
-        gridRows = rows;
-        gridColumns = columns;
-        gridSpacingX = spacingX;
-        gridSpacingZ = spacingZ;
-        gridCenterOffset = centerOffset;
-    }
-
-    #endregion
-
-    //JML: Draw grid in SceneView using Gizmos (Issue #420: rowGap 적용)
+    //JML: Draw grid in SceneView using Gizmos
     private void OnDrawGizmos()
     {
         // Draw grid even when not playing (for visualization during setup)
@@ -1187,74 +889,10 @@ public class CharacterPlacementManager : MonoBehaviour
             boundaryDepth
         );
         Gizmos.DrawWireCube(gridCenter, gridBoundarySize);
-
-        // 양방향 방어 모드: Grid 2 그리기
-        if (splitGridMode)
-        {
-            DrawGrid2Gizmos(cubeSize, emptyColor, wireColor, slotIndex);
-        }
     }
 
     /// <summary>
-    /// JML: Grid 2 Gizmo 그리기 (양방향 방어 모드)
-    /// </summary>
-    private void DrawGrid2Gizmos(Vector3 cubeSize, Color emptyColor, Color wireColor, int startSlotIndex)
-    {
-        Color grid2Color = new Color(0f, 0.5f, 1f, 0.3f);  // Blue for Grid 2
-        Color grid2WireColor = new Color(0f, 0.7f, 1f, 0.8f);   // Light blue wireframe
-
-        float totalWidth = (gridColumns - 1) * gridSpacingX;
-        int slotIndex = startSlotIndex;
-
-        // Grid 2 위치 계산
-        Vector3 startPos = new Vector3(
-            -totalWidth / 2f + grid2CenterOffset.x,
-            grid2CenterOffset.y,
-            grid2CenterOffset.z
-        );
-
-        for (int col = 0; col < gridColumns; col++)
-        {
-            Vector3 position = startPos + new Vector3(col * gridSpacingX, 0f, 0f);
-
-            // Check if slot is occupied (only in play mode)
-            bool isOccupied = false;
-            int grid2Index = slotIndex - startSlotIndex;
-            if (Application.isPlaying && gridSlots2.Count > grid2Index)
-            {
-                isOccupied = !gridSlots2[grid2Index].IsEmpty();
-            }
-
-            // Set color based on occupancy
-            Gizmos.color = isOccupied ? new Color(1f, 0.5f, 0f, 0.5f) : grid2Color;
-
-            // Draw cube for slot
-            Gizmos.DrawCube(position, cubeSize);
-
-            // Draw wireframe
-            Gizmos.color = grid2WireColor;
-            Gizmos.DrawWireCube(position, cubeSize);
-
-            // Draw slot index label in scene view
-            #if UNITY_EDITOR
-            UnityEditor.Handles.Label(position + Vector3.up * 0.2f, $"G2_{slotIndex}");
-            #endif
-
-            slotIndex++;
-        }
-
-        // Draw Grid 2 boundary
-        Gizmos.color = new Color(0f, 0.7f, 1f, 0.8f);
-        Vector3 grid2BoundarySize = new Vector3(
-            gridColumns * gridSpacingX,
-            0.05f,
-            gridSpacingZ
-        );
-        Gizmos.DrawWireCube(grid2CenterOffset, grid2BoundarySize);
-    }
-
-    /// <summary>
-    /// JML: Gizmo 슬롯 그리기 헬퍼 메서드 (Issue #420)
+    /// JML: Gizmo 슬롯 그리기 헬퍼 메서드
     /// </summary>
     private void DrawSlotGizmo(Vector3 position, Vector3 cubeSize, int slotIndex, Color emptyColor, Color occupiedColor, Color wireColor)
     {

@@ -181,6 +181,32 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
+        /// CardGrid 활성화 (카드 슬롯 표시용)
+        /// cardGrid 참조가 없으면 cardSlots[0]의 부모를 활성화
+        /// </summary>
+        private void ActivateCardGrid()
+        {
+            if (cardGrid != null)
+            {
+                cardGrid.SetActive(true);
+                Debug.Log("[CardSelectPanel] CardGrid 활성화됨");
+            }
+            else
+            {
+                // cardGrid 참조가 없으면 cardSlots[0]의 부모를 활성화 시도
+                if (cardSlots != null && cardSlots.Length > 0 && cardSlots[0] != null)
+                {
+                    var parent = cardSlots[0].transform.parent;
+                    if (parent != null)
+                    {
+                        parent.gameObject.SetActive(true);
+                        Debug.Log($"[CardSelectPanel] CardGrid(부모) 활성화됨: {parent.name}");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Open panel for game start - character cards based on deck count (3-4)
         /// </summary>
         public void OpenForGameStart()
@@ -195,6 +221,9 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             panel.SetActive(true);
+
+            // CardGrid 활성화 (카드 슬롯 표시용)
+            ActivateCardGrid();
 
             // 데이터 로딩 대기 후 카드 표시
             WaitForDataAndShowCards(isGameStart: true).Forget();
@@ -216,6 +245,9 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             panel.SetActive(true);
+
+            // CardGrid 활성화 (카드 슬롯 표시용)
+            ActivateCardGrid();
 
             // 데이터 로딩 대기 후 카드 표시
             WaitForDataAndShowCards(isGameStart: false).Forget();
@@ -241,25 +273,8 @@ namespace NovelianMagicLibraryDefense.UI
 
             panel.SetActive(true);
 
-            // Issue #476: CardGrid도 활성화 (카드 슬롯 표시용)
-            if (cardGrid != null)
-            {
-                cardGrid.SetActive(true);
-                Debug.Log("[CardSelectPanel] CardGrid 활성화됨");
-            }
-            else
-            {
-                // cardGrid 참조가 없으면 cardSlots[0]의 부모를 활성화 시도
-                if (cardSlots != null && cardSlots.Length > 0 && cardSlots[0] != null)
-                {
-                    var parent = cardSlots[0].transform.parent;
-                    if (parent != null)
-                    {
-                        parent.gameObject.SetActive(true);
-                        Debug.Log($"[CardSelectPanel] CardGrid(부모) 활성화됨: {parent.name}");
-                    }
-                }
-            }
+            // CardGrid 활성화 (카드 슬롯 표시용)
+            ActivateCardGrid();
 
             Debug.Log("[CardSelectPanel] 패널 활성화됨, 카드 로딩 시작...");
 
