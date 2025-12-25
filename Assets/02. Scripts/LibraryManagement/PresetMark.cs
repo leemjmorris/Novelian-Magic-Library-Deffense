@@ -81,15 +81,14 @@ public class PresetMark : MonoBehaviour
     }
 
     /// <summary>
-    /// 버튼 비활성화 설정 (다른 파견에서 사용 중일 때)
+    /// 비활성화 표시 설정 (다른 파견에서 사용 중일 때)
+    /// 버튼 클릭은 가능하지만 시각적으로 비활성화 표시
     /// </summary>
     public void SetDisabled(bool disabled)
     {
         isDisabled = disabled;
-        if (button != null)
-        {
-            button.interactable = !disabled;
-        }
+        // 버튼 클릭은 허용 (파견 시작 시점에 체크)
+        // 시각적으로만 비활성화 표시
         UpdateVisual();
     }
 

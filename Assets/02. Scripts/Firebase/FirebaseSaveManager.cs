@@ -398,6 +398,8 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "isActive", state.isActive },
                 { "locationId", state.locationId },
                 { "hours", state.hours },
+                { "startTimeMs", state.startTimeMs },
+                { "endTimeMs", state.endTimeMs },
                 { "startTime", state.startTime },
                 { "endTime", state.endTime },
                 { "presetIndex", state.presetIndex }
@@ -725,6 +727,8 @@ public class FirebaseSaveManager : MonoBehaviour
             state.isActive = snap.Child("isActive").Value != null && (bool)snap.Child("isActive").Value;
             state.locationId = GetIntValue(snap.Child("locationId"));
             state.hours = GetIntValue(snap.Child("hours"));
+            state.startTimeMs = GetLongValue(snap.Child("startTimeMs"));
+            state.endTimeMs = GetLongValue(snap.Child("endTimeMs"));
             state.startTime = snap.Child("startTime").Value?.ToString() ?? "";
             state.endTime = snap.Child("endTime").Value?.ToString() ?? "";
             state.presetIndex = GetIntValue(snap.Child("presetIndex"), -1); // 기본값 -1

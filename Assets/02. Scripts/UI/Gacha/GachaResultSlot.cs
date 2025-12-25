@@ -53,8 +53,15 @@ public class GachaResultSlot : MonoBehaviour
             characterNameText.text = result.GetCharacterName();
         }
 
-        // 2. 캐릭터 아이콘 로드
-        await LoadCharacterIcon(result.CharacterId);
+        // 2. 아이콘 로드 (신규: 캐릭터 / 중복: 정수)
+        if (result.IsNew)
+        {
+            await LoadCharacterIcon(result.CharacterId);
+        }
+        else
+        {
+            await LoadEssenceIcon(result.EssenceId);
+        }
 
         // 3. 등급 프레임 색상 설정
         SetGradeFrameColor(result.CharacterId);
@@ -137,6 +144,39 @@ public class GachaResultSlot : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogWarning($"[GachaResultSlot] 아이콘 로드 예외: {e.Message}");
+            characterIcon.color = new Color(1f, 1f, 1f, 0.5f);
+        }
+    }
+
+    /// <summary>
+    /// 정수 아이콘 로드 (Addressables) - 중복 캐릭터용
+    /// </summary>
+    private async UniTask LoadEssenceIcon(int essenceId)
+    {
+        if (characterIcon == null || essenceId == 0) return;
+
+        // AddressableKey 유틸리티로 아이콘 키 조회
+        string iconKey = AddressableKey.GetItemIconKey(essenceId);
+
+        try
+        {
+            var handle = Addressables.LoadAssetAsync<Sprite>(iconKey);
+            await handle.ToUniTask();
+
+            if (handle.Status == AsyncOperationStatus.Succeeded)
+            {
+                characterIcon.sprite = handle.Result;
+                characterIcon.color = Color.white;
+            }
+            else
+            {
+                Debug.LogWarning($"[GachaResultSlot] 정수 아이콘 로드 실패: {iconKey}");
+                characterIcon.color = new Color(1f, 1f, 1f, 0.5f);
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"[GachaResultSlot] 정수 아이콘 로드 예외: {e.Message}");
             characterIcon.color = new Color(1f, 1f, 1f, 0.5f);
         }
     }
