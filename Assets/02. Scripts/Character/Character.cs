@@ -103,6 +103,9 @@ namespace Novelian.Combat
         // Issue #476: 도전던전 스턴 상태
         private bool isStunnedByBossDungeon = false;
 
+        // 액티브 스킬 쿨다운 추적
+        private float lastActiveSkillTime = float.MinValue;
+
         // JML: 책갈피 시스템 (Issue #320)
         private int characterId = -1;
         private bool isManuallyInitialized = false;
@@ -208,6 +211,43 @@ namespace Novelian.Combat
 
         #endregion
 
+        #region Active Skill System
+
+        /// <summary>
+        /// 액티브 스킬이 장착되어 있는지 확인
+        /// </summary>
+        private bool HasActiveSkill() => activeSkillData != null;
+
+        /// <summary>
+        /// 액티브 스킬 쿨다운이 완료되었는지 확인
+        /// </summary>
+        private bool IsActiveSkillReady()
+        {
+            if (activeSkillData == null) return false;
+            float cooldown = CalculateActiveSkillCooldown();
+            return Time.time - lastActiveSkillTime >= cooldown;
+        }
+
+        /// <summary>
+        /// 액티브 스킬 쿨다운 계산 (모디파이어 적용)
+        /// </summary>
+        private float CalculateActiveSkillCooldown()
+        {
+            float baseCooldown = activeSkillData?.cooldown ?? 3f;
+            float cooldownReduction = 1f - (cooldownModifier / 100f);
+            return Mathf.Max(0.5f, baseCooldown * cooldownReduction);
+        }
+
+        /// <summary>
+        /// 액티브 스킬 쿨다운 리셋
+        /// </summary>
+        private void ResetActiveSkillCooldown()
+        {
+            lastActiveSkillTime = Time.time;
+        }
+
+        #endregion
+
         #region Attack Loop (Stub)
 
         private void StartAttackLoop()
@@ -276,12 +316,30 @@ namespace Novelian.Combat
             LookAtTarget(target);
             PlayAttackAnimation();
 
-            // 스킬 실행 (SkillExecutor 사용)
-            ExecuteBasicAttackAsync(target).Forget();
+            // 스킬 실행 분기
+            if (HasActiveSkill())
+            {
+                if (IsActiveSkillReady())
+                {
+                    // 메인스킬 + 서포트 발사
+                    ExecuteActiveSkillAsync(target).Forget();
+                    ResetActiveSkillCooldown();
+                }
+                else
+                {
+                    // 기본공격 단독 발사 (서포트 없음)
+                    ExecuteBasicAttackWithoutSupportAsync(target).Forget();
+                }
+            }
+            else
+            {
+                // 기본공격 + 서포트 발사 (현재 동작)
+                ExecuteBasicAttackAsync(target).Forget();
+            }
         }
 
         /// <summary>
-        /// 기본 공격 스킬 실행
+        /// 기본 공격 스킬 실행 (서포트 스킬 적용)
         /// </summary>
         private async UniTaskVoid ExecuteBasicAttackAsync(ITargetable target)
         {
@@ -292,6 +350,36 @@ namespace Novelian.Combat
                 target,
                 basicAttackData,
                 supportData
+            );
+        }
+
+        /// <summary>
+        /// 기본 공격 스킬 실행 (서포트 스킬 미적용 - 메인스킬 장착 시)
+        /// </summary>
+        private async UniTaskVoid ExecuteBasicAttackWithoutSupportAsync(ITargetable target)
+        {
+            if (basicAttackData == null) return;
+
+            await SkillExecutor.Instance.ExecuteSkillAsync(
+                transform,
+                target,
+                basicAttackData,
+                null  // 서포트 없음
+            );
+        }
+
+        /// <summary>
+        /// 액티브 스킬 실행 (서포트 스킬 적용)
+        /// </summary>
+        private async UniTaskVoid ExecuteActiveSkillAsync(ITargetable target)
+        {
+            if (activeSkillData == null) return;
+
+            await SkillExecutor.Instance.ExecuteSkillAsync(
+                transform,
+                target,
+                activeSkillData,
+                supportData  // 서포트는 액티브 스킬에 적용
             );
         }
 
@@ -352,6 +440,7 @@ namespace Novelian.Combat
         public void OnSpawn()
         {
             characterObj?.SetActive(true);
+            lastActiveSkillTime = float.MinValue; // 스폰 시 액티브 스킬 쿨다운 리셋
 
             if (!isInitialized)
             {
@@ -361,7 +450,6 @@ namespace Novelian.Combat
             {
                 StartAttackLoop();
             }
-
         }
 
         public void OnDespawn()
