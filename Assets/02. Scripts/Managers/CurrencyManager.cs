@@ -81,12 +81,18 @@ public class CurrencyManager : MonoBehaviour
 
     private void Update()
     {
+        // 초기화 전이면 AP 회복 스킵
+        if (currencies.Count == 0) return;
+
         UpdateAPRecovery();
     }
 
     private void UpdateAPRecovery()
     {
-        int currentAP = GetCurrency(AP_ID);
+        // AP가 초기화되지 않았으면 스킵
+        if (!currencies.ContainsKey(AP_ID)) return;
+
+        int currentAP = currencies[AP_ID];
 
         // AP가 최대치면 회복 불필요 - 타이머 리셋
         if (currentAP >= maxAP)
