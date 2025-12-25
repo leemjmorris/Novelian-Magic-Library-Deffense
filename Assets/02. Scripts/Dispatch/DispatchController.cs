@@ -211,6 +211,12 @@ namespace Dispatch
             selectImageM.gameObject.SetActive(true);
             Debug.Log($"{LogTag} SelectImage-M 활성화됨");
 
+            // 선택하기 버튼 즉시 활성화 (애니메이션 기다리지 않음)
+            EnableSelectButton();
+
+            // 애니메이션 완료 플래그 설정
+            isAnimationComplete = true;
+
             // 애니메이션 캔슬 토큰 생성
             cancellationTokenSource?.Cancel();
             cancellationTokenSource = new CancellationTokenSource();
@@ -225,7 +231,6 @@ namespace Dispatch
 
             // UniTask를 사용한 부드러운 Width 축소 애니메이션
             float elapsedTime = 0f;
-            int frameCount = 0;
 
             while (elapsedTime < animationDuration)
             {
@@ -244,18 +249,11 @@ namespace Dispatch
                 float newWidth = Mathf.Lerp(startWidth, targetWidth, easedT);
                 selectImageM.sizeDelta = new Vector2(newWidth, currentHeight);
 
-                frameCount++;
                 await UniTask.Yield(PlayerLoopTiming.Update, cancellationTokenSource.Token);
             }
 
             // 최종 Width 확정
             selectImageM.sizeDelta = new Vector2(targetWidth, currentHeight);
-
-            // 애니메이션 완료 플래그 설정
-            isAnimationComplete = true;
-
-            // 선택하기 버튼 활성화
-            EnableSelectButton();
         }
 
         /// <summary>
