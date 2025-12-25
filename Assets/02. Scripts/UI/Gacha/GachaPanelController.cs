@@ -52,7 +52,8 @@ public class GachaPanelController : MonoBehaviour
     private const int PULL_COST_GOLD = 5000;          // 골드 5000당 1회
 
     // 정수 ID 베이스 (CHARACTER_POOL 인덱스 기반으로 계산)
-    private const int ESSENCE_ID_BASE = 30001;
+    // 10215(그믐) ~ 10234(베리타) - IngredientTable 기준
+    private const int ESSENCE_ID_BASE = 10215;
 
     // 전체 캐릭터 풀 (20종, 균등 확률 5%)
     private static readonly int[] CHARACTER_POOL = {
@@ -111,9 +112,25 @@ public class GachaPanelController : MonoBehaviour
             return;
         }
 
-        // RenderTexture 런타임 생성 (1920x1080)
-        videoRenderTexture = new RenderTexture(1920, 1080, 0);
-        videoRenderTexture.Create();
+        // 비디오 클립 설정
+        if (gachaVideoClip != null)
+        {
+            videoPlayer.clip = gachaVideoClip;
+
+            // 동영상 원본 해상도에 맞춰 RenderTexture 동적 생성
+            int width = (int)gachaVideoClip.width;
+            int height = (int)gachaVideoClip.height;
+            videoRenderTexture = new RenderTexture(width, height, 0);
+            videoRenderTexture.Create();
+
+            Debug.Log($"[GachaPanelController] 동영상 해상도: {width}x{height}");
+        }
+        else
+        {
+            // 기본값 (동영상 없을 경우)
+            videoRenderTexture = new RenderTexture(1920, 1080, 0);
+            videoRenderTexture.Create();
+        }
 
         // VideoPlayer에 RenderTexture 연결
         videoPlayer.targetTexture = videoRenderTexture;
@@ -121,12 +138,6 @@ public class GachaPanelController : MonoBehaviour
 
         // RawImage에 RenderTexture 연결
         videoRawImage.texture = videoRenderTexture;
-
-        // 비디오 클립 설정
-        if (gachaVideoClip != null)
-        {
-            videoPlayer.clip = gachaVideoClip;
-        }
 
         // 초기에는 비디오 UI 숨김
         videoRawImage.gameObject.SetActive(false);
