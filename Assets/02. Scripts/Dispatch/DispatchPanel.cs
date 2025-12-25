@@ -1961,6 +1961,12 @@ namespace Dispatch
                             AddLog($"  💼 인벤토리에 추가됨");
                         }
                     }
+
+                    // 토스트로 획득 아이템 표시
+                    if (RewardToastManager.Instance != null)
+                    {
+                        RewardToastManager.Instance.ShowReward(reward.Item_ID, finalAmount);
+                    }
                 }
                 else
                 {
