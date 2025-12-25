@@ -506,12 +506,13 @@ namespace Novelian.Combat
 
         /// <summary>
         /// JML: UI용 장착 스킬 이름 반환 (Issue #424)
+        /// 메인 스킬(책갈피)이 있으면 메인 스킬 이름 표시
         /// </summary>
         public string GetDisplaySkillName()
         {
-            if (supportData != null)
+            if (activeSkillData != null)
             {
-                return supportData.support_name;
+                return activeSkillData.skill_name;
             }
             return "없음";
         }
