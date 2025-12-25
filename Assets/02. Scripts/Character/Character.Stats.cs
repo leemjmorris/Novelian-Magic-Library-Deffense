@@ -251,12 +251,28 @@ namespace Novelian.Combat
         private void ApplyBookmarksIfAvailable()
         {
             int charId = GetCharacterId();
-            if (charId <= 0) return;
+            Debug.Log($"[Character] ApplyBookmarksIfAvailable 시작 - CharacterID: {charId}");
 
-            if (BookMarkManager.Instance == null) return;
+            if (charId <= 0)
+            {
+                Debug.LogWarning($"[Character] CharacterID가 유효하지 않음: {charId}");
+                return;
+            }
+
+            if (BookMarkManager.Instance == null)
+            {
+                Debug.LogWarning("[Character] BookMarkManager.Instance가 null입니다!");
+                return;
+            }
 
             var bookmarks = BookMarkManager.Instance.GetEquippedBookmarksForCharacter(charId);
-            if (bookmarks == null || bookmarks.Count == 0) return;
+            Debug.Log($"[Character] GetEquippedBookmarksForCharacter({charId}) 결과: {(bookmarks != null ? bookmarks.Count.ToString() : "null")}개");
+
+            if (bookmarks == null || bookmarks.Count == 0)
+            {
+                Debug.Log($"[Character] CharacterID {charId}에 장착된 책갈피가 없습니다.");
+                return;
+            }
 
             Debug.Log($"[Character] 책갈피 {bookmarks.Count}개 적용 시작 (CharacterID: {charId})");
 

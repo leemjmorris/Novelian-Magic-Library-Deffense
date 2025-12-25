@@ -1171,6 +1171,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
             collider3D.enabled = false;
         }
 
+        // 4. Rigidbody 중력 비활성화 (사망 후 낙하 방지)
+        if (rb != null)
+        {
+            rb.useGravity = false;
+            rb.linearVelocity = Vector3.zero;
+        }
+
         // JML: Unregister BEFORE despawning to prevent accessing destroyed object
         TargetRegistry.Instance.UnregisterTarget(this);
 
@@ -1454,7 +1461,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (rb != null)
         {
             rb.isKinematic = false;
-            rb.useGravity = false;
+            rb.useGravity = true; // 중력 활성화 - 공중 스폰 시 자연스럽게 낙하
             rb.mass = 10f; // 질량 증가 - 밀림 감소
             rb.linearDamping = 5f; // 저항 추가 - 밀림 후 빠른 정지
             rb.interpolation = RigidbodyInterpolation.Interpolate; // 부드러운 이동

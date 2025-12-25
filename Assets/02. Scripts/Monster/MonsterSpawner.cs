@@ -17,6 +17,14 @@ namespace NovelianMagicLibraryDefense.Spawners
         [SerializeField] private LayerMask groundLayer = ~0; // Everything
         [Tooltip("지면 검출 레이캐스트 높이")]
         [SerializeField] private float raycastHeight = 50f;
+        [Tooltip("스폰 높이 오프셋 (지면 위로 띄움)")]
+        [SerializeField] private float spawnHeightOffset = 0.5f;
+
+        [Header("Spawn Collision Check")]
+        [Tooltip("스폰 시 충돌 체크 반경")]
+        [SerializeField] private float spawnCheckRadius = 1.0f;
+        [Tooltip("몬스터 레이어 (충돌 체크용)")]
+        [SerializeField] private LayerMask monsterLayer;
 
         [Header("Gizmo Settings")]
         [SerializeField] private Color gizmoColor = new Color(1f, 0.5f, 0f, 0.3f);
@@ -37,13 +45,14 @@ namespace NovelianMagicLibraryDefense.Spawners
             Vector3 rayOrigin = new Vector3(randomX, center.y + raycastHeight, randomZ);
             if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastHeight * 2f, groundLayer))
             {
-                Debug.Log($"[MonsterSpawner] Raycast 히트: {hit.collider.name}, 위치: {hit.point}, 레이어: {LayerMask.LayerToName(hit.collider.gameObject.layer)}");
-                return hit.point;
+                // 지면 위에 오프셋 추가하여 스폰 (지면에 박히는 현상 방지)
+                Vector3 spawnPos = hit.point + Vector3.up * spawnHeightOffset;
+                return spawnPos;
             }
 
-            // Raycast 실패 시 스폰 영역 중심 Y 사용
+            // Raycast 실패 시 스폰 영역 중심 Y 사용 + 오프셋
             Debug.LogWarning($"[MonsterSpawner] 지면을 찾을 수 없음: ({randomX}, {randomZ})");
-            return new Vector3(randomX, center.y, randomZ);
+            return new Vector3(randomX, center.y + spawnHeightOffset, randomZ);
         }
 
         /// <summary>
@@ -60,6 +69,39 @@ namespace NovelianMagicLibraryDefense.Spawners
         public Vector3 GetSize()
         {
             return spawnAreaSize;
+        }
+
+        /// <summary>
+        /// 빈 공간에 스폰 위치 찾기 (다른 몬스터와 겹치지 않는 위치)
+        /// </summary>
+        /// <param name="position">찾은 빈 공간 위치</param>
+        /// <param name="maxAttempts">최대 시도 횟수</param>
+        /// <returns>빈 공간을 찾았으면 true</returns>
+        public bool TryGetEmptySpawnPosition(out Vector3 position, int maxAttempts = 10)
+        {
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                Vector3 candidate = GetRandomSpawnPosition();
+
+                // 해당 위치에 다른 몬스터가 없는지 확인
+                if (!Physics.CheckSphere(candidate, spawnCheckRadius, monsterLayer))
+                {
+                    position = candidate;
+                    return true;
+                }
+            }
+
+            // 빈 공간을 찾지 못함
+            position = Vector3.zero;
+            return false;
+        }
+
+        /// <summary>
+        /// 스폰 체크 반경 반환
+        /// </summary>
+        public float GetSpawnCheckRadius()
+        {
+            return spawnCheckRadius;
         }
 
         private void OnDrawGizmos()

@@ -14,10 +14,6 @@ public class MonsterMove : MonoBehaviour
     private bool isActive = false;
     private bool isStopped = false;
 
-    // 이동 보간 설정
-    private const float VELOCITY_LERP_SPEED = 5f; // 속도 보간 (낮을수록 부드러움, 높을수록 즉각 반응)
-    private const float ROTATION_LERP_SPEED = 10f; // 회전 보간
-
     // 애니메이터 파라미터 해시 (성능 최적화)
     private static readonly int ANIM_IS_MOVING = Animator.StringToHash("IsMoving");
 
@@ -60,9 +56,9 @@ public class MonsterMove : MonoBehaviour
 
         if (!entity.IsWallHit && !isStopped)
         {
-            // 목표 속도 직접 설정 (Y축만 0 고정)
+            // 수평 이동 속도 설정 (Y축은 중력에 맡김)
             Vector3 targetVelocity = moveDirection * speed;
-            targetVelocity.y = 0f;
+            targetVelocity.y = rb.linearVelocity.y; // 기존 Y 속도 유지 (중력 적용)
 
             rb.linearVelocity = targetVelocity;
 
@@ -79,8 +75,8 @@ public class MonsterMove : MonoBehaviour
         }
         else
         {
-            // 정지
-            rb.linearVelocity = Vector3.zero;
+            // 정지 (Y축은 중력에 맡김)
+            rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
 
             if (monsterAnimator != null)
             {

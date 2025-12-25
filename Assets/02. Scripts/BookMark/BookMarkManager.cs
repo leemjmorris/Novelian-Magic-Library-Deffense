@@ -335,6 +335,9 @@ public class BookMarkManager : MonoBehaviour
     /// </summary>
     public List<BookMark> GetEquippedBookmarksForCharacter(int characterID)
     {
+        Debug.Log($"[BookMarkManager] GetEquippedBookmarksForCharacter({characterID}) 호출");
+        Debug.Log($"[BookMarkManager] characterBookmarks 딕셔너리 키 목록: [{string.Join(", ", characterBookmarks.Keys)}]");
+
         BookMark[] bookmarks = GetOrCreateBookmarkArray(characterID);
         List<BookMark> result = new List<BookMark>();
 
@@ -343,9 +346,11 @@ public class BookMarkManager : MonoBehaviour
             if (bookmarks[i] != null)
             {
                 result.Add(bookmarks[i]);
+                Debug.Log($"[BookMarkManager] 슬롯 {i}: {bookmarks[i].Name} (Type: {bookmarks[i].Type}, SkillID: {bookmarks[i].SkillID})");
             }
         }
 
+        Debug.Log($"[BookMarkManager] CharacterID {characterID}에 장착된 책갈피: {result.Count}개");
         return result;
     }
 
@@ -450,6 +455,7 @@ public class BookMarkManager : MonoBehaviour
                         if (item.equipSlotIndex < bookmarks.Length)
                         {
                             bookmarks[item.equipSlotIndex] = bookmark;
+                            Debug.Log($"<color=#3EB489>[BookMarkManager]</color> 장착 상태 복원: CharacterID={item.equippedCharacterId}, 슬롯={item.equipSlotIndex}, 책갈피={bookmark.Name}, SkillID={bookmark.SkillID}");
                         }
                     }
                 }
@@ -457,6 +463,7 @@ public class BookMarkManager : MonoBehaviour
         }
 
         Debug.Log($"<color=#3EB489>[BookMarkManager]</color> Firebase에서 책갈피 로드: {ownedBookmarks.Count}개");
+        Debug.Log($"<color=#3EB489>[BookMarkManager]</color> characterBookmarks 딕셔너리 키 목록: [{string.Join(", ", characterBookmarks.Keys)}]");
     }
 
     /// <summary>

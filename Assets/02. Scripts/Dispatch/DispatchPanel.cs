@@ -41,6 +41,9 @@ namespace Dispatch
         [Header("패널 타입 설정")]
         [SerializeField] private DispatchType panelDispatchType = DispatchType.Combat; // 이 패널의 파견 타입 (Inspector에서 고정)
 
+        [Header("테스트 모드")]
+        [SerializeField] private bool useTestMode = true; // true: 시간=초로 변환 (4시간→4초), false: 실제 시간 사용
+
         [Header("프리셋 선택")]
         [SerializeField] private DispatchPresetSelector presetSelector; // 프리셋 선택 컴포넌트
 
@@ -959,15 +962,9 @@ namespace Dispatch
             }
             else
             {
-                // 다른 파견에서 사용 중인 프리셋이면 파견 불가 (로컬 선택 기준)
-                if (presetSelector != null && presetSelector.IsLocalSelectedPresetUsedByOtherDispatch())
+                // 파견 시작 전 유효성 검사
+                if (!ValidateDispatchConditions())
                 {
-                    // 토스트 메시지 표시
-                    if (WarningUIManager.Instance != null)
-                    {
-                        WarningUIManager.Instance.ShowWarning("이 프리셋은\n다른 파견에서 사용 중입니다.");
-                    }
-                    Debug.LogWarning("[DispatchPanel] 다른 파견에서 사용 중인 프리셋으로는 파견할 수 없습니다.");
                     return;
                 }
 
@@ -993,6 +990,63 @@ namespace Dispatch
 
                 AddLog("ℹ️ 보상 정보 패널 닫힘 (버튼 클릭)");
             }
+        }
+
+        /// <summary>
+        /// 파견 시작 전 유효성 검사
+        /// </summary>
+        /// <returns>유효하면 true, 아니면 false</returns>
+        private bool ValidateDispatchConditions()
+        {
+            if (presetSelector == null)
+            {
+                AddLog("⚠️ 프리셋 선택기가 없습니다.");
+                return true; // 프리셋 선택기가 없으면 검사 스킵
+            }
+
+            // 1. 프리셋이 비어있는지 확인
+            var deck = presetSelector.GetLocalSelectedDeck();
+            int validCharacterCount = 0;
+            foreach (int charId in deck)
+            {
+                if (charId > 0) validCharacterCount++;
+            }
+
+            if (validCharacterCount == 0)
+            {
+                // 프리셋이 완전히 비어있음
+                if (WarningUIManager.Instance != null)
+                {
+                    WarningUIManager.Instance.ShowWarning("프리셋이 비어있습니다.");
+                }
+                AddLog("❌ 파견 불가: 프리셋이 비어있습니다.");
+                return false;
+            }
+
+            // 2. 3명 이상인지 확인
+            if (validCharacterCount < 3)
+            {
+                if (WarningUIManager.Instance != null)
+                {
+                    WarningUIManager.Instance.ShowWarning("3명부터 파견이 가능합니다.");
+                }
+                AddLog($"❌ 파견 불가: 캐릭터 {validCharacterCount}명 (최소 3명 필요)");
+                return false;
+            }
+
+            // 3. 다른 파견에서 사용 중인 프리셋인지 확인
+            if (presetSelector.IsLocalSelectedPresetUsedByOtherDispatch())
+            {
+                if (WarningUIManager.Instance != null)
+                {
+                    WarningUIManager.Instance.ShowWarning("이미 파견중인 캐릭터가 있습니다!");
+                }
+                AddLog("❌ 파견 불가: 다른 파견에서 사용 중인 프리셋입니다.");
+                return false;
+            }
+
+            AddLog("✅ 파견 조건 검사 통과");
+            return true;
         }
 
         /// <summary>
@@ -1036,16 +1090,24 @@ namespace Dispatch
                 presetSelector.RefreshPresetMarks();
             }
 
-            // 테스트용: 초 단위로 시간 설정 (실제 게임에서는 시간 * 3600)
             // 북마크 파견 시간 감소 modifier 적용
-            float reducedTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
-            remainingTime = reducedTime; // 선택한 숫자를 초로 사용 (4시간 선택 = 4초, modifier 적용)
+            float reducedTimeHours = RewardHelper.CalculateDispatchTime(currentSelectedHours);
+
+            // 테스트 모드: 시간=초로 변환 (4시간→4초), 실제 모드: 시간→초 변환
+            if (useTestMode)
+            {
+                remainingTime = reducedTimeHours; // 테스트: 시간 값을 그대로 초로 사용
+                AddLog($"⏰ [테스트 모드] 파견 시작: {remainingTime:F1}초 후 완료 예정 (원본: {currentSelectedHours}시간)");
+            }
+            else
+            {
+                remainingTime = reducedTimeHours * 3600f; // 실제: 시간 → 초 변환
+                AddLog($"⏰ 파견 시작: {reducedTimeHours:F1}시간 ({remainingTime:F0}초) 후 완료 예정 (원본: {currentSelectedHours}시간)");
+            }
 
             // UI 업데이트
             UpdateDispatchUI();
             UpdateDispatchCountText();  // 파견 횟수 텍스트 업데이트 (0/1 → 1/1)
-
-            AddLog($"⏰ 테스트 모드: {reducedTime:F1}초 후 완료 예정 (원본: {currentSelectedHours}초, 감소 적용)");
             AddLog("==============================================\n");
         }
 
@@ -1961,6 +2023,12 @@ namespace Dispatch
                             AddLog($"  💼 인벤토리에 추가됨");
                         }
                     }
+
+                    // 토스트로 획득 아이템 표시
+                    if (RewardToastManager.Instance != null)
+                    {
+                        RewardToastManager.Instance.ShowReward(reward.Item_ID, finalAmount);
+                    }
                 }
                 else
                 {
@@ -2176,8 +2244,16 @@ namespace Dispatch
             }
 
             // 종료 시간 계산 (북마크 파견 시간 감소 modifier 적용)
-            float reducedDispatchTime = RewardHelper.CalculateDispatchTime(currentSelectedHours);
-            long endTimeMs = dispatchStartTimeMs + (long)(reducedDispatchTime * 1000); // 밀리초 단위
+            float reducedDispatchTimeHours = RewardHelper.CalculateDispatchTime(currentSelectedHours);
+            long endTimeMs;
+            if (useTestMode)
+            {
+                endTimeMs = dispatchStartTimeMs + (long)(reducedDispatchTimeHours * 1000f); // 테스트: 시간=초로 사용 → 밀리초 변환
+            }
+            else
+            {
+                endTimeMs = dispatchStartTimeMs + (long)(reducedDispatchTimeHours * 3600f * 1000f); // 실제: 시간 → 밀리초 변환
+            }
             System.DateTime endTime = System.DateTimeOffset.FromUnixTimeMilliseconds(endTimeMs).LocalDateTime;
 
             var state = new Firebase.Data.DispatchStateData
@@ -2275,6 +2351,21 @@ namespace Dispatch
 
                 AddLog("⚠️ 레거시 형식으로 파견 복원 (로컬 시간 기준 - 마이그레이션 필요)");
             }
+
+            // 남은 시간 계산 (총 파견 시간 - 경과 시간)
+            float reducedTimeHours = RewardHelper.CalculateDispatchTime(state.hours);
+            float totalDispatchTimeSeconds;
+            if (useTestMode)
+            {
+                totalDispatchTimeSeconds = reducedTimeHours; // 테스트: 시간=초로 사용
+            }
+            else
+            {
+                totalDispatchTimeSeconds = reducedTimeHours * 3600f; // 실제: 시간 → 초 변환
+            }
+            remainingTime = totalDispatchTimeSeconds - elapsedSeconds;
+
+            AddLog($"📂 남은 시간 계산: 총 {totalDispatchTimeSeconds:F0}초 - 경과 {elapsedSeconds:F0}초 = {remainingTime:F0}초 (테스트모드: {useTestMode})");
 
             // 이미 파견 완료된 경우
             if (remainingTime <= 0f)
