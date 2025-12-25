@@ -408,6 +408,23 @@ namespace NovelianMagicLibraryDefense.Managers
                 return;
             }
 
+            // JML: CardSelectPanel Awake 완료 대기 (재시작 시 타이밍 문제 해결)
+            elapsed = 0f;
+            while (!ui.IsCardSelectPanelReady() && elapsed < timeout)
+            {
+                await UniTask.Yield();
+                elapsed += Time.unscaledDeltaTime;
+            }
+
+            if (!ui.IsCardSelectPanelReady())
+            {
+                Debug.LogWarning("[StageManager] CardSelectPanel Awake 타임아웃! 강제 진행...");
+            }
+            else
+            {
+                Debug.Log("[StageManager] CardSelectPanel Awake 완료 확인!");
+            }
+
             Debug.Log("[StageManager] Calling OpenCardSelectForGameStart...");
             ui.OpenCardSelectForGameStart(); // Opens deck count character cards (3-4)
 

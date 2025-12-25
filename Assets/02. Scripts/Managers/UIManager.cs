@@ -121,6 +121,14 @@ namespace NovelianMagicLibraryDefense.Managers
             return cardSelectPanel != null && cardSelectPanel.IsOpen;
         }
 
+        /// <summary>
+        /// JML: CardSelectPanel Awake 완료 여부 확인 (재시작 시 타이밍 문제 해결용)
+        /// </summary>
+        public bool IsCardSelectPanelReady()
+        {
+            return cardSelectPanel != null && cardSelectPanel.IsAwakeComplete;
+        }
+
         #endregion
     }
 }

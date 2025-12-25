@@ -78,6 +78,9 @@ namespace NovelianMagicLibraryDefense.UI
         private const float SELECTED_CARD_SCALE = 1.15f;
         private const float NORMAL_CARD_SCALE = 1.0f;
 
+        // Awake 완료 플래그 (재시작 시 타이밍 문제 해결용)
+        private bool isAwakeComplete = false;
+
         public enum CardType
         {
             Character,
@@ -138,6 +141,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             Debug.Log("[CardSelectPanel] Awake completed, ready to use");
+            isAwakeComplete = true;
         }
 
         /// <summary>
@@ -1895,5 +1899,11 @@ namespace NovelianMagicLibraryDefense.UI
         #endregion
 
         public bool IsOpen => panel != null && panel.activeSelf;
+
+        /// <summary>
+        /// JML: Awake 완료 여부 (재시작 시 타이밍 문제 해결용)
+        /// StageManager에서 카드 선택 패널 열기 전에 확인
+        /// </summary>
+        public bool IsAwakeComplete => isAwakeComplete;
     }
 }
