@@ -1454,9 +1454,15 @@ namespace Dispatch
                     var rewardCandidate = CSVLoader.Instance.GetData<RewardData>(rewardID);
                     if (rewardCandidate == null) continue;
 
-                    // 아이템의 등급 조회
-                    var ingredientData = CSVLoader.Instance.GetData<IngredientData>(rewardCandidate.Item_ID);
-                    int gradeId = ingredientData?.Grade_ID ?? 0;
+                    // 아이템의 등급 조회 (IngredientData에서 찾고, 없으면 CurrencyData로 간주)
+                    int gradeId = 0;
+                    var ingredientTable = CSVLoader.Instance.GetTable<IngredientData>();
+                    var ingredientData = ingredientTable?.DataList?.Find(x => x.Ingredient_ID == rewardCandidate.Item_ID);
+                    if (ingredientData != null)
+                    {
+                        gradeId = ingredientData.Grade_ID;
+                    }
+                    // CurrencyData는 등급이 없으므로 0으로 유지
 
                     if (gradeId > highestGrade)
                     {
