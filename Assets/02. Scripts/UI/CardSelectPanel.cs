@@ -1599,12 +1599,12 @@ namespace NovelianMagicLibraryDefense.UI
         /// JML: 서포트 스킬 카드가 현재 필드 캐릭터와 호환되는지 확인 (Issue #437)
         /// 카드 표시 전에 필터링하여 호환 불가 카드를 제외
         /// </summary>
-        /// <param name="cardId">CardTable ID (081029~081051)</param>
+        /// <param name="cardId">CardTable ID (081029~081037)</param>
         /// <returns>호환 가능한 캐릭터가 있으면 true</returns>
         private bool IsSupportSkillCardCompatible(int cardId)
         {
-            // 서포트 스킬 카드 범위 확인 (081029~081051)
-            if (cardId < 81029 || cardId > 81051) return true;  // 일반 카드는 통과
+            // 서포트 스킬 카드 범위 확인 (081029~081037)
+            if (cardId < 81029 || cardId > 81037) return true;  // 일반 카드는 통과
 
             // CardTable ID → Support_ID 변환 (081029 → 40001, 081030 → 40002, ...)
             int supportId = (cardId - 81029) + 40001;
