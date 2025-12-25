@@ -596,17 +596,22 @@ public class SkillEditorWindow : EditorWindow
         return false;
     }
 
+    /// <summary>
+    /// 다음 사용 가능한 스킬 ID를 반환
+    /// 실제 게임 규칙: 메인 스킬은 39001~39999 범위 사용
+    /// </summary>
     private int GetNextAvailableSkillId()
     {
-        if (csvSkills.Count == 0) return 1001;
+        const int BASE_SKILL_ID = 39001;
+        const int MAX_SKILL_ID = 39999;
 
-        // 현재 선택된 behavior_type에 맞는 ID 범위 찾기
-        string selectedBehavior = creatableBehaviorTypes[newBehaviorTypeIndex];
-        int baseId = GetBaseIdForBehaviorType(selectedBehavior);
+        if (csvSkills.Count == 0) return BASE_SKILL_ID;
 
-        // 해당 범위에서 사용 가능한 다음 ID 찾기
+        // 사용 중인 ID 목록
         var usedIds = csvSkills.Select(s => s.skill_id).ToHashSet();
-        for (int id = baseId; id < baseId + 100; id++)
+
+        // 39001부터 순차적으로 빈 ID 찾기
+        for (int id = BASE_SKILL_ID; id <= MAX_SKILL_ID; id++)
         {
             if (!usedIds.Contains(id))
                 return id;
@@ -616,42 +621,30 @@ public class SkillEditorWindow : EditorWindow
         return csvSkills.Max(s => s.skill_id) + 1;
     }
 
-    private int GetBaseIdForBehaviorType(string behaviorType)
-    {
-        return behaviorType switch
-        {
-            "SingleProjectile" => 1001,
-            "ExplosiveProjectile" => 1101,
-            "FallingProjectile" => 1201,
-            "BeamRay" => 1201,
-            "TargetAOE" => 1301,
-            "LinearAOE" => 1401,
-            "GroundAOE" => 1501,
-            "MovingAOE" => 1501,
-            "Barrier" => 1601,
-            "Buff" => 1701,
-            "Debuff" => 1801,
-            "Trap" => 1901,
-            "Instant" => 2001,
-            _ => 1001
-        };
-    }
-
     private bool IsProjectileType(string behaviorType)
     {
-        return behaviorType == "SingleProjectile" || behaviorType == "ExplosiveProjectile" ||
+        // 신규 시스템: Projectile 타입
+        // 레거시: SingleProjectile, ExplosiveProjectile, FallingProjectile
+        return behaviorType == "Projectile" ||
+               behaviorType == "SingleProjectile" || behaviorType == "ExplosiveProjectile" ||
                behaviorType == "FallingProjectile";
     }
 
     private bool IsAOEType(string behaviorType)
     {
-        return behaviorType == "ExplosiveProjectile" || behaviorType == "TargetAOE" ||
+        // 신규 시스템: AOE 타입 (aoe_radius > 0인 경우 범위 공격)
+        // 레거시: TargetAOE, LinearAOE, GroundAOE, MovingAOE, ExplosiveProjectile
+        return behaviorType == "AOE" ||
+               behaviorType == "ExplosiveProjectile" || behaviorType == "TargetAOE" ||
                behaviorType == "LinearAOE" || behaviorType == "GroundAOE" || behaviorType == "MovingAOE";
     }
 
     private bool IsDurationType(string behaviorType)
     {
-        return behaviorType == "BeamRay" || behaviorType == "GroundAOE" ||
+        // 신규 시스템: BeamRay, AOE(duration > 0인 경우)
+        // 레거시: BeamRay, GroundAOE, Barrier, Buff, Debuff
+        return behaviorType == "BeamRay" || behaviorType == "AOE" ||
+               behaviorType == "GroundAOE" ||
                behaviorType == "Barrier" || behaviorType == "Buff" || behaviorType == "Debuff";
     }
 
