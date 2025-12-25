@@ -18,6 +18,9 @@ public class Wall : MonoBehaviour, IEntity
     [SerializeField] private float maxShield = 100f;
     private float shield = 0f;
 
+    // 테스트용 무적 모드
+    private bool isInvincible = false;
+
     private void Awake()
     {
         health = maxHealth;
@@ -38,6 +41,9 @@ public class Wall : MonoBehaviour, IEntity
     // JML: Shield 먼저 소진 후 HP 감소 (Issue #424)
     public void TakeDamage(float damage)
     {
+        // 무적 모드일 때는 데미지 무시
+        if (isInvincible) return;
+
         float remainingDamage = damage;
 
         // 1. Shield가 있으면 먼저 소진
@@ -90,6 +96,24 @@ public class Wall : MonoBehaviour, IEntity
     public Vector3 GetPosition() => transform.position;
     public Transform GetTransform() => transform;
     public WallEvents GetWallEvents() => wallEvents;
+
+    #region Invincible System (테스트용)
+
+    /// <summary>
+    /// 테스트용 무적 모드 설정
+    /// </summary>
+    public void SetInvincible(bool invincible)
+    {
+        isInvincible = invincible;
+        Debug.Log($"[Wall] 무적 모드: {(invincible ? "ON" : "OFF")}");
+    }
+
+    /// <summary>
+    /// 현재 무적 상태 반환
+    /// </summary>
+    public bool IsInvincible() => isInvincible;
+
+    #endregion
 
     #region Shield System (Issue #424)
 
