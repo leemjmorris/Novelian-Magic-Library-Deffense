@@ -962,15 +962,9 @@ namespace Dispatch
             }
             else
             {
-                // 다른 파견에서 사용 중인 프리셋이면 파견 불가 (로컬 선택 기준)
-                if (presetSelector != null && presetSelector.IsLocalSelectedPresetUsedByOtherDispatch())
+                // 파견 시작 전 유효성 검사
+                if (!ValidateDispatchConditions())
                 {
-                    // 토스트 메시지 표시
-                    if (WarningUIManager.Instance != null)
-                    {
-                        WarningUIManager.Instance.ShowWarning("이 프리셋은\n다른 파견에서 사용 중입니다.");
-                    }
-                    Debug.LogWarning("[DispatchPanel] 다른 파견에서 사용 중인 프리셋으로는 파견할 수 없습니다.");
                     return;
                 }
 
@@ -996,6 +990,63 @@ namespace Dispatch
 
                 AddLog("ℹ️ 보상 정보 패널 닫힘 (버튼 클릭)");
             }
+        }
+
+        /// <summary>
+        /// 파견 시작 전 유효성 검사
+        /// </summary>
+        /// <returns>유효하면 true, 아니면 false</returns>
+        private bool ValidateDispatchConditions()
+        {
+            if (presetSelector == null)
+            {
+                AddLog("⚠️ 프리셋 선택기가 없습니다.");
+                return true; // 프리셋 선택기가 없으면 검사 스킵
+            }
+
+            // 1. 프리셋이 비어있는지 확인
+            var deck = presetSelector.GetLocalSelectedDeck();
+            int validCharacterCount = 0;
+            foreach (int charId in deck)
+            {
+                if (charId > 0) validCharacterCount++;
+            }
+
+            if (validCharacterCount == 0)
+            {
+                // 프리셋이 완전히 비어있음
+                if (WarningUIManager.Instance != null)
+                {
+                    WarningUIManager.Instance.ShowWarning("프리셋이 비어있습니다.");
+                }
+                AddLog("❌ 파견 불가: 프리셋이 비어있습니다.");
+                return false;
+            }
+
+            // 2. 3명 이상인지 확인
+            if (validCharacterCount < 3)
+            {
+                if (WarningUIManager.Instance != null)
+                {
+                    WarningUIManager.Instance.ShowWarning("3명부터 파견이 가능합니다.");
+                }
+                AddLog($"❌ 파견 불가: 캐릭터 {validCharacterCount}명 (최소 3명 필요)");
+                return false;
+            }
+
+            // 3. 다른 파견에서 사용 중인 프리셋인지 확인
+            if (presetSelector.IsLocalSelectedPresetUsedByOtherDispatch())
+            {
+                if (WarningUIManager.Instance != null)
+                {
+                    WarningUIManager.Instance.ShowWarning("이미 파견중인 캐릭터가 있습니다!");
+                }
+                AddLog("❌ 파견 불가: 다른 파견에서 사용 중인 프리셋입니다.");
+                return false;
+            }
+
+            AddLog("✅ 파견 조건 검사 통과");
+            return true;
         }
 
         /// <summary>
