@@ -37,6 +37,11 @@ namespace Novelian.Training
 
         public void TakeDamage(float damage)
         {
+            TakeDamage(damage, false);
+        }
+
+        public void TakeDamage(float damage, bool isCritical)
+        {
             if (!isActive) return;
 
             // 데미지 기록 이벤트 발생 (DPSCalculator가 구독)
@@ -49,7 +54,8 @@ namespace Novelian.Training
             }
 
             // 무한 체력이므로 죽지 않음
-            Debug.Log($"[DummyTarget] Took {damage:F1} damage (subscribers: {OnDamageTaken?.GetInvocationList()?.Length ?? 0})");
+            string critText = isCritical ? " (CRITICAL!)" : "";
+            Debug.Log($"[DummyTarget] Took {damage:F1} damage{critText} (subscribers: {OnDamageTaken?.GetInvocationList()?.Length ?? 0})");
         }
 
         public bool HasFocusMark() => hasFocusMark;

@@ -280,15 +280,20 @@ namespace Novelian.Combat
         }
 
         /// <summary>
-        /// 공격 간격 계산 (쿨다운 모디파이어 + 서포트 스킬 효과 적용)
+        /// 공격 간격 계산 (쿨다운 모디파이어 + 공격속도 모디파이어 + 서포트 스킬 효과 적용)
         /// </summary>
         private float CalculateAttackInterval()
         {
             float baseCooldown = basicAttackData?.cooldown ?? 1.5f;
 
-            // 쿨다운 모디파이어 적용
+            // 쿨다운 모디파이어 적용 (책갈피 쿨타임 감소)
             float cooldownReduction = 1f - (cooldownModifier / 100f);
-            float interval = baseCooldown * cooldownReduction;
+
+            // 공격 속도 모디파이어 적용 (스탯 카드 공격속도 증가)
+            // 공격 속도가 증가하면 간격이 줄어듬
+            float attackSpeedBonus = 1f + (attackSpeedModifier / 100f);
+
+            float interval = (baseCooldown * cooldownReduction) / attackSpeedBonus;
 
             // Enhance 서포트 - 쿨다운 감소 (scale_multiplier가 0.8이면 80%로 감소)
             if (supportData != null && supportData.IsEnhanceSupport && supportData.scale_multiplier > 0)
@@ -303,8 +308,8 @@ namespace Novelian.Combat
         {
             if (!isInitialized || basicAttackData == null) return;
 
-            // 타겟 찾기
-            float searchRange = basicAttackData.range > 0 ? basicAttackData.range : 100f;
+            // 타겟 찾기 (FinalRange 사용 - 스탯 카드 사거리 버프 적용)
+            float searchRange = FinalRange;
             ITargetable target = TargetRegistry.Instance?.FindTarget(transform.position, searchRange, useWeightTargeting);
 
             if (target == null)

@@ -17,6 +17,8 @@ namespace Novelian.Combat
         private bool isExplosive;
         private GameObject hitPrefab;
         private float hitScale = 1f;
+        private Character casterCharacter; // 캐스터 캐릭터 (스탯 적용용)
+        private bool isCritical; // 치명타 여부
         #endregion
 
         #region State
@@ -70,7 +72,7 @@ namespace Novelian.Combat
 
         #region Initialization
 
-        public void Initialize(MainSkillData main, SupportSkillData support, ITargetable targetable, bool explosive, GameObject hitEffectPrefab = null, float hitEffectScale = 1f)
+        public void Initialize(MainSkillData main, SupportSkillData support, ITargetable targetable, bool explosive, GameObject hitEffectPrefab = null, float hitEffectScale = 1f, Character caster = null)
         {
             mainSkill = main;
             supportSkill = support;
@@ -78,10 +80,35 @@ namespace Novelian.Combat
             isExplosive = explosive;
             hitPrefab = hitEffectPrefab;
             hitScale = hitEffectScale > 0 ? hitEffectScale : 1f;
+            casterCharacter = caster;
 
-            damage = SkillExecutor.CalculateDamage(main, support);
-            speed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_SPEED;
-            maxRange = main.range > 0 ? main.range : DEFAULT_RANGE;
+            // 데미지 계산 (Character 스탯 적용, 치명타 판정 포함)
+            damage = SkillExecutor.CalculateDamage(main, support, caster, out isCritical);
+
+            // 투사체 속도 (Character 스탯 적용)
+            float baseSpeed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_SPEED;
+            if (caster != null)
+            {
+                float speedModifier = caster.GetProjectileSpeedModifier();
+                speed = baseSpeed * (1f + speedModifier / 100f);
+            }
+            else
+            {
+                speed = baseSpeed;
+            }
+
+            // 사거리 (Character 스탯 적용)
+            float baseRange = main.range > 0 ? main.range : DEFAULT_RANGE;
+            if (caster != null)
+            {
+                float rangeModifier = caster.GetRangeModifier();
+                maxRange = baseRange * (1f + rangeModifier / 100f);
+            }
+            else
+            {
+                maxRange = baseRange;
+            }
+
             startPosition = transform.position;
 
             ApplySupportEffects(support);

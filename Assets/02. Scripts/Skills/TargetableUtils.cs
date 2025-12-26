@@ -43,6 +43,14 @@ namespace Novelian.Combat
         /// </summary>
         public static void ApplyDamageInRadius(Vector3 center, float radius, float damage)
         {
+            ApplyDamageInRadius(center, radius, damage, false);
+        }
+
+        /// <summary>
+        /// 범위 내 모든 적에게 데미지 적용 (크리티컬 여부 포함)
+        /// </summary>
+        public static void ApplyDamageInRadius(Vector3 center, float radius, float damage, bool isCritical)
+        {
             Collider[] colliders = Physics.OverlapSphere(center, radius);
 
             for (int i = 0; i < colliders.Length; i++)
@@ -53,7 +61,7 @@ namespace Novelian.Combat
                 ITargetable target = GetTargetable(col);
                 if (target != null && target.IsAlive())
                 {
-                    target.TakeDamage(damage);
+                    target.TakeDamage(damage, isCritical);
                 }
             }
         }

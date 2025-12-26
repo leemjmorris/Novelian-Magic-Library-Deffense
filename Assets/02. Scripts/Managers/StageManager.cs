@@ -23,6 +23,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private StageEvents stageEvents;
         [SerializeField] private CharacterPlacementManager characterPlacementManager; // JML: Inspector에서 직접 참조 (Issue #349)
         [SerializeField] private StageStateManager stageStateManager; // JML: 맵 로드 후 Wall 참조 갱신용
+        [SerializeField] private CharacterCardGridManager characterCardGridManager; // 스탯 카드 적용 후 UI 갱신용
 
         [Header("Camera (Required - not in map prefab)")]
         [SerializeField] private Unity.Cinemachine.CinemachineCamera cinemachineCamera;
@@ -799,6 +800,12 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             Debug.Log($"[StageManager] Buff applied to {characters.Count} characters");
+
+            // UI 갱신 - 캐릭터 카드 스탯 정보 업데이트
+            if (characterCardGridManager != null)
+            {
+                characterCardGridManager.RefreshAllStats();
+            }
         }
 
         #endregion

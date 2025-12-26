@@ -12,6 +12,8 @@ namespace Novelian.Combat
         #region Runtime Data
         private MainSkillData mainSkill;
         private SupportSkillData supportSkill;
+        private Character casterCharacter;
+        private bool isCritical;
         #endregion
 
         #region AOE Settings
@@ -48,25 +50,38 @@ namespace Novelian.Combat
         private const float DEFAULT_CC_DURATION = 3f;
         #endregion
 
-        public void Initialize(MainSkillData main, SupportSkillData support, bool isGround = false, bool isLinear = false, Vector3 moveDirection = default, bool isFalling = false, Vector3 fallTarget = default)
+        public void Initialize(MainSkillData main, SupportSkillData support, bool isGround = false, bool isLinear = false, Vector3 moveDirection = default, bool isFalling = false, Vector3 fallTarget = default, Character caster = null)
         {
             mainSkill = main;
             supportSkill = support;
+            casterCharacter = caster;
             this.isGround = isGround;
             this.isLinear = isLinear;
             this.moveDirection = moveDirection;
             this.isFalling = isFalling;
             this.fallTarget = fallTarget;
 
-            // 기본 값 설정
-            damage = SkillExecutor.CalculateDamage(main, support);
+            // 기본 값 설정 - Character 스탯 적용
+            damage = SkillExecutor.CalculateDamage(main, support, caster, out isCritical);
             radius = main.aoe_radius > 0 ? main.aoe_radius : DEFAULT_RADIUS;
             duration = main.duration > 0 ? main.duration : DEFAULT_DURATION;
             tickInterval = DEFAULT_TICK_INTERVAL;
 
-            // 이동/낙하 속도 설정
-            moveSpeed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_MOVE_SPEED;
-            fallSpeed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_FALL_SPEED;
+            // 이동/낙하 속도 설정 - Character 스탯 적용
+            float baseSpeed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_MOVE_SPEED;
+            float baseFallSpeed = main.projectile_speed > 0 ? main.projectile_speed : DEFAULT_FALL_SPEED;
+
+            if (caster != null)
+            {
+                float speedModifier = 1f + (caster.GetProjectileSpeedModifier() / 100f);
+                moveSpeed = baseSpeed * speedModifier;
+                fallSpeed = baseFallSpeed * speedModifier;
+            }
+            else
+            {
+                moveSpeed = baseSpeed;
+                fallSpeed = baseFallSpeed;
+            }
 
             // 서포트 스킬 효과 적용
             ApplySupportEffects(support);

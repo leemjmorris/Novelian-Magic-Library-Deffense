@@ -517,6 +517,30 @@ namespace Novelian.Combat
             return "없음";
         }
 
+        /// <summary>
+        /// 추가 데미지 모디파이어 반환 (스탯 카드 BonusDamage용)
+        /// </summary>
+        public float GetBonusDamageModifier()
+        {
+            return bonusDamageModifier;
+        }
+
+        /// <summary>
+        /// 투사체 속도 모디파이어 반환 (스탯 카드 ProjectileSpeed용)
+        /// </summary>
+        public float GetProjectileSpeedModifier()
+        {
+            return projectileSpeedModifier;
+        }
+
+        /// <summary>
+        /// 사거리 모디파이어 반환 (스탯 카드 Range용)
+        /// </summary>
+        public float GetRangeModifier()
+        {
+            return rangeModifier;
+        }
+
         #endregion
     }
 }

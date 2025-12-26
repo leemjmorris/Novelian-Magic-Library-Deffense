@@ -110,7 +110,10 @@ namespace Novelian.Combat
             // 조합 규칙 검증 - 유효하지 않으면 서포트 스킬 없이 실행
             SupportSkillData validSupport = GetValidSupportSkill(mainSkill, supportSkill);
 
-            await ExecuteByBehaviorType(caster, target, mainSkill, validSupport, prefab, hitPrefab);
+            // 캐스터에서 Character 컴포넌트 추출 (스탯 적용용)
+            Character casterCharacter = caster.GetComponent<Character>();
+
+            await ExecuteByBehaviorType(caster, target, mainSkill, validSupport, prefab, hitPrefab, casterCharacter);
         }
 
         #endregion
@@ -193,7 +196,8 @@ namespace Novelian.Combat
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
             GameObject prefab,
-            GameObject hitPrefab)
+            GameObject hitPrefab,
+            Character casterCharacter = null)
         {
             switch (mainSkill.behavior_type)
             {
@@ -203,46 +207,46 @@ namespace Novelian.Combat
                 case "Projectile":
                     // 폭발 여부는 aoe_radius로 판단
                     bool isExplosive = mainSkill.aoe_radius > 0;
-                    ExecuteProjectile(caster, target, mainSkill, supportSkill, prefab, hitPrefab, isExplosive);
+                    ExecuteProjectile(caster, target, mainSkill, supportSkill, prefab, hitPrefab, isExplosive, casterCharacter);
                     break;
 
                 case "BeamRay":
-                    await ExecuteBeamAsync(caster, target, mainSkill, supportSkill, prefab);
+                    await ExecuteBeamAsync(caster, target, mainSkill, supportSkill, prefab, casterCharacter);
                     break;
 
                 case "AOE":
-                    await ExecuteAOEAsync(caster, target, mainSkill, supportSkill, prefab, hitPrefab);
+                    await ExecuteAOEAsync(caster, target, mainSkill, supportSkill, prefab, hitPrefab, casterCharacter);
                     break;
 
                 // ============================================
                 // Legacy 호환성 (이전 타입들도 지원)
                 // ============================================
                 case "SingleProjectile":
-                    ExecuteProjectile(caster, target, mainSkill, supportSkill, prefab, hitPrefab, false);
+                    ExecuteProjectile(caster, target, mainSkill, supportSkill, prefab, hitPrefab, false, casterCharacter);
                     break;
 
                 case "ExplosiveProjectile":
-                    ExecuteProjectile(caster, target, mainSkill, supportSkill, prefab, hitPrefab, true);
+                    ExecuteProjectile(caster, target, mainSkill, supportSkill, prefab, hitPrefab, true, casterCharacter);
                     break;
 
                 case "FallingProjectile":
-                    await ExecuteFallingProjectileAsync(caster, target, mainSkill, supportSkill, prefab, hitPrefab);
+                    await ExecuteFallingProjectileAsync(caster, target, mainSkill, supportSkill, prefab, hitPrefab, casterCharacter);
                     break;
 
                 case "TargetAOE":
-                    await ExecuteTargetAOEAsync(caster, target, mainSkill, supportSkill, prefab, hitPrefab);
+                    await ExecuteTargetAOEAsync(caster, target, mainSkill, supportSkill, prefab, hitPrefab, casterCharacter);
                     break;
 
                 case "LinearAOE":
-                    ExecuteLinearAOE(caster, target, mainSkill, supportSkill, prefab);
+                    ExecuteLinearAOE(caster, target, mainSkill, supportSkill, prefab, casterCharacter);
                     break;
 
                 case "GroundAOE":
-                    ExecuteGroundAOE(caster, target, mainSkill, supportSkill, prefab);
+                    ExecuteGroundAOE(caster, target, mainSkill, supportSkill, prefab, casterCharacter);
                     break;
 
                 case "MovingAOE":
-                    ExecuteMovingAOE(caster, target, mainSkill, supportSkill, prefab);
+                    ExecuteMovingAOE(caster, target, mainSkill, supportSkill, prefab, casterCharacter);
                     break;
 
                 case "Barrier":
@@ -262,7 +266,7 @@ namespace Novelian.Combat
                     break;
 
                 case "Instant":
-                    await ExecuteInstantAsync(caster, target, mainSkill, supportSkill, prefab);
+                    await ExecuteInstantAsync(caster, target, mainSkill, supportSkill, prefab, casterCharacter);
                     break;
 
                 default:
@@ -282,7 +286,8 @@ namespace Novelian.Combat
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
             GameObject prefab,
-            GameObject hitPrefab)
+            GameObject hitPrefab,
+            Character casterCharacter = null)
         {
             Vector3 targetPos = GetTargetOrForwardPosition(caster, target);
             float radius = mainSkill.aoe_radius > 0 ? mainSkill.aoe_radius : DEFAULT_AOE_RADIUS;
@@ -306,7 +311,7 @@ namespace Novelian.Combat
                 float hitScale = vfxDatabase != null ? vfxDatabase.GetHitScale(mainSkill.skill_id) : 1f;
                 SpawnHitEffect(hitPrefab, targetPos, hitScale);
 
-                float damage = CalculateDamage(mainSkill, supportSkill);
+                float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out _);
                 TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, hitTarget =>
                 {
                     ApplyAOEStatusEffects(hitTarget, supportSkill, damage);
@@ -330,7 +335,8 @@ namespace Novelian.Combat
             SupportSkillData supportSkill,
             GameObject prefab,
             GameObject hitPrefab,
-            bool isExplosive)
+            bool isExplosive,
+            Character casterCharacter = null)
         {
             if (target == null || !target.IsAlive())
             {
@@ -354,7 +360,7 @@ namespace Novelian.Combat
             for (int i = 0; i < projectileCount; i++)
             {
                 Vector3 fireDir = CalculateSpreadDirection(direction, i, projectileCount, spreadAngle);
-                SpawnProjectile(spawnPos, fireDir, mainSkill, supportSkill, prefab, isExplosive, target, hitPrefab);
+                SpawnProjectile(spawnPos, fireDir, mainSkill, supportSkill, prefab, isExplosive, target, hitPrefab, casterCharacter);
             }
         }
 
@@ -377,7 +383,8 @@ namespace Novelian.Combat
             GameObject prefab,
             bool isExplosive,
             ITargetable target,
-            GameObject hitPrefab)
+            GameObject hitPrefab,
+            Character casterCharacter = null)
         {
             GameObject projectileObj = Instantiate(prefab, position, Quaternion.LookRotation(direction));
 
@@ -416,7 +423,7 @@ namespace Novelian.Combat
             // Hit 스케일 가져오기
             float hitScale = vfxDatabase != null ? vfxDatabase.GetHitScale(mainSkill.skill_id) : 1f;
 
-            projectile.Initialize(mainSkill, supportSkill, target, isExplosive, hitPrefab, hitScale);
+            projectile.Initialize(mainSkill, supportSkill, target, isExplosive, hitPrefab, hitScale, casterCharacter);
         }
 
         /// <summary>
@@ -429,7 +436,8 @@ namespace Novelian.Combat
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
             GameObject prefab,
-            GameObject hitPrefab)
+            GameObject hitPrefab,
+            Character casterCharacter = null)
         {
             // 착지 위치 결정
             Vector3 landingPos = target != null
@@ -461,7 +469,7 @@ namespace Novelian.Combat
                     targetLandingPos += new Vector3(offset.x, 0, offset.y);
                 }
 
-                SpawnFallingProjectile(targetLandingPos, mainSkill, supportSkill, prefab, hitPrefab).Forget();
+                SpawnFallingProjectile(targetLandingPos, mainSkill, supportSkill, prefab, hitPrefab, casterCharacter).Forget();
             }
 
             await UniTask.Yield();
@@ -475,7 +483,8 @@ namespace Novelian.Combat
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
             GameObject prefab,
-            GameObject hitPrefab)
+            GameObject hitPrefab,
+            Character casterCharacter = null)
         {
             // 경고 VFX 표시
             GameObject warningVFX = vfxDatabase.GetWarningPrefab(mainSkill.skill_id);
@@ -539,12 +548,12 @@ namespace Novelian.Combat
             SpawnHitEffect(hitPrefab, landingPos, hitScale);
 
             // 데미지 적용
-            float damage = CalculateDamage(mainSkill, supportSkill);
+            float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out bool isCritical);
 
             // 폭발형인지 확인
             if (mainSkill.aoe_radius > 0)
             {
-                TargetableUtils.ApplyDamageInRadius(landingPos, radius, damage);
+                TargetableUtils.ApplyDamageInRadius(landingPos, radius, damage, isCritical);
             }
             else
             {
@@ -552,7 +561,7 @@ namespace Novelian.Combat
                 ITargetable nearestTarget = TargetableUtils.FindNearestTarget(landingPos, 1f);
                 if (nearestTarget != null && nearestTarget.IsAlive())
                 {
-                    nearestTarget.TakeDamage(damage);
+                    nearestTarget.TakeDamage(damage, isCritical);
                 }
             }
 
@@ -573,7 +582,8 @@ namespace Novelian.Combat
             ITargetable target,
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
-            GameObject prefab)
+            GameObject prefab,
+            Character casterCharacter = null)
         {
             // 프로젝타일과 동일한 발사 위치 (캐스터 위치 + 높이 오프셋)
             Vector3 spawnPos = caster.position + Vector3.up * DEFAULT_SPAWN_HEIGHT;
@@ -591,7 +601,7 @@ namespace Novelian.Combat
             }
 
             float duration = mainSkill.duration > 0 ? mainSkill.duration : DEFAULT_BEAM_DURATION;
-            float damage = CalculateDamage(mainSkill, supportSkill);
+            float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out _);
 
             // 각 빔 방향 계산 및 실행
             var beamTasks = new System.Collections.Generic.List<UniTask>();
@@ -978,7 +988,8 @@ namespace Novelian.Combat
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
             GameObject prefab,
-            GameObject hitPrefab)
+            GameObject hitPrefab,
+            Character casterCharacter = null)
         {
             Vector3 targetPos = GetTargetOrForwardPosition(caster, target);
 
@@ -995,9 +1006,9 @@ namespace Novelian.Combat
             float hitScale = vfxDatabase != null ? vfxDatabase.GetHitScale(mainSkill.skill_id) : 1f;
             SpawnHitEffect(hitPrefab, targetPos, hitScale);
 
-            float damage = CalculateDamage(mainSkill, supportSkill);
+            float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out bool isCritical);
 
-            TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage);
+            TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, isCritical);
 
             if (aoeObj != null) Destroy(aoeObj, 2f);
         }
@@ -1010,13 +1021,14 @@ namespace Novelian.Combat
             ITargetable target,
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
-            GameObject prefab)
+            GameObject prefab,
+            Character casterCharacter = null)
         {
             Vector3 spawnPos = caster.position;
             Vector3 direction = GetDirectionToTarget(caster, target);
 
             GameObject aoeObj = Instantiate(prefab, spawnPos, Quaternion.LookRotation(direction));
-            GetOrAddComponent<SkillAOE>(aoeObj).Initialize(mainSkill, supportSkill, isLinear: true, moveDirection: direction);
+            GetOrAddComponent<SkillAOE>(aoeObj).Initialize(mainSkill, supportSkill, isLinear: true, moveDirection: direction, caster: casterCharacter);
         }
 
         /// <summary>
@@ -1027,7 +1039,8 @@ namespace Novelian.Combat
             ITargetable target,
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
-            GameObject prefab)
+            GameObject prefab,
+            Character casterCharacter = null)
         {
             Vector3 targetPos = GetTargetOrForwardPosition(caster, target);
 
@@ -1038,7 +1051,7 @@ namespace Novelian.Combat
             }
 
             GameObject aoeObj = Instantiate(prefab, targetPos, Quaternion.identity);
-            GetOrAddComponent<SkillAOE>(aoeObj).Initialize(mainSkill, supportSkill, isGround: true);
+            GetOrAddComponent<SkillAOE>(aoeObj).Initialize(mainSkill, supportSkill, isGround: true, caster: casterCharacter);
         }
 
         /// <summary>
@@ -1050,7 +1063,8 @@ namespace Novelian.Combat
             ITargetable target,
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
-            GameObject prefab)
+            GameObject prefab,
+            Character casterCharacter = null)
         {
             // 소환 위치 결정 (타겟이 있으면 타겟 위치, 없으면 캐스터 앞)
             Vector3 spawnPos = target != null
@@ -1078,7 +1092,8 @@ namespace Novelian.Combat
                 isLinear: true,
                 moveDirection: moveDirection,
                 isFalling: false,
-                fallTarget: default
+                fallTarget: default,
+                caster: casterCharacter
             );
         }
 
@@ -1177,7 +1192,8 @@ namespace Novelian.Combat
             ITargetable target,
             MainSkillData mainSkill,
             SupportSkillData supportSkill,
-            GameObject prefab)
+            GameObject prefab,
+            Character casterCharacter = null)
         {
             Vector3 targetPos = target != null ? target.GetTransform().position : caster.position;
 
@@ -1185,8 +1201,8 @@ namespace Novelian.Combat
 
             if (target != null && target.IsAlive())
             {
-                float damage = CalculateDamage(mainSkill, supportSkill);
-                target.TakeDamage(damage);
+                float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out bool isCritical);
+                target.TakeDamage(damage, isCritical);
             }
 
             float lifetime = mainSkill.duration > 0 ? mainSkill.duration : DEFAULT_INSTANT_DURATION;
@@ -1259,11 +1275,44 @@ namespace Novelian.Combat
         #region Damage Calculation
 
         /// <summary>
-        /// 데미지 계산
+        /// 데미지 계산 (Character 스탯 적용)
         /// </summary>
-        public static float CalculateDamage(MainSkillData mainSkill, SupportSkillData supportSkill)
+        /// <param name="mainSkill">메인 스킬 데이터</param>
+        /// <param name="supportSkill">서포트 스킬 데이터</param>
+        /// <param name="casterCharacter">캐스터 캐릭터 (null이면 기본값 사용)</param>
+        /// <param name="isCritical">치명타 여부 (out)</param>
+        /// <returns>최종 데미지</returns>
+        public static float CalculateDamage(MainSkillData mainSkill, SupportSkillData supportSkill, Character casterCharacter, out bool isCritical)
         {
-            float damage = mainSkill.base_damage;
+            isCritical = false;
+            float damage;
+
+            // Character가 있으면 FinalDamage 사용 (스탯 카드 버프 적용됨)
+            if (casterCharacter != null)
+            {
+                damage = casterCharacter.FinalDamage;
+
+                // BonusDamage 적용 (추가 데미지)
+                float bonusDamagePercent = casterCharacter.GetBonusDamageModifier();
+                if (bonusDamagePercent > 0)
+                {
+                    damage *= (1f + bonusDamagePercent / 100f);
+                }
+
+                // 치명타 판정
+                float critChance = casterCharacter.GetDisplayCritChance(); // 기본 5% + modifier
+                if (UnityEngine.Random.Range(0f, 100f) < critChance)
+                {
+                    isCritical = true;
+                    float critMultiplier = casterCharacter.GetDisplayCritMultiplier(); // 기본 150% + modifier
+                    damage *= (critMultiplier / 100f);
+                }
+            }
+            else
+            {
+                // Character가 없으면 기본값 사용 (하위 호환성)
+                damage = mainSkill.base_damage;
+            }
 
             // Enhance 서포트의 explosion_ratio를 데미지 배율로 사용
             if (supportSkill != null && supportSkill.IsEnhanceSupport && supportSkill.explosion_ratio > 0)
@@ -1272,6 +1321,14 @@ namespace Novelian.Combat
             }
 
             return damage;
+        }
+
+        /// <summary>
+        /// 데미지 계산 (하위 호환성용 오버로드)
+        /// </summary>
+        public static float CalculateDamage(MainSkillData mainSkill, SupportSkillData supportSkill)
+        {
+            return CalculateDamage(mainSkill, supportSkill, null, out _);
         }
 
         #endregion
