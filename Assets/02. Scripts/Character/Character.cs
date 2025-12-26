@@ -144,7 +144,9 @@ namespace Novelian.Combat
         /// <summary>
         /// CSV 데이터 기반 초기화
         /// </summary>
-        public void Initialize(int csvCharacterId)
+        /// <param name="csvCharacterId">캐릭터 ID</param>
+        /// <param name="applyBookmarks">BookMarkManager에서 저장된 책갈피 자동 적용 여부 (기본: true)</param>
+        public void Initialize(int csvCharacterId, bool applyBookmarks = true)
         {
             characterId = csvCharacterId;
             isManuallyInitialized = true;
@@ -160,7 +162,12 @@ namespace Novelian.Combat
                 basicAttackSkillId = characterData.Base_Skill_ID;
             }
 
-            ApplyBookmarksIfAvailable();
+            // BookMarkManager 책갈피 자동 적용 (훈련소 등에서는 false로 설정 가능)
+            if (applyBookmarks)
+            {
+                ApplyBookmarksIfAvailable();
+            }
+
             LoadSkillData();
             StartAttackLoop();
 

@@ -12,6 +12,7 @@ namespace Novelian.Training
     {
         [Header("Settings")]
         [SerializeField] private float _weight = 1f;
+        [SerializeField] private GameObject damageTextPrefab;  // 훈련소 전용 데미지 폰트 (Inspector에서 할당)
 
         // 데미지 기록용 이벤트
         public static event System.Action<float> OnDamageTaken;
@@ -46,6 +47,22 @@ namespace Novelian.Training
 
             // 데미지 기록 이벤트 발생 (DPSCalculator가 구독)
             OnDamageTaken?.Invoke(damage);
+
+            // 데미지 폰트 표시 (훈련소 전용 - 직접 Instantiate)
+            if (damageTextPrefab != null)
+            {
+                Collider col = GetComponent<Collider>();
+                Vector3 textPosition = col != null ? col.bounds.center : transform.position;
+                textPosition += Vector3.up * 0.5f; // 약간 위로
+
+                GameObject textObj = Instantiate(damageTextPrefab, textPosition, Quaternion.identity);
+                var floatingText = textObj.GetComponent<FloatingDamageText>();
+                if (floatingText != null)
+                {
+                    floatingText.OnSpawn();
+                    floatingText.Initialize(damage, isCritical, false);
+                }
+            }
 
             // 피격 애니메이션 재생 (처음부터 재생하여 Exit Time 리셋)
             if (_animator != null && _animator.enabled)
