@@ -153,9 +153,9 @@ RectTransform:
   - {fileID: 879062750}
   m_Father: {fileID: 521849127}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 176.73474, y: 0}
   m_SizeDelta: {x: 354.9376, y: 80}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1461377
@@ -656,6 +656,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1948416503}
+  - {fileID: 947791529}
   - {fileID: 237173451}
   - {fileID: 2082477015}
   - {fileID: 130922621}
@@ -663,7 +664,6 @@ RectTransform:
   - {fileID: 1654479364914655814}
   - {fileID: 764357859}
   - {fileID: 2074235373}
-  - {fileID: 947791529}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -906,6 +906,7 @@ MonoBehaviour:
   characterSlotPrefab: {fileID: 5275873630982296166, guid: a307ccdaeee94314b9de989c93718d0b, type: 3}
   characterInfoPanel: {fileID: 2082477014}
   infoPanel: {fileID: 2082477018}
+  filterObject: {fileID: 947791528}
   filterDropdown: {fileID: 1726131983}
 --- !u!114 &86349546
 MonoBehaviour:
@@ -2938,13 +2939,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 372893139}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.392}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4644,7 +4645,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &516556045
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4800,8 +4801,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.000030517578, y: 0.000045776367}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0.000030517578, y: -0.000061035156}
+  m_SizeDelta: {x: 0, y: 80}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &521849128
 MonoBehaviour:
@@ -6962,7 +6963,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1358903661}
   m_HandleRect: {fileID: 1358903660}
   m_Direction: 3
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -8594,7 +8595,7 @@ MonoBehaviour:
   activeSynergyPanel: {fileID: 516556044}
   activeSynergyTitleText: {fileID: 2044100938}
   activeSynergyText: {fileID: 546893821}
-  characterSlotPrefab: {fileID: 2403927167225211134, guid: 9728585c3aa48784c8869bcd957dc7da, type: 3}
+  characterSlotPrefab: {fileID: 581878313938818266, guid: c9cffc005262d3b4ea9b7a79a495653e, type: 3}
   deckslotPrefab: {fileID: 7671539953295113025, guid: 60fae3e298347ee43bd665df010b95e0, type: 3}
   characterSlotContainer: {fileID: 1797106734}
   deckSlots:
@@ -10129,7 +10130,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &947791529
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10664,7 +10665,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1010530306
 RectTransform:
   m_ObjectHideFlags: 0
@@ -10705,7 +10706,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 3786f650046f3cc4eb9fa94b3c122c75, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -11485,9 +11486,9 @@ RectTransform:
   m_Father: {fileID: 2070317145}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: -12.3363, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1129622909
 MonoBehaviour:
@@ -13017,7 +13018,7 @@ RectTransform:
   m_Father: {fileID: 2052761494}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0.46310043, y: 116.500015}
   m_SizeDelta: {x: 0.9261, y: -233.0002}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -16229,7 +16230,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 6.663208, y: 0}
+  m_SizeDelta: {x: -8.336792, y: 30}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1797106735
 MonoBehaviour:
@@ -16258,14 +16259,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 25
+    m_Left: 30
     m_Right: 0
-    m_Top: 20
+    m_Top: 50
     m_Bottom: 0
   m_ChildAlignment: 0
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 200, y: 200}
+  m_CellSize: {x: 195, y: 250}
   m_Spacing: {x: 20, y: 20}
   m_Constraint: 1
   m_ConstraintCount: 4
@@ -17474,7 +17475,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 397.66846, y: -131.88623}
+  m_AnchoredPosition: {x: 397.66846, y: -131.88603}
   m_SizeDelta: {x: 795.3368, y: 263.77206}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1876079617
@@ -21344,6 +21345,10 @@ PrefabInstance:
     - target: {fileID: 7671539953295113025, guid: 60fae3e298347ee43bd665df010b95e0, type: 3}
       propertyPath: m_Name
       value: DeckSlot1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7671539953295113025, guid: 60fae3e298347ee43bd665df010b95e0, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
