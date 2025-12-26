@@ -121,6 +121,12 @@ public class InventoryItemInfo
     /// </summary>
     private string GetDescription(int itemId)
     {
+        // 정수 아이템 (10215~10234) - 캐릭터별 정수
+        if (itemId >= 10215 && itemId <= 10234)
+        {
+            return GetEssenceDescription(itemId);
+        }
+
         return itemId switch
         {
             // 기존 아이템
@@ -148,5 +154,31 @@ public class InventoryItemInfo
             10114 => "마법이 깃든 룬석입니다.\n책갈피 강화에 사용됩니다.",
             _ => "아이템 설명이 없습니다."
         };
+    }
+
+    /// <summary>
+    /// 정수 아이템 설명 반환 (캐릭터별 장르 기반)
+    /// </summary>
+    private string GetEssenceDescription(int essenceId)
+    {
+        // 정수 ID와 캐릭터 풀 인덱스 매핑
+        // 10215~10218: Horror (공포) - 캐릭터 21001~21004
+        // 10219~10222: Romance (로맨스) - 캐릭터 22005~22008
+        // 10223~10226: Adventure (모험) - 캐릭터 23009~23012
+        // 10227~10230: Comedy (코미디) - 캐릭터 24013~24016
+        // 10231~10234: Mystery (추리) - 캐릭터 25017~25020
+
+        int index = essenceId - 10215;
+        string genreName = index switch
+        {
+            >= 0 and <= 3 => "공포",
+            >= 4 and <= 7 => "로맨스",
+            >= 8 and <= 11 => "모험",
+            >= 12 and <= 15 => "코미디",
+            >= 16 and <= 19 => "추리",
+            _ => "알 수 없는"
+        };
+
+        return $"{genreName} 장르의 정수입니다.\n캐릭터 승급에 사용됩니다.";
     }
 }

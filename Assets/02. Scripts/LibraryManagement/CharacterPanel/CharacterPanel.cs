@@ -30,6 +30,7 @@ public class CharacterPanel : MonoBehaviour
     [SerializeField] private CharacterInfoPanel infoPanel;
 
     [Header("Filter")]
+    [SerializeField] private GameObject filterObject;      // Filter UI 오브젝트 (활성화/비활성화용)
     [SerializeField] private TMP_Dropdown filterDropdown;
 
     private List<LibraryCharacterSlot> characterSlots = new List<LibraryCharacterSlot>();
@@ -225,6 +226,55 @@ public class CharacterPanel : MonoBehaviour
             default:
                 return true;
         }
+    }
+
+    /// <summary>
+    /// 패널 활성화 시 필터 UI 표시
+    /// </summary>
+    private void OnEnable()
+    {
+        if (filterObject != null)
+        {
+            filterObject.SetActive(true);
+        }
+    }
+
+    /// <summary>
+    /// 패널 비활성화 시 필터 초기화 및 필터 UI 숨김
+    /// </summary>
+    private void OnDisable()
+    {
+        ResetFilter();
+
+        if (filterObject != null)
+        {
+            filterObject.SetActive(false);
+        }
+    }
+
+    /// <summary>
+    /// 필터를 전체로 초기화하고 모든 슬롯 표시
+    /// </summary>
+    public void ResetFilter()
+    {
+        currentFilter = CharacterFilterType.All;
+
+        if (filterDropdown != null)
+        {
+            filterDropdown.SetValueWithoutNotify(0); // 이벤트 발생 없이 값만 변경
+        }
+
+        // 모든 슬롯 활성화 및 원래 순서로 복원
+        for (int i = 0; i < characterSlots.Count; i++)
+        {
+            if (characterSlots[i] != null)
+            {
+                characterSlots[i].gameObject.SetActive(true);
+                characterSlots[i].transform.SetSiblingIndex(i);
+            }
+        }
+
+        Debug.Log("[CharacterPanel] Filter reset to All");
     }
 
     private void OnDestroy()
