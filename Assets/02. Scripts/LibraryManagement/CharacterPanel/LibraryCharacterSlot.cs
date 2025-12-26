@@ -9,6 +9,14 @@ public class LibraryCharacterSlot : MonoBehaviour
 {
     private int characterID;
     public int CharacterID => characterID;
+
+    private Genre characterGenre;
+    public Genre CharacterGenre => characterGenre;
+
+    public bool IsOwned => isOwned;
+
+    private int enhancementLevel;
+    public int EnhancementLevel => enhancementLevel;
     [SerializeField] private TextMeshProUGUI characterName;
     [SerializeField] private TextMeshProUGUI characterSliderLevelText;
     [SerializeField] private TextMeshProUGUI characterLevel;
@@ -62,16 +70,20 @@ public class LibraryCharacterSlot : MonoBehaviour
         // 1. 캐릭터 ID 저장
         characterID = data.Character_ID;
 
+        // 1-1. 장르 저장 (필터링용)
+        characterGenre = data.Genre;
+
         // 2. 캐릭터 이름 표시
         if (characterName != null)
             characterName.text = CSVLoader.Instance.GetData<StringTable>(data.Character_Name_ID)?.Text ?? "Unknown";
 
         // 3. 현재 강화 레벨 (CharacterEnhancementManager에서 가져오기)
-        int currentEnhanceLevel = 1;
+        enhancementLevel = 1;
         if (CharacterEnhancementManager.Instance != null)
         {
-            currentEnhanceLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterID);
+            enhancementLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterID);
         }
+        int currentEnhanceLevel = enhancementLevel;
 
         // 4. 해당 강화 레벨의 LevelData ID 가져오기
         int levelDataID = GetLevelDataID(data, currentEnhanceLevel);
