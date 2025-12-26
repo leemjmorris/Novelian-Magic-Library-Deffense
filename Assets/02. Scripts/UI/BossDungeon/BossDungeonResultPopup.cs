@@ -103,11 +103,13 @@ namespace NovelianMagicLibraryDefense.UI
             // 다음 층 해금 (Firebase 저장)
             UnlockNextFloor();
 
-            // 다음 층 버튼 활성화 (마지막 층이 아닐 경우)
+            // 다음 층 버튼 활성화 (다음 층 데이터가 존재하고 구현된 경우만)
             if (nextFloorButton != null && currentDungeonData != null)
             {
-                // TODO: 최대 층 체크 (현재는 100층까지)
-                bool hasNextFloor = currentDungeonData.Floor_Index < 100;
+                int nextFloorIndex = currentDungeonData.Floor_Index + 1;
+                var nextDungeonData = CSVLoader.Instance?.GetTable<BossDungeonData>()
+                    ?.Find(d => d.Floor_Index == nextFloorIndex);
+                bool hasNextFloor = nextDungeonData != null && nextDungeonData.IsImplemented;
                 nextFloorButton.gameObject.SetActive(hasNextFloor);
             }
 
@@ -445,10 +447,14 @@ namespace NovelianMagicLibraryDefense.UI
             var nextDungeonData = CSVLoader.Instance.GetTable<BossDungeonData>()
                 .Find(d => d.Floor_Index == nextFloorIndex);
 
-            if (nextDungeonData != null)
+            if (nextDungeonData != null && nextDungeonData.IsImplemented)
             {
                 SelectedBossDungeon.Data = nextDungeonData;
                 LoadSceneAsync(SceneName.BossDungeonScene).Forget();
+            }
+            else if (nextDungeonData != null && !nextDungeonData.IsImplemented)
+            {
+                Debug.LogError($"[BossDungeonResultPopup] 다음 층({nextFloorIndex})은 아직 구현되지 않았습니다!");
             }
             else
             {
