@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
+using NovelianMagicLibraryDefense.Managers;
 
 /// <summary>
 /// TitleScene UI 컨트롤러
@@ -48,6 +49,12 @@ public class TitleSceneController : MonoBehaviour
 
     private async void Start()
     {
+        // BGM 재생 (씬 시작과 동시에)
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayBGMWithFade("BGM_Title", 1f);
+        }
+
         InitializeAnimations();
         PlayTitleAnimations();
         await InitializeFirebaseAsync();

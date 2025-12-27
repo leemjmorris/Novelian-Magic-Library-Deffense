@@ -30,6 +30,12 @@ public class ShopPanel : MonoBehaviour
         if (costumeButton != null) costumeButton.onClick.AddListener(OnCostumeButtonClicked);
         if (gachaButton != null) gachaButton.onClick.AddListener(OnGachaButtonClicked);
         if (closeButton != null) closeButton.onClick.AddListener(OnCloseButtonClicked);
+
+        // Shop BGM 재생 (Lobby BGM 일시정지 후 크로스페이드)
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PauseBGMAndPlay("BGM_Shop", 1f);
+        }
     }
 
     private void OnDisable()
@@ -39,6 +45,12 @@ public class ShopPanel : MonoBehaviour
         if (costumeButton != null) costumeButton.onClick.RemoveListener(OnCostumeButtonClicked);
         if (gachaButton != null) gachaButton.onClick.RemoveListener(OnGachaButtonClicked);
         if (closeButton != null) closeButton.onClick.RemoveListener(OnCloseButtonClicked);
+
+        // Shop 닫힐 때 Lobby BGM 재개 (크로스페이드)
+        if (AudioManager.Instance != null && AudioManager.Instance.HasPausedBGM)
+        {
+            AudioManager.Instance.StopAndResumePausedBGM(1f);
+        }
     }
 
     public void OnCloseButtonClicked()

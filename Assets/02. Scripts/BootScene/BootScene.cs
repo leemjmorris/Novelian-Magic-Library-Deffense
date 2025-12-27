@@ -467,6 +467,9 @@ public class BootScene : MonoBehaviour
     {
         Log($"=== Transitioning to {nextSceneName} ===");
 
+        // 로비 BGM으로 크로스페이드
+        AudioManager.Instance.CrossfadeBGM("BGM_Lobby", 1f);
+
         if (FadeController.Instance == null || LoadingUIManager.Instance == null)
         {
             Debug.LogWarning("FadeController or LoadingUIManager not available, loading scene directly");
