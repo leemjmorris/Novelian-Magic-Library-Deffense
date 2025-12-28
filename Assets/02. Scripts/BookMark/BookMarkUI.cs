@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using MoreMountains.Feedbacks;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.Managers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -79,6 +80,12 @@ public class BookMarkUI : MonoBehaviour
     private async UniTaskVoid Start()
     {
         Debug.Log("[BookMarkUI] Start() called - Loading recipes...");
+
+        // BookMark BGM 재생 (크로스페이드)
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.CrossfadeBGM("BGM_BookMark", 1f);
+        }
 
         await LoadRecipesFromCSV(); // TODO JML: 부트씬 로드하면 필요 없어짐
 

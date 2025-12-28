@@ -49,6 +49,12 @@ namespace NovelianMagicLibraryDefense.Managers
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = 120;
 
+            // Battle BGM 재생 (크로스페이드)
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.CrossfadeBGM("BGM_Battle", 1f);
+            }
+
             InitializeManagers();
         }
 
