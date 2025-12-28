@@ -732,7 +732,8 @@ namespace NovelianMagicLibraryDefense.Managers
             if (dungeonUI != null)
             {
                 Debug.Log("[BossDungeonManager] ShowClearResult 호출 중...");
-                dungeonUI.ShowClearResult(remainingTime);
+                float timeLimit = dungeonData?.Time_Limit ?? 60f;
+                dungeonUI.ShowClearResult(remainingTime, timeLimit);
             }
             else
             {
@@ -766,7 +767,10 @@ namespace NovelianMagicLibraryDefense.Managers
             if (dungeonUI != null)
             {
                 Debug.Log("[BossDungeonManager] ShowFailResult 호출 중...");
-                dungeonUI.ShowFailResult(reason);
+                // 게임 진행 시간 계산 (초기 제한시간 - 남은 시간)
+                float timeLimit = dungeonData?.Time_Limit ?? 60f;
+                float progressTime = timeLimit - remainingTime;
+                dungeonUI.ShowFailResult(progressTime);
             }
             else
             {

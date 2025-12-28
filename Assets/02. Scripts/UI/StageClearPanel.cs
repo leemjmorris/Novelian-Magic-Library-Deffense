@@ -34,6 +34,9 @@ namespace NovelianMagicLibraryDefense.UI
         private int cachedKillCount;
         private float cachedWallHpRatio; // Wall HP 비율 (0.0 ~ 1.0)
 
+        // 실제 획득한 보상 캐시 (아이템ID, 수량)
+        private System.Collections.Generic.List<(int itemId, int amount)> earnedRewards = new System.Collections.Generic.List<(int, int)>();
+
         public bool IsOpen => panel != null && panel.activeSelf;
 
         private void Awake()
@@ -83,14 +86,14 @@ namespace NovelianMagicLibraryDefense.UI
                 panel.SetActive(true);
             }
 
-            // 스테이지 정보 표시
+            // 보상 계산 및 지급 (먼저 실행하여 earnedRewards 채움)
+            GiveRewards();
+
+            // 스테이지 정보 표시 (획득한 보상 기반)
             UpdateStageInfo();
 
             // 다음 스테이지 버튼 활성화/비활성화 체크
             UpdateNextStageButton();
-
-            // 보상 지급
-            GiveRewards();
 
             Debug.Log($"[StageClearPanel] Shown - Time: {progressTime:F1}s, Kills: {killCount}, WallHP: {wallHpRatio:P0}");
         }
@@ -168,91 +171,40 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// 보상 텍스트 생성 (CSV 연동)
+        /// 보상 텍스트 생성 (실제 획득한 보상 기반)
         /// </summary>
         private string GetRewardText()
         {
-            const string FALLBACK_REWARD = "보상\n1500G";
-
-            if (!SelectedStage.HasSelection)
+            if (earnedRewards.Count == 0)
             {
                 return "보상\n-";
             }
 
-            // RewardGroupTable에서 Reward_Group_ID로 조회
-            int rewardGroupId = SelectedStage.Data.Reward_Group_ID;
-            if (rewardGroupId == 0)
-            {
-                return FALLBACK_REWARD;
-            }
-
-            var rewardGroupTable = CSVLoader.Instance?.GetTable<RewardGroupData>();
-            if (rewardGroupTable == null)
-            {
-                Debug.LogWarning("[StageClearPanel] RewardGroupTable not loaded");
-                return FALLBACK_REWARD;
-            }
-
-            RewardGroupData rewardGroup = rewardGroupTable.GetId(rewardGroupId);
-            if (rewardGroup == null)
-            {
-                Debug.LogWarning($"[StageClearPanel] RewardGroup not found: {rewardGroupId}");
-                return FALLBACK_REWARD;
-            }
-
-            // Reward_X_ID들 수집 (0이 아닌 것만)
-            int[] rewardIds = new int[]
-            {
-                rewardGroup.Reward_1_ID,
-                rewardGroup.Reward_2_ID,
-                rewardGroup.Reward_3_ID,
-                rewardGroup.Reward_4_ID,
-                rewardGroup.Reward_5_ID
-            };
-
-            var rewardTable = CSVLoader.Instance?.GetTable<RewardData>();
-            if (rewardTable == null)
-            {
-                Debug.LogWarning("[StageClearPanel] RewardTable not loaded");
-                return FALLBACK_REWARD;
-            }
-
             System.Collections.Generic.List<string> rewardStrings = new System.Collections.Generic.List<string>();
 
-            foreach (int rewardId in rewardIds)
+            foreach (var (itemId, amount) in earnedRewards)
             {
-                if (rewardId == 0) continue;
-
-                RewardData reward = rewardTable.GetId(rewardId);
-                if (reward == null || reward.Item_ID == 0) continue;
-
-                string itemName = GetItemName(reward.Item_ID);
-                if (string.IsNullOrEmpty(itemName)) continue;
-
-                // 수량 표시 (Min_Count == Max_Count면 단일 수량, 아니면 범위)
-                string countStr = reward.Min_Count == reward.Max_Count
-                    ? $"{reward.Min_Count}"
-                    : $"{reward.Min_Count}~{reward.Max_Count}";
-
-                rewardStrings.Add($"{itemName} x{countStr}");
-            }
-
-            // 유효한 보상이 없으면 fallback
-            if (rewardStrings.Count == 0)
-            {
-                return FALLBACK_REWARD;
+                string itemName = GetItemName(itemId);
+                if (string.IsNullOrEmpty(itemName))
+                {
+                    itemName = $"아이템 {itemId}";
+                }
+                rewardStrings.Add($"{itemName} x{amount}");
             }
 
             return "보상\n" + string.Join(", ", rewardStrings);
         }
 
         /// <summary>
-        /// 실제 보상 지급 (CSV 데이터 없으면 1500G fallback)
+        /// 실제 보상 지급 (확률 계산 포함, CSV 데이터 없으면 1500G fallback)
         /// </summary>
         private void GiveRewards()
         {
             const int FALLBACK_GOLD = 1500;
             const int GOLD_CURRENCY_ID = 1601; // 골드 Currency ID
+
+            // 이전 보상 캐시 초기화
+            earnedRewards.Clear();
 
             // CSV 데이터가 없으면 1500G fallback
             if (!SelectedStage.HasSelection)
@@ -299,14 +251,21 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
-            bool anyRewardGiven = false;
-
             foreach (int rewardId in rewardIds)
             {
                 if (rewardId == 0) continue;
 
                 RewardData reward = rewardTable.GetId(rewardId);
                 if (reward == null || reward.Item_ID == 0) continue;
+
+                // 확률 체크 (Is_Fixed가 true면 100% 획득, 아니면 Probability로 결정)
+                bool shouldGive = reward.Is_Fixed || Random.value <= reward.Probability;
+
+                if (!shouldGive)
+                {
+                    Debug.Log($"[StageClearPanel] 확률 실패: Item_ID={reward.Item_ID}, Probability={reward.Probability * 100:F1}%");
+                    continue;
+                }
 
                 // 수량 결정 (Min~Max 범위 내 랜덤)
                 int amount = reward.Min_Count == reward.Max_Count
@@ -315,11 +274,13 @@ namespace NovelianMagicLibraryDefense.UI
 
                 // 아이템 지급
                 GiveItem(reward.Item_ID, amount);
-                anyRewardGiven = true;
+
+                // 획득 보상 캐시에 추가
+                earnedRewards.Add((reward.Item_ID, amount));
             }
 
             // 유효한 보상이 없으면 fallback
-            if (!anyRewardGiven)
+            if (earnedRewards.Count == 0)
             {
                 GiveFallbackReward(GOLD_CURRENCY_ID, FALLBACK_GOLD);
             }
@@ -333,6 +294,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (CurrencyManager.Instance != null)
             {
                 CurrencyManager.Instance.AddCurrency(currencyId, amount);
+                earnedRewards.Add((currencyId, amount));
                 Debug.Log($"[StageClearPanel] Fallback 보상 지급: {amount}G");
             }
         }

@@ -238,22 +238,22 @@ namespace NovelianMagicLibraryDefense.UI
         /// <summary>
         /// 클리어 결과 표시
         /// </summary>
-        public void ShowClearResult(float remainingTime)
+        public void ShowClearResult(float remainingTime, float timeLimit)
         {
             if (clearPanel != null)
             {
-                clearPanel.Show(remainingTime);
+                clearPanel.Show(remainingTime, timeLimit);
             }
         }
 
         /// <summary>
         /// 실패 결과 표시
         /// </summary>
-        public void ShowFailResult(string reason)
+        public void ShowFailResult(float progressTime)
         {
             if (failedPanel != null)
             {
-                failedPanel.Show(reason);
+                failedPanel.Show(progressTime);
             }
         }
     }
