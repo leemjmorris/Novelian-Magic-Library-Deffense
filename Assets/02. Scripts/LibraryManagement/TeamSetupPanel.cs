@@ -3,6 +3,8 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using NovelianMagicLibraryDefense.Audio;
+using NovelianMagicLibraryDefense.Managers;
 
 public class TeamSetupPanel : MonoBehaviour
 {
@@ -242,6 +244,13 @@ public class TeamSetupPanel : MonoBehaviour
         // 선택된 덱 슬롯에 캐릭터 설정
         int targetSlot = selectedDeckSlotIndex;
         deckSlots[targetSlot].SetCharacter(characterId);
+
+        // 덱 장착 음성 재생 (_2)
+        string voiceKey = CharacterVoiceHelper.GetEquipVoiceKey(characterId);
+        if (!string.IsNullOrEmpty(voiceKey))
+        {
+            AudioManager.Instance?.PlaySFX(voiceKey);
+        }
 
         Debug.Log($"[TeamSetupPanel] 슬롯 {targetSlot}에 캐릭터 설정 후 - IsSet: {deckSlots[targetSlot].IsSet}, CharacterId: {deckSlots[targetSlot].CharacterId}");
 

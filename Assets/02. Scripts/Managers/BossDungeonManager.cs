@@ -67,6 +67,13 @@ namespace NovelianMagicLibraryDefense.Managers
         private void Awake()
         {
             Debug.Log("[BossDungeonManager] Awake 호출됨");
+
+            // BossDungeon BGM 재생 (크로스페이드)
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.CrossfadeBGM("BGM_BossDungeon", 1f);
+            }
+
             Initialize();  // BaseManager.Initialize() → OnInitialize() 호출
         }
 

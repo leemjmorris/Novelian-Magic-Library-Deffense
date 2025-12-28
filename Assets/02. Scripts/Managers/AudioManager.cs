@@ -1,6 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -28,6 +28,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private List<AudioSource> sfxPool = new List<AudioSource>();
         private Dictionary<string, AudioClip> loadedClips = new Dictionary<string, AudioClip>();
+        private Dictionary<string, AsyncOperationHandle<AudioClip>> loadedHandles = new Dictionary<string, AsyncOperationHandle<AudioClip>>();
         private Dictionary<string, AsyncOperationHandle<AudioClip>> loadingHandles = new Dictionary<string, AsyncOperationHandle<AudioClip>>();
 
         // Volume settings (default to 1.0 = 100%)
@@ -45,8 +46,25 @@ namespace NovelianMagicLibraryDefense.Managers
         private const string BGM_VOLUME_PARAM = "BGMVolume";
         private const string SFX_VOLUME_PARAM = "SFXVolume";
 
-        // Fade coroutine
-        private Coroutine bgmFadeCoroutine;
+        // Current BGM tracking
+        private string currentBGMName = "";
+        public string CurrentBGMName => currentBGMName;
+        public bool IsBGMPlaying => bgmSource != null && bgmSource.isPlaying;
+
+        // Pause/Resume support
+        private string pausedBGMName = "";
+        private float pausedBGMTime = 0f;
+        private AudioClip pausedBGMClip = null;
+        public bool HasPausedBGM => !string.IsNullOrEmpty(pausedBGMName);
+
+        // Fade cancellation
+        private CancellationTokenSource bgmFadeCts;
+
+        // Voice Queue System (캐릭터 대사 순차 재생)
+        private Queue<string> voiceQueue = new Queue<string>();
+        private bool isVoicePlaying = false;
+        private CancellationTokenSource voiceQueueCts;
+        private const float VOICE_DELAY = 0.5f; // 음성 간 딜레이 (초)
 
         private void Awake()
         {
@@ -64,6 +82,26 @@ namespace NovelianMagicLibraryDefense.Managers
             DontDestroyOnLoad(gameObject);
 
             InitializeAudio();
+        }
+
+        private void Start()
+        {
+            // AudioMixer needs to be fully initialized before setting values
+            // Awake timing can cause SetFloat to succeed but not actually apply
+            ApplyAudioSettingsDelayed().Forget();
+        }
+
+        private async UniTaskVoid ApplyAudioSettingsDelayed()
+        {
+            // Wait one frame for AudioMixer to be fully ready
+            await UniTask.Yield();
+
+            // Re-apply the loaded settings
+            SetMasterVolume(masterVolume);
+            SetBGMVolume(bgmVolume);
+            SetSFXVolume(sfxVolume);
+
+            Debug.Log("[AudioManager] Audio settings re-applied after initialization");
         }
 
         /// <summary>
@@ -135,13 +173,26 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// Play BGM by addressable key
         /// </summary>
-        public async void PlayBGM(string clipName)
+        /// <param name="clipName">Addressable key for the audio clip</param>
+        /// <param name="forceRestart">If true, restart even if same BGM is playing</param>
+        public async void PlayBGM(string clipName, bool forceRestart = false)
         {
+            // Skip if same BGM is already playing
+            if (!forceRestart && currentBGMName == clipName && bgmSource.isPlaying)
+            {
+                Debug.Log($"[AudioManager] BGM already playing: {clipName}");
+                return;
+            }
+
+            CancelBGMFade();
+
             AudioClip clip = await LoadAudioClipAsync(clipName);
 
             if (clip != null)
             {
+                currentBGMName = clipName;
                 bgmSource.clip = clip;
+                bgmSource.volume = 1f;
                 bgmSource.Play();
                 Debug.Log($"[AudioManager] Playing BGM: {clipName}");
             }
@@ -150,23 +201,30 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <summary>
         /// Play BGM with fade in effect
         /// </summary>
-        public async void PlayBGMWithFade(string clipName, float fadeDuration = 1f)
+        /// <param name="clipName">Addressable key for the audio clip</param>
+        /// <param name="fadeDuration">Fade duration in seconds</param>
+        /// <param name="forceRestart">If true, restart even if same BGM is playing</param>
+        public async void PlayBGMWithFade(string clipName, float fadeDuration = 1f, bool forceRestart = false)
         {
+            // Skip if same BGM is already playing
+            if (!forceRestart && currentBGMName == clipName && bgmSource.isPlaying)
+            {
+                Debug.Log($"[AudioManager] BGM already playing: {clipName}");
+                return;
+            }
+
+            CancelBGMFade();
+
             AudioClip clip = await LoadAudioClipAsync(clipName);
 
             if (clip != null)
             {
-                // Stop any ongoing fade
-                if (bgmFadeCoroutine != null)
-                {
-                    StopCoroutine(bgmFadeCoroutine);
-                }
-
+                currentBGMName = clipName;
                 bgmSource.clip = clip;
                 bgmSource.volume = 0f;
                 bgmSource.Play();
 
-                bgmFadeCoroutine = StartCoroutine(FadeIn(bgmSource, fadeDuration));
+                FadeInAsync(fadeDuration).Forget();
                 Debug.Log($"[AudioManager] Playing BGM with fade in: {clipName}");
             }
         }
@@ -176,13 +234,11 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void StopBGM()
         {
-            if (bgmFadeCoroutine != null)
-            {
-                StopCoroutine(bgmFadeCoroutine);
-                bgmFadeCoroutine = null;
-            }
+            CancelBGMFade();
 
             bgmSource.Stop();
+            bgmSource.volume = 1f;
+            currentBGMName = "";
             Debug.Log("[AudioManager] BGM stopped");
         }
 
@@ -191,32 +247,96 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void StopBGMWithFade(float fadeDuration = 1f)
         {
-            if (bgmFadeCoroutine != null)
-            {
-                StopCoroutine(bgmFadeCoroutine);
-            }
-
-            bgmFadeCoroutine = StartCoroutine(FadeOutAndStop(bgmSource, fadeDuration));
+            CancelBGMFade();
+            FadeOutAndStopAsync(fadeDuration).Forget();
             Debug.Log("[AudioManager] Stopping BGM with fade out");
         }
 
         /// <summary>
         /// Crossfade from current BGM to new BGM
         /// </summary>
-        public async void CrossfadeBGM(string clipName, float fadeDuration = 1f)
+        /// <param name="clipName">Addressable key for the new audio clip</param>
+        /// <param name="fadeDuration">Total crossfade duration in seconds</param>
+        /// <param name="forceRestart">If true, crossfade even if same BGM is playing</param>
+        public async void CrossfadeBGM(string clipName, float fadeDuration = 1f, bool forceRestart = false)
         {
+            // Skip if same BGM is already playing
+            if (!forceRestart && currentBGMName == clipName && bgmSource.isPlaying)
+            {
+                Debug.Log($"[AudioManager] BGM already playing: {clipName}");
+                return;
+            }
+
+            CancelBGMFade();
+
             AudioClip clip = await LoadAudioClipAsync(clipName);
 
             if (clip != null)
             {
-                if (bgmFadeCoroutine != null)
-                {
-                    StopCoroutine(bgmFadeCoroutine);
-                }
-
-                bgmFadeCoroutine = StartCoroutine(CrossfadeCoroutine(clip, fadeDuration));
+                CrossfadeAsync(clip, clipName, fadeDuration).Forget();
                 Debug.Log($"[AudioManager] Crossfading to BGM: {clipName}");
             }
+        }
+
+        /// <summary>
+        /// Cancel any ongoing BGM fade operation
+        /// </summary>
+        private void CancelBGMFade()
+        {
+            if (bgmFadeCts != null)
+            {
+                bgmFadeCts.Cancel();
+                bgmFadeCts.Dispose();
+                bgmFadeCts = null;
+            }
+        }
+
+        /// <summary>
+        /// Pause current BGM with fade out and play new BGM with fade in
+        /// Used for Shop panel - pauses Lobby BGM and plays Shop BGM
+        /// </summary>
+        /// <param name="newClipName">Addressable key for the new BGM to play</param>
+        /// <param name="fadeDuration">Fade duration in seconds</param>
+        public async void PauseBGMAndPlay(string newClipName, float fadeDuration = 1f)
+        {
+            CancelBGMFade();
+
+            // Save current BGM state before pausing
+            if (bgmSource.isPlaying && bgmSource.clip != null)
+            {
+                pausedBGMName = currentBGMName;
+                pausedBGMTime = bgmSource.time;
+                pausedBGMClip = bgmSource.clip;
+                Debug.Log($"[AudioManager] Saving BGM state: {pausedBGMName} at {pausedBGMTime:F2}s");
+            }
+
+            // Load new clip
+            AudioClip newClip = await LoadAudioClipAsync(newClipName);
+            if (newClip == null)
+            {
+                Debug.LogError($"[AudioManager] Failed to load new BGM: {newClipName}");
+                return;
+            }
+
+            // Crossfade: current BGM fade out -> pause -> new BGM fade in
+            PauseBGMAndPlayAsync(newClip, newClipName, fadeDuration).Forget();
+        }
+
+        /// <summary>
+        /// Stop current BGM with fade out and resume paused BGM with fade in
+        /// Used for Shop panel - stops Shop BGM and resumes Lobby BGM
+        /// </summary>
+        /// <param name="fadeDuration">Fade duration in seconds</param>
+        public void StopAndResumePausedBGM(float fadeDuration = 1f)
+        {
+            if (!HasPausedBGM)
+            {
+                Debug.LogWarning("[AudioManager] No paused BGM to resume");
+                return;
+            }
+
+            CancelBGMFade();
+            StopAndResumePausedBGMAsync(fadeDuration).Forget();
         }
 
         #endregion
@@ -285,6 +405,87 @@ namespace NovelianMagicLibraryDefense.Managers
 
         #endregion
 
+        #region Voice Queue (캐릭터 대사 순차 재생)
+
+        /// <summary>
+        /// 캐릭터 음성을 큐에 추가하고 순차 재생
+        /// 동시 소환 시 겹치지 않고 순서대로 재생됨
+        /// </summary>
+        /// <param name="voiceKey">음성 Addressable 키 (예: "Greum_1")</param>
+        public void EnqueueVoice(string voiceKey)
+        {
+            if (string.IsNullOrEmpty(voiceKey)) return;
+
+            voiceQueue.Enqueue(voiceKey);
+            Debug.Log($"[AudioManager] Voice enqueued: {voiceKey} (Queue size: {voiceQueue.Count})");
+
+            // 큐 처리가 실행 중이 아니면 시작
+            if (!isVoicePlaying)
+            {
+                ProcessVoiceQueueAsync().Forget();
+            }
+        }
+
+        /// <summary>
+        /// 음성 큐 순차 처리
+        /// </summary>
+        private async UniTaskVoid ProcessVoiceQueueAsync()
+        {
+            if (isVoicePlaying) return;
+
+            isVoicePlaying = true;
+            voiceQueueCts = new CancellationTokenSource();
+            var token = voiceQueueCts.Token;
+
+            try
+            {
+                while (voiceQueue.Count > 0)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    string voiceKey = voiceQueue.Dequeue();
+                    AudioClip clip = await LoadAudioClipAsync(voiceKey);
+
+                    if (clip != null)
+                    {
+                        AudioSource availableSource = GetAvailableSFXSource();
+                        if (availableSource != null)
+                        {
+                            availableSource.PlayOneShot(clip);
+                            Debug.Log($"[AudioManager] Playing voice: {voiceKey}");
+
+                            // 클립 재생 시간 + 딜레이만큼 대기
+                            float waitTime = clip.length + VOICE_DELAY;
+                            await UniTask.Delay((int)(waitTime * 1000), cancellationToken: token);
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.Log("[AudioManager] Voice queue cancelled");
+            }
+            finally
+            {
+                isVoicePlaying = false;
+                voiceQueueCts?.Dispose();
+                voiceQueueCts = null;
+            }
+        }
+
+        /// <summary>
+        /// 음성 큐 초기화 (씬 전환 시 호출)
+        /// </summary>
+        public void ClearVoiceQueue()
+        {
+            voiceQueueCts?.Cancel();
+            voiceQueue.Clear();
+            isVoicePlaying = false;
+            Debug.Log("[AudioManager] Voice queue cleared");
+        }
+
+        #endregion
+
         #region Volume Control
 
         /// <summary>
@@ -298,10 +499,13 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 // Convert 0-1 to decibels (-80db to 0db)
                 float db = masterVolume > 0 ? 20f * Mathf.Log10(masterVolume) : -80f;
-                audioMixer.SetFloat(MASTER_VOLUME_PARAM, db);
+                bool success = audioMixer.SetFloat(MASTER_VOLUME_PARAM, db);
+                Debug.Log($"[AudioManager] SetMasterVolume: input={volume}, clamped={masterVolume}, db={db}, success={success}");
             }
-
-            Debug.Log($"[AudioManager] Master volume set to: {masterVolume}");
+            else
+            {
+                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set master volume.");
+            }
         }
 
         /// <summary>
@@ -314,10 +518,13 @@ namespace NovelianMagicLibraryDefense.Managers
             if (audioMixer != null)
             {
                 float db = bgmVolume > 0 ? 20f * Mathf.Log10(bgmVolume) : -80f;
-                audioMixer.SetFloat(BGM_VOLUME_PARAM, db);
+                bool success = audioMixer.SetFloat(BGM_VOLUME_PARAM, db);
+                Debug.Log($"[AudioManager] SetBGMVolume: input={volume}, clamped={bgmVolume}, db={db}, success={success}");
             }
-
-            Debug.Log($"[AudioManager] BGM volume set to: {bgmVolume}");
+            else
+            {
+                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set BGM volume.");
+            }
         }
 
         /// <summary>
@@ -330,10 +537,13 @@ namespace NovelianMagicLibraryDefense.Managers
             if (audioMixer != null)
             {
                 float db = sfxVolume > 0 ? 20f * Mathf.Log10(sfxVolume) : -80f;
-                audioMixer.SetFloat(SFX_VOLUME_PARAM, db);
+                bool success = audioMixer.SetFloat(SFX_VOLUME_PARAM, db);
+                Debug.Log($"[AudioManager] SetSFXVolume: input={volume}, clamped={sfxVolume}, db={db}, success={success}");
             }
-
-            Debug.Log($"[AudioManager] SFX volume set to: {sfxVolume}");
+            else
+            {
+                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set SFX volume.");
+            }
         }
 
         /// <summary>
@@ -396,16 +606,16 @@ namespace NovelianMagicLibraryDefense.Managers
         private async UniTask<AudioClip> LoadAudioClipAsync(string clipName)
         {
             // Check if already loaded
-            if (loadedClips.ContainsKey(clipName))
+            if (loadedClips.TryGetValue(clipName, out AudioClip cachedClip))
             {
-                return loadedClips[clipName];
+                return cachedClip;
             }
 
             // Check if currently loading
-            if (loadingHandles.ContainsKey(clipName))
+            if (loadingHandles.TryGetValue(clipName, out var loadingHandle))
             {
-                await loadingHandles[clipName].Task;
-                return loadedClips.ContainsKey(clipName) ? loadedClips[clipName] : null;
+                await loadingHandle.Task;
+                return loadedClips.TryGetValue(clipName, out var clip) ? clip : null;
             }
 
             try
@@ -418,12 +628,14 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (handle.Status == AsyncOperationStatus.Succeeded)
                 {
                     loadedClips[clipName] = handle.Result;
+                    loadedHandles[clipName] = handle; // Store handle for proper release
                     Debug.Log($"[AudioManager] Loaded audio clip: {clipName}");
                     return handle.Result;
                 }
                 else
                 {
                     Debug.LogError($"[AudioManager] Failed to load audio clip: {clipName}");
+                    Addressables.Release(handle);
                     return null;
                 }
             }
@@ -438,69 +650,261 @@ namespace NovelianMagicLibraryDefense.Managers
             }
         }
 
+        /// <summary>
+        /// Unload a specific audio clip from memory
+        /// </summary>
+        public void UnloadAudioClip(string clipName)
+        {
+            if (loadedHandles.TryGetValue(clipName, out var handle))
+            {
+                if (handle.IsValid())
+                {
+                    Addressables.Release(handle);
+                }
+                loadedHandles.Remove(clipName);
+                loadedClips.Remove(clipName);
+                Debug.Log($"[AudioManager] Unloaded audio clip: {clipName}");
+            }
+        }
+
+        /// <summary>
+        /// Unload all cached audio clips from memory
+        /// </summary>
+        public void UnloadAllAudioClips()
+        {
+            foreach (var kvp in loadedHandles)
+            {
+                if (kvp.Value.IsValid())
+                {
+                    Addressables.Release(kvp.Value);
+                }
+            }
+            loadedHandles.Clear();
+            loadedClips.Clear();
+            Debug.Log("[AudioManager] Unloaded all audio clips");
+        }
+
         #endregion
 
-        #region Fade Effects
+        #region Fade Effects (UniTask)
 
         /// <summary>
-        /// Fade in audio source volume
+        /// Fade in BGM volume using UniTask
         /// </summary>
-        private IEnumerator FadeIn(AudioSource source, float duration)
+        private async UniTaskVoid FadeInAsync(float duration)
         {
-            float startVolume = 0f;
-            float targetVolume = 1f;
+            bgmFadeCts = new CancellationTokenSource();
+            var token = bgmFadeCts.Token;
+
             float elapsed = 0f;
-
-            source.volume = startVolume;
-
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                source.volume = Mathf.Lerp(startVolume, targetVolume, elapsed / duration);
-                yield return null;
-            }
-
-            source.volume = targetVolume;
-            bgmFadeCoroutine = null;
-        }
-
-        /// <summary>
-        /// Fade out audio source volume and stop
-        /// </summary>
-        private IEnumerator FadeOutAndStop(AudioSource source, float duration)
-        {
-            float startVolume = source.volume;
-            float elapsed = 0f;
-
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                source.volume = Mathf.Lerp(startVolume, 0f, elapsed / duration);
-                yield return null;
-            }
-
-            source.volume = 0f;
-            source.Stop();
-            source.volume = 1f; // Reset for next use
-            bgmFadeCoroutine = null;
-        }
-
-        /// <summary>
-        /// Crossfade from current BGM to new BGM
-        /// </summary>
-        private IEnumerator CrossfadeCoroutine(AudioClip newClip, float duration)
-        {
-            float halfDuration = duration / 2f;
-
-            // Fade out current BGM
-            yield return FadeOutAndStop(bgmSource, halfDuration);
-
-            // Set new clip and fade in
-            bgmSource.clip = newClip;
             bgmSource.volume = 0f;
-            bgmSource.Play();
 
-            yield return FadeIn(bgmSource, halfDuration);
+            try
+            {
+                while (elapsed < duration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    bgmSource.volume = Mathf.Lerp(0f, 1f, elapsed / duration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+                bgmSource.volume = 1f;
+            }
+            catch (OperationCanceledException)
+            {
+                // Fade was cancelled, do nothing
+            }
+        }
+
+        /// <summary>
+        /// Fade out BGM volume and stop using UniTask
+        /// </summary>
+        private async UniTaskVoid FadeOutAndStopAsync(float duration)
+        {
+            bgmFadeCts = new CancellationTokenSource();
+            var token = bgmFadeCts.Token;
+
+            float startVolume = bgmSource.volume;
+            float elapsed = 0f;
+
+            try
+            {
+                while (elapsed < duration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    bgmSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / duration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+
+                bgmSource.volume = 0f;
+                bgmSource.Stop();
+                bgmSource.volume = 1f;
+                currentBGMName = "";
+            }
+            catch (OperationCanceledException)
+            {
+                // Fade was cancelled, do nothing
+            }
+        }
+
+        /// <summary>
+        /// Crossfade from current BGM to new BGM using UniTask
+        /// </summary>
+        private async UniTaskVoid CrossfadeAsync(AudioClip newClip, string newClipName, float duration)
+        {
+            bgmFadeCts = new CancellationTokenSource();
+            var token = bgmFadeCts.Token;
+
+            float halfDuration = duration / 2f;
+            float startVolume = bgmSource.volume;
+            float elapsed = 0f;
+
+            try
+            {
+                // Fade out current BGM
+                while (elapsed < halfDuration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    bgmSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / halfDuration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+
+                bgmSource.Stop();
+                bgmSource.volume = 0f;
+
+                // Set new clip and fade in
+                currentBGMName = newClipName;
+                bgmSource.clip = newClip;
+                bgmSource.Play();
+
+                elapsed = 0f;
+                while (elapsed < halfDuration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    bgmSource.volume = Mathf.Lerp(0f, 1f, elapsed / halfDuration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+
+                bgmSource.volume = 1f;
+            }
+            catch (OperationCanceledException)
+            {
+                // Fade was cancelled, do nothing
+            }
+        }
+
+        /// <summary>
+        /// Pause current BGM with fade out and play new BGM with fade in
+        /// Saves the current playback position for later resumption
+        /// </summary>
+        private async UniTaskVoid PauseBGMAndPlayAsync(AudioClip newClip, string newClipName, float duration)
+        {
+            bgmFadeCts = new CancellationTokenSource();
+            var token = bgmFadeCts.Token;
+
+            float halfDuration = duration / 2f;
+            float startVolume = bgmSource.volume;
+            float elapsed = 0f;
+
+            try
+            {
+                // Fade out current BGM
+                while (elapsed < halfDuration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    bgmSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / halfDuration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+
+                // Pause (not stop) - save exact position
+                pausedBGMTime = bgmSource.time;
+                bgmSource.Pause();
+                bgmSource.volume = 0f;
+                Debug.Log($"[AudioManager] BGM paused at {pausedBGMTime:F2}s");
+
+                // Set new clip and fade in
+                currentBGMName = newClipName;
+                bgmSource.clip = newClip;
+                bgmSource.time = 0f;
+                bgmSource.Play();
+
+                elapsed = 0f;
+                while (elapsed < halfDuration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    bgmSource.volume = Mathf.Lerp(0f, 1f, elapsed / halfDuration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+
+                bgmSource.volume = 1f;
+                Debug.Log($"[AudioManager] Now playing: {newClipName}");
+            }
+            catch (OperationCanceledException)
+            {
+                // Fade was cancelled, do nothing
+            }
+        }
+
+        /// <summary>
+        /// Stop current BGM with fade out and resume paused BGM with fade in
+        /// Resumes from the saved playback position
+        /// </summary>
+        private async UniTaskVoid StopAndResumePausedBGMAsync(float duration)
+        {
+            bgmFadeCts = new CancellationTokenSource();
+            var token = bgmFadeCts.Token;
+
+            float halfDuration = duration / 2f;
+            float startVolume = bgmSource.volume;
+            float elapsed = 0f;
+
+            try
+            {
+                // Fade out current BGM (Shop BGM)
+                while (elapsed < halfDuration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    bgmSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / halfDuration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+
+                bgmSource.Stop();
+                bgmSource.volume = 0f;
+
+                // Restore paused BGM
+                currentBGMName = pausedBGMName;
+                bgmSource.clip = pausedBGMClip;
+                bgmSource.time = pausedBGMTime;
+                bgmSource.Play();
+                Debug.Log($"[AudioManager] Resuming BGM: {pausedBGMName} from {pausedBGMTime:F2}s");
+
+                // Clear paused state
+                pausedBGMName = "";
+                pausedBGMTime = 0f;
+                pausedBGMClip = null;
+
+                // Fade in resumed BGM
+                elapsed = 0f;
+                while (elapsed < halfDuration)
+                {
+                    token.ThrowIfCancellationRequested();
+                    elapsed += Time.deltaTime;
+                    bgmSource.volume = Mathf.Lerp(0f, 1f, elapsed / halfDuration);
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
+                }
+
+                bgmSource.volume = 1f;
+            }
+            catch (OperationCanceledException)
+            {
+                // Fade was cancelled, do nothing
+            }
         }
 
         #endregion
@@ -511,7 +915,19 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (instance != this) return;
 
+            // Cancel any ongoing fade
+            CancelBGMFade();
+
             // Release all loaded AudioClips
+            foreach (var handle in loadedHandles.Values)
+            {
+                if (handle.IsValid())
+                {
+                    Addressables.Release(handle);
+                }
+            }
+
+            // Release any still-loading handles
             foreach (var handle in loadingHandles.Values)
             {
                 if (handle.IsValid())
@@ -521,6 +937,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             loadedClips.Clear();
+            loadedHandles.Clear();
             loadingHandles.Clear();
 
             Debug.Log("[AudioManager] Cleaned up and released resources");

@@ -21,7 +21,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private CSVLoader csvLoader;
     [SerializeField] private CurrencyManager currencyManager;
     [SerializeField] private IngredientManager ingredientManager;
-    [SerializeField] private AudioManager audioManager;
+    // AudioManager는 이제 TitleScene에서 초기화됨
     [SerializeField] private BookMarkManager bookMarkManager;
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private CharacterEnhancementManager characterEnhancementManager;
@@ -29,7 +29,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private CharacterOwnershipManager characterOwnershipManager;
     [SerializeField] private WarningUIManager warningUIManager; 
     [SerializeField] private LoadingUIManager loadingUIManager;
-    [SerializeField] private InputManager inputManager;
+    // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화됨
     [SerializeField] private PartySynergyManager partySynergyManager;
 
     [Header("Loading Progress")]
@@ -88,44 +88,22 @@ public class BootScene : MonoBehaviour
             fadeTask, // JML: Complete fade if not done
             InitializeCurrencyManager(),
             InitializeIngredientManager(),
-            InitializeAudioManager(),
+            // AudioManager는 이제 TitleScene에서 초기화됨
             InitializeBookMarkManager(),
             InitializeLoadingUIManager(), // LCB: 로딩 UI 매니저 초기화 (병렬 처리)
             InitializeDeckManager(),
             InitializeCharacterEnhancementManager(),
             InitializeCharacterOwnershipManager(),
             InitializeWarningUIManager(),
-            InitializeInputManager(),
+            // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화됨
             InitializePartySynergyManager()
-            // LMJ: SkillEffectDatabase 초기화 제거됨 (스킬 시스템 리팩토링 예정)
+            // LMJ: AudioManager 초기화는 TitleScene에서 진행
         );
 
         Log("--- All Boot Systems Initialized ---");
     }
 
-    private async UniTask InitializeInputManager()
-    {
-        Log("Initializing InputManager...");
-
-        if (inputManager == null)
-        {
-            Debug.LogError("✗ InputManager reference is NULL! Assign it in Inspector.");
-            return;
-        }
-
-        // JML: Wait for Awake to complete
-        await UniTask.WaitUntil(() => InputManager.Instance != null);
-        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start()
-
-        if (InputManager.Instance != null)
-        {
-            Log("✓ InputManager ready");
-        }
-        else
-        {
-            Debug.LogError("✗ InputManager failed to initialize!");
-        }
-    }
+    // InputManager 초기화 메서드 제거됨 - DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화
 
     private async UniTask InitializePartySynergyManager()
     {
@@ -432,32 +410,7 @@ public class BootScene : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// JML: Initialize AudioManager (runs in parallel with other managers)
-    /// </summary>
-    private async UniTask InitializeAudioManager()
-    {
-        Log("Initializing AudioManager...");
-
-        if (audioManager == null)
-        {
-            Debug.LogError("✗ AudioManager reference is NULL! Assign it in Inspector.");
-            return;
-        }
-
-        // JML: Wait for Awake to complete
-        await UniTask.WaitUntil(() => AudioManager.Instance != null);
-        await UniTask.DelayFrame(1);
-
-        if (AudioManager.Instance != null)
-        {
-            Log("✓ AudioManager ready");
-        }
-        else
-        {
-            Debug.LogError("✗ AudioManager failed to initialize!");
-        }
-    }
+    // AudioManager 초기화 메서드 제거됨 - TitleScene에서 초기화됨
 
     /// <summary>
     /// JML: Transition to the next scene with fade effect
@@ -466,6 +419,9 @@ public class BootScene : MonoBehaviour
     private async UniTask TransitionToNextScene()
     {
         Log($"=== Transitioning to {nextSceneName} ===");
+
+        // 로비 BGM으로 크로스페이드 (AudioManager가 있는 경우만)
+        AudioManager.Instance?.CrossfadeBGM("BGM_Lobby", 1f);
 
         if (FadeController.Instance == null || LoadingUIManager.Instance == null)
         {
