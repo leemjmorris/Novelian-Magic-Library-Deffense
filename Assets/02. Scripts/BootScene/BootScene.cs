@@ -21,7 +21,6 @@ public class BootScene : MonoBehaviour
     [SerializeField] private CSVLoader csvLoader;
     [SerializeField] private CurrencyManager currencyManager;
     [SerializeField] private IngredientManager ingredientManager;
-    [SerializeField] private AudioManager audioManager;
     [SerializeField] private BookMarkManager bookMarkManager;
     [SerializeField] private DeckManager deckManager;
     [SerializeField] private CharacterEnhancementManager characterEnhancementManager;
@@ -88,7 +87,6 @@ public class BootScene : MonoBehaviour
             fadeTask, // JML: Complete fade if not done
             InitializeCurrencyManager(),
             InitializeIngredientManager(),
-            InitializeAudioManager(),
             InitializeBookMarkManager(),
             InitializeLoadingUIManager(), // LCB: 로딩 UI 매니저 초기화 (병렬 처리)
             InitializeDeckManager(),
@@ -97,7 +95,7 @@ public class BootScene : MonoBehaviour
             InitializeWarningUIManager(),
             InitializeInputManager(),
             InitializePartySynergyManager()
-            // LMJ: SkillEffectDatabase 초기화 제거됨 (스킬 시스템 리팩토링 예정)
+            // LMJ: AudioManager 초기화는 TitleScene에서 진행
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -432,32 +430,7 @@ public class BootScene : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// JML: Initialize AudioManager (runs in parallel with other managers)
-    /// </summary>
-    private async UniTask InitializeAudioManager()
-    {
-        Log("Initializing AudioManager...");
-
-        if (audioManager == null)
-        {
-            Debug.LogError("✗ AudioManager reference is NULL! Assign it in Inspector.");
-            return;
-        }
-
-        // JML: Wait for Awake to complete
-        await UniTask.WaitUntil(() => AudioManager.Instance != null);
-        await UniTask.DelayFrame(1);
-
-        if (AudioManager.Instance != null)
-        {
-            Log("✓ AudioManager ready");
-        }
-        else
-        {
-            Debug.LogError("✗ AudioManager failed to initialize!");
-        }
-    }
+    // LMJ: AudioManager 초기화는 TitleScene에서 진행
 
     /// <summary>
     /// JML: Transition to the next scene with fade effect
@@ -467,8 +440,8 @@ public class BootScene : MonoBehaviour
     {
         Log($"=== Transitioning to {nextSceneName} ===");
 
-        // 로비 BGM으로 크로스페이드
-        AudioManager.Instance.CrossfadeBGM("BGM_Lobby", 1f);
+        // 로비 BGM으로 크로스페이드 (AudioManager가 있는 경우만)
+        AudioManager.Instance?.CrossfadeBGM("BGM_Lobby", 1f);
 
         if (FadeController.Instance == null || LoadingUIManager.Instance == null)
         {
