@@ -15,25 +15,31 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Panel")]
         [SerializeField] private GameObject panel;
 
+        [Header("Rank Image")]
+        [SerializeField] private Image rankImage;
+        [SerializeField] private Sprite rankFSprite; // F 랭크 이미지
+
         [Header("Text Fields")]
-        [SerializeField] private TextMeshProUGUI titleText;
         [SerializeField] private TextMeshProUGUI floorText;
-        [SerializeField] private TextMeshProUGUI reasonText;
+        [SerializeField] private TextMeshProUGUI progressTimeText;
 
         [Header("Buttons")]
         [SerializeField] private Button lobbyButton;
         [SerializeField] private Button retryButton;
 
-        [Header("Animation")]
-        [SerializeField] private float showDelay = 1f;
-        [SerializeField] private Animator animator;
-
+        // 캐시된 결과 데이터
+        private float cachedProgressTime;
         private BossDungeonData currentDungeonData;
 
-        public bool IsOpen => (panel != null ? panel : gameObject).activeSelf;
+        public bool IsOpen => panel != null && panel.activeSelf;
 
         private void Awake()
         {
+            if (panel != null)
+            {
+                panel.SetActive(false);
+            }
+
             // 버튼 이벤트 연결
             if (lobbyButton != null)
                 lobbyButton.onClick.AddListener(OnLobbyButtonClicked);
@@ -52,55 +58,56 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// 실패 패널 표시
+        /// 실패 패널 표시 (데이터 포함)
         /// </summary>
-        public void Show(string reason)
+        public void Show(float progressTime)
         {
+            cachedProgressTime = progressTime;
             currentDungeonData = SelectedBossDungeon.Data;
 
-            // Issue #476: 텍스트를 패널 활성화 전에 먼저 세팅 (텍스트 변경이 눈에 보이지 않도록)
-            SetupTexts(reason);
+            if (panel != null)
+            {
+                panel.SetActive(true);
+            }
 
-            // 패널 활성화
-            GameObject targetPanel = panel != null ? panel : gameObject;
-            targetPanel.SetActive(true);
+            // 던전 정보 표시
+            UpdateFloorInfo();
 
-            ShowAsync().Forget();
+            Debug.Log($"[BossDungeonFailedPanel] Shown - Time: {progressTime:F1}s");
         }
 
         /// <summary>
-        /// 텍스트 미리 세팅 (패널 활성화 전)
+        /// 실패 패널 표시 (데이터 없이 - 하위 호환)
         /// </summary>
-        private void SetupTexts(string reason)
+        public void Show()
         {
-            if (titleText != null)
-                titleText.text = "실패...";
-
-            if (reasonText != null)
-                reasonText.text = reason;
-
-            if (floorText != null && currentDungeonData != null)
-                floorText.text = $"{currentDungeonData.Floor_Index}층";
+            Show(0f);
         }
 
-        private async UniTaskVoid ShowAsync()
+        /// <summary>
+        /// 층 정보 업데이트
+        /// </summary>
+        private void UpdateFloorInfo()
         {
-            // 지연 후 게임 일시정지
-            if (showDelay > 0)
+            // 층 이름
+            if (floorText != null && currentDungeonData != null)
             {
-                await UniTask.Delay((int)(showDelay * 1000));
+                floorText.text = $"{currentDungeonData.Floor_Index}층";
             }
 
-            // Issue #476: 게임 일시정지
-            Time.timeScale = 0f;
-
-            // 애니메이션 재생
-            if (animator != null)
+            // 랭크 이미지 (실패는 항상 F)
+            if (rankImage != null && rankFSprite != null)
             {
-                animator.SetTrigger("Fail");
+                rankImage.sprite = rankFSprite;
             }
 
-            Debug.Log("[BossDungeonFailedPanel] 실패 표시 완료");
+            // 게임 진행 시간
+            if (progressTimeText != null)
+            {
+                int minutes = (int)(cachedProgressTime / 60);
+                int seconds = (int)(cachedProgressTime % 60);
+                progressTimeText.text = $"게임 진행 시간: {minutes:D2}:{seconds:D2}";
+            }
         }
 
         /// <summary>
@@ -108,44 +115,46 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void Close()
         {
-            GameObject targetPanel = panel != null ? panel : gameObject;
-            targetPanel.SetActive(false);
+            if (panel != null)
+            {
+                panel.SetActive(false);
+            }
         }
 
-        #region Button Handlers
-
-        private void OnLobbyButtonClicked()
+        /// <summary>
+        /// 로비로 돌아가기
+        /// </summary>
+        public void OnLobbyButtonClicked()
         {
-            Debug.Log("[BossDungeonFailedPanel] 로비 버튼 클릭");
-            Time.timeScale = 1f;
+            Debug.Log("[BossDungeonFailedPanel] Lobby button clicked - Loading LobbyScene");
             Close();
+            Time.timeScale = 1f;
             SelectedBossDungeon.Clear();
-            LoadSceneAsync(SceneName.LobbyScene).Forget();
+            LoadLobbySceneAsync().Forget();
         }
 
-        private void OnRetryButtonClicked()
+        /// <summary>
+        /// 재도전 (SelectedBossDungeon.Data 유지)
+        /// </summary>
+        public void OnRetryButtonClicked()
         {
-            Debug.Log("[BossDungeonFailedPanel] 재도전 버튼 클릭");
-            Time.timeScale = 1f;
+            Debug.Log("[BossDungeonFailedPanel] Retry button clicked - Reloading BossDungeonScene");
             Close();
-            LoadSceneAsync(SceneName.BossDungeonScene).Forget();
+            Time.timeScale = 1f;
+            // SelectedBossDungeon.Data는 유지하여 같은 층 재시작
+            LoadBossDungeonSceneAsync().Forget();
         }
 
-        private async UniTaskVoid LoadSceneAsync(string sceneName)
+        #region Scene Loading
+
+        private async UniTaskVoid LoadLobbySceneAsync()
         {
-            if (FadeController.Instance != null)
-            {
-                FadeController.Instance.fadePanel.SetActive(true);
-                await FadeController.Instance.FadeOut(0.5f);
-            }
+            await FadeController.Instance.LoadSceneWithFade(SceneName.LobbyScene);
+        }
 
-            await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
-
-            if (FadeController.Instance != null)
-            {
-                await FadeController.Instance.FadeIn(0.5f);
-                FadeController.Instance.fadePanel.SetActive(false);
-            }
+        private async UniTaskVoid LoadBossDungeonSceneAsync()
+        {
+            await FadeController.Instance.LoadSceneWithFade(SceneName.BossDungeonScene);
         }
 
         #endregion
