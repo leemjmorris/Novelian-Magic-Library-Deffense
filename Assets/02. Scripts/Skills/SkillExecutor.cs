@@ -1,4 +1,6 @@
 using Cysharp.Threading.Tasks;
+using NovelianMagicLibraryDefense.Audio;
+using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
 namespace Novelian.Combat
@@ -106,6 +108,9 @@ namespace Novelian.Combat
             {
                 return;
             }
+
+            // 스킬 발동 사운드 재생
+            PlaySkillSound(mainSkill.skill_id);
 
             // 조합 규칙 검증 - 유효하지 않으면 서포트 스킬 없이 실행
             SupportSkillData validSupport = GetValidSupportSkill(mainSkill, supportSkill);
@@ -1214,6 +1219,19 @@ namespace Novelian.Combat
         #endregion
 
         #region Helper Methods
+
+        /// <summary>
+        /// 스킬 발동 사운드 재생
+        /// </summary>
+        private void PlaySkillSound(int skillId)
+        {
+            string soundKey = SkillSoundHelper.GetSkillSoundKey(skillId);
+            Debug.Log($"[SkillSound] skillId={skillId}, soundKey={soundKey ?? "null"}, AudioManager={AudioManager.Instance != null}");
+            if (!string.IsNullOrEmpty(soundKey))
+            {
+                AudioManager.Instance?.PlaySFX(soundKey);
+            }
+        }
 
         private Vector3 GetTargetOrForwardPosition(Transform caster, ITargetable target)
         {
