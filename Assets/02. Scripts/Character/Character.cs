@@ -9,6 +9,7 @@ namespace Novelian.Combat
     using System.Threading;
     using System.Collections.Generic;
     using NovelianMagicLibraryDefense.Managers;
+    using NovelianMagicLibraryDefense.Audio;
 
     /// <summary>
     /// 캐릭터 메인 클래스
@@ -171,7 +172,22 @@ namespace Novelian.Combat
             LoadSkillData();
             StartAttackLoop();
 
+            // 소환 대사 재생
+            PlaySummonVoice(csvCharacterId);
+
             isInitialized = true;
+        }
+
+        /// <summary>
+        /// 소환 시 캐릭터 대사 재생
+        /// </summary>
+        private void PlaySummonVoice(int charId)
+        {
+            string voiceKey = CharacterVoiceHelper.GetRandomVoiceKey(charId);
+            if (!string.IsNullOrEmpty(voiceKey))
+            {
+                AudioManager.Instance?.EnqueueVoice(voiceKey);
+            }
         }
 
         private void OnDestroy()
