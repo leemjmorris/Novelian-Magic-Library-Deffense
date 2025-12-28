@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Managers;
 using NovelianMagicLibraryDefense.Core;
 using Cysharp.Threading.Tasks;
@@ -16,7 +17,13 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Settings")]
         [SerializeField] private bool pauseOnOpen = true;
 
+        [Header("Volume Sliders")]
+        [SerializeField] private Slider masterVolumeSlider;
+        [SerializeField] private Slider bgmVolumeSlider;
+        [SerializeField] private Slider sfxVolumeSlider;
+
         private bool isOpen = false;
+        private bool isInitializingSliders = false;
         private float previousTimeScale = 1f;
 
         private void Awake()
@@ -30,6 +37,8 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnMasterVolumeChanged(float value)
         {
+            Debug.Log($"[SettingsPanel] OnMasterVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            if (isInitializingSliders) return;
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.SetMasterVolume(value);
@@ -42,6 +51,8 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnBGMVolumeChanged(float value)
         {
+            Debug.Log($"[SettingsPanel] OnBGMVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            if (isInitializingSliders) return;
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.SetBGMVolume(value);
@@ -54,6 +65,8 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnSFXVolumeChanged(float value)
         {
+            Debug.Log($"[SettingsPanel] OnSFXVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            if (isInitializingSliders) return;
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.SetSFXVolume(value);
@@ -98,6 +111,30 @@ namespace NovelianMagicLibraryDefense.UI
 
             gameObject.SetActive(true);
             isOpen = true;
+
+            // 슬라이더 값을 AudioManager의 현재 볼륨 값으로 동기화
+            SyncSlidersWithAudioManager();
+        }
+
+        /// <summary>
+        /// 슬라이더 값을 AudioManager의 현재 볼륨 값으로 동기화
+        /// </summary>
+        private void SyncSlidersWithAudioManager()
+        {
+            if (AudioManager.Instance == null) return;
+
+            isInitializingSliders = true;
+
+            if (masterVolumeSlider != null)
+                masterVolumeSlider.value = AudioManager.Instance.GetMasterVolume();
+
+            if (bgmVolumeSlider != null)
+                bgmVolumeSlider.value = AudioManager.Instance.GetBGMVolume();
+
+            if (sfxVolumeSlider != null)
+                sfxVolumeSlider.value = AudioManager.Instance.GetSFXVolume();
+
+            isInitializingSliders = false;
         }
 
         /// <summary>

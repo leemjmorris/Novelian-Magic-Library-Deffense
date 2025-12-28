@@ -1,4 +1,6 @@
 using Cysharp.Threading.Tasks;
+using NovelianMagicLibraryDefense.Audio;
+using NovelianMagicLibraryDefense.Managers;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -448,6 +450,9 @@ namespace Novelian.Combat
         /// </summary>
         private void ApplyDamage(ITargetable hitTarget)
         {
+            // 히트 사운드 재생
+            PlayHitSound();
+
             if (isExplosive && mainSkill.aoe_radius > 0)
             {
                 // 범위 데미지
@@ -775,6 +780,21 @@ namespace Novelian.Combat
         #endregion
 
         #region Utility
+
+        /// <summary>
+        /// 히트 사운드 재생
+        /// </summary>
+        private void PlayHitSound()
+        {
+            if (mainSkill == null) return;
+
+            string hitSoundKey = SkillSoundHelper.GetHitSoundKey(mainSkill.skill_id);
+            Debug.Log($"[HitSound] skillId={mainSkill.skill_id}, hitSoundKey={hitSoundKey ?? "null"}, AudioManager={AudioManager.Instance != null}");
+            if (!string.IsNullOrEmpty(hitSoundKey))
+            {
+                AudioManager.Instance?.PlaySFX(hitSoundKey);
+            }
+        }
 
         private void SpawnHitEffect(Vector3 position)
         {

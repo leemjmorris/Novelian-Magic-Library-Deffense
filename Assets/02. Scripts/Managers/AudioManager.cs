@@ -60,6 +60,12 @@ namespace NovelianMagicLibraryDefense.Managers
         // Fade cancellation
         private CancellationTokenSource bgmFadeCts;
 
+        // Voice Queue System (캐릭터 대사 순차 재생)
+        private Queue<string> voiceQueue = new Queue<string>();
+        private bool isVoicePlaying = false;
+        private CancellationTokenSource voiceQueueCts;
+        private const float VOICE_DELAY = 0.5f; // 음성 간 딜레이 (초)
+
         private void Awake()
         {
             // Singleton pattern
@@ -76,6 +82,26 @@ namespace NovelianMagicLibraryDefense.Managers
             DontDestroyOnLoad(gameObject);
 
             InitializeAudio();
+        }
+
+        private void Start()
+        {
+            // AudioMixer needs to be fully initialized before setting values
+            // Awake timing can cause SetFloat to succeed but not actually apply
+            ApplyAudioSettingsDelayed().Forget();
+        }
+
+        private async UniTaskVoid ApplyAudioSettingsDelayed()
+        {
+            // Wait one frame for AudioMixer to be fully ready
+            await UniTask.Yield();
+
+            // Re-apply the loaded settings
+            SetMasterVolume(masterVolume);
+            SetBGMVolume(bgmVolume);
+            SetSFXVolume(sfxVolume);
+
+            Debug.Log("[AudioManager] Audio settings re-applied after initialization");
         }
 
         /// <summary>
@@ -379,6 +405,87 @@ namespace NovelianMagicLibraryDefense.Managers
 
         #endregion
 
+        #region Voice Queue (캐릭터 대사 순차 재생)
+
+        /// <summary>
+        /// 캐릭터 음성을 큐에 추가하고 순차 재생
+        /// 동시 소환 시 겹치지 않고 순서대로 재생됨
+        /// </summary>
+        /// <param name="voiceKey">음성 Addressable 키 (예: "Greum_1")</param>
+        public void EnqueueVoice(string voiceKey)
+        {
+            if (string.IsNullOrEmpty(voiceKey)) return;
+
+            voiceQueue.Enqueue(voiceKey);
+            Debug.Log($"[AudioManager] Voice enqueued: {voiceKey} (Queue size: {voiceQueue.Count})");
+
+            // 큐 처리가 실행 중이 아니면 시작
+            if (!isVoicePlaying)
+            {
+                ProcessVoiceQueueAsync().Forget();
+            }
+        }
+
+        /// <summary>
+        /// 음성 큐 순차 처리
+        /// </summary>
+        private async UniTaskVoid ProcessVoiceQueueAsync()
+        {
+            if (isVoicePlaying) return;
+
+            isVoicePlaying = true;
+            voiceQueueCts = new CancellationTokenSource();
+            var token = voiceQueueCts.Token;
+
+            try
+            {
+                while (voiceQueue.Count > 0)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    string voiceKey = voiceQueue.Dequeue();
+                    AudioClip clip = await LoadAudioClipAsync(voiceKey);
+
+                    if (clip != null)
+                    {
+                        AudioSource availableSource = GetAvailableSFXSource();
+                        if (availableSource != null)
+                        {
+                            availableSource.PlayOneShot(clip);
+                            Debug.Log($"[AudioManager] Playing voice: {voiceKey}");
+
+                            // 클립 재생 시간 + 딜레이만큼 대기
+                            float waitTime = clip.length + VOICE_DELAY;
+                            await UniTask.Delay((int)(waitTime * 1000), cancellationToken: token);
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.Log("[AudioManager] Voice queue cancelled");
+            }
+            finally
+            {
+                isVoicePlaying = false;
+                voiceQueueCts?.Dispose();
+                voiceQueueCts = null;
+            }
+        }
+
+        /// <summary>
+        /// 음성 큐 초기화 (씬 전환 시 호출)
+        /// </summary>
+        public void ClearVoiceQueue()
+        {
+            voiceQueueCts?.Cancel();
+            voiceQueue.Clear();
+            isVoicePlaying = false;
+            Debug.Log("[AudioManager] Voice queue cleared");
+        }
+
+        #endregion
+
         #region Volume Control
 
         /// <summary>
@@ -392,10 +499,13 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 // Convert 0-1 to decibels (-80db to 0db)
                 float db = masterVolume > 0 ? 20f * Mathf.Log10(masterVolume) : -80f;
-                audioMixer.SetFloat(MASTER_VOLUME_PARAM, db);
+                bool success = audioMixer.SetFloat(MASTER_VOLUME_PARAM, db);
+                Debug.Log($"[AudioManager] SetMasterVolume: input={volume}, clamped={masterVolume}, db={db}, success={success}");
             }
-
-            Debug.Log($"[AudioManager] Master volume set to: {masterVolume}");
+            else
+            {
+                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set master volume.");
+            }
         }
 
         /// <summary>
@@ -408,10 +518,13 @@ namespace NovelianMagicLibraryDefense.Managers
             if (audioMixer != null)
             {
                 float db = bgmVolume > 0 ? 20f * Mathf.Log10(bgmVolume) : -80f;
-                audioMixer.SetFloat(BGM_VOLUME_PARAM, db);
+                bool success = audioMixer.SetFloat(BGM_VOLUME_PARAM, db);
+                Debug.Log($"[AudioManager] SetBGMVolume: input={volume}, clamped={bgmVolume}, db={db}, success={success}");
             }
-
-            Debug.Log($"[AudioManager] BGM volume set to: {bgmVolume}");
+            else
+            {
+                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set BGM volume.");
+            }
         }
 
         /// <summary>
@@ -424,10 +537,13 @@ namespace NovelianMagicLibraryDefense.Managers
             if (audioMixer != null)
             {
                 float db = sfxVolume > 0 ? 20f * Mathf.Log10(sfxVolume) : -80f;
-                audioMixer.SetFloat(SFX_VOLUME_PARAM, db);
+                bool success = audioMixer.SetFloat(SFX_VOLUME_PARAM, db);
+                Debug.Log($"[AudioManager] SetSFXVolume: input={volume}, clamped={sfxVolume}, db={db}, success={success}");
             }
-
-            Debug.Log($"[AudioManager] SFX volume set to: {sfxVolume}");
+            else
+            {
+                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set SFX volume.");
+            }
         }
 
         /// <summary>

@@ -97,7 +97,7 @@ public class BootScene : MonoBehaviour
             InitializeWarningUIManager(),
             // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화됨
             InitializePartySynergyManager()
-            // LMJ: SkillEffectDatabase 초기화 제거됨 (스킬 시스템 리팩토링 예정)
+            // LMJ: AudioManager 초기화는 TitleScene에서 진행
         );
 
         Log("--- All Boot Systems Initialized ---");
@@ -420,8 +420,8 @@ public class BootScene : MonoBehaviour
     {
         Log($"=== Transitioning to {nextSceneName} ===");
 
-        // 로비 BGM으로 크로스페이드
-        AudioManager.Instance.CrossfadeBGM("BGM_Lobby", 1f);
+        // 로비 BGM으로 크로스페이드 (AudioManager가 있는 경우만)
+        AudioManager.Instance?.CrossfadeBGM("BGM_Lobby", 1f);
 
         if (FadeController.Instance == null || LoadingUIManager.Instance == null)
         {
