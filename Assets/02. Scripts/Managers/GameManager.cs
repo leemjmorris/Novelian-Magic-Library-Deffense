@@ -17,7 +17,6 @@ namespace NovelianMagicLibraryDefense.Managers
         public static GameManager Instance => instance;
 
         [Header("Manager References")]
-        [SerializeField] private InputManager inputManager;
         [SerializeField] private ObjectPoolManager poolManager;
         [SerializeField] private UIManager uiManager;
         [SerializeField] private WaveManager waveManager;
@@ -25,7 +24,8 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private StageStateManager stageStateManager;
 
         // Public accessors for type-safe manager access
-        public InputManager Input => inputManager;
+        // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 별도 관리
+        public InputManager Input => InputManager.Instance;
         public ObjectPoolManager Pool => poolManager;
         public UIManager UI => uiManager;
         public WaveManager Wave => waveManager;
@@ -74,10 +74,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             // Initialize in dependency order
-            if (inputManager != null)
-            {
-                inputManager.Initialize();
-            }
+            // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 Awake에서 자동 초기화됨
 
             if (poolManager != null)
             {
@@ -116,7 +113,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void ResetAll()
         {
-            inputManager?.Reset();
+            InputManager.Instance?.ResetInputState();
             poolManager?.Reset();
             uiManager?.Reset();
             waveManager?.Reset();
