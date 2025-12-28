@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
+using TMPro;
 using NovelianMagicLibraryDefense.Managers;
 
 /// <summary>
@@ -244,7 +245,6 @@ public class TitleSceneController : MonoBehaviour
             if (FirebaseManager.Instance.IsSignedIn)
             {
                 Debug.Log($"{LOG_PREFIX} 이미 로그인됨! UserId: {FirebaseManager.Instance.CurrentUserId}");
-                Debug.Log($"{LOG_PREFIX} BootScene으로 이동합니다...");
                 LoadBootScene();
                 return;
             }
@@ -261,7 +261,6 @@ public class TitleSceneController : MonoBehaviour
             }
 
             Debug.Log($"{LOG_PREFIX} 구글 로그인 성공! UserId: {userId}");
-            Debug.Log($"{LOG_PREFIX} BootScene으로 이동합니다...");
             LoadBootScene();
         }
         catch (System.Exception e)

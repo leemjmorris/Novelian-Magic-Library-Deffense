@@ -3,8 +3,7 @@ using Cysharp.Threading.Tasks;
 using Firebase;
 using Firebase.Auth;
 using System;
-using GooglePlayGames;
-using GooglePlayGames.BasicApi;
+using Google;
 
 /// <summary>
 /// Firebase 초기화 및 인증 관리
@@ -14,6 +13,9 @@ public class FirebaseManager : MonoBehaviour
 {
     private const string LOG_PREFIX = "<color=#3EB489>[Firebase]</color>";
 
+    // Google Cloud Console에서 생성한 Web Client ID
+    private const string WEB_CLIENT_ID = "192924105425-bvrka8999d7b243ue4vd0s5mscenfob2.apps.googleusercontent.com";
+
     public static FirebaseManager Instance { get; private set; }
 
     private FirebaseAuth auth;
@@ -22,10 +24,6 @@ public class FirebaseManager : MonoBehaviour
     public bool IsInitialized { get; private set; }
     public bool IsSignedIn => currentUser != null;
     public string CurrentUserId => currentUser?.UserId;
-
-    // GPGS 관련
-    private bool isGPGSInitialized = false;
-    public bool IsGPGSInitialized => isGPGSInitialized;
 
     private void Awake()
     {
@@ -125,31 +123,11 @@ public class FirebaseManager : MonoBehaviour
         }
     }
 
-    #region Google Play Games Services
+    #region Google Sign-In
 
     /// <summary>
-    /// Google Play Games Services 초기화
-    /// </summary>
-    public void InitializeGPGS()
-    {
-        if (isGPGSInitialized)
-        {
-            Debug.Log($"{LOG_PREFIX} GPGS 이미 초기화됨");
-            return;
-        }
-
-#if UNITY_ANDROID
-        PlayGamesPlatform.DebugLogEnabled = true;
-        PlayGamesPlatform.Activate();
-        isGPGSInitialized = true;
-        Debug.Log($"{LOG_PREFIX} GPGS 초기화 완료");
-#else
-        Debug.LogWarning($"{LOG_PREFIX} GPGS는 Android에서만 지원됩니다.");
-#endif
-    }
-
-    /// <summary>
-    /// 구글 로그인 (GPGS + Firebase)
+    /// 구글 로그인 (Google Sign-In + Firebase)
+    /// 계정 선택 UI가 표시됨
     /// </summary>
     /// <returns>성공 시 UserId, 실패 시 null</returns>
     public async UniTask<string> SignInWithGoogleAsync()
@@ -160,29 +138,48 @@ public class FirebaseManager : MonoBehaviour
             return null;
         }
 
-#if UNITY_ANDROID
-        // 1. GPGS 초기화
-        InitializeGPGS();
-
+#if UNITY_ANDROID || UNITY_IOS
         try
         {
-            // 2. GPGS 로그인 + Server Auth Code 요청
-            string serverAuthCode = await AuthenticateWithGPGSAsync();
-
-            if (string.IsNullOrEmpty(serverAuthCode))
+            // 1. Google Sign-In 설정
+            GoogleSignIn.Configuration = new GoogleSignInConfiguration
             {
-                Debug.LogError($"{LOG_PREFIX} GPGS Server Auth Code 획득 실패");
+                WebClientId = WEB_CLIENT_ID,
+                RequestIdToken = true,
+                UseGameSignIn = false,
+                RequestEmail = true
+            };
+
+            // 2. Google Sign-In 실행 (계정 선택 UI 표시)
+            var signInTask = GoogleSignIn.DefaultInstance.SignIn();
+            var googleUser = await signInTask.AsUniTask();
+
+            if (googleUser == null)
+            {
+                Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: 사용자 정보 없음");
                 return null;
             }
 
-            Debug.Log($"{LOG_PREFIX} GPGS 로그인 성공! Server Auth Code 획득됨");
+            string idToken = googleUser.IdToken;
+            if (string.IsNullOrEmpty(idToken))
+            {
+                Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: ID Token 없음");
+                return null;
+            }
+
+            Debug.Log($"{LOG_PREFIX} Google Sign-In 성공! Email: {googleUser.Email}");
 
             // 3. Firebase Credential 생성 및 로그인
-            Credential credential = PlayGamesAuthProvider.GetCredential(serverAuthCode);
+            Credential credential = GoogleAuthProvider.GetCredential(idToken, null);
             currentUser = await auth.SignInWithCredentialAsync(credential);
 
             Debug.Log($"{LOG_PREFIX} 구글 로그인 성공! UserId: {currentUser.UserId}");
             return currentUser.UserId;
+        }
+        catch (GoogleSignIn.SignInException e)
+        {
+            Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: {e.Status} - {e.Message}");
+            return null;
         }
         catch (Exception e)
         {
@@ -190,99 +187,10 @@ public class FirebaseManager : MonoBehaviour
             return null;
         }
 #else
-        Debug.LogWarning($"{LOG_PREFIX} 구글 로그인은 Android에서만 지원됩니다.");
+        Debug.LogWarning($"{LOG_PREFIX} 구글 로그인은 Android/iOS에서만 지원됩니다.");
         return null;
 #endif
     }
-
-#if UNITY_ANDROID
-    /// <summary>
-    /// GPGS 인증 및 Server Auth Code 획득
-    /// 항상 계정 선택 UI를 표시하기 위해 ManuallyAuthenticate 사용
-    /// </summary>
-    private UniTask<string> AuthenticateWithGPGSAsync()
-    {
-        var tcs = new UniTaskCompletionSource<string>();
-        ShowToast("구글 계정 선택 UI 표시 중...");
-
-        // 항상 수동 로그인 (계정 선택 UI 표시)
-        PlayGamesPlatform.Instance.ManuallyAuthenticate((status) =>
-        {
-            Debug.Log($"{LOG_PREFIX} GPGS ManuallyAuthenticate 결과: {status}");
-            ShowToast($"ManuallyAuth: {status}");
-
-            if (status == SignInStatus.Success)
-            {
-                RequestServerAuthCode(tcs);
-            }
-            else
-            {
-                Debug.LogError($"{LOG_PREFIX} GPGS 인증 실패: {status}");
-                ShowToast($"GPGS 실패: {status}");
-                tcs.TrySetResult(null);
-            }
-        });
-
-        return tcs.Task;
-    }
-
-    /// <summary>
-    /// Server Auth Code 요청
-    /// </summary>
-    private void RequestServerAuthCode(UniTaskCompletionSource<string> tcs)
-    {
-        Debug.Log($"{LOG_PREFIX} GPGS 인증 성공! Server Auth Code 요청 중...");
-        ShowToast("Server Auth Code 요청 중...");
-
-        PlayGamesPlatform.Instance.RequestServerSideAccess(
-            forceRefreshToken: true,
-            (authCode) =>
-            {
-                if (!string.IsNullOrEmpty(authCode))
-                {
-                    Debug.Log($"{LOG_PREFIX} Server Auth Code 획득 성공");
-                    ShowToast("Server Auth Code 획득 성공!");
-                    tcs.TrySetResult(authCode);
-                }
-                else
-                {
-                    Debug.LogError($"{LOG_PREFIX} Server Auth Code가 비어있음");
-                    ShowToast("Server Auth Code 실패 - 비어있음");
-                    tcs.TrySetResult(null);
-                }
-            });
-    }
-
-    /// <summary>
-    /// Android 토스트 메시지 표시 (디버그용)
-    /// </summary>
-    private void ShowToast(string message)
-    {
-#if UNITY_ANDROID && !UNITY_EDITOR
-        try
-        {
-            using (var unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-            using (var activity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
-            using (var toastClass = new AndroidJavaClass("android.widget.Toast"))
-            {
-                activity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
-                {
-                    using (var toast = toastClass.CallStatic<AndroidJavaObject>("makeText", activity, message, 0))
-                    {
-                        toast.Call("show");
-                    }
-                }));
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"{LOG_PREFIX} Toast 실패: {e.Message}");
-        }
-#else
-        Debug.Log($"{LOG_PREFIX} [Toast] {message}");
-#endif
-    }
-#endif
 
     #endregion
 
@@ -298,6 +206,20 @@ public class FirebaseManager : MonoBehaviour
         }
 
         string userId = currentUser?.UserId ?? "Unknown";
+
+        // Google Sign-In 로그아웃
+#if UNITY_ANDROID || UNITY_IOS
+        try
+        {
+            GoogleSignIn.DefaultInstance.SignOut();
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"{LOG_PREFIX} Google SignOut 실패: {e.Message}");
+        }
+#endif
+
+        // Firebase 로그아웃
         auth.SignOut();
         currentUser = null;
         Debug.Log($"{LOG_PREFIX} 로그아웃 완료. UserId: {userId}");
