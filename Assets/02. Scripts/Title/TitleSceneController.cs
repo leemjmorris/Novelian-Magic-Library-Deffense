@@ -212,13 +212,63 @@ public class TitleSceneController : MonoBehaviour
     }
 
     /// <summary>
-    /// 로그인 Button OnClick 이벤트에서 호출
+    /// 게스트 로그인 Button OnClick 이벤트에서 호출
     /// </summary>
     public void OnStartButtonClicked()
     {
         if (isProcessing) return;
 
         ProcessLoginAsync().Forget();
+    }
+
+    /// <summary>
+    /// 구글 로그인 Button OnClick 이벤트에서 호출
+    /// </summary>
+    public void OnGoogleLoginButtonClicked()
+    {
+        if (isProcessing) return;
+
+        ProcessGoogleLoginAsync().Forget();
+    }
+
+    /// <summary>
+    /// 구글 로그인 처리
+    /// </summary>
+    private async UniTaskVoid ProcessGoogleLoginAsync()
+    {
+        isProcessing = true;
+
+        try
+        {
+            // 이미 로그인되어 있는지 확인
+            if (FirebaseManager.Instance.IsSignedIn)
+            {
+                Debug.Log($"{LOG_PREFIX} 이미 로그인됨! UserId: {FirebaseManager.Instance.CurrentUserId}");
+                Debug.Log($"{LOG_PREFIX} BootScene으로 이동합니다...");
+                LoadBootScene();
+                return;
+            }
+
+            // 구글 로그인
+            Debug.Log($"{LOG_PREFIX} 구글 로그인 시도 중...");
+            string userId = await FirebaseManager.Instance.SignInWithGoogleAsync();
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                Debug.LogError($"{LOG_PREFIX} 구글 로그인 실패!");
+                isProcessing = false;
+                return;
+            }
+
+            Debug.Log($"{LOG_PREFIX} 구글 로그인 성공! UserId: {userId}");
+            Debug.Log($"{LOG_PREFIX} BootScene으로 이동합니다...");
+            LoadBootScene();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 구글 로그인 에러: {e.Message}");
+            isProcessing = false;
+        }
     }
 
     /// <summary>
