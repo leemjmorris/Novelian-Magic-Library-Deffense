@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using NovelianMagicLibraryDefense.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
@@ -12,68 +11,12 @@ namespace NovelianMagicLibraryDefense.Managers
     /// Input System 기반 터치/마우스 입력 처리 매니저
     /// Android: 터치 입력 (싱글 터치만)
     /// Unity Editor: 마우스 입력 (기본) 또는 터치 시뮬레이션
-    /// MonoBehaviour 기반 Manager (VContainer 지원)
-    /// Singleton 패턴으로 어디서든 접근 가능
+    /// DontDestroyOnLoad 싱글톤 패턴으로 모든 씬에서 동작
     /// </summary>
-    public class InputManager : BaseManager
+    public class InputManager : MonoBehaviour
     {
-        // Singleton Instance
-        [Header("Singleton Settings")]
-        [Tooltip("인스펙터에서 직접 할당 가능 (옵션). 비어있으면 자동으로 찾습니다.")]
-        [SerializeField] private InputManager manualInstance;
-
         private static InputManager instance;
-        public static InputManager Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    // 1순위: 인스펙터에서 직접 할당된 인스턴스
-                    InputManager[] allInstances = FindObjectsByType<InputManager>(FindObjectsSortMode.None);
-                    foreach (var mgr in allInstances)
-                    {
-                        if (mgr.manualInstance != null)
-                        {
-                            instance = mgr.manualInstance;
-                            break;
-                        }
-                    }
-
-                    // 2순위: Tag로 찾기
-                    if (instance == null)
-                    {
-                        GameObject managerObj = GameObject.FindGameObjectWithTag("Manager");
-                        if (managerObj != null)
-                        {
-                            instance = managerObj.GetComponent<InputManager>();
-                        }
-                    }
-
-                    // 3순위: Tag 없으면 이름으로 찾기
-                    if (instance == null)
-                    {
-                        GameObject managerObj = GameObject.Find("InputManager"); // 씬에 있는 오브젝트 이름
-                        if (managerObj != null)
-                        {
-                            instance = managerObj.GetComponent<InputManager>();
-                        }
-                    }
-
-                    // 4순위: FindFirstObjectByType으로 찾기
-                    if (instance == null)
-                    {
-                        instance = FindFirstObjectByType<InputManager>();
-                    }
-
-                    if (instance == null)
-                    {
-                        Debug.LogError("[InputManager] Instance not found in scene! Make sure InputManager GameObject has 'Manager' tag or assign it manually in Inspector.");
-                    }
-                }
-                return instance;
-            }
-        }
+        public static InputManager Instance => instance;
 
 #if UNITY_EDITOR
         [Header("Editor Test Settings")]
@@ -116,18 +59,26 @@ namespace NovelianMagicLibraryDefense.Managers
         public static event Action<Vector2> OnDrop;
         #endregion
 
-        protected override void OnInitialize()
+        private void Awake()
         {
-            // Singleton 설정
+            // Singleton 패턴 (DontDestroyOnLoad)
             if (instance != null && instance != this)
             {
-                // 중복 인스턴스는 경고 없이 조용히 무시 (씬 전환 시 정상 동작)
-                // Destroy(gameObject)를 호출하지 않음 - GameManager가 관리하는 오브젝트일 수 있음
-                enabled = false;
+                Destroy(gameObject);
                 return;
             }
+
             instance = this;
 
+            // DontDestroyOnLoad를 위해 root로 이동
+            transform.SetParent(null);
+            DontDestroyOnLoad(gameObject);
+
+            Initialize();
+        }
+
+        private void Initialize()
+        {
             Debug.Log("[InputManager] Initializing Input System");
 
             // Input Actions 생성
@@ -364,7 +315,10 @@ namespace NovelianMagicLibraryDefense.Managers
 #endif
         }
 
-        protected override void OnReset()
+        /// <summary>
+        /// 입력 상태 리셋 (외부에서 호출 가능)
+        /// </summary>
+        public void ResetInputState()
         {
             Debug.Log("[InputManager] Resetting input state");
 
@@ -376,24 +330,13 @@ namespace NovelianMagicLibraryDefense.Managers
             isLongPressCompleted = false;
         }
 
-        protected override void OnDispose()
+        private void OnDestroy()
         {
-            CleanupInputActions();
-        }
+            if (instance != this) return;
 
-        /// <summary>
-        /// Clean up InputActions to prevent memory leaks
-        /// Called from OnDispose (which is called by BaseManager.OnDestroy)
-        /// </summary>
-        private void CleanupInputActions()
-        {
             Debug.Log("[InputManager] Cleaning up Input System");
 
-            // Singleton 정리
-            if (instance == this)
-            {
-                instance = null;
-            }
+            instance = null;
 
             // 타이머 정리
             longPressCts?.Cancel();

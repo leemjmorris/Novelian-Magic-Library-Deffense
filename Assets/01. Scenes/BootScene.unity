@@ -669,7 +669,6 @@ GameObject:
   - component: {fileID: 729743811}
   - component: {fileID: 729743812}
   - component: {fileID: 729743813}
-  - component: {fileID: 729743814}
   - component: {fileID: 729743815}
   - component: {fileID: 729743817}
   - component: {fileID: 729743818}
@@ -814,20 +813,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   grantGenreTestCharacters: 1
---- !u!114 &729743814
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 729743801}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 386f41d9dc339554d8b489ab887eabbf, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  manualInstance: {fileID: 729743814}
-  simulateTouchInEditor: 1
 --- !u!114 &729743815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1210,7 +1195,6 @@ MonoBehaviour:
   characterOwnershipManager: {fileID: 729743813}
   warningUIManager: {fileID: 329053012}
   loadingUIManager: {fileID: 729743811}
-  inputManager: {fileID: 729743814}
   partySynergyManager: {fileID: 729743818}
   minimumLoadTime: 1
   firebaseSaveManager: {fileID: 729743815}
