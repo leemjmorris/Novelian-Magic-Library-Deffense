@@ -39,6 +39,7 @@ namespace NovelianMagicLibraryDefense.Managers
         protected override void OnInitialize()
         {
             CurrentState = StageState.Playing;
+            Time.timeScale = 1f; // Issue #564: 씬 로드 시 TimeScale 초기화
 
             // JML: Tag로 Wall 참조 찾기 (동적 맵 로드 지원)
             FindWallReferences();
