@@ -100,6 +100,14 @@ namespace NovelianMagicLibraryDefense.Managers
         private CancellationTokenSource timerCts;
         #endregion
 
+        #region Scene Transition Flag (Issue #570)
+        /// <summary>
+        /// JML: 씬 전환 중 플래그 - 로비 복귀 등 씬 전환 시 true로 설정
+        /// 레벨업 등 게임 이벤트를 무시하기 위해 사용
+        /// </summary>
+        public bool IsExitingStage { get; set; } = false;
+        #endregion
+
         #region GlobalStatBuffs (Issue #349)
         /// <summary>
         /// JML: 전역 스텟 버프 저장소
@@ -467,6 +475,7 @@ namespace NovelianMagicLibraryDefense.Managers
             isStageCleared = false;
             CurrentStageId = 0;
             Time.timeScale = 1f;
+            IsExitingStage = false; // Issue #570: 플래그 초기화
 
             // JML: Reset global stat buffs (Issue #349)
             globalStatBuffs.Clear();
@@ -585,6 +594,13 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private async UniTaskVoid LevelUp()
         {
+            // Issue #570: 씬 전환 중이면 레벨업 무시
+            if (IsExitingStage)
+            {
+                Debug.Log("[StageManager] LevelUp skipped - exiting stage");
+                return;
+            }
+
             var previousTimeScale = Time.timeScale;
             // Debug.Log($"타임 스케일 {previousTimeScale}"); // LCB: Debug previous time scale
             int maxExp = GetRequiredExpForNextLevel();
