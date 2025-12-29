@@ -157,8 +157,8 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 await LoadAndSetIcon(iconImage, iconKey);
 
-                // 골드 아이콘(1601) 크기 조절
-                if (reward.Item_ID == 1601)
+                // 골드 아이콘(1601), 마석 아이콘(1604, 1605) 크기 조절
+                if (reward.Item_ID == 1601 || reward.Item_ID == 1604 || reward.Item_ID == 1605)
                 {
                     RectTransform rt = iconObj.GetComponent<RectTransform>();
                     if (rt != null)
@@ -195,8 +195,8 @@ namespace NovelianMagicLibraryDefense.UI
             GameObject tooltipPanel = tooltipTransform != null ? tooltipTransform.gameObject : null;
             TextMeshProUGUI tooltipText = tooltipPanel != null ? tooltipPanel.GetComponentInChildren<TextMeshProUGUI>() : null;
 
-            // 골드 아이콘의 툴팁은 스케일 및 위치 보정
-            if (reward.Item_ID == 1601 && tooltipTransform != null)
+            // 골드/마석 아이콘의 툴팁은 스케일 및 위치 보정
+            if ((reward.Item_ID == 1601 || reward.Item_ID == 1604 || reward.Item_ID == 1605) && tooltipTransform != null)
             {
                 tooltipTransform.localScale = new Vector3(2f, 2f, 1f);
                 RectTransform tooltipRect = tooltipTransform.GetComponent<RectTransform>();

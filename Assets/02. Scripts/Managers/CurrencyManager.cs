@@ -33,6 +33,9 @@ public class CurrencyManager : MonoBehaviour
     // 마지막 AP 동기화 시간 (서버 시간, 밀리초)
     private long lastAPSyncTimeMs = 0;
 
+    // 초기화 완료 여부 (중복 초기화 방지)
+    private bool isInitialized = false;
+
     // 기존 Gold 호환용
     public int Gold => GetCurrency(GOLD_ID);
 
@@ -56,6 +59,13 @@ public class CurrencyManager : MonoBehaviour
 
     private void Init()
     {
+        // 이미 초기화되었으면 스킵 (타이틀씬에서 재시작 시 기존 데이터 유지)
+        if (isInitialized)
+        {
+            Debug.Log($"[CurrencyManager] 이미 초기화됨 - 기존 데이터 유지. 골드: {currencies[GOLD_ID]}, 던전출입증: {currencies[DUNGEON_PASS_ID]}");
+            return;
+        }
+
         // 모든 재화 초기화 (CurrencyTable 기준: 1601~1606)
         // TODO: 세이브/로드 시스템 구현 시 저장된 값으로 덮어쓰기
         currencies[GOLD_ID] = 0;         // 테스트용 초기 골드
@@ -76,6 +86,7 @@ public class CurrencyManager : MonoBehaviour
             }
         }
 
+        isInitialized = true;
         Debug.Log($"[CurrencyManager] 초기화 완료. 재화 종류: {currencies.Count}개, 최대 AP: {maxAP}");
     }
 
