@@ -590,8 +590,8 @@ namespace Novelian.Training
             // 자동 공격 비활성화 (Initialize 전에)
             currentCharacter.SetAutoAttackEnabled(false);
 
-            // 캐릭터 초기화
-            currentCharacter.Initialize(selectedCharacterId);
+            // 캐릭터 초기화 (BookMarkManager 책갈피 자동 적용 비활성화 - 훈련소 UI 설정 사용)
+            currentCharacter.Initialize(selectedCharacterId, applyBookmarks: false);
 
             // 성급 적용 (1성이 기본, 2/3성으로 업그레이드)
             ApplyStarTier(currentCharacter, selectedGrade);

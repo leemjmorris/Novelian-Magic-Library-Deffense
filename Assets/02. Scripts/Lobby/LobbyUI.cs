@@ -44,6 +44,12 @@ public class LobbyUI : MonoBehaviour
         // 로비 진입 시 타임스케일 복구 (도전던전 등에서 일시정지 상태로 넘어올 경우 대비)
         Time.timeScale = 1f;
 
+        // Lobby BGM 재생 (다른 씬에서 돌아올 때 크로스페이드)
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.CrossfadeBGM("BGM_Lobby", 1f);
+        }
+
         InitializeAP();
         RefreshNickname();
 

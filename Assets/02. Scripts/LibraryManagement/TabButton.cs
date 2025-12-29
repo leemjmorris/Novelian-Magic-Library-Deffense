@@ -23,6 +23,12 @@ public class TabButton : MonoBehaviour
 
     private void Start()
     {
+        // CharacterManagement BGM 재생 (크로스페이드)
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.CrossfadeBGM("BGM_CharacterManagement", 1f);
+        }
+
         characterTabButton.onClick.AddListener(OnCharacterTabClicked);
         partyTabButton.onClick.AddListener(OnPartyTabClicked);
         teamSetupTabButton.onClick.AddListener(OnTeamSetupTabClicked);

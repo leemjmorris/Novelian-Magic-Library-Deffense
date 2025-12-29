@@ -19,7 +19,13 @@ namespace Novelian.Combat
 
             if (col.CompareTag(Tag.Monster))
             {
-                return col.GetComponent<Monster>();
+                // Monster 컴포넌트 우선 (일반 몬스터)
+                var monster = col.GetComponent<Monster>();
+                if (monster != null) return monster;
+
+                // ITargetable 인터페이스 fallback (DummyTarget 등 훈련소용)
+                var targetable = col.GetComponent<ITargetable>();
+                if (targetable != null) return targetable;
             }
 
             if (col.CompareTag(Tag.BossMonster))

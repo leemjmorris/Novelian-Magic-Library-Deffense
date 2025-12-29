@@ -4,13 +4,14 @@ using NovelianMagicLibraryDefense.Managers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace NovelianMagicLibraryDefense.UI
 {
     /// <summary>
     /// Issue #511 - 도전던전 확인 패널
     /// 시작하기 버튼 + 던전 출입증 소모 로직
-    /// StageSceneManager.OnLoadGameScene() 패턴 참고
+    /// 보상 아이콘 표시 (RewardIconHelper 사용)
     /// </summary>
     public class BossDungeonPopUpPanel : MonoBehaviour
     {
@@ -21,8 +22,16 @@ namespace NovelianMagicLibraryDefense.UI
         [SerializeField] private Button startButton;
         [SerializeField] private Button closeButton;
 
+        [Header("Reward Icons")]
+        [SerializeField] private Transform rewardIconContainer;    // 보상 아이콘 컨테이너
+        [SerializeField] private GameObject rewardIconPrefab;      // 보상 아이콘 프리팹
+        [SerializeField] private GridLayoutGroup gridLayoutGroup;  // Grid Layout Group
+
         [Header("Warning Panel")]
         [SerializeField] private GameObject deckSetupWarningPanel;
+
+        // 동적 생성된 아이콘 오브젝트 리스트
+        private List<GameObject> spawnedIcons = new List<GameObject>();
 
         private const int ENTRY_COST = 1;
         private readonly Color normalColor = Color.white;
@@ -64,11 +73,50 @@ namespace NovelianMagicLibraryDefense.UI
 
             UpdateCostText();
 
+            // 보상 아이콘 업데이트
+            UpdateRewardIcons().Forget();
+
             // 패널 활성화
             if (panel != null)
                 panel.SetActive(true);
             else
                 gameObject.SetActive(true);
+        }
+
+        /// <summary>
+        /// 보상 아이콘 업데이트 (RewardIconHelper 사용)
+        /// </summary>
+        private async UniTaskVoid UpdateRewardIcons()
+        {
+            // 기존 아이콘 삭제
+            RewardIconHelper.ClearIcons(spawnedIcons);
+
+            if (!SelectedBossDungeon.HasSelection)
+            {
+                return;
+            }
+
+            if (rewardIconContainer == null || rewardIconPrefab == null)
+            {
+                // Inspector에서 설정 안 된 경우 무시 (정상 동작)
+                return;
+            }
+
+            // Grid Layout을 1줄로 고정
+            if (gridLayoutGroup != null)
+            {
+                gridLayoutGroup.constraint = GridLayoutGroup.Constraint.FixedRowCount;
+                gridLayoutGroup.constraintCount = 1;
+            }
+
+            int rewardGroupId = SelectedBossDungeon.Data.Reward_Group_ID;
+            await RewardIconHelper.CreateRewardIcons(
+                rewardGroupId,
+                rewardIconContainer,
+                rewardIconPrefab,
+                spawnedIcons,
+                enableTooltip: true
+            );
         }
 
         /// <summary>
@@ -93,6 +141,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void Close()
         {
+            // 보상 아이콘 정리
+            RewardIconHelper.ClearIcons(spawnedIcons);
+
             if (panel != null)
                 panel.SetActive(false);
             else

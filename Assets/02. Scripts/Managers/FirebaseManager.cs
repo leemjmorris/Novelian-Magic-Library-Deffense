@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using Firebase;
 using Firebase.Auth;
 using System;
+using Google;
 
 /// <summary>
 /// Firebase 초기화 및 인증 관리
@@ -11,6 +12,9 @@ using System;
 public class FirebaseManager : MonoBehaviour
 {
     private const string LOG_PREFIX = "<color=#3EB489>[Firebase]</color>";
+
+    // Google Cloud Console에서 생성한 Web Client ID
+    private const string WEB_CLIENT_ID = "192924105425-bvrka8999d7b243ue4vd0s5mscenfob2.apps.googleusercontent.com";
 
     public static FirebaseManager Instance { get; private set; }
 
@@ -119,6 +123,77 @@ public class FirebaseManager : MonoBehaviour
         }
     }
 
+    #region Google Sign-In
+
+    /// <summary>
+    /// 구글 로그인 (Google Sign-In + Firebase)
+    /// 계정 선택 UI가 표시됨
+    /// </summary>
+    /// <returns>성공 시 UserId, 실패 시 null</returns>
+    public async UniTask<string> SignInWithGoogleAsync()
+    {
+        if (!IsInitialized)
+        {
+            Debug.LogError($"{LOG_PREFIX} Firebase 초기화 필요. InitializeAsync를 먼저 호출하세요.");
+            return null;
+        }
+
+#if UNITY_ANDROID || UNITY_IOS
+        try
+        {
+            // 1. Google Sign-In 설정
+            GoogleSignIn.Configuration = new GoogleSignInConfiguration
+            {
+                WebClientId = WEB_CLIENT_ID,
+                RequestIdToken = true,
+                UseGameSignIn = false,
+                RequestEmail = true
+            };
+
+            // 2. Google Sign-In 실행 (계정 선택 UI 표시)
+            var signInTask = GoogleSignIn.DefaultInstance.SignIn();
+            var googleUser = await signInTask.AsUniTask();
+
+            if (googleUser == null)
+            {
+                Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: 사용자 정보 없음");
+                return null;
+            }
+
+            string idToken = googleUser.IdToken;
+            if (string.IsNullOrEmpty(idToken))
+            {
+                Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: ID Token 없음");
+                return null;
+            }
+
+            Debug.Log($"{LOG_PREFIX} Google Sign-In 성공! Email: {googleUser.Email}");
+
+            // 3. Firebase Credential 생성 및 로그인
+            Credential credential = GoogleAuthProvider.GetCredential(idToken, null);
+            currentUser = await auth.SignInWithCredentialAsync(credential);
+
+            Debug.Log($"{LOG_PREFIX} 구글 로그인 성공! UserId: {currentUser.UserId}");
+            return currentUser.UserId;
+        }
+        catch (GoogleSignIn.SignInException e)
+        {
+            Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: {e.Status} - {e.Message}");
+            return null;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 구글 로그인 실패: {e.Message}");
+            return null;
+        }
+#else
+        Debug.LogWarning($"{LOG_PREFIX} 구글 로그인은 Android/iOS에서만 지원됩니다.");
+        return null;
+#endif
+    }
+
+    #endregion
+
     /// <summary>
     /// 로그아웃
     /// </summary>
@@ -131,6 +206,20 @@ public class FirebaseManager : MonoBehaviour
         }
 
         string userId = currentUser?.UserId ?? "Unknown";
+
+        // Google Sign-In 로그아웃
+#if UNITY_ANDROID || UNITY_IOS
+        try
+        {
+            GoogleSignIn.DefaultInstance.SignOut();
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"{LOG_PREFIX} Google SignOut 실패: {e.Message}");
+        }
+#endif
+
+        // Firebase 로그아웃
         auth.SignOut();
         currentUser = null;
         Debug.Log($"{LOG_PREFIX} 로그아웃 완료. UserId: {userId}");
