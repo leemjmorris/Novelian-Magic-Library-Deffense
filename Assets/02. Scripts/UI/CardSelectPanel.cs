@@ -6,6 +6,7 @@ using UnityEngine;
 using TMPro;
 using NovelianMagicLibraryDefense.Managers;
 using Novelian.Combat;
+using Coffee.UIExtensions;
 
 namespace NovelianMagicLibraryDefense.UI
 {
@@ -58,6 +59,10 @@ namespace NovelianMagicLibraryDefense.UI
         private CancellationTokenSource selectionCts;
         private bool isCardSelected = false;
 
+        [Header("Particle Effects (Issue #559)")]
+        [Tooltip("CardParticleManager 참조 (Inspector에서 할당 또는 자동 검색)")]
+        [SerializeField] private CardParticleManager cardParticleManager;
+
         // Events
         public event Action<CardData> OnCardSelected;
 
@@ -103,6 +108,13 @@ namespace NovelianMagicLibraryDefense.UI
         {
             // JML: 카드 슬롯 초기 비활성화 (씬 진입 시 카드 초기화가 보이는 문제 방지)
             HideCardSlotsOnAwake();
+
+            // Issue #559: CardParticleManager 참조 확보 (비활성 자식도 검색)
+            if (cardParticleManager == null)
+            {
+                cardParticleManager = GetComponentInChildren<CardParticleManager>(true);
+                Debug.Log($"[CardSelectPanel] CardParticleManager 검색 결과: {(cardParticleManager != null ? "찾음" : "못찾음")}");
+            }
 
             // JML: Inspector 참조가 없으면 Tag로 fallback 시도
             if (placementManager == null)
@@ -229,6 +241,10 @@ namespace NovelianMagicLibraryDefense.UI
             // CardGrid 활성화 (카드 슬롯 표시용)
             ActivateCardGrid();
 
+            // Issue #559: 패널 열릴 때 배경 파티클 재생
+            Debug.Log($"[CardSelectPanel] OpenForGameStart - cardParticleManager: {(cardParticleManager != null ? "있음" : "없음")}");
+            cardParticleManager?.PlayBackgroundEffect();
+
             // 데이터 로딩 대기 후 카드 표시
             WaitForDataAndShowCards(isGameStart: true).Forget();
         }
@@ -252,6 +268,9 @@ namespace NovelianMagicLibraryDefense.UI
 
             // CardGrid 활성화 (카드 슬롯 표시용)
             ActivateCardGrid();
+
+            // Issue #559: 패널 열릴 때 배경 파티클 재생
+            cardParticleManager?.PlayBackgroundEffect();
 
             // 데이터 로딩 대기 후 카드 표시
             WaitForDataAndShowCards(isGameStart: false).Forget();
@@ -279,6 +298,9 @@ namespace NovelianMagicLibraryDefense.UI
 
             // CardGrid 활성화 (카드 슬롯 표시용)
             ActivateCardGrid();
+
+            // Issue #559: 패널 열릴 때 배경 파티클 재생
+            cardParticleManager?.PlayBackgroundEffect();
 
             Debug.Log("[CardSelectPanel] 패널 활성화됨, 카드 로딩 시작...");
 
@@ -928,6 +950,7 @@ namespace NovelianMagicLibraryDefense.UI
                 }
 
                 cardSlots[i].gameObject.SetActive(true);
+
                 Debug.Log($"[CardSelectPanel] CardSlot[{i}] 설정: CardTableID={cardTableIds[i]}, Type={cards[i].Type}, ID={cards[i].Id}");
             }
         }
@@ -1740,6 +1763,9 @@ namespace NovelianMagicLibraryDefense.UI
                 Time.timeScale = previousTimeScale;
                 isPaused = false;
             }
+
+            // Issue #559: 배경 파티클 중지
+            cardParticleManager?.StopBackgroundEffect();
 
             // 서포트 스킬 선택 상태 초기화 (Issue #437)
             ResetSupportSkillSelection();
