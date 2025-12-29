@@ -648,7 +648,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 386f41d9dc339554d8b489ab887eabbf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  manualInstance: {fileID: 830796989}
   simulateTouchInEditor: 1
 --- !u!4 &830796990
 Transform:
@@ -996,7 +995,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a142757f4b063c040abbbee3669c9c4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  inputManager: {fileID: 830796989}
   poolManager: {fileID: 1418561795}
   uiManager: {fileID: 1531905675}
   waveManager: {fileID: 0}
@@ -1297,7 +1295,7 @@ GameObject:
   - component: {fileID: 1474253480}
   m_Layer: 0
   m_Name: SkillExecutor
-  m_TagString: Untagged
+  m_TagString: SkillExecutor
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -10653,6 +10651,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pauseOnOpen: 1
+  masterVolumeSlider: {fileID: 0}
+  bgmVolumeSlider: {fileID: 0}
+  sfxVolumeSlider: {fileID: 0}
 --- !u!222 &4408063019519931849
 CanvasRenderer:
   m_ObjectHideFlags: 0
