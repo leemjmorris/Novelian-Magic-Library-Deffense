@@ -219,7 +219,9 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (pauseOnGameStart)
             {
-                previousTimeScale = Time.timeScale;
+                // Issue #564: 게임 시작 시에는 항상 TimeScale 1로 복구되어야 함
+                // 이전 씬에서 TimeScale이 0인 상태로 전환될 수 있으므로 고정값 사용
+                previousTimeScale = 1f;
                 Time.timeScale = 0f;
                 isPaused = true;
             }
@@ -271,7 +273,8 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
-            previousTimeScale = Time.timeScale;
+            // Issue #564: 보스 던전 시작 시에도 항상 TimeScale 1로 복구되어야 함
+            previousTimeScale = 1f;
             Time.timeScale = 0f;
             isPaused = true;
 
