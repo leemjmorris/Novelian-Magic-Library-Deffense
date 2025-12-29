@@ -163,6 +163,12 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void GoToLobby()
         {
+            // Issue #570: 씬 전환 중 레벨업 방지를 위해 플래그 설정
+            if (GameManager.Instance?.Stage != null)
+            {
+                GameManager.Instance.Stage.IsExitingStage = true;
+            }
+
             // Restore time scale before scene change
             Time.timeScale = 1f;
             LoadSceneWithLoadingUI("LobbyScene").Forget();

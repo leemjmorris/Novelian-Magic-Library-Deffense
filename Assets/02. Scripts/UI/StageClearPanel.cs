@@ -419,6 +419,13 @@ namespace NovelianMagicLibraryDefense.UI
         public void OnLobbyButtonClicked()
         {
             Debug.Log("[StageClearPanel] Lobby button clicked - Loading LobbyScene");
+
+            // Issue #570: 씬 전환 중 레벨업 방지를 위해 플래그 설정
+            if (GameManager.Instance?.Stage != null)
+            {
+                GameManager.Instance.Stage.IsExitingStage = true;
+            }
+
             Close();
             Time.timeScale = 1f;
             SelectedStage.Clear();
