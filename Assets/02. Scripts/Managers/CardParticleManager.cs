@@ -1,17 +1,32 @@
 using UnityEngine;
 using Coffee.UIExtensions;
+using AssetKits.ParticleImage;
+using AssetKits.ParticleImage.Enumerations;
 
 namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
     /// 카드 선택 패널 UI 파티클 관리자 (Issue #559)
     /// 패널이 열릴 때 배경 파티클 효과 재생
+    /// UIParticle 또는 ParticleImage 둘 다 지원
     /// </summary>
     public class CardParticleManager : MonoBehaviour
     {
+        private enum BackgroundEffectType
+        {
+            UIParticle,
+            ParticleImage
+        }
+
         [Header("Background Effect")]
-        [Tooltip("패널 열릴 때 재생되는 배경 파티클 (ConfettiRain)")]
-        [SerializeField] private UIParticle backgroundEffect;
+        [Tooltip("배경 파티클 타입 선택")]
+        [SerializeField] private BackgroundEffectType backgroundEffectType = BackgroundEffectType.UIParticle;
+
+        [Tooltip("UIParticle 사용 시 (Coffee.UIExtensions)")]
+        [SerializeField] private UIParticle backgroundEffectUIParticle;
+
+        [Tooltip("ParticleImage 사용 시 (AssetKits.ParticleImage)")]
+        [SerializeField] private ParticleImage backgroundEffectParticleImage;
 
         [Header("Settings")]
         [SerializeField] private bool effectEnabled = true;
@@ -20,8 +35,15 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void Awake()
         {
-            InitializeUIParticle(backgroundEffect, ref backgroundParticles);
-            Debug.Log("[CardParticleManager] Initialized");
+            if (backgroundEffectType == BackgroundEffectType.UIParticle)
+            {
+                InitializeUIParticle(backgroundEffectUIParticle, ref backgroundParticles);
+            }
+            else // ParticleImage
+            {
+                InitializeParticleImage(backgroundEffectParticleImage);
+            }
+            Debug.Log($"[CardParticleManager] Initialized - Type: {backgroundEffectType}");
         }
 
         private void InitializeUIParticle(UIParticle uiParticle, ref ParticleSystem[] particleSystems)
@@ -42,15 +64,34 @@ namespace NovelianMagicLibraryDefense.Managers
             }
         }
 
+        private void InitializeParticleImage(ParticleImage particleImage)
+        {
+            if (particleImage == null) return;
+
+            // TimeScale=0에서도 재생되도록 설정
+            particleImage.timeScale = TimeScale.Unscaled;
+            particleImage.Stop(true);
+        }
+
         /// <summary>
         /// 배경 파티클 재생 (패널 열릴 때 호출)
         /// </summary>
         public void PlayBackgroundEffect()
         {
-            if (!effectEnabled || backgroundEffect == null) return;
+            if (!effectEnabled) return;
 
-            ResetAndPlayParticles(backgroundEffect, backgroundParticles);
-            Debug.Log("[CardParticleManager] Background effect started");
+            if (backgroundEffectType == BackgroundEffectType.UIParticle)
+            {
+                if (backgroundEffectUIParticle == null) return;
+                ResetAndPlayUIParticle(backgroundEffectUIParticle, backgroundParticles);
+            }
+            else // ParticleImage
+            {
+                if (backgroundEffectParticleImage == null) return;
+                ResetAndPlayParticleImage(backgroundEffectParticleImage);
+            }
+
+            Debug.Log($"[CardParticleManager] Background effect started - Type: {backgroundEffectType}");
         }
 
         /// <summary>
@@ -58,13 +99,21 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void StopBackgroundEffect()
         {
-            if (backgroundEffect == null) return;
+            if (backgroundEffectType == BackgroundEffectType.UIParticle)
+            {
+                if (backgroundEffectUIParticle == null) return;
+                backgroundEffectUIParticle.Stop();
+            }
+            else // ParticleImage
+            {
+                if (backgroundEffectParticleImage == null) return;
+                backgroundEffectParticleImage.Stop(true);
+            }
 
-            backgroundEffect.Stop();
             Debug.Log("[CardParticleManager] Background effect stopped");
         }
 
-        private void ResetAndPlayParticles(UIParticle uiParticle, ParticleSystem[] particleSystems)
+        private void ResetAndPlayUIParticle(UIParticle uiParticle, ParticleSystem[] particleSystems)
         {
             if (uiParticle == null) return;
 
@@ -84,6 +133,15 @@ namespace NovelianMagicLibraryDefense.Managers
             uiParticle.Stop();
             uiParticle.Clear();
             uiParticle.Play();
+        }
+
+        private void ResetAndPlayParticleImage(ParticleImage particleImage)
+        {
+            if (particleImage == null) return;
+
+            particleImage.Stop(true);
+            particleImage.Clear();
+            particleImage.Play();
         }
     }
 }

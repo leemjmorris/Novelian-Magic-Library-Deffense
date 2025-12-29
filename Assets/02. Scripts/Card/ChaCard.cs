@@ -6,6 +6,8 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System.Threading;
+using AssetKits.ParticleImage;
+using AssetKits.ParticleImage.Enumerations;
 
 /// <summary>
 /// JML: CharacterCardGrid의 각 슬롯에 표시되는 캐릭터 카드 (Issue #424)
@@ -25,6 +27,10 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
     [SerializeField] private GameObject star1;
     [SerializeField] private GameObject star2;
     [SerializeField] private GameObject star3;
+
+    [Header("3-Star Effect (Issue #559)")]
+    [Tooltip("3성 달성 시 재생되는 파티클 효과")]
+    [SerializeField] private ParticleImage threeStarEffect;
 
     [Header("Empty State")]
     [SerializeField] private Color emptyBackgroundColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
@@ -64,6 +70,9 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         // GridManager 찾기
         gridManager = GetComponentInParent<CharacterCardGridManager>();
         rectTransform = GetComponent<RectTransform>();
+
+        // Issue #559: 3성 파티클 초기화 (TimeScale=0에서도 재생되도록)
+        InitializeThreeStarEffect();
 
         // Issue #476: 이미 Initialize()가 호출된 경우 SetEmpty() 스킵
         // (스크립트 실행 순서 문제로 BossDungeonManager.Awake()가 먼저 실행되어
@@ -262,6 +271,12 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         if (star2 != null) star2.SetActive(false);
         if (star3 != null) star3.SetActive(false);
 
+        // Issue #559: 3성 파티클 효과 정지
+        if (threeStarEffect != null)
+        {
+            threeStarEffect.Stop(true);
+        }
+
         // 배경 딤 처리
         if (backgroundImage != null)
         {
@@ -281,6 +296,18 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
     }
 
     /// <summary>
+    /// JML: 3성 파티클 효과 초기화 (Issue #559)
+    /// TimeScale=0에서도 재생되도록 설정
+    /// </summary>
+    private void InitializeThreeStarEffect()
+    {
+        if (threeStarEffect == null) return;
+
+        threeStarEffect.timeScale = TimeScale.Unscaled;
+        threeStarEffect.Stop(true);
+    }
+
+    /// <summary>
     /// JML: 성급 아이콘 표시 업데이트
     /// </summary>
     private void UpdateStarDisplay()
@@ -288,6 +315,38 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         if (star1 != null) star1.SetActive(starTier >= 1);
         if (star2 != null) star2.SetActive(starTier >= 2);
         if (star3 != null) star3.SetActive(starTier >= 3);
+
+        // Issue #559: 3성 달성 시 파티클 효과 재생
+        UpdateThreeStarEffect();
+    }
+
+    /// <summary>
+    /// JML: 3성 파티클 효과 재생/정지 (Issue #559)
+    /// </summary>
+    private void UpdateThreeStarEffect()
+    {
+        if (threeStarEffect == null) return;
+
+        if (starTier >= 3)
+        {
+            // 이미 재생 중이 아닐 때만 재생
+            if (!threeStarEffect.isPlaying)
+            {
+                threeStarEffect.Stop(true);
+                threeStarEffect.Clear();
+                threeStarEffect.Play();
+                Debug.Log($"[ChaCard] 3-Star effect started for character {characterId}");
+            }
+        }
+        else
+        {
+            // 3성 미만이면 정지
+            if (threeStarEffect.isPlaying)
+            {
+                threeStarEffect.Stop(true);
+                Debug.Log($"[ChaCard] 3-Star effect stopped for character {characterId}");
+            }
+        }
     }
 
     /// <summary>
