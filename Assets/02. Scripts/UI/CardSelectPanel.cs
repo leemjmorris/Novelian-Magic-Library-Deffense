@@ -81,6 +81,9 @@ namespace NovelianMagicLibraryDefense.UI
         // Awake 완료 플래그 (재시작 시 타이밍 문제 해결용)
         private bool isAwakeComplete = false;
 
+        // Issue #564: 카드 슬롯 설정 중 플래그 (클릭 이벤트 무시용)
+        private bool isSettingUpCards = false;
+
         public enum CardType
         {
             Character,
@@ -101,6 +104,13 @@ namespace NovelianMagicLibraryDefense.UI
 
         private async void Awake()
         {
+            // Issue #564: panel 참조가 없으면 자동으로 설정
+            if (panel == null)
+            {
+                panel = this.gameObject;
+                Debug.Log("[CardSelectPanel] panel 자동 설정됨 (this.gameObject)");
+            }
+
             // JML: 카드 슬롯 초기 비활성화 (씬 진입 시 카드 초기화가 보이는 문제 방지)
             HideCardSlotsOnAwake();
 
@@ -187,13 +197,15 @@ namespace NovelianMagicLibraryDefense.UI
         /// <summary>
         /// CardGrid 활성화 (카드 슬롯 표시용)
         /// cardGrid 참조가 없으면 cardSlots[0]의 부모를 활성화
+        /// Issue #564: 전체 부모 계층을 활성화하여 씬 재로드 시에도 정상 표시되도록
         /// </summary>
         private void ActivateCardGrid()
         {
             if (cardGrid != null)
             {
-                cardGrid.SetActive(true);
-                Debug.Log("[CardSelectPanel] CardGrid 활성화됨");
+                // cardGrid와 모든 상위 부모 활성화
+                EnsureHierarchyActive(cardGrid.transform);
+                Debug.Log($"[CardSelectPanel] CardGrid 활성화됨: {cardGrid.name}, activeInHierarchy={cardGrid.activeInHierarchy}");
             }
             else
             {
@@ -203,9 +215,71 @@ namespace NovelianMagicLibraryDefense.UI
                     var parent = cardSlots[0].transform.parent;
                     if (parent != null)
                     {
-                        parent.gameObject.SetActive(true);
-                        Debug.Log($"[CardSelectPanel] CardGrid(부모) 활성화됨: {parent.name}");
+                        EnsureHierarchyActive(parent);
+                        Debug.Log($"[CardSelectPanel] CardGrid(부모) 활성화됨: {parent.name}, activeInHierarchy={parent.gameObject.activeInHierarchy}");
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Issue #564: Transform과 모든 부모 계층을 활성화
+        /// 씬 재로드 시 비활성화된 부모 오브젝트 문제 해결
+        /// </summary>
+        private void EnsureHierarchyActive(Transform target)
+        {
+            if (target == null) return;
+
+            // 부모부터 활성화해야 자식이 activeInHierarchy=true가 됨
+            var hierarchy = new System.Collections.Generic.List<Transform>();
+            Transform current = target;
+            while (current != null)
+            {
+                hierarchy.Add(current);
+                current = current.parent;
+            }
+
+            // 역순으로 (최상위부터) 활성화
+            for (int i = hierarchy.Count - 1; i >= 0; i--)
+            {
+                if (!hierarchy[i].gameObject.activeSelf)
+                {
+                    hierarchy[i].gameObject.SetActive(true);
+                    Debug.Log($"[CardSelectPanel] 부모 활성화: {hierarchy[i].name}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Issue #564: 모든 카드 슬롯 즉시 활성화
+        /// CSV 로딩 대기 전에 먼저 UI를 표시하여 사용자가 빈 화면을 보지 않도록 함
+        /// </summary>
+        private void ActivateAllCardSlots()
+        {
+            if (cardSlots == null) return;
+
+            for (int i = 0; i < cardSlots.Length; i++)
+            {
+                if (cardSlots[i] != null)
+                {
+                    cardSlots[i].gameObject.SetActive(true);
+                }
+            }
+            Debug.Log($"[CardSelectPanel] 모든 카드 슬롯 즉시 활성화: {cardSlots.Length}개");
+        }
+
+        /// <summary>
+        /// Issue #564: 모든 카드 슬롯 비활성화 (Initialize 완료 전 기본 아이콘이 보이지 않도록)
+        /// </summary>
+        private void HideAllCardSlots()
+        {
+            if (cardSlots == null) return;
+
+            for (int i = 0; i < cardSlots.Length; i++)
+            {
+                if (cardSlots[i] != null)
+                {
+                    cardSlots[i].gameObject.SetActive(false);
                 }
             }
         }
@@ -267,65 +341,231 @@ namespace NovelianMagicLibraryDefense.UI
         {
             Debug.Log("[CardSelectPanel] OpenForBossDungeon 호출됨");
 
+            // Issue #564: panel 참조가 없으면 자동으로 설정
             if (panel == null)
             {
-                Debug.LogError("[CardSelectPanel] panel이 null입니다! Inspector에서 Panel을 연결해주세요.");
-                return;
+                panel = this.gameObject;
+                Debug.Log("[CardSelectPanel] panel 자동 설정됨 (this.gameObject)");
             }
+
+            // Issue #564: cardSlots 배열이 비어있으면 런타임에 찾기
+            EnsureCardSlotsValid();
 
             // Issue #564: 보스 던전 시작 시에도 항상 TimeScale 1로 복구되어야 함
             previousTimeScale = 1f;
             Time.timeScale = 0f;
             isPaused = true;
 
+            // Issue #564: 카드 슬롯 먼저 비활성화 (기본 아이콘이 보이지 않도록)
+            HideAllCardSlots();
+
             panel.SetActive(true);
 
             // CardGrid 활성화 (카드 슬롯 표시용)
             ActivateCardGrid();
 
+            // Issue #564: 카드 슬롯은 Initialize 완료 후 활성화 (SetupCardSlots에서 처리)
+            // 아이콘 로딩이 완료된 후에만 카드가 표시되어 이상한 아이콘 문제 해결
+
             Debug.Log("[CardSelectPanel] 패널 활성화됨, 카드 로딩 시작...");
 
-            // 데이터 로딩 대기 후 카드 표시
-            WaitForDataAndShowBossDungeonCards().Forget();
+            // Issue #564 Fix: TimeScale=0에서도 즉시 실행되도록 동기 호출 + 내부에서 EarlyUpdate 사용
+            // UniTaskVoid.Forget()은 TimeScale=0에서 스케줄링 지연 가능
+            StartBossDungeonCardDisplay();
+        }
+
+        /// <summary>
+        /// Issue #564: cardSlots 배열이 비어있거나 null이면 런타임에 찾기
+        /// 씬 재로드 시 SerializedField 참조가 유실될 수 있음
+        /// </summary>
+        private void EnsureCardSlotsValid()
+        {
+            // cardSlots 유효성 검사
+            bool needsRefresh = cardSlots == null || cardSlots.Length == 0;
+            if (!needsRefresh)
+            {
+                // 배열은 있지만 내부가 null인지 확인
+                for (int i = 0; i < cardSlots.Length; i++)
+                {
+                    if (cardSlots[i] == null)
+                    {
+                        needsRefresh = true;
+                        Debug.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 null입니다!");
+                        break;
+                    }
+                }
+            }
+
+            // Issue #564 Fix: 씬 전환 후 cardSlots가 다른 씬의 오브젝트를 참조할 수 있음
+            // cardGrid의 자식인지 확인하여 현재 씬의 오브젝트인지 검증
+            if (!needsRefresh && cardGrid != null && cardSlots != null && cardSlots.Length > 0)
+            {
+                for (int i = 0; i < cardSlots.Length; i++)
+                {
+                    if (cardSlots[i] != null && cardSlots[i].transform.parent != cardGrid.transform)
+                    {
+                        needsRefresh = true;
+                        Debug.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 현재 cardGrid의 자식이 아님! (씬 전환 감지)");
+                        break;
+                    }
+                }
+            }
+
+            if (!needsRefresh)
+            {
+                Debug.Log($"[CardSelectPanel] cardSlots 유효함: {cardSlots.Length}개");
+                return;
+            }
+
+            Debug.LogWarning("[CardSelectPanel] cardSlots 배열이 유효하지 않음! 런타임에 찾기 시도...");
+
+            // cardGrid가 null이면 먼저 찾기
+            if (cardGrid == null)
+            {
+                // "CardGrid" 이름을 가진 자식 찾기
+                var gridTransform = transform.Find("CardGrid");
+                if (gridTransform != null)
+                {
+                    cardGrid = gridTransform.gameObject;
+                    Debug.Log($"[CardSelectPanel] CardGrid 자식에서 발견: {cardGrid.name}");
+                }
+            }
+
+            // cardGrid에서 StageCard 컴포넌트를 가진 자식들 찾기
+            if (cardGrid != null)
+            {
+                var foundCards = cardGrid.GetComponentsInChildren<StageCard>(true);
+                if (foundCards != null && foundCards.Length > 0)
+                {
+                    cardSlots = foundCards;
+                    Debug.Log($"[CardSelectPanel] cardGrid에서 {cardSlots.Length}개 카드 슬롯 발견!");
+                    return;
+                }
+            }
+
+            // cardGrid가 없으면 자기 자신의 자식에서 찾기
+            var selfCards = GetComponentsInChildren<StageCard>(true);
+            if (selfCards != null && selfCards.Length > 0)
+            {
+                cardSlots = selfCards;
+                Debug.Log($"[CardSelectPanel] 자식에서 {cardSlots.Length}개 카드 슬롯 발견!");
+                return;
+            }
+
+            // 그래도 없으면 씬 전체에서 "Card" 이름으로 찾기 (최후의 수단)
+            var allStageCards = UnityEngine.Object.FindObjectsByType<StageCard>(FindObjectsSortMode.None);
+            if (allStageCards != null && allStageCards.Length > 0)
+            {
+                // CardGrid 아래에 있는 것만 필터링
+                var filtered = new System.Collections.Generic.List<StageCard>();
+                foreach (var card in allStageCards)
+                {
+                    if (card.transform.parent != null && card.transform.parent.name.Contains("CardGrid"))
+                    {
+                        filtered.Add(card);
+                    }
+                }
+                if (filtered.Count > 0)
+                {
+                    cardSlots = filtered.ToArray();
+                    Debug.Log($"[CardSelectPanel] 씬에서 {cardSlots.Length}개 카드 슬롯 발견!");
+                    return;
+                }
+            }
+
+            Debug.LogError("[CardSelectPanel] cardSlots를 찾을 수 없습니다! Inspector에서 확인하세요.");
+        }
+
+        /// <summary>
+        /// Issue #564: TimeScale=0에서도 즉시 실행되도록 async void 래퍼 사용
+        /// async void는 UniTaskVoid와 달리 즉시 동기적으로 시작됨
+        /// </summary>
+        private async void StartBossDungeonCardDisplay()
+        {
+            try
+            {
+                Debug.Log("[CardSelectPanel] StartBossDungeonCardDisplay 시작 (async void)");
+                await WaitForDataAndShowBossDungeonCardsInternal();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[CardSelectPanel] StartBossDungeonCardDisplay 예외: {e.Message}\n{e.StackTrace}");
+                // Fallback: 패널 닫기
+                Close();
+            }
         }
 
         /// <summary>
         /// Issue #476: 도전던전 카드 표시 (캐릭터 3장 + 스탯 1장)
+        /// TimeScale=0에서도 동작하도록 EarlyUpdate 사용
         /// </summary>
-        private async UniTaskVoid WaitForDataAndShowBossDungeonCards()
+        private async UniTask WaitForDataAndShowBossDungeonCardsInternal()
         {
-            SetCardSlotsInteractable(false);
-
-            // CSV 로딩 대기
-            if (CSVLoader.Instance != null && !CSVLoader.Instance.IsInit)
+            try
             {
-                int maxWaitFrames = 600;
-                int frameCount = 0;
-                while (!CSVLoader.Instance.IsInit && frameCount < maxWaitFrames)
+                Debug.Log("[CardSelectPanel] WaitForDataAndShowBossDungeonCards 시작");
+                SetCardSlotsInteractable(false);
+
+                // CSV 로딩 대기 (TimeScale=0에서도 동작하도록 EarlyUpdate 사용)
+                if (CSVLoader.Instance != null && !CSVLoader.Instance.IsInit)
                 {
-                    await UniTask.Yield(PlayerLoopTiming.Update);
-                    frameCount++;
+                    Debug.Log("[CardSelectPanel] CSV 로딩 대기 중...");
+                    int maxWaitFrames = 600;
+                    int frameCount = 0;
+                    while (!CSVLoader.Instance.IsInit && frameCount < maxWaitFrames)
+                    {
+                        await UniTask.Yield(PlayerLoopTiming.EarlyUpdate);
+                        frameCount++;
+                    }
+                    Debug.Log($"[CardSelectPanel] CSV 로딩 완료 (frames: {frameCount})");
+                }
+
+                // 캐릭터 프리팹 프리로드 대기 (TimeScale=0에서도 동작하도록 EarlyUpdate 사용)
+                if (placementManager != null && !placementManager.IsPreloadComplete())
+                {
+                    Debug.Log("[CardSelectPanel] 캐릭터 프리로드 대기 중...");
+                    int maxWaitFrames = 300;
+                    int frameCount = 0;
+                    while (!placementManager.IsPreloadComplete() && frameCount < maxWaitFrames)
+                    {
+                        await UniTask.Yield(PlayerLoopTiming.EarlyUpdate);
+                        frameCount++;
+                    }
+                    Debug.Log($"[CardSelectPanel] 캐릭터 프리로드 완료 (frames: {frameCount})");
+                }
+                else if (placementManager == null)
+                {
+                    Debug.LogWarning("[CardSelectPanel] placementManager가 null - 스탯 카드만 표시됩니다");
+                }
+
+                // 도전던전 카드 생성: 캐릭터 3장 + 스탯 1장 (또는 캐릭터 2장 + 스탯 2장)
+                Debug.Log("[CardSelectPanel] GetBossDungeonCards 호출...");
+                CardData[] cards = GetBossDungeonCards();
+                Debug.Log($"[CardSelectPanel] 카드 {cards?.Length ?? 0}장 생성됨, CreateCards 호출...");
+                await CreateCards(cards);
+
+                SetCardSlotsInteractable(true);
+                Debug.Log("[CardSelectPanel] 카드 생성 완료, 타이머 시작");
+                StartSelectionTimer().Forget();
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[CardSelectPanel] WaitForDataAndShowBossDungeonCards 예외 발생: {e.Message}\n{e.StackTrace}");
+                // 예외 발생 시에도 최소한 스탯 카드라도 표시
+                try
+                {
+                    CardData[] fallbackCards = GetRandomStatCards(4);
+                    await CreateCards(fallbackCards);
+                    SetCardSlotsInteractable(true);
+                    StartSelectionTimer().Forget();
+                    Debug.Log("[CardSelectPanel] Fallback: 스탯 카드 4장으로 대체");
+                }
+                catch (System.Exception fallbackEx)
+                {
+                    Debug.LogError($"[CardSelectPanel] Fallback도 실패: {fallbackEx.Message}");
+                    Close(); // 최후의 수단: 패널 닫기
                 }
             }
-
-            // 캐릭터 프리팹 프리로드 대기
-            if (placementManager != null && !placementManager.IsPreloadComplete())
-            {
-                int maxWaitFrames = 300;
-                int frameCount = 0;
-                while (!placementManager.IsPreloadComplete() && frameCount < maxWaitFrames)
-                {
-                    await UniTask.Yield(PlayerLoopTiming.Update);
-                    frameCount++;
-                }
-            }
-
-            // 도전던전 카드 생성: 캐릭터 3장 + 스탯 1장 (또는 캐릭터 2장 + 스탯 2장)
-            CardData[] cards = GetBossDungeonCards();
-            CreateCards(cards);
-
-            SetCardSlotsInteractable(true);
-            StartSelectionTimer().Forget();
         }
 
         /// <summary>
@@ -462,7 +702,7 @@ namespace NovelianMagicLibraryDefense.UI
                 }
             }
 
-            CreateCards(cards);
+            await CreateCards(cards);
 
             // 카드 슬롯 버튼 활성화
             SetCardSlotsInteractable(true);
@@ -854,15 +1094,16 @@ namespace NovelianMagicLibraryDefense.UI
         /// <summary>
         /// JML: 카드 생성/설정 (Issue #424)
         /// cardSlots이 연결되어 있으면 새 시스템 사용, 아니면 기존 시스템 사용
+        /// Issue #564: async로 변경하여 카드 설정 완료를 보장
         /// </summary>
-        private void CreateCards(CardData[] cards)
+        private async UniTask CreateCards(CardData[] cards)
         {
             // cardSlots가 유효한지 확인 (하나라도 할당되어 있으면 새 시스템 사용)
             useCardSlotSystem = cardSlots != null && cardSlots.Length > 0 && cardSlots[0] != null;
 
             if (useCardSlotSystem)
             {
-                SetupCardSlots(cards).Forget();
+                await SetupCardSlots(cards);
             }
             else
             {
@@ -876,47 +1117,199 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private async UniTask SetupCardSlots(CardData[] cards)
         {
-            activeCardData = cards;
+            Debug.Log($"[CardSelectPanel] SetupCardSlots 시작: {cards?.Length ?? 0}장");
+            var cardTableIds = new int[cards?.Length ?? 0];
 
-            // 모든 슬롯 비활성화
-            for (int i = 0; i < cardSlots.Length; i++)
+            // Issue #564 Fix: 씬 전환 후 cardSlots가 꼬일 수 있으므로 강제로 현재 cardGrid에서 다시 찾기
+            if (cardGrid != null)
             {
-                if (cardSlots[i] != null)
+                var freshSlots = cardGrid.GetComponentsInChildren<StageCard>(true);
+                if (freshSlots != null && freshSlots.Length > 0)
                 {
-                    cardSlots[i].gameObject.SetActive(false);
+                    cardSlots = freshSlots;
                 }
             }
 
-            // 모든 카드 초기화 작업을 동시에 실행
-            var initTasks = new List<UniTask>();
-            var cardTableIds = new int[cards.Length];
+            // Issue #564: 설정 중 플래그 ON (클릭 이벤트 무시)
+            isSettingUpCards = true;
 
-            for (int i = 0; i < cards.Length && i < cardSlots.Length; i++)
+            try
             {
-                if (cardSlots[i] == null) continue;
+                activeCardData = cards;
 
-                // CardTable ID로 변환
-                cardTableIds[i] = ConvertToCardTableId(cards[i]);
+                // 모든 카드 초기화 작업을 동시에 실행
+                var initTasks = new List<UniTask>();
 
-                if (cardTableIds[i] > 0)
+                for (int i = 0; i < cards.Length && i < cardSlots.Length; i++)
                 {
-                    // 모든 Initialize를 동시에 실행
-                    initTasks.Add(cardSlots[i].Initialize(cardTableIds[i]));
+                    if (cardSlots[i] == null)
+                    {
+                        Debug.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 null입니다!");
+                        continue;
+                    }
+
+                    // Issue #564: 카드 슬롯 강제 활성화 (이전 층에서 비활성화된 경우 대비)
+                    cardSlots[i].gameObject.SetActive(true);
+
+                    // 버튼 이벤트 설정
+                    // Issue #564 Fix: 버튼을 먼저 비활성화해서 대기 중인 클릭 이벤트 방지
+                    var button = cardSlots[i].GetComponent<UnityEngine.UI.Button>();
+                    if (button != null)
+                    {
+                        button.interactable = false; // 초기화 중 클릭 방지
+                        button.onClick.RemoveAllListeners();
+                        int slotIndex = i;
+                        button.onClick.AddListener(() => OnCardSlotClicked(slotIndex));
+                    }
+
+                    // CardTable ID로 변환
+                    cardTableIds[i] = ConvertToCardTableId(cards[i]);
+
+                    if (cardTableIds[i] > 0)
+                    {
+                        // Issue #564: 카드 바로 활성화 (아이콘은 투명 상태로 시작, 로딩 완료 후 불투명해짐)
+                        // 부모 계층도 모두 활성화
+                        EnsureHierarchyActive(cardSlots[i].transform);
+                        initTasks.Add(cardSlots[i].Initialize(cardTableIds[i]));
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[CardSelectPanel] CardTableId가 0 - 수동 설정: cards[{i}]");
+                        SetupCardSlotManually(cardSlots[i], cards[i]);
+                        EnsureHierarchyActive(cardSlots[i].transform);
+                    }
                 }
-                else
+
+                // 사용하지 않는 슬롯 비활성화
+                for (int i = cards.Length; i < cardSlots.Length; i++)
                 {
-                    // CardTable에 없는 카드 (fallback: 직접 텍스트 설정)
-                    SetupCardSlotManually(cardSlots[i], cards[i]);
+                    if (cardSlots[i] != null)
+                    {
+                        cardSlots[i].gameObject.SetActive(false);
+                    }
+                }
+
+                // Initialize 완료 대기 (아이콘 로딩 등)
+                if (initTasks.Count > 0)
+                {
+                    await UniTask.WhenAll(initTasks);
+                }
+
+                // Issue #564 Fix: await 중 씬 전환으로 cardGrid/cardSlots 참조가 바뀔 수 있음
+                // await 후에 cardGrid와 cardSlots를 다시 찾고 강제 활성화
+                GameObject currentCardGrid = cardGrid;
+
+                // 기존 cardGrid가 파괴되었거나 비활성화된 경우 이름으로 다시 찾기
+                if (currentCardGrid == null || !currentCardGrid.activeInHierarchy)
+                {
+                    var cardSelect = GameObject.Find("CardSelect");
+                    if (cardSelect != null)
+                    {
+                        var gridTransform = cardSelect.transform.Find("CardGrid");
+                        if (gridTransform != null)
+                        {
+                            currentCardGrid = gridTransform.gameObject;
+                        }
+                    }
+                }
+
+                if (currentCardGrid != null)
+                {
+                    cardGrid = currentCardGrid;
+                    var freshSlots = cardGrid.GetComponentsInChildren<StageCard>(true);
+                    if (freshSlots != null && freshSlots.Length > 0)
+                    {
+                        cardSlots = freshSlots;
+
+                        // 강제 활성화
+                        for (int j = 0; j < cards.Length && j < cardSlots.Length; j++)
+                        {
+                            if (cardSlots[j] != null)
+                            {
+                                cardSlots[j].gameObject.SetActive(true);
+                            }
+                        }
+                    }
+                }
+
+                // Issue #564 Fix: 모든 초기화 완료 후 버튼 활성화
+                // 1프레임 대기하여 대기 중인 클릭 이벤트가 소멸되도록 함
+                await UniTask.Yield(PlayerLoopTiming.EarlyUpdate);
+
+                for (int i = 0; i < cards.Length && i < cardSlots.Length; i++)
+                {
+                    if (cardSlots[i] != null)
+                    {
+                        var button = cardSlots[i].GetComponent<UnityEngine.UI.Button>();
+                        if (button != null)
+                        {
+                            button.interactable = true;
+                        }
+                    }
+                }
+
+                // Issue #564 Fix: 최종 검증 직전에 cardGrid와 cardSlots를 다시 찾고 강제 활성화
+                // 모든 await 중에 씬 전환이 발생할 수 있음
+                var finalCardGrid = cardGrid;
+                if (finalCardGrid == null || !finalCardGrid.activeInHierarchy)
+                {
+                    var cardSelect = GameObject.Find("CardSelect");
+                    if (cardSelect != null)
+                    {
+                        var gridTransform = cardSelect.transform.Find("CardGrid");
+                        if (gridTransform != null)
+                        {
+                            finalCardGrid = gridTransform.gameObject;
+                        }
+                    }
+                }
+
+                if (finalCardGrid != null)
+                {
+                    cardGrid = finalCardGrid;
+                    var finalSlots = cardGrid.GetComponentsInChildren<StageCard>(true);
+                    if (finalSlots != null && finalSlots.Length > 0)
+                    {
+                        cardSlots = finalSlots;
+                        for (int k = 0; k < cards.Length && k < cardSlots.Length; k++)
+                        {
+                            if (cardSlots[k] != null)
+                            {
+                                cardSlots[k].gameObject.SetActive(true);
+                            }
+                        }
+                    }
                 }
             }
-
-            // 모든 초기화가 완료될 때까지 대기
-            if (initTasks.Count > 0)
+            catch (System.Exception e)
             {
-                await UniTask.WhenAll(initTasks);
-            }
+                Debug.LogError($"[CardSelectPanel] SetupCardSlots 예외 발생: {e.Message}\n{e.StackTrace}");
 
-            // 모든 초기화 완료 후 한번에 카드 표시
+                // 예외 발생 시에도 카드 슬롯 활성화 시도 (fallback)
+                try
+                {
+                    ActivateCardSlotsWithEvents(cards, cardTableIds);
+                    Debug.Log("[CardSelectPanel] SetupCardSlots Fallback: 카드 슬롯 강제 활성화");
+                }
+                catch (System.Exception fallbackEx)
+                {
+                    Debug.LogError($"[CardSelectPanel] SetupCardSlots Fallback 실패: {fallbackEx.Message}");
+                }
+            }
+            finally
+            {
+                // Issue #564: 설정 완료, 플래그 해제 (항상 실행)
+                isSettingUpCards = false;
+            }
+        }
+
+        /// <summary>
+        /// 카드 슬롯 활성화 및 버튼 이벤트 설정
+        /// </summary>
+        private void ActivateCardSlotsWithEvents(CardData[] cards, int[] cardTableIds)
+        {
+            if (cards == null || cardTableIds == null) return;
+
             for (int i = 0; i < cards.Length && i < cardSlots.Length; i++)
             {
                 if (cardSlots[i] == null) continue;
@@ -942,6 +1335,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void OnCardSlotClicked(int slotIndex)
         {
+            // Issue #564: 카드 설정 중에는 클릭 무시 (대기 중인 클릭 이벤트 방지)
+            if (isSettingUpCards) return;
+
             if (isCardSelected || activeCardData == null || slotIndex >= activeCardData.Length) return;
 
             CardData cardData = activeCardData[slotIndex];
