@@ -1561,8 +1561,7 @@ namespace Dispatch
 
         /// <summary>
         /// 아이템 아이콘 로드 (PathTable 경유)
-        /// Item_ID → IngredientData.Path_ID → PathData.Addressable_Key
-        /// 화폐(골드 등)는 고정 Addressable Key 사용
+        /// Item_ID → CurrencyData/IngredientData.Path_ID → PathData.Addressable_Key
         /// </summary>
         private async UniTaskVoid LoadItemIcon(Image targetImage, int itemId)
         {
@@ -1575,37 +1574,43 @@ namespace Dispatch
                 return;
             }
 
-            string iconKey;
+            string iconKey = null;
+            int pathId = 0;
 
-            // 화폐 아이템 처리 (골드: 1601, 다이아: 1602 등)
-            if (itemId == 1601)
+            // 화폐 아이템 처리 (1600번대: CurrencyData)
+            if (itemId >= 1600 && itemId < 1700)
             {
-                iconKey = "ItemIcon_Coin_Gold";  // 골드 아이콘 Addressable Key
-            }
-            else if (itemId == 1602)
-            {
-                iconKey = "ItemIcon_Gem_Diamond_Blue";  // 다이아 아이콘 Addressable Key
+                var currencyData = CSVLoader.Instance.GetData<CurrencyData>(itemId);
+                if (currencyData != null && currencyData.Path_ID > 0)
+                {
+                    pathId = currencyData.Path_ID;
+                }
             }
             else
             {
                 // 일반 재료 아이템: IngredientData에서 Path_ID 조회
                 var ingredientData = CSVLoader.Instance.GetData<IngredientData>(itemId);
-                if (ingredientData == null || ingredientData.Path_ID <= 0)
+                if (ingredientData != null && ingredientData.Path_ID > 0)
                 {
-                    AddLog($"⚠️ IngredientData 없음 또는 Path_ID 없음: {itemId}");
-                    return;
+                    pathId = ingredientData.Path_ID;
                 }
-
-                // PathTable에서 Addressable_Key 조회
-                var pathData = CSVLoader.Instance.GetData<PathData>(ingredientData.Path_ID);
-                if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
-                {
-                    AddLog($"⚠️ PathData 없음 또는 키 없음: Path_ID={ingredientData.Path_ID}");
-                    return;
-                }
-
-                iconKey = pathData.Addressable_Key;
             }
+
+            if (pathId <= 0)
+            {
+                AddLog($"⚠️ Path_ID 없음: itemId={itemId}");
+                return;
+            }
+
+            // PathTable에서 Addressable_Key 조회
+            var pathData = CSVLoader.Instance.GetData<PathData>(pathId);
+            if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
+            {
+                AddLog($"⚠️ PathData 없음 또는 키 없음: Path_ID={pathId}");
+                return;
+            }
+
+            iconKey = pathData.Addressable_Key;
 
             // Addressable에서 로드
             try

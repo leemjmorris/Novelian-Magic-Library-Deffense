@@ -9,7 +9,7 @@ using System.Collections.Generic;
 namespace NovelianMagicLibraryDefense.UI
 {
     /// <summary>
-    /// Issue #511 - 도전던전 확인 패널
+    /// Issue#511 - 도전던전 확인 패널
     /// 시작하기 버튼 + 던전 출입증 소모 로직
     /// 보상 아이콘 표시 (RewardIconHelper 사용)
     /// </summary>
