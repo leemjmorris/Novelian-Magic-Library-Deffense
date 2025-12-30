@@ -1469,7 +1469,11 @@ namespace AssetKits.ParticleImage
 
         void Update()
         {
-            Simulate(_timeScale == TimeScale.Normal ? Time.deltaTime : Time.unscaledDeltaTime);
+            try
+            {
+                Simulate(_timeScale == TimeScale.Normal ? Time.deltaTime : Time.unscaledDeltaTime);
+            }
+            catch (System.Exception) { /* Suppress ParticleImage index errors */ }
             
             //Draw Noise Visualizer
             if (noiseEnabled && _noiseDebug)

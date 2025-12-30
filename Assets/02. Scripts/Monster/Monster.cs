@@ -1241,7 +1241,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             dissolveValue = x;
             SetDissolveAmount(x);
-        }, 1f, dissolveDuration).SetEase(Ease.InQuad);
+        }, 1f, dissolveDuration)
+            .SetEase(Ease.InQuad)
+            .SetLink(gameObject);  // 씬 전환 시 GameObject 파괴되면 Tween 자동 Kill
 
         await dissolveTween.AsyncWaitForCompletion();
     }
@@ -1352,6 +1354,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (collider3D != null)
         {
             collider3D.enabled = false;
+        }
+
+        // 씬 전환으로 GameManager가 파괴된 경우 early return
+        if (NovelianMagicLibraryDefense.Managers.GameManager.Instance == null ||
+            NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool == null)
+        {
+            return;
         }
 
         // JML: 키 기반 풀링 사용 시 DespawnByKey 호출
