@@ -8583,11 +8583,11 @@ MonoBehaviour:
   pictureScrollView: {fileID: 1308731685}
   frameScrollView: {fileID: 1876966053}
   pictureSlotPrefab: {fileID: 6004983793189035331, guid: eaf9f94a2f5c81842b4b388a614bdf51, type: 3}
-  frameSlotPrefab: {fileID: 0}
+  frameSlotPrefab: {fileID: 6004983793189035331, guid: 38414ff0646cac041b24b4827bb1cc0c, type: 3}
   equipButton: {fileID: 1870635861}
   unequipButton: {fileID: 2103869794}
-  frameEquipButton: {fileID: 0}
-  frameUnequipButton: {fileID: 0}
+  frameEquipButton: {fileID: 1872015657}
+  frameUnequipButton: {fileID: 252472260}
   selectedPreviewImage: {fileID: 0}
 --- !u!224 &182027792 stripped
 RectTransform:
@@ -38524,7 +38524,6 @@ GameObject:
   - component: {fileID: 939840461}
   - component: {fileID: 939840460}
   - component: {fileID: 939840462}
-  - component: {fileID: 939840463}
   m_Layer: 5
   m_Name: ProflieImage
   m_TagString: Untagged
@@ -38645,31 +38644,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &939840463
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 939840458}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0aba4636ace01aa4bab6a142bbd78a40, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  profileImage: {fileID: 939840460}
-  frameImage: {fileID: 0}
-  profilePanelRect: {fileID: 0}
-  profileMaskRect: {fileID: 0}
-  profileMaskImageRect: {fileID: 0}
-  profileImageRect: {fileID: 0}
-  frameEquippedPanelSize: {x: 240, y: 230}
-  frameEquippedMaskSize: {x: 130, y: 130}
-  frameEquippedMaskPosY: 0
-  frameEquippedMaskImageSize: {x: 130, y: 130}
-  frameEquippedMaskImagePosY: 0
-  frameEquippedImageSize: {x: 228.8388, y: 228.8388}
-  frameEquippedImagePosY: -44
 --- !u!1 &945786415
 GameObject:
   m_ObjectHideFlags: 0
@@ -47865,8 +47839,8 @@ MonoBehaviour:
   panel2: {fileID: 181920302}
   profileImageButton: {fileID: 242134638}
   profileImage: {fileID: 242134636}
-  frameImage: {fileID: 0}
-  profilePicturePanel: {fileID: 0}
+  frameImage: {fileID: 1630904136}
+  profilePicturePanel: {fileID: 181920304}
   nicknameInputField: {fileID: 850250422}
   lobbyUI: {fileID: 1055357261}
 --- !u!1 &1138910980
@@ -62170,7 +62144,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -1.2057037, y: 6.54}
+  m_AnchoredPosition: {x: -1.2057037, y: 6.5399933}
   m_SizeDelta: {x: 170, y: 170}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1462592938
@@ -68224,6 +68198,7 @@ GameObject:
   - component: {fileID: 1621222410}
   - component: {fileID: 1621222412}
   - component: {fileID: 1621222411}
+  - component: {fileID: 1621222413}
   m_Layer: 5
   m_Name: ProfliePanel
   m_TagString: Untagged
@@ -68289,6 +68264,31 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1621222409}
   m_CullTransparentMesh: 1
+--- !u!114 &1621222413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1621222409}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0aba4636ace01aa4bab6a142bbd78a40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  profileImage: {fileID: 939840460}
+  frameImage: {fileID: 1621222411}
+  profilePanelRect: {fileID: 1621222410}
+  profileMaskRect: {fileID: 1416177141}
+  profileMaskImageRect: {fileID: 1462592937}
+  profileImageRect: {fileID: 1630904135}
+  frameEquippedPanelSize: {x: 240, y: 230}
+  frameEquippedMaskSize: {x: 130, y: 130}
+  frameEquippedMaskPosY: 0
+  frameEquippedMaskImageSize: {x: 130, y: 130}
+  frameEquippedMaskImagePosY: -2
+  frameEquippedImageSize: {x: 228, y: 228}
+  frameEquippedImagePosY: 0
 --- !u!1 &1621689244
 GameObject:
   m_ObjectHideFlags: 0
@@ -68886,11 +68886,11 @@ RectTransform:
   - {fileID: 1462592937}
   m_Father: {fileID: 1362512180}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 1, y: 0.5}
-  m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -44}
-  m_SizeDelta: {x: 228.8388, y: 228.8388}
-  m_Pivot: {x: 1, y: 0.5}
+  m_AnchorMin: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 228, y: 228}
+  m_Pivot: {x: 1, y: 0}
 --- !u!114 &1630904136
 MonoBehaviour:
   m_ObjectHideFlags: 0
