@@ -9,7 +9,8 @@ public class StageData
     public int Wave_4_ID { get; set; }
     public float Time_Limit { get; set; }
     public float Barrier_HP { get; set; }
-    public int Reward_Group_ID { get; set; }
+    public int Reward_Group_1_ID { get; set; }
+    public int Reward_Group_2_ID { get; set; }
     public int AP_Cost_ID { get; set; }
     public int AP_Cost { get; set; }
 }
