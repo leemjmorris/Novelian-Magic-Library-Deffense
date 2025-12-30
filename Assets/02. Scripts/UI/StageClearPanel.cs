@@ -213,8 +213,10 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
-            int rewardGroupId = SelectedStage.Data.Reward_Group_ID;
-            if (rewardGroupId == 0)
+            int rewardGroup1Id = SelectedStage.Data.Reward_Group_1_ID;
+            int rewardGroup2Id = SelectedStage.Data.Reward_Group_2_ID;
+
+            if (rewardGroup1Id == 0 && rewardGroup2Id == 0)
             {
                 GiveFallbackReward(GOLD_CURRENCY_ID, FALLBACK_GOLD);
                 return;
@@ -227,10 +229,41 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
+            var rewardTable = CSVLoader.Instance?.GetTable<RewardData>();
+            if (rewardTable == null)
+            {
+                GiveFallbackReward(GOLD_CURRENCY_ID, FALLBACK_GOLD);
+                return;
+            }
+
+            // Reward_Group_1_ID 처리
+            if (rewardGroup1Id > 0)
+            {
+                ProcessRewardGroup(rewardGroupTable, rewardTable, rewardGroup1Id);
+            }
+
+            // Reward_Group_2_ID 처리
+            if (rewardGroup2Id > 0)
+            {
+                ProcessRewardGroup(rewardGroupTable, rewardTable, rewardGroup2Id);
+            }
+
+            // 유효한 보상이 없으면 fallback
+            if (earnedRewards.Count == 0)
+            {
+                GiveFallbackReward(GOLD_CURRENCY_ID, FALLBACK_GOLD);
+            }
+        }
+
+        /// <summary>
+        /// 보상 그룹 처리 (개별 보상 지급)
+        /// </summary>
+        private void ProcessRewardGroup(CsvTable<RewardGroupData> rewardGroupTable, CsvTable<RewardData> rewardTable, int rewardGroupId)
+        {
             RewardGroupData rewardGroup = rewardGroupTable.GetId(rewardGroupId);
             if (rewardGroup == null)
             {
-                GiveFallbackReward(GOLD_CURRENCY_ID, FALLBACK_GOLD);
+                Debug.LogWarning($"[StageClearPanel] RewardGroup not found: {rewardGroupId}");
                 return;
             }
 
@@ -243,13 +276,6 @@ namespace NovelianMagicLibraryDefense.UI
                 rewardGroup.Reward_4_ID,
                 rewardGroup.Reward_5_ID
             };
-
-            var rewardTable = CSVLoader.Instance?.GetTable<RewardData>();
-            if (rewardTable == null)
-            {
-                GiveFallbackReward(GOLD_CURRENCY_ID, FALLBACK_GOLD);
-                return;
-            }
 
             foreach (int rewardId in rewardIds)
             {
@@ -277,12 +303,6 @@ namespace NovelianMagicLibraryDefense.UI
 
                 // 획득 보상 캐시에 추가
                 earnedRewards.Add((reward.Item_ID, amount));
-            }
-
-            // 유효한 보상이 없으면 fallback
-            if (earnedRewards.Count == 0)
-            {
-                GiveFallbackReward(GOLD_CURRENCY_ID, FALLBACK_GOLD);
             }
         }
 
