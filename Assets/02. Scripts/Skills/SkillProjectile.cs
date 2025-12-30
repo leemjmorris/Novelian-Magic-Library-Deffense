@@ -832,6 +832,9 @@ namespace Novelian.Combat
 
         private void DestroyProjectile()
         {
+            // 이미 파괴된 경우 무시
+            if (this == null || gameObject == null) return;
+
             isInitialized = false;
             Destroy(gameObject);
         }
