@@ -648,19 +648,52 @@ namespace NovelianMagicLibraryDefense.Managers
 
         /// <summary>
         /// Load volume settings from PlayerPrefs
+        /// If no saved settings exist, use Audio Mixer's current values as defaults
         /// </summary>
         public void LoadAudioSettings()
         {
-            masterVolume = PlayerPrefs.GetFloat(MASTER_VOLUME_KEY, 1.0f);
-            bgmVolume = PlayerPrefs.GetFloat(BGM_VOLUME_KEY, 1.0f);
-            sfxVolume = PlayerPrefs.GetFloat(SFX_VOLUME_KEY, 1.0f);
+            // Audio Mixer에서 현재 값을 읽어와서 기본값으로 사용
+            float defaultMaster = GetMixerVolumeAsLinear(MASTER_VOLUME_PARAM);
+            float defaultBGM = GetMixerVolumeAsLinear(BGM_VOLUME_PARAM);
+            float defaultSFX = GetMixerVolumeAsLinear(SFX_VOLUME_PARAM);
+
+            // PlayerPrefs에 저장된 값이 있으면 사용, 없으면 Mixer 기본값 사용
+            // HasKey로 명시적으로 저장된 값이 있는지 확인
+            masterVolume = PlayerPrefs.HasKey(MASTER_VOLUME_KEY)
+                ? PlayerPrefs.GetFloat(MASTER_VOLUME_KEY)
+                : defaultMaster;
+            bgmVolume = PlayerPrefs.HasKey(BGM_VOLUME_KEY)
+                ? PlayerPrefs.GetFloat(BGM_VOLUME_KEY)
+                : defaultBGM;
+            sfxVolume = PlayerPrefs.HasKey(SFX_VOLUME_KEY)
+                ? PlayerPrefs.GetFloat(SFX_VOLUME_KEY)
+                : defaultSFX;
 
             // Apply loaded settings
             SetMasterVolume(masterVolume);
             SetBGMVolume(bgmVolume);
             SetSFXVolume(sfxVolume);
 
-            Debug.Log("[AudioManager] Audio settings loaded");
+            Debug.Log($"[AudioManager] Audio settings loaded - Master: {masterVolume:F2}, BGM: {bgmVolume:F2}, SFX: {sfxVolume:F2} " +
+                      $"(Mixer defaults - Master: {defaultMaster:F2}, BGM: {defaultBGM:F2}, SFX: {defaultSFX:F2})");
+        }
+
+        /// <summary>
+        /// Audio Mixer에서 현재 dB 값을 읽어 0~1 범위의 linear 값으로 변환
+        /// </summary>
+        private float GetMixerVolumeAsLinear(string paramName)
+        {
+            if (audioMixer == null) return 1.0f;
+
+            if (audioMixer.GetFloat(paramName, out float dbValue))
+            {
+                // dB를 linear로 변환: 10^(dB/20)
+                // -80dB = 0, 0dB = 1
+                if (dbValue <= -80f) return 0f;
+                return Mathf.Pow(10f, dbValue / 20f);
+            }
+
+            return 1.0f; // 읽기 실패 시 기본값
         }
 
         #endregion

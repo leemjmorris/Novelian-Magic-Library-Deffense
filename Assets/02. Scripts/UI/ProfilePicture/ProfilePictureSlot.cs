@@ -236,12 +236,24 @@ public class ProfilePictureSlot : MonoBehaviour
     }
 
     /// <summary>
-    /// 프레임 이미지 로드
+    /// 프레임 이미지 로드 (Addressables)
+    /// SkinImage에 프레임 스프라이트 적용
     /// </summary>
     private void LoadFrameImage(int frameId)
     {
-        // TODO: 프레임 에셋 로드 구현
-        // 현재는 기본 이미지 사용
+        string spriteKey = AddressableKey.GetAvatarFrameKey(frameId);
+
+        Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
+        {
+            if (handle.Status == AsyncOperationStatus.Succeeded && skinImage != null)
+            {
+                skinImage.sprite = handle.Result;
+            }
+            else
+            {
+                Debug.LogWarning($"[ProfilePictureSlot] 프레임 이미지 로드 실패: {spriteKey}");
+            }
+        };
     }
 
     /// <summary>

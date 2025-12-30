@@ -73,6 +73,26 @@ namespace Novelian.Combat
         }
 
         /// <summary>
+        /// 범위 내 모든 적에게 데미지 적용 (상성 시스템 적용, Issue #531)
+        /// </summary>
+        public static void ApplyDamageInRadius(Vector3 center, float radius, float damage, bool isCritical, Genre attackerGenre)
+        {
+            Collider[] colliders = Physics.OverlapSphere(center, radius);
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                var col = colliders[i];
+                if (!IsValidEnemy(col)) continue;
+
+                ITargetable target = GetTargetable(col);
+                if (target != null && target.IsAlive())
+                {
+                    target.TakeDamage(damage, isCritical, attackerGenre);
+                }
+            }
+        }
+
+        /// <summary>
         /// 범위 내 모든 적에게 데미지 적용 + 콜백
         /// </summary>
         public static void ApplyDamageInRadius(Vector3 center, float radius, float damage, System.Action<ITargetable> onHit)
@@ -88,6 +108,27 @@ namespace Novelian.Combat
                 if (target != null && target.IsAlive())
                 {
                     target.TakeDamage(damage);
+                    onHit?.Invoke(target);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 범위 내 모든 적에게 데미지 적용 + 콜백 (상성 시스템 적용, Issue #531)
+        /// </summary>
+        public static void ApplyDamageInRadius(Vector3 center, float radius, float damage, Genre attackerGenre, System.Action<ITargetable> onHit)
+        {
+            Collider[] colliders = Physics.OverlapSphere(center, radius);
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                var col = colliders[i];
+                if (!IsValidEnemy(col)) continue;
+
+                ITargetable target = GetTargetable(col);
+                if (target != null && target.IsAlive())
+                {
+                    target.TakeDamage(damage, false, attackerGenre);
                     onHit?.Invoke(target);
                 }
             }
