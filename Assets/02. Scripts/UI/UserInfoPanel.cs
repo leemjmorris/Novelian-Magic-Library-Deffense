@@ -14,6 +14,7 @@ public class UserInfoPanel : MonoBehaviour
     [Header("Profile Picture")]
     [SerializeField] private Button profileImageButton;
     [SerializeField] private Image profileImage;
+    [SerializeField] private Image frameImage;
     [SerializeField] private ProfilePicturePanel profilePicturePanel;
 
     [Header("Nickname")]
@@ -22,6 +23,7 @@ public class UserInfoPanel : MonoBehaviour
 
     private bool isSubscribed = false;
     private Sprite defaultProfileSprite; // 프리팹의 기본 이미지 저장
+    private Sprite defaultFrameSprite; // 프리팹의 기본 프레임 이미지 저장
 
     private void Awake()
     {
@@ -29,6 +31,10 @@ public class UserInfoPanel : MonoBehaviour
         if (profileImage != null)
         {
             defaultProfileSprite = profileImage.sprite;
+        }
+        if (frameImage != null)
+        {
+            defaultFrameSprite = frameImage.sprite;
         }
     }
 
@@ -54,6 +60,7 @@ public class UserInfoPanel : MonoBehaviour
         // 활성화될 때마다 구독 시도 및 이미지 갱신
         TrySubscribeToManager();
         RefreshProfileImage();
+        RefreshFrameImage();
         RefreshNickname();
     }
 
@@ -64,8 +71,10 @@ public class UserInfoPanel : MonoBehaviour
         if (ProfilePictureManager.Instance != null)
         {
             ProfilePictureManager.Instance.OnPictureEquipped += OnPictureEquipped;
+            ProfilePictureManager.Instance.OnFrameEquipped += OnFrameEquipped;
             isSubscribed = true;
             RefreshProfileImage();
+            RefreshFrameImage();
         }
     }
 
@@ -84,6 +93,7 @@ public class UserInfoPanel : MonoBehaviour
         if (ProfilePictureManager.Instance != null && isSubscribed)
         {
             ProfilePictureManager.Instance.OnPictureEquipped -= OnPictureEquipped;
+            ProfilePictureManager.Instance.OnFrameEquipped -= OnFrameEquipped;
             isSubscribed = false;
         }
     }
@@ -135,6 +145,14 @@ public class UserInfoPanel : MonoBehaviour
     private void OnPictureEquipped(int pictureId)
     {
         RefreshProfileImage();
+    }
+
+    /// <summary>
+    /// 프레임 장착 시 호출
+    /// </summary>
+    private void OnFrameEquipped(int frameId)
+    {
+        RefreshFrameImage();
     }
 
     /// <summary>
@@ -192,6 +210,49 @@ public class UserInfoPanel : MonoBehaviour
             else
             {
                 Debug.LogWarning($"[UserInfoPanel] 프로필 이미지 로드 실패: {spriteKey}");
+            }
+        };
+    }
+
+    /// <summary>
+    /// 프레임 이미지 갱신
+    /// </summary>
+    public void RefreshFrameImage()
+    {
+        if (frameImage == null) return;
+        if (ProfilePictureManager.Instance == null) return;
+
+        int equippedFrameId = ProfilePictureManager.Instance.GetEquippedFrameId();
+
+        if (equippedFrameId == -1)
+        {
+            // 장착된 프레임 없음 - 기본 프레임으로 복원
+            if (frameImage != null && defaultFrameSprite != null)
+            {
+                frameImage.sprite = defaultFrameSprite;
+            }
+            return;
+        }
+
+        LoadFrameImage(equippedFrameId);
+    }
+
+    /// <summary>
+    /// 프레임 이미지 로드 (Addressables)
+    /// </summary>
+    private void LoadFrameImage(int frameId)
+    {
+        string spriteKey = AddressableKey.GetAvatarFrameKey(frameId);
+
+        Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
+        {
+            if (handle.Status == AsyncOperationStatus.Succeeded && frameImage != null)
+            {
+                frameImage.sprite = handle.Result;
+            }
+            else
+            {
+                Debug.LogWarning($"[UserInfoPanel] 프레임 이미지 로드 실패: {spriteKey}");
             }
         };
     }
