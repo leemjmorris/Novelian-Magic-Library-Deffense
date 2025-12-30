@@ -235,7 +235,7 @@ namespace Novelian.Combat
             }
 
             Vector3 newPos = transform.position + transform.forward * moveDistance;
-            newPos.y = startPosition.y; // Y축 고정
+            // Y축 고정 제거 - 타겟 콜라이더 중앙을 향해 직선 이동 (Issue #600)
             transform.position = newPos;
 
             float traveled = Vector3.Distance(startPosition, transform.position);
@@ -343,14 +343,13 @@ namespace Novelian.Combat
             if (!isHoming || target == null || !target.IsAlive()) return;
 
             Vector3 targetCenter = TargetableUtils.GetAimPosition(target);
-            // Y축 무시하고 XZ 평면에서만 방향 계산
-            Vector3 flatTarget = new Vector3(targetCenter.x, startPosition.y, targetCenter.z);
-            Vector3 targetDir = (flatTarget - transform.position).normalized;
+            // 3D 공간에서 타겟 콜라이더 중앙을 향해 유도 (Issue #600)
+            Vector3 targetDir = (targetCenter - transform.position).normalized;
 
             if (targetDir.sqrMagnitude > 0.001f)
             {
                 Vector3 newDir = Vector3.Lerp(transform.forward, targetDir, homingStrength * Time.deltaTime);
-                newDir.y = 0f; // Y축 방향 제거
+                // Y축 제한 제거 - 3D 유도 (Issue #600)
                 if (newDir.sqrMagnitude > 0.001f)
                 {
                     transform.rotation = Quaternion.LookRotation(newDir.normalized);
@@ -717,7 +716,7 @@ namespace Novelian.Combat
                 Vector3 splitDir = Quaternion.Euler(0, angleOffset, 0) * transform.forward;
                 // 충돌 지점에서 진행 방향으로 오프셋하여 스폰 (몬스터 내부 스폰 방지)
                 Vector3 spawnPos = transform.position + splitDir * SPLIT_SPAWN_OFFSET;
-                spawnPos.y = startPosition.y; // Y축 고정
+                // Y축 고정 제거 - 현재 위치에서 자연스럽게 분열 (Issue #600)
                 // hitTargets 상속하여 방금 맞힌 적 즉시 재타격 방지
                 SpawnDerivedProjectile(spawnPos, splitDir, null, splitDamage, 0, new HashSet<int>(hitTargets), splitScaleMultiplier);
             }
