@@ -91,6 +91,15 @@ public static class AddressableKey
     // SkillPrefabDatabase removed - migrated to SkillEffectDatabase
 
     /// <summary>
+    /// Frame ID로 아바타 프레임 어드레서블 키 반환
+    /// 예: 1 → "Avatar Frame_1"
+    /// </summary>
+    public static string GetAvatarFrameKey(int frameId)
+    {
+        return $"Avatar Frame_{frameId}";
+    }
+
+    /// <summary>
     /// JML: [Obsolete] 이 메서드는 더 이상 사용하지 않음 (Issue #447)
     /// 개별 캐릭터 프리팹 시스템으로 변경됨.
     /// CharacterPlacementManager.GetCharacterPrefabKey() 사용 권장.

@@ -13,8 +13,37 @@ public class LobbyProfileImage : MonoBehaviour
     [SerializeField] private Image profileImage;
     [SerializeField] private Image frameImage;
 
+    [Header("RectTransform References")]
+    [SerializeField] private RectTransform profilePanelRect;
+    [SerializeField] private RectTransform profileMaskRect;
+    [SerializeField] private RectTransform profileMaskImageRect; // ProfileMask 하위의 ProfileImage
+    [SerializeField] private RectTransform profileImageRect; // ProfileImage (1)
+
+    [Header("Frame Equipped Size Settings - ProfilePanel")]
+    [SerializeField] private Vector2 frameEquippedPanelSize = new Vector2(240f, 230f);
+
+    [Header("Frame Equipped Size Settings - Mask")]
+    [SerializeField] private Vector2 frameEquippedMaskSize = new Vector2(130f, 130f);
+    [SerializeField] private float frameEquippedMaskPosY = 0f;
+
+    [Header("Frame Equipped Size Settings - MaskImage (Mask 하위 ProfileImage)")]
+    [SerializeField] private Vector2 frameEquippedMaskImageSize = new Vector2(130f, 130f);
+    [SerializeField] private float frameEquippedMaskImagePosY = 0f;
+
+    [Header("Frame Equipped Size Settings - ProfileImage (1)")]
+    [SerializeField] private Vector2 frameEquippedImageSize = new Vector2(228.8388f, 228.8388f);
+    [SerializeField] private float frameEquippedImagePosY = -44f;
+
     private bool isSubscribed = false;
-    private Sprite defaultProfileSprite; // 프리팹의 기본 이미지 저장
+    private Sprite defaultProfileSprite; // 프리팹의 기본 프로필 이미지 저장
+    private Sprite defaultFrameSprite; // 프리팹의 기본 프레임 이미지 저장
+    private Vector2 defaultPanelSize; // 기본 패널 크기 저장
+    private Vector2 defaultMaskSize; // 기본 마스크 크기 저장
+    private float defaultMaskPosY; // 기본 마스크 Y 위치 저장
+    private Vector2 defaultMaskImageSize; // 기본 마스크 이미지 크기 저장
+    private float defaultMaskImagePosY; // 기본 마스크 이미지 Y 위치 저장
+    private Vector2 defaultImageSize; // 기본 이미지 크기 저장
+    private float defaultImagePosY; // 기본 이미지 Y 위치 저장
 
     private void Awake()
     {
@@ -22,6 +51,31 @@ public class LobbyProfileImage : MonoBehaviour
         if (profileImage != null)
         {
             defaultProfileSprite = profileImage.sprite;
+        }
+        if (frameImage != null)
+        {
+            defaultFrameSprite = frameImage.sprite;
+        }
+
+        // 기본 RectTransform 크기 저장
+        if (profilePanelRect != null)
+        {
+            defaultPanelSize = profilePanelRect.sizeDelta;
+        }
+        if (profileMaskRect != null)
+        {
+            defaultMaskSize = profileMaskRect.sizeDelta;
+            defaultMaskPosY = profileMaskRect.anchoredPosition.y;
+        }
+        if (profileMaskImageRect != null)
+        {
+            defaultMaskImageSize = profileMaskImageRect.sizeDelta;
+            defaultMaskImagePosY = profileMaskImageRect.anchoredPosition.y;
+        }
+        if (profileImageRect != null)
+        {
+            defaultImageSize = profileImageRect.sizeDelta;
+            defaultImagePosY = profileImageRect.anchoredPosition.y;
         }
     }
 
@@ -103,7 +157,123 @@ public class LobbyProfileImage : MonoBehaviour
 
         int equippedFrameId = ProfilePictureManager.Instance.GetEquippedFrameId();
 
-        // TODO: 프레임 이미지 로드 구현
+        if (equippedFrameId == -1)
+        {
+            // 장착된 프레임 없음 - 기본 프레임으로 복원
+            if (frameImage != null && defaultFrameSprite != null)
+            {
+                frameImage.sprite = defaultFrameSprite;
+                Debug.Log("[LobbyProfileImage] 프레임 이미지를 기본 이미지로 복원");
+            }
+
+            // RectTransform 기본 크기로 복원
+            RestoreDefaultRectSize();
+            return;
+        }
+
+        LoadFrameImage(equippedFrameId);
+
+        // RectTransform 프레임 장착 크기로 변경
+        ApplyFrameEquippedRectSize();
+    }
+
+    /// <summary>
+    /// 프레임 장착 시 RectTransform 크기 적용
+    /// </summary>
+    private void ApplyFrameEquippedRectSize()
+    {
+        if (profilePanelRect != null)
+        {
+            profilePanelRect.sizeDelta = frameEquippedPanelSize;
+            Debug.Log($"[LobbyProfileImage] ProfilePanel 크기 변경: {frameEquippedPanelSize}");
+        }
+
+        if (profileMaskRect != null)
+        {
+            profileMaskRect.sizeDelta = frameEquippedMaskSize;
+            var maskPos = profileMaskRect.anchoredPosition;
+            maskPos.y = frameEquippedMaskPosY;
+            profileMaskRect.anchoredPosition = maskPos;
+            Debug.Log($"[LobbyProfileImage] ProfileMask 크기 변경: {frameEquippedMaskSize}, PosY: {frameEquippedMaskPosY}");
+        }
+
+        if (profileMaskImageRect != null)
+        {
+            profileMaskImageRect.sizeDelta = frameEquippedMaskImageSize;
+            var maskImgPos = profileMaskImageRect.anchoredPosition;
+            maskImgPos.y = frameEquippedMaskImagePosY;
+            profileMaskImageRect.anchoredPosition = maskImgPos;
+            Debug.Log($"[LobbyProfileImage] ProfileMaskImage 크기 변경: {frameEquippedMaskImageSize}, PosY: {frameEquippedMaskImagePosY}");
+        }
+
+        if (profileImageRect != null)
+        {
+            profileImageRect.sizeDelta = frameEquippedImageSize;
+            var imgPos = profileImageRect.anchoredPosition;
+            imgPos.y = frameEquippedImagePosY;
+            profileImageRect.anchoredPosition = imgPos;
+            Debug.Log($"[LobbyProfileImage] ProfileImage 크기 변경: {frameEquippedImageSize}, PosY: {frameEquippedImagePosY}");
+        }
+    }
+
+    /// <summary>
+    /// RectTransform 기본 크기로 복원
+    /// </summary>
+    private void RestoreDefaultRectSize()
+    {
+        if (profilePanelRect != null)
+        {
+            profilePanelRect.sizeDelta = defaultPanelSize;
+            Debug.Log($"[LobbyProfileImage] ProfilePanel 크기 복원: {defaultPanelSize}");
+        }
+
+        if (profileMaskRect != null)
+        {
+            profileMaskRect.sizeDelta = defaultMaskSize;
+            var maskPos = profileMaskRect.anchoredPosition;
+            maskPos.y = defaultMaskPosY;
+            profileMaskRect.anchoredPosition = maskPos;
+            Debug.Log($"[LobbyProfileImage] ProfileMask 크기 복원: {defaultMaskSize}, PosY: {defaultMaskPosY}");
+        }
+
+        if (profileMaskImageRect != null)
+        {
+            profileMaskImageRect.sizeDelta = defaultMaskImageSize;
+            var maskImgPos = profileMaskImageRect.anchoredPosition;
+            maskImgPos.y = defaultMaskImagePosY;
+            profileMaskImageRect.anchoredPosition = maskImgPos;
+            Debug.Log($"[LobbyProfileImage] ProfileMaskImage 크기 복원: {defaultMaskImageSize}, PosY: {defaultMaskImagePosY}");
+        }
+
+        if (profileImageRect != null)
+        {
+            profileImageRect.sizeDelta = defaultImageSize;
+            var imgPos = profileImageRect.anchoredPosition;
+            imgPos.y = defaultImagePosY;
+            profileImageRect.anchoredPosition = imgPos;
+            Debug.Log($"[LobbyProfileImage] ProfileImage 크기 복원: {defaultImageSize}, PosY: {defaultImagePosY}");
+        }
+    }
+
+    /// <summary>
+    /// 프레임 이미지 로드 (Addressables)
+    /// </summary>
+    private void LoadFrameImage(int frameId)
+    {
+        string spriteKey = AddressableKey.GetAvatarFrameKey(frameId);
+
+        Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
+        {
+            if (handle.Status == AsyncOperationStatus.Succeeded && frameImage != null)
+            {
+                frameImage.sprite = handle.Result;
+                Debug.Log($"[LobbyProfileImage] 프레임 이미지 변경: {spriteKey}");
+            }
+            else
+            {
+                Debug.LogWarning($"[LobbyProfileImage] 프레임 이미지 로드 실패: {spriteKey}");
+            }
+        };
     }
 
     /// <summary>
