@@ -451,6 +451,12 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 isBossSpawned = true;
                 Debug.Log($"[BossDungeonManager] 보스 스폰 완료: {bossAddressableKey}");
+
+                // Issue #583: 남은 몬스터 수 UI 업데이트
+                if (dungeonUI != null)
+                {
+                    dungeonUI.UpdateMonsterCount(1);
+                }
             }
         }
 
@@ -720,6 +726,12 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 Debug.LogWarning($"[BossDungeonManager] boss != currentBoss 불일치로 무시됨");
                 return;
+            }
+
+            // Issue #583: 남은 몬스터 수 UI 업데이트
+            if (dungeonUI != null)
+            {
+                dungeonUI.UpdateMonsterCount(0);
             }
 
             OnDungeonCleared();
