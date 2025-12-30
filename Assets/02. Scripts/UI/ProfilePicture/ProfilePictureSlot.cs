@@ -24,9 +24,6 @@ public class ProfilePictureSlot : MonoBehaviour
     [SerializeField] private GameObject checkIcon;            // Check - 장착 중 표시
     [SerializeField] private Button slotButton;               // Select에 있는 Button
 
-    [Header("Lock Settings")]
-    [SerializeField] private float lockedAlpha = 0.5f;        // 잠금 시 SkinImage 투명도
-
     private int itemId;
     private bool isLocked = true;
     private bool isEquipped = false;
@@ -138,7 +135,7 @@ public class ProfilePictureSlot : MonoBehaviour
     /// 잠금 상태 설정
     /// - RockPanel 활성화 (어두운 오버레이)
     /// - Lock 아이콘 표시
-    /// - SkinImage 투명도 조정
+    /// - SkinImage 검정색으로 변경
     /// - 버튼 비활성화
     /// </summary>
     public void SetLocked(bool locked)
@@ -153,12 +150,10 @@ public class ProfilePictureSlot : MonoBehaviour
         if (lockIcon != null)
             lockIcon.SetActive(locked);
 
-        // SkinImage 투명도 조정
+        // SkinImage 컬러 변경 (잠금: 검정, 해금: 흰색)
         if (skinImage != null)
         {
-            Color color = skinImage.color;
-            color.a = locked ? lockedAlpha : 1f;
-            skinImage.color = color;
+            skinImage.color = locked ? Color.black : Color.white;
         }
 
         // 버튼 상호작용 비활성화

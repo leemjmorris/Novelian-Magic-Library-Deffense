@@ -19,6 +19,7 @@ namespace Firebase.Data
         public BookmarkSaveData bookmarks;
         public DispatchData dispatch;
         public PartySynergySaveData partySynergies;
+        public ProfileSaveData profile;
 
         public UserData()
         {
@@ -32,6 +33,7 @@ namespace Firebase.Data
             bookmarks = new BookmarkSaveData();
             dispatch = new DispatchData();
             partySynergies = new PartySynergySaveData();
+            profile = new ProfileSaveData();
         }
 
         /// <summary>
@@ -431,6 +433,22 @@ namespace Firebase.Data
         public PartySynergySaveData()
         {
             levels = new Dictionary<string, int>();
+        }
+    }
+
+    /// <summary>
+    /// 프로필 사진/프레임 저장 데이터
+    /// </summary>
+    [Serializable]
+    public class ProfileSaveData
+    {
+        public int equippedPictureId;  // 장착된 프로필 사진 ID (캐릭터 ID 기반)
+        public int equippedFrameId;    // 장착된 프레임 ID (1~12)
+
+        public ProfileSaveData()
+        {
+            equippedPictureId = -1;  // -1 = 장착 안 함
+            equippedFrameId = -1;    // -1 = 장착 안 함
         }
     }
 }

@@ -271,8 +271,20 @@ public class ProfilePictureManager : MonoBehaviour
     /// </summary>
     private void SaveToFirebase()
     {
-        // TODO: Firebase 연동 시 구현
-        // FirebaseSaveManager.Instance.SaveProfilePictureAsync(...)
+        if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance == null)
+        {
+            Debug.LogWarning("[ProfilePictureManager] Firebase 매니저가 초기화되지 않음");
+            return;
+        }
+
+        string userId = FirebaseManager.Instance.CurrentUserId;
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogWarning("[ProfilePictureManager] 유저 ID가 없음");
+            return;
+        }
+
+        FirebaseSaveManager.Instance.SaveProfileAsync(userId, equippedPictureId, equippedFrameId).Forget();
     }
 
     /// <summary>

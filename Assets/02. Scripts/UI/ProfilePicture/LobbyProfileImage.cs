@@ -88,6 +88,7 @@ public class LobbyProfileImage : MonoBehaviour
     {
         TrySubscribeToManager();
         RefreshProfileImage();
+        RefreshFrameImage();
     }
 
     private void TrySubscribeToManager()
