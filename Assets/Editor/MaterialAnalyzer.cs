@@ -102,14 +102,14 @@ public class MaterialAnalyzer : EditorWindow
         usedMaterials.Clear();
         var materialDict = new Dictionary<Material, MaterialInfo>();
 
-        // MeshRenderer
-        foreach (var renderer in FindObjectsOfType<MeshRenderer>(true))
+        // MeshRenderer (inactive 포함)
+        foreach (var renderer in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             ProcessRenderer(renderer, materialDict);
         }
 
-        // SkinnedMeshRenderer
-        foreach (var renderer in FindObjectsOfType<SkinnedMeshRenderer>(true))
+        // SkinnedMeshRenderer (inactive 포함)
+        foreach (var renderer in Object.FindObjectsByType<SkinnedMeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             ProcessRenderer(renderer, materialDict);
         }
@@ -143,12 +143,12 @@ public class MaterialAnalyzer : EditorWindow
 
             UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath);
 
-            foreach (var renderer in FindObjectsOfType<MeshRenderer>(true))
+            foreach (var renderer in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 ProcessRenderer(renderer, materialDict);
             }
 
-            foreach (var renderer in FindObjectsOfType<SkinnedMeshRenderer>(true))
+            foreach (var renderer in Object.FindObjectsByType<SkinnedMeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 ProcessRenderer(renderer, materialDict);
             }
