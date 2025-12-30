@@ -379,7 +379,7 @@ Shader "AllIn1SpriteShader/AllIn1Urp2dRenderer"
         {
 			Name "Main Pass"
 
-			Tags { "LightMode" = "Universal2D" }
+			Tags { "LightMode" = "Universal2D" } 
 
             HLSLPROGRAM
 			#pragma vertex CombinedShapeLightVertex 
@@ -461,6 +461,6 @@ Shader "AllIn1SpriteShader/AllIn1Urp2dRenderer"
         }
     }
 
-	FallBack "AllIn1SpriteShader/AllIn1SpriteShader"
+	//FallBack "AllIn1SpriteShader/AllIn1SpriteShader"
 	CustomEditor "AllIn1SpriteShader.AllIn12DRendererMaterialInspector"
 }

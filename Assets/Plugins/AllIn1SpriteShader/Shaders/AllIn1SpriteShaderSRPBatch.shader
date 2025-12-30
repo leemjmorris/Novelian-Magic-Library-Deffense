@@ -272,6 +272,7 @@ Shader "AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch"
 		Pass
         {
 			HLSLPROGRAM
+			#pragma target 4.5
 			#pragma multi_compile_instancing
 			#pragma vertex vert
 			#pragma fragment frag
@@ -280,8 +281,10 @@ Shader "AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch"
 
 			#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
 			#include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
+			#include "Packages/com.unity.render-pipelines.high-definition/Runtime/Lighting/AtmosphericScattering/AtmosphericScattering.hlsl"
 
 			#include "ShaderLibrary/AllIn1SpriteShaderSRP_CommonFunctions.hlsl"
+			#include "ShaderLibrary/AllIn1SpriteShaderSRP_HDRPHelper.hlsl"
 
 			#include "ShaderLibrary/AllIn1SpriteShaderSRP_Structs.hlsl"
 			#include_with_pragmas "ShaderLibrary/AllIn1SpriteShaderSRP_ShaderFeatures.hlsl"
@@ -324,6 +327,7 @@ Shader "AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch"
 			#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
 			#include "ShaderLibrary/AllIn1SpriteShaderSRP_CommonFunctions.hlsl"
+			#include "ShaderLibrary/AllIn1SpriteShaderSRP_URPHelper.hlsl"
 
 			#include "ShaderLibrary/AllIn1SpriteShaderSRP_Structs.hlsl"
 			#include_with_pragmas "ShaderLibrary/AllIn1SpriteShaderSRP_ShaderFeatures.hlsl"
@@ -341,6 +345,6 @@ Shader "AllIn1SpriteShader/AllIn1SpriteShaderSRPBatch"
         }
     }
 
-	Fallback "AllIn1SpriteShader/AllIn1SpriteShader"
+	//Fallback "AllIn1SpriteShader/AllIn1SpriteShader"
 	CustomEditor "AllIn1SpriteShader.AllIn1SpriteShaderMaterialInspector"
 }
