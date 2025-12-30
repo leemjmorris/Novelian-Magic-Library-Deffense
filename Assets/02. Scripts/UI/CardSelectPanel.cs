@@ -1460,11 +1460,38 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
+            // 교체 여부 확인 (메시지 표시용)
+            bool hadPreviousSkill = targetCharacter.HasSupportSkill();
+
+            // === 스킬 조합 호환성 검사 (Issue #585) ===
+            int mainSkillId = targetCharacter.GetBasicAttackSkillId();
+            var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(mainSkillId);
+            var supportSkillData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
+
+            // SkillExecutor가 있고 데이터가 유효하면 호환성 검증
+            if (SkillExecutor.Instance != null && mainSkillData != null && supportSkillData != null)
+            {
+                if (!SkillExecutor.Instance.IsValidCombination(mainSkillData, supportSkillData))
+                {
+                    Debug.LogWarning($"[CardSelectPanel] 조합 불가: {mainSkillData.behavior_type} + {supportSkillData.support_type}");
+                    WarningUIManager.Instance?.ShowWarning("이 조합은 사용할 수 없습니다");
+                    return;
+                }
+            }
+            // === 호환성 검사 끝 ===
+
             bool success = targetCharacter.EquipSupportSkill(supportId);
             if (success)
             {
                 var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
                 string skillName = supportData?.support_name ?? $"Support_{supportId}";
+
+                // 교체 시 메시지 표시
+                if (hadPreviousSkill)
+                {
+                    WarningUIManager.Instance?.ShowWarning("스킬이 교체되었습니다");
+                }
+
                 Debug.Log($"[CardSelectPanel] 서포트 스킬 '{skillName}' → 캐릭터 {characterId}에 장착 완료!");
 
                 // 선택 초기화
@@ -1970,8 +1997,8 @@ namespace NovelianMagicLibraryDefense.UI
 
             foreach (var character in fieldCharacters)
             {
-                // 이미 서포트 스킬이 있는 캐릭터는 스킵
-                if (character.HasSupportSkill()) continue;
+                // 동일 스킬이면 스킵 (교체 의미 없음)
+                if (character.GetSupportSkillId() == supportId) continue;
 
                 // 메인 스킬 타입 조회
                 int mainSkillId = character.GetBasicAttackSkillId();
@@ -2067,8 +2094,8 @@ namespace NovelianMagicLibraryDefense.UI
 
             foreach (var character in fieldCharacters)
             {
-                // 이미 서포트 스킬이 있는 캐릭터는 스킵
-                if (character.HasSupportSkill()) continue;
+                // 동일 스킬이면 스킵 (교체 의미 없음)
+                if (character.GetSupportSkillId() == supportId) continue;
 
                 // 메인 스킬 타입 조회
                 int mainSkillId = character.GetBasicAttackSkillId();
