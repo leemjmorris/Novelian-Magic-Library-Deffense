@@ -311,6 +311,20 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     }
 
     /// <summary>
+    /// 상성 시스템 적용 데미지 처리 (Issue #531)
+    /// 공격자 장르에 따라 상성 배율 적용 후 데미지 처리
+    /// </summary>
+    /// <param name="damage">기본 데미지</param>
+    /// <param name="isCriticalHit">치명타 여부</param>
+    /// <param name="attackerGenre">공격자 장르</param>
+    public void TakeDamage(float damage, bool isCriticalHit, Genre attackerGenre)
+    {
+        float multiplier = AffinityCalculator.GetMultiplier(attackerGenre, bossGenre);
+        float affinityDamage = damage * multiplier;
+        TakeDamage(affinityDamage, isCriticalHit);
+    }
+
+    /// <summary>
     /// CC 효과 적용 (Support 스킬용)
     /// Boss는 CC에 면역 - 이펙트만 표시하고 실제 효과는 적용하지 않음
     /// </summary>

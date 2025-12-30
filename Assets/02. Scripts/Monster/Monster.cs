@@ -282,6 +282,20 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
 
     /// <summary>
+    /// 상성 시스템 적용 데미지 처리 (Issue #531)
+    /// 공격자 장르에 따라 상성 배율 적용 후 데미지 처리
+    /// </summary>
+    /// <param name="damage">기본 데미지</param>
+    /// <param name="isCriticalHit">치명타 여부</param>
+    /// <param name="attackerGenre">공격자 장르</param>
+    public void TakeDamage(float damage, bool isCriticalHit, Genre attackerGenre)
+    {
+        float multiplier = AffinityCalculator.GetMultiplier(attackerGenre, monsterGenre);
+        float affinityDamage = damage * multiplier;
+        TakeDamage(affinityDamage, isCriticalHit, Vector3.zero);
+    }
+
+    /// <summary>
     /// 데미지 처리 (치명타 여부 및 공격자 위치 포함)
     /// </summary>
     /// <param name="damage">데미지량</param>
