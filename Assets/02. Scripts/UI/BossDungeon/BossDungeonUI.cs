@@ -31,6 +31,9 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Floor Info")]
         [SerializeField] private TextMeshProUGUI floorText;
 
+        [Header("Monster Count UI")]
+        [SerializeField] private TextMeshProUGUI remainingMonstersText;
+
         [Header("Result Panels")]
         [SerializeField] private BossDungeonClearPanel clearPanel;   // 승리 패널
         [SerializeField] private BossDungeonFailedPanel failedPanel; // 패배 패널
@@ -254,6 +257,17 @@ namespace NovelianMagicLibraryDefense.UI
             if (failedPanel != null)
             {
                 failedPanel.Show(progressTime);
+            }
+        }
+
+        /// <summary>
+        /// Issue #583: 남은 몬스터 수 업데이트
+        /// </summary>
+        public void UpdateMonsterCount(int count)
+        {
+            if (remainingMonstersText != null)
+            {
+                remainingMonstersText.text = $"남은 몬스터 수 : {count}";
             }
         }
     }
