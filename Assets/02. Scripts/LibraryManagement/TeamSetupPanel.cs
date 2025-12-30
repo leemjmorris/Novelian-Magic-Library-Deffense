@@ -245,11 +245,11 @@ public class TeamSetupPanel : MonoBehaviour
         int targetSlot = selectedDeckSlotIndex;
         deckSlots[targetSlot].SetCharacter(characterId);
 
-        // 덱 장착 음성 재생 (_2)
+        // 덱 장착 음성 재생 (_2) - 이전 음성 정지 후 재생
         string voiceKey = CharacterVoiceHelper.GetEquipVoiceKey(characterId);
         if (!string.IsNullOrEmpty(voiceKey))
         {
-            AudioManager.Instance?.PlaySFX(voiceKey);
+            AudioManager.Instance?.PlayVoice(voiceKey);
         }
 
         Debug.Log($"[TeamSetupPanel] 슬롯 {targetSlot}에 캐릭터 설정 후 - IsSet: {deckSlots[targetSlot].IsSet}, CharacterId: {deckSlots[targetSlot].CharacterId}");
