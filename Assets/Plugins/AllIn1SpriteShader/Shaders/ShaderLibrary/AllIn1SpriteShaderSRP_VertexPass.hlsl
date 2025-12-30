@@ -66,8 +66,14 @@ v2f vert(appdata v)
 	#endif
 
 	#if FOG_ON
-		UNITY_TRANSFER_FOG(o,o.vertex);
+		o.fogCoord = 0;
+		#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
+			o.fogCoord = ComputeFogFactor(o.vertex.z);
+		#endif
 	#endif
+
+	o.positionWS = TransformObjectToWorld(v.vertex.xyz);
+
 
 	return o;
 }

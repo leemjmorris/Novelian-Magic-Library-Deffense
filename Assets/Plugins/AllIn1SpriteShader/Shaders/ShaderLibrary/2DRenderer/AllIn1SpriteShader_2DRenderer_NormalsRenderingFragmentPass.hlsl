@@ -219,9 +219,9 @@ float4 NormalsRenderingFragment(FragmentDataNormalsPass i) : SV_Target
 	#if BLUR_ON
     #if ATLAS_ON
     #if !BLURISHD_ON
-	col = BlurHD(i.uv, _MainTex, _BlurIntensity, (_MaxXUV - _MinXUV), (_MaxYUV - _MinYUV)) * i.color;
+	col = BlurHD(i.uv, _MainTex, sampler_MainTex, _BlurIntensity, (_MaxXUV - _MinXUV), (_MaxYUV - _MinYUV)) * i.color;
     #else
-    col = Blur(i.uv, _MainTex, _BlurIntensity * (_MaxXUV - _MinXUV)) * i.color;
+    col = Blur(i.uv, _MainTex, sampler_MainTex, _BlurIntensity * (_MaxXUV - _MinXUV)) * i.color;
     #endif
     #else
     #if !BLURISHD_ON
