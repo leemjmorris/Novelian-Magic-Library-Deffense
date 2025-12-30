@@ -303,8 +303,8 @@ public class CharacterCardGridManager : MonoBehaviour
 
             if (character == null) continue;
 
-            // 이미 서포트 스킬이 있으면 비호환 처리
-            if (character.HasSupportSkill())
+            // 동일 스킬이면 Dim (교체 의미 없음)
+            if (character.GetSupportSkillId() == supportId)
             {
                 card.PlayDimAnimation();
                 continue;
