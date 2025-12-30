@@ -104,9 +104,21 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
-            int rewardGroupId = SelectedStage.Data.Reward_Group_ID;
+            int rewardGroup1Id = SelectedStage.Data.Reward_Group_1_ID;
+            int rewardGroup2Id = SelectedStage.Data.Reward_Group_2_ID;
+
+            // Reward_Group_1 아이콘 생성
             await RewardIconHelper.CreateRewardIcons(
-                rewardGroupId,
+                rewardGroup1Id,
+                rewardIconContainer,
+                rewardIconPrefab,
+                spawnedIcons,
+                enableTooltip: true
+            );
+
+            // Reward_Group_2 아이콘 생성
+            await RewardIconHelper.CreateRewardIcons(
+                rewardGroup2Id,
                 rewardIconContainer,
                 rewardIconPrefab,
                 spawnedIcons,

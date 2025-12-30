@@ -73,7 +73,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   wallEvents: {fileID: 11400000, guid: 385762a3bb97eb1439bc9ecd0f1ebc41, type: 2}
+  bossDungeonManager: {fileID: 0}
   maxHealth: 200
+  maxShield: 100
 --- !u!1001 &1039957093590810738
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -192,6 +194,10 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 238833112545710938, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.5019608
+      objectReference: {fileID: 0}
     - target: {fileID: 993241038066498783, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -260,6 +266,22 @@ PrefabInstance:
       propertyPath: m_Materials.Array.size
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2471607120540837702, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.21176471
+      objectReference: {fileID: 0}
+    - target: {fileID: 2609633570316952632, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.44705883
+      objectReference: {fileID: 0}
+    - target: {fileID: 2609633570316952632, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
+      propertyPath: InitialModule.startColor.minColor.a
+      value: 0.18039216
+      objectReference: {fileID: 0}
+    - target: {fileID: 3320157125609336461, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.11764706
+      objectReference: {fileID: 0}
     - target: {fileID: 3353587875869393900, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
       propertyPath: m_LocalScale.x
       value: 5
@@ -287,6 +309,10 @@ PrefabInstance:
     - target: {fileID: 6075047626699710988, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
       propertyPath: m_Materials.Array.size
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8369719537458482086, guid: bf03ab34715fd6e44b04d02e8e69d9e2, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.15686275
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -319,7 +345,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   wallEvents: {fileID: 11400000, guid: 385762a3bb97eb1439bc9ecd0f1ebc41, type: 2}
+  bossDungeonManager: {fileID: 0}
   maxHealth: 200
+  maxShield: 100
 --- !u!1001 &3382103365738105150
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -414,6 +442,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Shield (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 411963062274122573, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 434479656132456980, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -454,6 +486,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2150937445162892007, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.2901961
+      objectReference: {fileID: 0}
+    - target: {fileID: 2150937445162892007, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: InitialModule.startColor.minColor.a
+      value: 0.20392157
+      objectReference: {fileID: 0}
     - target: {fileID: 2703808197156961912, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: m_Materials.Array.size
       value: 1
@@ -462,6 +502,10 @@ PrefabInstance:
       propertyPath: m_Materials.Array.size
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 5871322409292424246, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.25882354
+      objectReference: {fileID: 0}
     - target: {fileID: 5915291591558563597, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: m_LocalScale.x
       value: 3
@@ -509,6 +553,14 @@ PrefabInstance:
     - target: {fileID: 6279500312808221580, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: m_ConstrainProportionsScale
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6582787682771616732, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.20392157
+      objectReference: {fileID: 0}
+    - target: {fileID: 6582787682771616732, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: InitialModule.startColor.minColor.a
+      value: 0.18431373
       objectReference: {fileID: 0}
     - target: {fileID: 6816950717349714867, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: m_Materials.Array.size
@@ -529,6 +581,22 @@ PrefabInstance:
     - target: {fileID: 7379856455577318551, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: m_ConstrainProportionsScale
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7557130421800515239, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.18431373
+      objectReference: {fileID: 0}
+    - target: {fileID: 7713564537936969612, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: ColorModule.enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7713564537936969612, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: LightsModule.enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7713564537936969612, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.24313726
       objectReference: {fileID: 0}
     - target: {fileID: 7955454365001340563, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: m_Materials.Array.size
@@ -553,6 +621,10 @@ PrefabInstance:
     - target: {fileID: 8327711000261792497, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: m_Materials.Array.size
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9066036428171255404, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
+      propertyPath: InitialModule.startColor.maxColor.a
+      value: 0.20392157
       objectReference: {fileID: 0}
     - target: {fileID: 9066036428171255404, guid: 0ab9901c2aa061e47812c95fe8fe8e92, type: 3}
       propertyPath: InitialModule.startRotationX.scalar

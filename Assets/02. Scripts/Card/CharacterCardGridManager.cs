@@ -19,6 +19,7 @@ public class CharacterCardGridManager : MonoBehaviour
     [Header("Detail Popup")]
     [SerializeField] private ChaCard characterInfoCard; // 씬에 미리 배치된 상세 정보 카드
     [SerializeField] private GameObject dimBackground; // 딤 처리 배경
+    [SerializeField] private GameObject characterInfoCardPanel; // 상세 정보 패널
 
     /// <summary>
     /// 슬롯 인덱스 → 캐릭터 ID 매핑
@@ -43,6 +44,10 @@ public class CharacterCardGridManager : MonoBehaviour
         if (characterInfoCard != null)
         {
             characterInfoCard.gameObject.SetActive(false);
+        }
+        if (characterInfoCardPanel != null)
+        {
+            characterInfoCardPanel.SetActive(false);
         }
     }
 
@@ -404,6 +409,12 @@ public class CharacterCardGridManager : MonoBehaviour
             dimBackground.SetActive(true);
         }
 
+        // 상세 정보 패널 활성화
+        if (characterInfoCardPanel != null)
+        {
+            characterInfoCardPanel.SetActive(true);
+        }
+
         // 상세 정보 카드 활성화
         characterInfoCard.gameObject.SetActive(true);
 
@@ -434,6 +445,12 @@ public class CharacterCardGridManager : MonoBehaviour
         if (dimBackground != null)
         {
             dimBackground.SetActive(false);
+        }
+
+        // 상세 정보 패널 비활성화
+        if (characterInfoCardPanel != null)
+        {
+            characterInfoCardPanel.SetActive(false);
         }
     }
 

@@ -221,9 +221,9 @@ half4 frag(v2f i) : SV_Target
 #if BLUR_ON
 #if ATLAS_ON
 #if !BLURISHD_ON
-	col = BlurHD(i.uv, _MainTex, _BlurIntensity, (_MaxXUV - _MinXUV), (_MaxYUV - _MinYUV)) * i.color;
+	col = BlurHD(i.uv, _MainTex, sampler_MainTex, _BlurIntensity, (_MaxXUV - _MinXUV), (_MaxYUV - _MinYUV)) * i.color;
 #else
-    col = Blur(i.uv, _MainTex, _BlurIntensity * (_MaxXUV - _MinXUV)) * i.color;
+    col = Blur(i.uv, _MainTex, sampler_MainTex, _BlurIntensity * (_MaxXUV - _MinXUV)) * i.color;
 #endif
 #else
 #if !BLURISHD_ON
@@ -563,9 +563,8 @@ col.a *= _Alpha;
 		col *= unity_SpriteColor;
 	#endif
 
-
 #if FOG_ON
-	UNITY_APPLY_FOG(i.fogCoord, col);
+	col = AllIn1MixFog(col, i.vertex, i.positionWS, i.fogCoord);
 #endif
 
 	return col;

@@ -362,6 +362,14 @@ namespace Novelian.Combat
 
             Vector3 spawnPos = caster.position + Vector3.up * DEFAULT_SPAWN_HEIGHT;
             Vector3 targetPos = TargetableUtils.GetAimPosition(target);
+
+            // Bounce 서포트일 때 발사 높이를 타겟 콜라이더 중앙 높이로 맞춤 (Issue #600)
+            // Bounce는 Y축 고정으로 수평 반사하므로, 시작 높이를 타겟에 맞춰야 함
+            if (supportSkill != null && supportSkill.IsBounceSupport)
+            {
+                spawnPos.y = targetPos.y;
+            }
+
             Vector3 direction = (targetPos - spawnPos).normalized;
 
             int projectileCount = 1;

@@ -5,8 +5,8 @@ half4 CombinedShapeLightFragment(v2f i) : SV_Target
 {
     UNITY_SETUP_INSTANCE_ID(i);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-    half randomSeed = UNITY_ACCESS_INSTANCED_PROP(Props, _RandomSeed);
-            
+    half randomSeed = _RandomSeed;
+
 	float texWidth;
 	float texHeight;
 	_MainTex.GetDimensions(texWidth, texHeight);

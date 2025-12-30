@@ -28,8 +28,11 @@ struct v2f
 #endif
 
 #if FOG_ON
-	UNITY_FOG_COORDS(4)
+	float fogCoord : TEXCOORD4;
 #endif
+
+	float3 positionWS : TEXCOORD5;
+
 	UNITY_VERTEX_INPUT_INSTANCE_ID
 	UNITY_VERTEX_OUTPUT_STEREO
 };

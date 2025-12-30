@@ -43,6 +43,12 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             instance = this;
+
+            // DontDestroyOnLoad는 루트 GameObject에만 작동하므로 부모에서 분리
+            if (transform.parent != null)
+            {
+                transform.SetParent(null);
+            }
             DontDestroyOnLoad(gameObject);
 
             if (toastPanel != null)

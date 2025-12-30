@@ -518,6 +518,18 @@ namespace Novelian.Combat
         }
 
         /// <summary>
+        /// UI용 장착 서포트 스킬 표시명 반환
+        /// 서포트 스킬이 있으면 한글명 반환, 없으면 null
+        /// </summary>
+        public string GetSupportSkillDisplayName()
+        {
+            if (!HasSupportSkill()) return null;
+
+            var supportSkill = CSVLoader.Instance?.GetData<SupportSkillData>(supportSkillId);
+            return supportSkill?.support_name;
+        }
+
+        /// <summary>
         /// 추가 데미지 모디파이어 반환 (스탯 카드 BonusDamage용)
         /// </summary>
         public float GetBonusDamageModifier()
