@@ -130,8 +130,15 @@ namespace Novelian.Combat
                 await UniTask.Yield();
             }
 
-            // 착지 시 데미지
-            TargetableUtils.ApplyDamageInRadius(transform.position, radius, damage);
+            // 착지 시 데미지 - 상성 시스템 적용 (Issue #531)
+            if (casterCharacter != null)
+            {
+                TargetableUtils.ApplyDamageInRadius(transform.position, radius, damage, isCritical, casterCharacter.GetGenre());
+            }
+            else
+            {
+                TargetableUtils.ApplyDamageInRadius(transform.position, radius, damage);
+            }
 
             // 이펙트 재생 대기 후 삭제
             await UniTask.Delay(FALLING_LAND_DELAY_MS);
@@ -142,10 +149,17 @@ namespace Novelian.Combat
         {
             float elapsed = 0f;
 
-            // 즉시 데미지 (TargetAOE, LinearAOE의 경우)
+            // 즉시 데미지 (TargetAOE, LinearAOE의 경우) - 상성 시스템 적용 (Issue #531)
             if (!isGround)
             {
-                TargetableUtils.ApplyDamageInRadius(transform.position, radius, damage);
+                if (casterCharacter != null)
+                {
+                    TargetableUtils.ApplyDamageInRadius(transform.position, radius, damage, isCritical, casterCharacter.GetGenre());
+                }
+                else
+                {
+                    TargetableUtils.ApplyDamageInRadius(transform.position, radius, damage);
+                }
             }
 
             // 지속 장판 또는 직선 이동 AOE
@@ -179,10 +193,21 @@ namespace Novelian.Combat
         {
             float tickDamage = CalculateTickDamage();
 
-            TargetableUtils.ApplyDamageInRadius(transform.position, radius, tickDamage, target =>
+            // 상성 시스템 적용 (Issue #531)
+            if (casterCharacter != null)
             {
-                ApplyStatusEffects(target);
-            });
+                TargetableUtils.ApplyDamageInRadius(transform.position, radius, tickDamage, casterCharacter.GetGenre(), target =>
+                {
+                    ApplyStatusEffects(target);
+                });
+            }
+            else
+            {
+                TargetableUtils.ApplyDamageInRadius(transform.position, radius, tickDamage, target =>
+                {
+                    ApplyStatusEffects(target);
+                });
+            }
         }
 
         /// <summary>
@@ -285,7 +310,15 @@ namespace Novelian.Combat
             ITargetable target = TargetableUtils.GetTargetable(other);
             if (target != null && target.IsAlive())
             {
-                target.TakeDamage(damage);
+                // 상성 시스템 적용 (Issue #531)
+                if (casterCharacter != null)
+                {
+                    target.TakeDamage(damage, isCritical, casterCharacter.GetGenre());
+                }
+                else
+                {
+                    target.TakeDamage(damage, isCritical);
+                }
                 damagedTargets.Add(targetId);
             }
         }

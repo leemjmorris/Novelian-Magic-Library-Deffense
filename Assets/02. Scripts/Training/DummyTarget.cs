@@ -43,6 +43,21 @@ namespace Novelian.Training
 
         public void TakeDamage(float damage, bool isCritical)
         {
+            TakeDamageInternal(damage, isCritical);
+        }
+
+        /// <summary>
+        /// 상성 시스템 적용 데미지 처리 (Issue #531)
+        /// 훈련용 허수아비는 상성 무시 - 기본 데미지 그대로 적용
+        /// </summary>
+        public void TakeDamage(float damage, bool isCritical, Genre attackerGenre)
+        {
+            // 훈련용이므로 상성 무시, 기본 데미지 그대로 적용
+            TakeDamageInternal(damage, isCritical);
+        }
+
+        private void TakeDamageInternal(float damage, bool isCritical)
+        {
             if (!isActive) return;
 
             // 데미지 기록 이벤트 발생 (DPSCalculator가 구독)
