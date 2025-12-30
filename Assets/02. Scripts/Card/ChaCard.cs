@@ -362,12 +362,18 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         {
             // 캐릭터 인스턴스에서 실제 스탯 가져오기
             string skillName = linkedCharacter.GetDisplaySkillName();
+            string supportName = linkedCharacter.GetSupportSkillDisplayName();
             float damage = linkedCharacter.GetDisplayDamage();
             float attackSpeed = linkedCharacter.GetDisplayAttackSpeed();
             float critChance = linkedCharacter.GetDisplayCritChance();
             float critMultiplier = linkedCharacter.GetDisplayCritMultiplier();
 
-            characterInfoText.text = $"장착 스킬: {skillName}\n" +
+            // 메인 스킬 + 서포트 스킬 표시 (예: "화염구 (관통)", "없음 (관통)")
+            string skillDisplay = string.IsNullOrEmpty(supportName)
+                ? skillName
+                : $"{skillName} ({supportName})";
+
+            characterInfoText.text = $"장착 스킬: {skillDisplay}\n" +
                                      $"공격력: {damage:F1}\n" +
                                      $"공격속도: {attackSpeed:F2}\n" +
                                      $"치명타 확률: {critChance:F1}%\n" +
