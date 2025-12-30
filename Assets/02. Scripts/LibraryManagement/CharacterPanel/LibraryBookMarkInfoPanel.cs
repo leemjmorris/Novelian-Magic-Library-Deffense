@@ -112,6 +112,16 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
     /// </summary>
     private void OnEquipButtonClicked()
     {
+        // Issue #576 - 책갈피 해금 체크
+        if (NovelianMagicLibraryDefense.Managers.StageProgressManager.Instance != null &&
+            !NovelianMagicLibraryDefense.Managers.StageProgressManager.Instance.IsBookmarkUnlocked())
+        {
+            int requiredStage = NovelianMagicLibraryDefense.Managers.StageProgressManager.Instance.GetBookmarkUnlockStage();
+            string message = string.Format(WarningText.BookmarkLocked, requiredStage);
+            NovelianMagicLibraryDefense.Managers.WarningUIManager.Instance.ShowWarning(message);
+            return;
+        }
+
         if (currentBookmark == null || characterInfoPanel == null)
         {
             Debug.LogWarning("[LibraryBookMarkInfoPanel] 책갈피 또는 캐릭터 정보가 없습니다.");
@@ -215,6 +225,16 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
     /// </summary>
     private void OnChangeButtonClicked()
     {
+        // Issue #576 - 책갈피 해금 체크
+        if (NovelianMagicLibraryDefense.Managers.StageProgressManager.Instance != null &&
+            !NovelianMagicLibraryDefense.Managers.StageProgressManager.Instance.IsBookmarkUnlocked())
+        {
+            int requiredStage = NovelianMagicLibraryDefense.Managers.StageProgressManager.Instance.GetBookmarkUnlockStage();
+            string message = string.Format(WarningText.BookmarkLocked, requiredStage);
+            NovelianMagicLibraryDefense.Managers.WarningUIManager.Instance.ShowWarning(message);
+            return;
+        }
+
         if (currentBookmark == null || characterInfoPanel == null)
         {
             Debug.LogWarning("[LibraryBookMarkInfoPanel] 책갈피 또는 캐릭터 정보가 없습니다.");

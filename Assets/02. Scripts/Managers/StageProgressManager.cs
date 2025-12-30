@@ -17,6 +17,10 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private const int DEFAULT_UNLOCKED_STAGE = 1; // 1스테이지는 기본 해금
 
+        // Issue #576 - 기능 해금 조건 상수
+        private const int BOOKMARK_UNLOCK_STAGE = 2;      // 책갈피 제작/장착 해금 스테이지
+        private const int BOSS_DUNGEON_UNLOCK_STAGE = 5;  // 도전던전 해금 스테이지
+
         private int highestClearedStage = 0;
 
         private void Awake()
@@ -123,5 +127,35 @@ namespace NovelianMagicLibraryDefense.Managers
                 Debug.Log($"[StageProgressManager] 스테이지 {stageNumber}까지 해금됨 (디버그)");
             }
         }
+
+        #region Issue #576 - 기능 해금 시스템
+
+        /// <summary>
+        /// 책갈피 제작/장착 기능 해금 여부 확인
+        /// </summary>
+        public bool IsBookmarkUnlocked()
+        {
+            return highestClearedStage >= BOOKMARK_UNLOCK_STAGE;
+        }
+
+        /// <summary>
+        /// 도전던전 기능 해금 여부 확인
+        /// </summary>
+        public bool IsBossDungeonUnlocked()
+        {
+            return highestClearedStage >= BOSS_DUNGEON_UNLOCK_STAGE;
+        }
+
+        /// <summary>
+        /// 책갈피 해금에 필요한 스테이지 번호 반환
+        /// </summary>
+        public int GetBookmarkUnlockStage() => BOOKMARK_UNLOCK_STAGE;
+
+        /// <summary>
+        /// 도전던전 해금에 필요한 스테이지 번호 반환
+        /// </summary>
+        public int GetBossDungeonUnlockStage() => BOSS_DUNGEON_UNLOCK_STAGE;
+
+        #endregion
     }
 }

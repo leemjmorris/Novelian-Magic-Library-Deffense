@@ -355,5 +355,9 @@ public static class WarningText
     public const string FeatureNotReady = "준비 중인 기능입니다";
     public const string MainSkillBookmarkLimitReached = "메인 스킬 책갈피는 1개만 장착 가능합니다";
     public const string StatBookmarkLimitReached = "스탯 책갈피는 4개까지만 장착 가능합니다";
+
+    // Issue #576 - 기능 해금 관련 메시지
+    public const string BookmarkLocked = "{0}스테이지 클리어 후 해금됩니다";
+    public const string BossDungeonLocked = "{0}스테이지 클리어 후 해금됩니다";
 }
 
