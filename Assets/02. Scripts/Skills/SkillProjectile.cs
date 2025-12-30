@@ -283,8 +283,15 @@ namespace Novelian.Combat
                 int hitTargetId = hitTarget.GetTransform().GetInstanceID();
                 if (hitTargets.Contains(hitTargetId)) continue;
 
-                // 데미지 적용 (관통이므로 멈추지 않음)
-                hitTarget.TakeDamage(damage);
+                // 데미지 적용 (관통이므로 멈추지 않음) - 상성 시스템 적용 (Issue #531)
+                if (casterCharacter != null)
+                {
+                    hitTarget.TakeDamage(damage, isCritical, casterCharacter.GetGenre());
+                }
+                else
+                {
+                    hitTarget.TakeDamage(damage, isCritical);
+                }
                 hitTargets.Add(hitTargetId);
                 SpawnHitEffect(hit.point);
 
@@ -466,13 +473,27 @@ namespace Novelian.Combat
                     explosionDamage *= supportSkill.explosion_ratio;
                 }
 
-                // 범위 내 모든 적에게 데미지 + 상태효과
-                TargetableUtils.ApplyDamageInRadius(transform.position, radius, explosionDamage, ApplyStatusEffects);
+                // 범위 내 모든 적에게 데미지 + 상태효과 - 상성 시스템 적용 (Issue #531)
+                if (casterCharacter != null)
+                {
+                    TargetableUtils.ApplyDamageInRadius(transform.position, radius, explosionDamage, casterCharacter.GetGenre(), ApplyStatusEffects);
+                }
+                else
+                {
+                    TargetableUtils.ApplyDamageInRadius(transform.position, radius, explosionDamage, ApplyStatusEffects);
+                }
             }
             else
             {
-                // 단일 데미지
-                hitTarget.TakeDamage(damage);
+                // 단일 데미지 - 상성 시스템 적용 (Issue #531)
+                if (casterCharacter != null)
+                {
+                    hitTarget.TakeDamage(damage, isCritical, casterCharacter.GetGenre());
+                }
+                else
+                {
+                    hitTarget.TakeDamage(damage, isCritical);
+                }
                 // 상태효과 적용
                 ApplyStatusEffects(hitTarget);
             }

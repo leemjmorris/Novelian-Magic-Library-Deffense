@@ -91,6 +91,15 @@ public static class AddressableKey
     // SkillPrefabDatabase removed - migrated to SkillEffectDatabase
 
     /// <summary>
+    /// Frame ID로 아바타 프레임 어드레서블 키 반환
+    /// 예: 1 → "Avatar Frame_1"
+    /// </summary>
+    public static string GetAvatarFrameKey(int frameId)
+    {
+        return $"Avatar Frame_{frameId}";
+    }
+
+    /// <summary>
     /// JML: [Obsolete] 이 메서드는 더 이상 사용하지 않음 (Issue #447)
     /// 개별 캐릭터 프리팹 시스템으로 변경됨.
     /// CharacterPlacementManager.GetCharacterPrefabKey() 사용 권장.
@@ -355,5 +364,9 @@ public static class WarningText
     public const string FeatureNotReady = "준비 중인 기능입니다";
     public const string MainSkillBookmarkLimitReached = "메인 스킬 책갈피는 1개만 장착 가능합니다";
     public const string StatBookmarkLimitReached = "스탯 책갈피는 4개까지만 장착 가능합니다";
+
+    // Issue #576 - 기능 해금 관련 메시지
+    public const string BookmarkLocked = "{0}스테이지 클리어 후 해금됩니다";
+    public const string BossDungeonLocked = "{0}스테이지 클리어 후 해금됩니다";
 }
 

@@ -23,8 +23,9 @@ public class ProfilePictureManager : MonoBehaviour
     private int equippedPictureId = -1;
     private int equippedFrameId = -1;
 
-    // 기본 프레임 ID (항상 해금)
-    private const int DEFAULT_FRAME_ID = 0;
+    // 프레임 ID 범위 (1~12)
+    private const int FRAME_ID_MIN = 1;
+    private const int FRAME_ID_MAX = 12;
 
     // 이벤트
     public event Action<int> OnPictureUnlocked;
@@ -64,8 +65,11 @@ public class ProfilePictureManager : MonoBehaviour
 
     private void Init()
     {
-        // 기본 프레임 해금
-        unlockedFrames.Add(DEFAULT_FRAME_ID);
+        // 모든 프레임 기본 해금 (1~12)
+        for (int i = FRAME_ID_MIN; i <= FRAME_ID_MAX; i++)
+        {
+            unlockedFrames.Add(i);
+        }
 
         // CharacterOwnershipManager에서 보유 캐릭터 동기화
         SyncWithCharacterOwnership();
@@ -187,6 +191,17 @@ public class ProfilePictureManager : MonoBehaviour
         equippedPictureId = -1;
         Debug.Log("[ProfilePictureManager] 프로필 사진 해제");
         OnPictureEquipped?.Invoke(-1);
+        SaveToFirebase();
+    }
+
+    /// <summary>
+    /// 현재 장착된 프레임 해제
+    /// </summary>
+    public void UnequipFrame()
+    {
+        equippedFrameId = -1;
+        Debug.Log("[ProfilePictureManager] 프레임 해제");
+        OnFrameEquipped?.Invoke(-1);
         SaveToFirebase();
     }
 

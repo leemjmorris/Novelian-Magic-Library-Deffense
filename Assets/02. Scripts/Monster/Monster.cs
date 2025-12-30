@@ -282,6 +282,20 @@ public class Monster : BaseEntity, ITargetable, IMovable
     }
 
     /// <summary>
+    /// 상성 시스템 적용 데미지 처리 (Issue #531)
+    /// 공격자 장르에 따라 상성 배율 적용 후 데미지 처리
+    /// </summary>
+    /// <param name="damage">기본 데미지</param>
+    /// <param name="isCriticalHit">치명타 여부</param>
+    /// <param name="attackerGenre">공격자 장르</param>
+    public void TakeDamage(float damage, bool isCriticalHit, Genre attackerGenre)
+    {
+        float multiplier = AffinityCalculator.GetMultiplier(attackerGenre, monsterGenre);
+        float affinityDamage = damage * multiplier;
+        TakeDamage(affinityDamage, isCriticalHit, Vector3.zero);
+    }
+
+    /// <summary>
     /// 데미지 처리 (치명타 여부 및 공격자 위치 포함)
     /// </summary>
     /// <param name="damage">데미지량</param>
@@ -1241,7 +1255,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
         {
             dissolveValue = x;
             SetDissolveAmount(x);
-        }, 1f, dissolveDuration).SetEase(Ease.InQuad);
+        }, 1f, dissolveDuration)
+            .SetEase(Ease.InQuad)
+            .SetLink(gameObject);  // 씬 전환 시 GameObject 파괴되면 Tween 자동 Kill
 
         await dissolveTween.AsyncWaitForCompletion();
     }
@@ -1352,6 +1368,13 @@ public class Monster : BaseEntity, ITargetable, IMovable
         if (collider3D != null)
         {
             collider3D.enabled = false;
+        }
+
+        // 씬 전환으로 GameManager가 파괴된 경우 early return
+        if (NovelianMagicLibraryDefense.Managers.GameManager.Instance == null ||
+            NovelianMagicLibraryDefense.Managers.GameManager.Instance.Pool == null)
+        {
+            return;
         }
 
         // JML: 키 기반 풀링 사용 시 DespawnByKey 호출

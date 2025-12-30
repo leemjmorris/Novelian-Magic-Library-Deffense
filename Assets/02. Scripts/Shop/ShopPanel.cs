@@ -23,6 +23,10 @@ public class ShopPanel : MonoBehaviour
     [SerializeField] private Button gachaButton;
     [SerializeField] private GameObject gachaPanel;
 
+    [Header("Gacha Sub Buttons (준비중 경고용)")]
+    [SerializeField] private Button bookmarkGachaButton;
+    [SerializeField] private Button costumeGachaButton;
+
     private void OnEnable()
     {
         if (shopButton != null) shopButton.onClick.AddListener(OnShopButtonClicked);
@@ -30,6 +34,8 @@ public class ShopPanel : MonoBehaviour
         if (costumeButton != null) costumeButton.onClick.AddListener(OnCostumeButtonClicked);
         if (gachaButton != null) gachaButton.onClick.AddListener(OnGachaButtonClicked);
         if (closeButton != null) closeButton.onClick.AddListener(OnCloseButtonClicked);
+        if (bookmarkGachaButton != null) bookmarkGachaButton.onClick.AddListener(OnFeatureNotReadyClicked);
+        if (costumeGachaButton != null) costumeGachaButton.onClick.AddListener(OnFeatureNotReadyClicked);
 
         // Shop BGM 재생 (Lobby BGM 일시정지 후 크로스페이드)
         if (AudioManager.Instance != null)
@@ -45,6 +51,8 @@ public class ShopPanel : MonoBehaviour
         if (costumeButton != null) costumeButton.onClick.RemoveListener(OnCostumeButtonClicked);
         if (gachaButton != null) gachaButton.onClick.RemoveListener(OnGachaButtonClicked);
         if (closeButton != null) closeButton.onClick.RemoveListener(OnCloseButtonClicked);
+        if (bookmarkGachaButton != null) bookmarkGachaButton.onClick.RemoveListener(OnFeatureNotReadyClicked);
+        if (costumeGachaButton != null) costumeGachaButton.onClick.RemoveListener(OnFeatureNotReadyClicked);
 
         // Shop 닫힐 때 Lobby BGM 재개 (크로스페이드)
         if (AudioManager.Instance != null && AudioManager.Instance.HasPausedBGM)
@@ -91,5 +99,16 @@ public class ShopPanel : MonoBehaviour
         // packagePanel.SetActive(false);
         // costumePanel.SetActive(false);
         gachaPanel.SetActive(true);
+    }
+
+    /// <summary>
+    /// 준비중인 기능 클릭 시 경고 표시
+    /// </summary>
+    private void OnFeatureNotReadyClicked()
+    {
+        if (WarningUIManager.Instance != null)
+        {
+            WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+        }
     }
 }

@@ -27,6 +27,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private int sfxPoolSize = 10;
 
         private List<AudioSource> sfxPool = new List<AudioSource>();
+        private AudioSource voiceSource; // 음성 전용 AudioSource (덱 장착 등 - 이전 음성 정지 후 재생)
         private Dictionary<string, AudioClip> loadedClips = new Dictionary<string, AudioClip>();
         private Dictionary<string, AsyncOperationHandle<AudioClip>> loadedHandles = new Dictionary<string, AsyncOperationHandle<AudioClip>>();
         private Dictionary<string, AsyncOperationHandle<AudioClip>> loadingHandles = new Dictionary<string, AsyncOperationHandle<AudioClip>>();
@@ -129,6 +130,9 @@ namespace NovelianMagicLibraryDefense.Managers
             // Create SFX AudioSource pool
             CreateSFXPool();
 
+            // Create Voice AudioSource (for exclusive voice playback)
+            CreateVoiceSource();
+
             // Load saved volume settings
             LoadAudioSettings();
 
@@ -166,6 +170,28 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             Debug.Log($"[AudioManager] Created SFX pool with {sfxPoolSize} AudioSources");
+        }
+
+        /// <summary>
+        /// Create dedicated AudioSource for exclusive voice playback
+        /// Stops previous voice before playing new one (used for deck equip, etc.)
+        /// </summary>
+        private void CreateVoiceSource()
+        {
+            voiceSource = gameObject.AddComponent<AudioSource>();
+            voiceSource.loop = false;
+            voiceSource.playOnAwake = false;
+
+            if (audioMixer != null)
+            {
+                AudioMixerGroup[] groups = audioMixer.FindMatchingGroups("SFX");
+                if (groups.Length > 0)
+                {
+                    voiceSource.outputAudioMixerGroup = groups[0];
+                }
+            }
+
+            Debug.Log("[AudioManager] Created Voice AudioSource for exclusive playback");
         }
 
         #region BGM Control
@@ -401,6 +427,48 @@ namespace NovelianMagicLibraryDefense.Managers
 
             // If all sources are playing, return the first one (it will overlap)
             return sfxPool.Count > 0 ? sfxPool[0] : null;
+        }
+
+        #endregion
+
+        #region Voice Control (Exclusive - 덱 장착 등)
+
+        /// <summary>
+        /// 음성 재생 (이전 음성 정지 후 새 음성 재생)
+        /// 덱 장착 시 캐릭터 음성 등 겹치면 안 되는 경우 사용
+        /// </summary>
+        /// <param name="clipName">Addressable 키</param>
+        public async void PlayVoice(string clipName)
+        {
+            if (string.IsNullOrEmpty(clipName)) return;
+
+            AudioClip clip = await LoadAudioClipAsync(clipName);
+
+            if (clip != null && voiceSource != null)
+            {
+                // 이전 음성 정지
+                if (voiceSource.isPlaying)
+                {
+                    voiceSource.Stop();
+                }
+
+                // 새 음성 재생
+                voiceSource.clip = clip;
+                voiceSource.Play();
+                Debug.Log($"[AudioManager] Playing voice (exclusive): {clipName}");
+            }
+        }
+
+        /// <summary>
+        /// 현재 음성 정지
+        /// </summary>
+        public void StopVoice()
+        {
+            if (voiceSource != null && voiceSource.isPlaying)
+            {
+                voiceSource.Stop();
+                Debug.Log("[AudioManager] Voice stopped");
+            }
         }
 
         #endregion

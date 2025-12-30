@@ -31,9 +31,13 @@ public class ProfilePicturePanel : MonoBehaviour
     [SerializeField] private GameObject pictureSlotPrefab;
     [SerializeField] private GameObject frameSlotPrefab;
 
-    [Header("Action Buttons")]
+    [Header("Action Buttons - Picture Tab")]
     [SerializeField] private Button equipButton;
     [SerializeField] private Button unequipButton;
+
+    [Header("Action Buttons - Frame Tab")]
+    [SerializeField] private Button frameEquipButton;
+    [SerializeField] private Button frameUnequipButton;
 
     [Header("Selected Display")]
     [SerializeField] private Image selectedPreviewImage;
@@ -82,11 +86,19 @@ public class ProfilePicturePanel : MonoBehaviour
         if (frameTabButton != null)
             frameTabButton.onClick.AddListener(OnFrameTabClicked);
 
+        // Picture Tab 버튼
         if (equipButton != null)
             equipButton.onClick.AddListener(OnEquipButtonClicked);
 
         if (unequipButton != null)
             unequipButton.onClick.AddListener(OnUnequipButtonClicked);
+
+        // Frame Tab 버튼
+        if (frameEquipButton != null)
+            frameEquipButton.onClick.AddListener(OnEquipButtonClicked);
+
+        if (frameUnequipButton != null)
+            frameUnequipButton.onClick.AddListener(OnUnequipButtonClicked);
     }
 
     private void OnDestroy()
@@ -100,11 +112,19 @@ public class ProfilePicturePanel : MonoBehaviour
         if (frameTabButton != null)
             frameTabButton.onClick.RemoveListener(OnFrameTabClicked);
 
+        // Picture Tab 버튼
         if (equipButton != null)
             equipButton.onClick.RemoveListener(OnEquipButtonClicked);
 
         if (unequipButton != null)
             unequipButton.onClick.RemoveListener(OnUnequipButtonClicked);
+
+        // Frame Tab 버튼
+        if (frameEquipButton != null)
+            frameEquipButton.onClick.RemoveListener(OnEquipButtonClicked);
+
+        if (frameUnequipButton != null)
+            frameUnequipButton.onClick.RemoveListener(OnUnequipButtonClicked);
     }
 
     /// <summary>
@@ -221,7 +241,7 @@ public class ProfilePicturePanel : MonoBehaviour
     }
 
     /// <summary>
-    /// 프레임 슬롯 생성
+    /// 프레임 슬롯 생성 (1~12번 프레임)
     /// </summary>
     private void GenerateFrameSlots()
     {
@@ -235,14 +255,19 @@ public class ProfilePicturePanel : MonoBehaviour
         }
         frameSlots.Clear();
 
-        // TODO: 프레임 데이터 테이블에서 가져오기
-        // 현재는 기본 프레임만 생성
-        var slotObj = Instantiate(frameSlotPrefab, frameContent);
-        var frameSlot = slotObj.GetComponent<ProfilePictureSlot>();
-        if (frameSlot != null)
+        // 프레임 1~12번 생성
+        const int FRAME_ID_MIN = 1;
+        const int FRAME_ID_MAX = 12;
+
+        for (int frameId = FRAME_ID_MIN; frameId <= FRAME_ID_MAX; frameId++)
         {
-            frameSlot.InitFrameSlot(0, this); // 기본 프레임 ID = 0
-            frameSlots.Add(frameSlot);
+            var slotObj = Instantiate(frameSlotPrefab, frameContent);
+            var frameSlot = slotObj.GetComponent<ProfilePictureSlot>();
+            if (frameSlot != null)
+            {
+                frameSlot.InitFrameSlot(frameId, this);
+                frameSlots.Add(frameSlot);
+            }
         }
 
         Debug.Log($"[ProfilePicturePanel] 프레임 슬롯 {frameSlots.Count}개 생성");
@@ -321,7 +346,10 @@ public class ProfilePicturePanel : MonoBehaviour
         {
             ProfilePictureManager.Instance.UnequipPicture();
         }
-        // 프레임은 기본 프레임으로 변경 (완전 해제 없음)
+        else
+        {
+            ProfilePictureManager.Instance.UnequipFrame();
+        }
 
         RefreshAllSlots();
         UpdateActionButtons();

@@ -318,6 +318,16 @@ public class LobbyUI : MonoBehaviour
 
     public void OnCraftButton()
     {
+        // Issue #576 - 책갈피 해금 체크
+        if (StageProgressManager.Instance != null &&
+            !StageProgressManager.Instance.IsBookmarkUnlocked())
+        {
+            int requiredStage = StageProgressManager.Instance.GetBookmarkUnlockStage();
+            string message = string.Format(WarningText.BookmarkLocked, requiredStage);
+            WarningUIManager.Instance.ShowWarning(message);
+            return;
+        }
+
         LoadSceneWithFadeOnly(SceneName.BookMarkCraftScene).Forget();
     }
 
@@ -328,9 +338,20 @@ public class LobbyUI : MonoBehaviour
 
     /// <summary>
     /// Issue #476 - 도전던전 버튼 클릭 시 BossDungeonSelectPanel 활성화
+    /// Issue #576 - 5스테이지 클리어 후 해금
     /// </summary>
     public void OnChallengeDungeonButton()
     {
+        // Issue #576 - 도전던전 해금 체크
+        if (StageProgressManager.Instance != null &&
+            !StageProgressManager.Instance.IsBossDungeonUnlocked())
+        {
+            int requiredStage = StageProgressManager.Instance.GetBossDungeonUnlockStage();
+            string message = string.Format(WarningText.BossDungeonLocked, requiredStage);
+            WarningUIManager.Instance.ShowWarning(message);
+            return;
+        }
+
         // 메뉴 레이아웃이 열려있으면 먼저 닫기
         if (menuLayout != null && menuLayout.activeSelf)
         {

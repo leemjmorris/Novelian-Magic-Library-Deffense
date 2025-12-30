@@ -317,10 +317,21 @@ namespace Novelian.Combat
                 SpawnHitEffect(hitPrefab, targetPos, hitScale);
 
                 float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out _);
-                TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, hitTarget =>
+                // 상성 시스템 적용 (Issue #531)
+                if (casterCharacter != null)
                 {
-                    ApplyAOEStatusEffects(hitTarget, supportSkill, damage);
-                });
+                    TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, casterCharacter.GetGenre(), hitTarget =>
+                    {
+                        ApplyAOEStatusEffects(hitTarget, supportSkill, damage);
+                    });
+                }
+                else
+                {
+                    TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, hitTarget =>
+                    {
+                        ApplyAOEStatusEffects(hitTarget, supportSkill, damage);
+                    });
+                }
 
                 if (aoeObj != null) Destroy(aoeObj, 2f);
             }
@@ -555,10 +566,17 @@ namespace Novelian.Combat
             // 데미지 적용
             float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out bool isCritical);
 
-            // 폭발형인지 확인
+            // 폭발형인지 확인 - 상성 시스템 적용 (Issue #531)
             if (mainSkill.aoe_radius > 0)
             {
-                TargetableUtils.ApplyDamageInRadius(landingPos, radius, damage, isCritical);
+                if (casterCharacter != null)
+                {
+                    TargetableUtils.ApplyDamageInRadius(landingPos, radius, damage, isCritical, casterCharacter.GetGenre());
+                }
+                else
+                {
+                    TargetableUtils.ApplyDamageInRadius(landingPos, radius, damage, isCritical);
+                }
             }
             else
             {
@@ -566,7 +584,14 @@ namespace Novelian.Combat
                 ITargetable nearestTarget = TargetableUtils.FindNearestTarget(landingPos, 1f);
                 if (nearestTarget != null && nearestTarget.IsAlive())
                 {
-                    nearestTarget.TakeDamage(damage, isCritical);
+                    if (casterCharacter != null)
+                    {
+                        nearestTarget.TakeDamage(damage, isCritical, casterCharacter.GetGenre());
+                    }
+                    else
+                    {
+                        nearestTarget.TakeDamage(damage, isCritical);
+                    }
                 }
             }
 
@@ -619,7 +644,7 @@ namespace Novelian.Combat
                     direction = Quaternion.Euler(0, angleOffset, 0) * baseDirection;
                 }
 
-                beamTasks.Add(ExecuteSingleBeamAsync(caster, spawnPos, direction, prefab, duration, damage, supportSkill));
+                beamTasks.Add(ExecuteSingleBeamAsync(caster, spawnPos, direction, prefab, duration, damage, supportSkill, casterCharacter));
             }
 
             await UniTask.WhenAll(beamTasks);
@@ -635,7 +660,8 @@ namespace Novelian.Combat
             GameObject prefab,
             float duration,
             float damage,
-            SupportSkillData supportSkill)
+            SupportSkillData supportSkill,
+            Character casterCharacter = null)
         {
             GameObject beamObj = Instantiate(prefab, spawnPos, Quaternion.LookRotation(direction));
             int monsterLayerMask = LayerMask.GetMask("Monster");
@@ -655,8 +681,8 @@ namespace Novelian.Combat
                 beamLength = CalculateBeamLengthToScreenBoundary(currentStartPos, direction);
                 ConfigureHovlLaser(beamObj, beamLength);
 
-                // 관통형 데미지 적용 (RaycastAll)
-                ApplyPenetratingBeamDamage(beamObj, beamLength, damage, monsterLayerMask, supportSkill);
+                // 관통형 데미지 적용 (RaycastAll) - 상성 시스템 적용 (Issue #531)
+                ApplyPenetratingBeamDamage(beamObj, beamLength, damage, monsterLayerMask, supportSkill, casterCharacter);
 
                 await UniTask.Delay((int)(BEAM_TICK_INTERVAL * 1000));
                 elapsed += BEAM_TICK_INTERVAL;
@@ -669,7 +695,7 @@ namespace Novelian.Combat
         /// <summary>
         /// 관통형 빔 데미지 적용 (RaycastAll로 경로상 모든 몬스터)
         /// </summary>
-        private void ApplyPenetratingBeamDamage(GameObject beamObj, float beamLength, float damage, int layerMask, SupportSkillData supportSkill)
+        private void ApplyPenetratingBeamDamage(GameObject beamObj, float beamLength, float damage, int layerMask, SupportSkillData supportSkill, Character casterCharacter = null)
         {
             if (beamObj == null) return;
 
@@ -687,7 +713,15 @@ namespace Novelian.Combat
                 ITargetable hitTarget = TargetableUtils.GetTargetable(hit.collider);
                 if (hitTarget != null && hitTarget.IsAlive())
                 {
-                    hitTarget.TakeDamage(tickDamage);
+                    // 상성 시스템 적용 (Issue #531)
+                    if (casterCharacter != null)
+                    {
+                        hitTarget.TakeDamage(tickDamage, false, casterCharacter.GetGenre());
+                    }
+                    else
+                    {
+                        hitTarget.TakeDamage(tickDamage);
+                    }
 
                     if (supportSkill != null)
                     {
@@ -1013,7 +1047,15 @@ namespace Novelian.Combat
 
             float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out bool isCritical);
 
-            TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, isCritical);
+            // 상성 시스템 적용 (Issue #531)
+            if (casterCharacter != null)
+            {
+                TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, isCritical, casterCharacter.GetGenre());
+            }
+            else
+            {
+                TargetableUtils.ApplyDamageInRadius(targetPos, radius, damage, isCritical);
+            }
 
             if (aoeObj != null) Destroy(aoeObj, 2f);
         }
@@ -1207,7 +1249,15 @@ namespace Novelian.Combat
             if (target != null && target.IsAlive())
             {
                 float damage = CalculateDamage(mainSkill, supportSkill, casterCharacter, out bool isCritical);
-                target.TakeDamage(damage, isCritical);
+                // 상성 시스템 적용 (Issue #531)
+                if (casterCharacter != null)
+                {
+                    target.TakeDamage(damage, isCritical, casterCharacter.GetGenre());
+                }
+                else
+                {
+                    target.TakeDamage(damage, isCritical);
+                }
             }
 
             float lifetime = mainSkill.duration > 0 ? mainSkill.duration : DEFAULT_INSTANT_DURATION;
