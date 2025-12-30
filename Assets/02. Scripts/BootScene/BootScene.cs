@@ -645,6 +645,13 @@ public class BootScene : MonoBehaviour
             Log("✓ PartySynergyManager 데이터 적용");
         }
 
+        // 9. 프로필 사진/프레임 적용 (ProfilePictureManager)
+        if (ProfilePictureManager.Instance != null && userData.profile != null)
+        {
+            ProfilePictureManager.Instance.LoadFromFirebase(userData.profile.equippedPictureId, userData.profile.equippedFrameId);
+            Log("✓ ProfilePictureManager 데이터 적용");
+        }
+
         // 파견 데이터는 FirebaseSaveManager.CachedData에서 직접 참조하므로 별도 적용 불필요
         Log("✓ 파견 데이터는 캐시에서 직접 참조");
     }

@@ -461,6 +461,38 @@ public class FirebaseSaveManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 프로필 사진/프레임 저장
+    /// </summary>
+    public async UniTask SaveProfileAsync(string userId, int pictureId, int frameId)
+    {
+        if (!isInitialized) return;
+
+        try
+        {
+            if (cachedUserData.profile == null)
+            {
+                cachedUserData.profile = new ProfileSaveData();
+            }
+
+            cachedUserData.profile.equippedPictureId = pictureId;
+            cachedUserData.profile.equippedFrameId = frameId;
+
+            var data = new Dictionary<string, object>
+            {
+                { "equippedPictureId", pictureId },
+                { "equippedFrameId", frameId }
+            };
+
+            await databaseRef.Child(USERS_PATH).Child(userId).Child("profile").SetValueAsync(data);
+            Debug.Log($"{LOG_PREFIX} 프로필 저장 완료 (사진: {pictureId}, 프레임: {frameId})");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 프로필 저장 실패: {e.Message}");
+        }
+    }
+
     #endregion
 
     #region 데이터 변환 헬퍼
@@ -536,6 +568,12 @@ public class FirebaseSaveManager : MonoBehaviour
             { "partySynergies", new Dictionary<string, object>
                 {
                     { "levels", data.partySynergies?.levels ?? new Dictionary<string, int>() }
+                }
+            },
+            { "profile", new Dictionary<string, object>
+                {
+                    { "equippedPictureId", data.profile?.equippedPictureId ?? -1 },
+                    { "equippedFrameId", data.profile?.equippedFrameId ?? -1 }
                 }
             }
         };
@@ -714,6 +752,14 @@ public class FirebaseSaveManager : MonoBehaviour
                     data.partySynergies.levels[child.Key] = GetIntValue(child);
                 }
             }
+        }
+
+        // profile (프로필 사진/프레임)
+        var profileSnap = snapshot.Child("profile");
+        if (profileSnap.Exists)
+        {
+            data.profile.equippedPictureId = GetIntValue(profileSnap.Child("equippedPictureId"), -1);
+            data.profile.equippedFrameId = GetIntValue(profileSnap.Child("equippedFrameId"), -1);
         }
 
         return data;
