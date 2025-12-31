@@ -31,6 +31,7 @@ public class BootScene : MonoBehaviour
     [SerializeField] private LoadingUIManager loadingUIManager;
     // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화됨
     [SerializeField] private PartySynergyManager partySynergyManager;
+    [SerializeField] private TimeManager timeManager; // Issue #602: TimeScale 관리
 
     [Header("Loading Progress")]
     [SerializeField] private float minimumLoadTime = 1.0f; // JML: Minimum time to show loading screen
@@ -96,14 +97,41 @@ public class BootScene : MonoBehaviour
             InitializeCharacterOwnershipManager(),
             InitializeWarningUIManager(),
             // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화됨
-            InitializePartySynergyManager()
-            // LMJ: AudioManager 초기화는 TitleScene에서 진행
+            InitializePartySynergyManager(),
+            InitializeTimeManager() // Issue #602: TimeScale 관리
         );
 
         Log("--- All Boot Systems Initialized ---");
     }
 
     // InputManager 초기화 메서드 제거됨 - DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화
+
+    /// <summary>
+    /// Issue #602: TimeManager 초기화 (DontDestroyOnLoad 싱글톤)
+    /// </summary>
+    private async UniTask InitializeTimeManager()
+    {
+        Log("Initializing TimeManager...");
+
+        if (timeManager == null)
+        {
+            Debug.LogError("✗ TimeManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+
+        // Awake 완료 대기
+        await UniTask.WaitUntil(() => TimeManager.Instance != null);
+        await UniTask.DelayFrame(1);
+
+        if (TimeManager.Instance != null)
+        {
+            Log("✓ TimeManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ TimeManager failed to initialize!");
+        }
+    }
 
     private async UniTask InitializePartySynergyManager()
     {

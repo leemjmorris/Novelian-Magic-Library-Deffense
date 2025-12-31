@@ -474,7 +474,8 @@ namespace NovelianMagicLibraryDefense.Managers
             RemainingTime = stageSettings != null ? stageSettings.stageDuration : 600f;
             isStageCleared = false;
             CurrentStageId = 0;
-            Time.timeScale = 1f;
+            // Issue #602: TimeManager를 통해 TimeScale 리셋
+            TimeManager.Instance?.ResetTimeScale();
             IsExitingStage = false; // Issue #570: 플래그 초기화
 
             // JML: Reset global stat buffs (Issue #349)
@@ -499,8 +500,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 monsterEvents.RemoveMonsterDiedListener(AddExp);
             }
 
-            // JML: Ensure time scale reset
-            Time.timeScale = 1f;
+            // Issue #602: TimeManager를 통해 TimeScale 리셋
+            TimeManager.Instance?.ResetTimeScale();
         }
 
         /// <summary>
@@ -601,8 +602,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 return;
             }
 
-            var previousTimeScale = Time.timeScale;
-            // Debug.Log($"타임 스케일 {previousTimeScale}"); // LCB: Debug previous time scale
+            // Issue #602: TimeManager가 TimeScale을 관리하므로 직접 저장/복원 제거
             int maxExp = GetRequiredExpForNextLevel();
             var ui = GameManager.Instance?.UI;
 
@@ -633,8 +633,8 @@ namespace NovelianMagicLibraryDefense.Managers
                     Debug.LogError("[StageManager] UIManager is null!");
                 }
             }
-            Time.timeScale = previousTimeScale; // Resume game
-            // Debug.Log($"타임 스케일{Time.timeScale}"); // LCB: Debug resumed time scale
+            // Issue #602: CardSelectPanel이 Close 시 TimeManager.PopTimeScale()을 호출하므로
+            // 여기서 별도로 TimeScale을 복원할 필요 없음
         }
 
         /// <summary>

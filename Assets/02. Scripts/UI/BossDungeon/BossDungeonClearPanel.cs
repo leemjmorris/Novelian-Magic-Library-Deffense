@@ -380,7 +380,8 @@ namespace NovelianMagicLibraryDefense.UI
         {
             Debug.Log("[BossDungeonClearPanel] Lobby button clicked - Loading LobbyScene");
             Close();
-            Time.timeScale = 1f;
+            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
             SelectedBossDungeon.Clear();
             LoadLobbySceneAsync().Forget();
         }
@@ -415,7 +416,8 @@ namespace NovelianMagicLibraryDefense.UI
             Debug.Log($"[BossDungeonClearPanel] 다음 층으로 이동: {nextFloorIndex}층");
 
             Close();
-            Time.timeScale = 1f;
+            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
             LoadBossDungeonSceneAsync().Forget();
         }
 

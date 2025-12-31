@@ -24,7 +24,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private StageStateManager stageStateManager;
 
         // Public accessors for type-safe manager access
-        // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 별도 관리
+        // InputManager, TimeManager는 DontDestroyOnLoad 싱글톤으로 별도 관리
         public InputManager Input => InputManager.Instance;
         public ObjectPoolManager Pool => poolManager;
         public UIManager UI => uiManager;

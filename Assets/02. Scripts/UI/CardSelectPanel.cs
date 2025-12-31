@@ -303,12 +303,10 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (panel == null) return;
 
-            if (pauseOnGameStart)
+            // Issue #602: 이미 일시정지 상태가 아닐 때만 Push (중복 Push 방지)
+            if (pauseOnGameStart && !isPaused)
             {
-                // Issue #564: 게임 시작 시에는 항상 TimeScale 1로 복구되어야 함
-                // 이전 씬에서 TimeScale이 0인 상태로 전환될 수 있으므로 고정값 사용
-                previousTimeScale = 1f;
-                Time.timeScale = 0f;
+                TimeManager.Instance?.PushTimeScale(0f);
                 isPaused = true;
             }
 
@@ -333,10 +331,10 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (panel == null) return;
 
-            if (pauseOnLevelUp)
+            // Issue #602: 이미 일시정지 상태가 아닐 때만 Push (중복 Push 방지)
+            if (pauseOnLevelUp && !isPaused)
             {
-                previousTimeScale = Time.timeScale;
-                Time.timeScale = 0f;
+                TimeManager.Instance?.PushTimeScale(0f);
                 isPaused = true;
             }
 
@@ -370,10 +368,12 @@ namespace NovelianMagicLibraryDefense.UI
             // Issue #564: cardSlots 배열이 비어있으면 런타임에 찾기
             EnsureCardSlotsValid();
 
-            // Issue #564: 보스 던전 시작 시에도 항상 TimeScale 1로 복구되어야 함
-            previousTimeScale = 1f;
-            Time.timeScale = 0f;
-            isPaused = true;
+            // Issue #602: 이미 일시정지 상태가 아닐 때만 Push (중복 Push 방지)
+            if (!isPaused)
+            {
+                TimeManager.Instance?.PushTimeScale(0f);
+                isPaused = true;
+            }
 
             // Issue #564: 카드 슬롯 먼저 비활성화 (기본 아이콘이 보이지 않도록)
             HideAllCardSlots();
@@ -2183,7 +2183,8 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (isPaused)
             {
-                Time.timeScale = previousTimeScale;
+                // Issue #602: TimeManager 스택에서 복구
+                TimeManager.Instance?.PopTimeScale();
                 isPaused = false;
             }
 
@@ -2195,6 +2196,19 @@ namespace NovelianMagicLibraryDefense.UI
 
             ClearCards();
             isCardSelected = false;
+        }
+
+        /// <summary>
+        /// Issue #602: 패널이 비활성화될 때 TimeScale 복구 보장
+        /// 외부에서 패널이 비활성화되어도 TimeScale이 복구되도록 함
+        /// </summary>
+        private void OnDisable()
+        {
+            if (isPaused)
+            {
+                TimeManager.Instance?.PopTimeScale();
+                isPaused = false;
+            }
         }
 
         /// <summary>

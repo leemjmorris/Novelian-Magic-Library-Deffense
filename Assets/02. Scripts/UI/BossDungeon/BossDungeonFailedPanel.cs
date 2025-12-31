@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.Managers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -128,7 +129,8 @@ namespace NovelianMagicLibraryDefense.UI
         {
             Debug.Log("[BossDungeonFailedPanel] Lobby button clicked - Loading LobbyScene");
             Close();
-            Time.timeScale = 1f;
+            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
             SelectedBossDungeon.Clear();
             LoadLobbySceneAsync().Forget();
         }
@@ -140,7 +142,8 @@ namespace NovelianMagicLibraryDefense.UI
         {
             Debug.Log("[BossDungeonFailedPanel] Retry button clicked - Reloading BossDungeonScene");
             Close();
-            Time.timeScale = 1f;
+            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
             // SelectedBossDungeon.Data는 유지하여 같은 층 재시작
             LoadBossDungeonSceneAsync().Forget();
         }

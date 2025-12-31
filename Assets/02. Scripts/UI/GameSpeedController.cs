@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.UI
 {
@@ -46,10 +47,11 @@ namespace NovelianMagicLibraryDefense.UI
 
         /// <summary>
         /// Set game speed to specific value
+        /// Issue #602: TimeManager를 통해 스택과 동기화
         /// </summary>
         public void SetSpeed(float speed)
         {
-            Time.timeScale = speed;
+            TimeManager.Instance?.SetTimeScale(speed);
             UpdateSpeedDisplay();
         }
 

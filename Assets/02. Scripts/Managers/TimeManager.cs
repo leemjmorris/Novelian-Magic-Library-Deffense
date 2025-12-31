@@ -1,38 +1,33 @@
 using System.Collections.Generic;
-using NovelianMagicLibraryDefense.Core;
 using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Managers
 {
     /// <summary>
-    /// LMJ: Centralized time scale management
+    /// Issue #602: Centralized time scale management (DontDestroyOnLoad Singleton)
     /// Handles time scale changes with stack-based approach to prevent conflicts
-    /// Single responsibility: Manage game time scale
     /// </summary>
-    public class TimeManager : BaseManager
+    public class TimeManager : MonoBehaviour
     {
+        private static TimeManager instance;
+        public static TimeManager Instance => instance;
+
         private Stack<float> timeScaleStack = new Stack<float>();
 
-        protected override void OnInitialize()
+        private void Awake()
         {
+            if (instance != null && instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+
             // Initialize with default time scale
             timeScaleStack.Clear();
             timeScaleStack.Push(1f);
-            Time.timeScale = 1f;
-        }
-
-        protected override void OnReset()
-        {
-            // Reset to default time scale
-            timeScaleStack.Clear();
-            timeScaleStack.Push(1f);
-            Time.timeScale = 1f;
-        }
-
-        protected override void OnDispose()
-        {
-            // Cleanup
-            timeScaleStack.Clear();
             Time.timeScale = 1f;
         }
 
@@ -114,6 +109,30 @@ namespace NovelianMagicLibraryDefense.Managers
         public void Resume()
         {
             PopTimeScale();
+        }
+
+        /// <summary>
+        /// Issue #602: Reset time scale stack and set to 1f
+        /// Use this when transitioning scenes to ensure clean state
+        /// </summary>
+        public void ResetTimeScale()
+        {
+            timeScaleStack.Clear();
+            timeScaleStack.Push(1f);
+            Time.timeScale = 1f;
+        }
+
+        /// <summary>
+        /// Issue #602: Check if currently paused (TimeScale pushed to 0)
+        /// </summary>
+        public bool IsPaused => timeScaleStack.Count > 1 && Time.timeScale == 0f;
+
+        private void OnDestroy()
+        {
+            if (instance == this)
+            {
+                instance = null;
+            }
         }
     }
 }
