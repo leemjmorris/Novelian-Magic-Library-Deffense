@@ -4,6 +4,7 @@ using DG.Tweening;
 using NovelianMagicLibraryDefense.Events;
 using Novelian.Combat;
 using UnityEngine;
+using UnityEngine.UI;
 
 //JML: Monster entity with movement and wall attack behavior
 public class Monster : BaseEntity, ITargetable, IMovable
@@ -19,6 +20,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
     [SerializeField] private Collider collider3D;
     [SerializeField] private Renderer[] renderers; // Dissolve용 렌더러 배열
     private Wall wall;
+
+    [Header("HP Bar")]
+    [SerializeField] private Slider hpBar;
 
     [Header("Death Effect Settings")]
     [SerializeField] private float dissolveDuration = 2f; // Dissolve 사라짐 시간
@@ -336,6 +340,9 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         // 체력 감소 (base.TakeDamage 대신 직접 처리하여 Die() 중복 호출 방지)
         currentHealth -= finalDamage;
+
+        // HP 바 업데이트
+        UpdateHPBar();
 
         // 사망 시 공격자 위치 기반 넉백
         if (currentHealth <= 0)
@@ -1440,6 +1447,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
     public override void OnSpawn()
     {
         base.OnSpawn(); // Initialize health
+        UpdateHPBar(); // HP 바 초기화
         isDead = false;
         isDespawning = false;
         isWallHit = false;
@@ -1604,6 +1612,17 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // JML: Redundant safety check - should already be unregistered in Die()
         // But kept as failsafe for edge cases
         TargetRegistry.Instance.UnregisterTarget(this);
+    }
+
+    /// <summary>
+    /// HP 바 업데이트
+    /// </summary>
+    private void UpdateHPBar()
+    {
+        if (hpBar != null)
+        {
+            hpBar.value = currentHealth / maxHealth;
+        }
     }
 
     //LMJ : Cleanup cancellation token on destroy
