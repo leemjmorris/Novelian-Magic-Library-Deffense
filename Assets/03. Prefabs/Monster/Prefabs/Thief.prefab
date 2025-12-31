@@ -43,7 +43,6 @@ GameObject:
   m_Component:
   - component: {fileID: 978319611851916386}
   - component: {fileID: 978319611859413940}
-  - component: {fileID: 9100159488395022050}
   - component: {fileID: 6420009909266098797}
   - component: {fileID: 990600931236120891}
   - component: {fileID: 2940419203517872732}
@@ -104,31 +103,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!143 &9100159488395022050
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 978319611852019714}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 1.79
-  m_Radius: 0.27
-  m_SlopeLimit: 45
-  m_StepOffset: 0.3
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0.9, z: 0}
 --- !u!54 &6420009909266098797
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -175,8 +149,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.348494, y: 3.7513995, z: 0.07904216}
-  m_Center: {x: 0.000003695488, y: 0.9262695, z: -0.0027474575}
+  m_Size: {x: 0.79, y: 1.83, z: -0.34}
+  m_Center: {x: 0, y: 0.9262695, z: 0}
 --- !u!114 &2940419203517872732
 MonoBehaviour:
   m_ObjectHideFlags: 0
