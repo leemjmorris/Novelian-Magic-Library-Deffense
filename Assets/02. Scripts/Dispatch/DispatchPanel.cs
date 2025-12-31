@@ -2032,7 +2032,12 @@ namespace Dispatch
                     // 토스트로 획득 아이템 표시
                     if (RewardToastManager.Instance != null)
                     {
+                        Debug.Log($"[DispatchPanel] RewardToastManager.ShowReward 호출: itemId={reward.Item_ID}, amount={finalAmount}");
                         RewardToastManager.Instance.ShowReward(reward.Item_ID, finalAmount);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[DispatchPanel] RewardToastManager.Instance is NULL!");
                     }
                 }
                 else
