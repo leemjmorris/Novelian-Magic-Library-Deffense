@@ -387,6 +387,82 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 677817414708991260, guid: 13c299176877c0e458c79f05bb2d846c, type: 3}
   m_PrefabInstance: {fileID: 163863692}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &174046211
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 174046212}
+  - component: {fileID: 174046214}
+  - component: {fileID: 174046213}
+  m_Layer: 5
+  m_Name: CharacterInfoCardPanel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &174046212
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 174046211}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 8163999034416834330}
+  m_Father: {fileID: 4686297334670987686}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &174046213
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 174046211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.92156863}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &174046214
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 174046211}
+  m_CullTransparentMesh: 1
 --- !u!1 &184588728
 GameObject:
   m_ObjectHideFlags: 0
@@ -1848,7 +1924,7 @@ PrefabInstance:
       objectReference: {fileID: 822203968}
     - target: {fileID: 2559037201267623759, guid: 88a59c8e316774bf68b9a81e990ede96, type: 3}
       propertyPath: _bursts.Array.data[0].used
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2559037201541945336, guid: 88a59c8e316774bf68b9a81e990ede96, type: 3}
       propertyPath: _loop
@@ -1864,7 +1940,7 @@ PrefabInstance:
       objectReference: {fileID: 1928004629}
     - target: {fileID: 2559037201541945336, guid: 88a59c8e316774bf68b9a81e990ede96, type: 3}
       propertyPath: _bursts.Array.data[0].used
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2559037202506892816, guid: 88a59c8e316774bf68b9a81e990ede96, type: 3}
       propertyPath: m_Name
@@ -1992,7 +2068,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2559037202506892822, guid: 88a59c8e316774bf68b9a81e990ede96, type: 3}
       propertyPath: _length
-      value: 1417.6166
+      value: 1440
       objectReference: {fileID: 0}
     - target: {fileID: 2559037202506892822, guid: 88a59c8e316774bf68b9a81e990ede96, type: 3}
       propertyPath: _radius
@@ -10478,7 +10554,7 @@ RectTransform:
   - {fileID: 4652299369067175369}
   - {fileID: 5384482207804533949}
   - {fileID: 54613179011837809}
-  - {fileID: 8163999034416834330}
+  - {fileID: 174046212}
   - {fileID: 996642147}
   - {fileID: 1183949477189123873}
   - {fileID: 6358928786956296374}
@@ -14809,7 +14885,7 @@ MonoBehaviour:
   placementManager: {fileID: 279134589}
   characterInfoCard: {fileID: 8163999034416834331}
   dimBackground: {fileID: 0}
-  characterInfoCardPanel: {fileID: 0}
+  characterInfoCardPanel: {fileID: 174046211}
 --- !u!224 &7855822840331510050
 RectTransform:
   m_ObjectHideFlags: 0
@@ -15481,7 +15557,7 @@ RectTransform:
   - {fileID: 3727533625038689786}
   - {fileID: 5290923627041692534}
   - {fileID: 3139920337348514862}
-  m_Father: {fileID: 4686297334670987686}
+  m_Father: {fileID: 174046212}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
