@@ -27,8 +27,9 @@ public class BootScene : MonoBehaviour
     [SerializeField] private CharacterEnhancementManager characterEnhancementManager;
     [SerializeField] private StageProgressManager stageProgressManager;
     [SerializeField] private CharacterOwnershipManager characterOwnershipManager;
-    [SerializeField] private WarningUIManager warningUIManager; 
+    [SerializeField] private WarningUIManager warningUIManager;
     [SerializeField] private LoadingUIManager loadingUIManager;
+    [SerializeField] private RewardToastManager rewardToastManager;
     // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화됨
     [SerializeField] private PartySynergyManager partySynergyManager;
     [SerializeField] private TimeManager timeManager; // Issue #602: TimeScale 관리
@@ -96,6 +97,7 @@ public class BootScene : MonoBehaviour
             InitializeCharacterEnhancementManager(),
             InitializeCharacterOwnershipManager(),
             InitializeWarningUIManager(),
+            InitializeRewardToastManager(),
             // InputManager는 이제 DontDestroyOnLoad 싱글톤으로 TitleScene에서 자동 초기화됨
             InitializePartySynergyManager(),
             InitializeTimeManager() // Issue #602: TimeScale 관리
@@ -177,6 +179,30 @@ public class BootScene : MonoBehaviour
         else
         {
             Debug.LogError("✗ WarningUIManager failed to initialize!");
+        }
+    }
+
+    private async UniTask InitializeRewardToastManager()
+    {
+        Log("Initializing RewardToastManager...");
+
+        if (rewardToastManager == null)
+        {
+            Debug.LogError("✗ RewardToastManager reference is NULL! Assign it in Inspector.");
+            return;
+        }
+
+        // JML: Wait for Awake to complete
+        await UniTask.WaitUntil(() => RewardToastManager.Instance != null);
+        await UniTask.DelayFrame(1); // JML: Wait one more frame for Start()
+
+        if (RewardToastManager.Instance != null)
+        {
+            Log("✓ RewardToastManager ready");
+        }
+        else
+        {
+            Debug.LogError("✗ RewardToastManager failed to initialize!");
         }
     }
 

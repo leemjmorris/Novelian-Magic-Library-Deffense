@@ -44,12 +44,24 @@ namespace NovelianMagicLibraryDefense.Managers
 
             instance = this;
 
-            // DontDestroyOnLoad는 루트 GameObject에만 작동하므로 부모에서 분리
-            if (transform.parent != null)
+            // CBL: Canvas 루트를 찾아서 DontDestroyOnLoad 적용
+            // RewardToastManager가 Canvas 하위에 있으면 Canvas 전체를 유지
+            Canvas rootCanvas = GetComponentInParent<Canvas>();
+            if (rootCanvas != null && rootCanvas.isRootCanvas)
             {
-                transform.SetParent(null);
+                // Canvas 루트를 DontDestroyOnLoad
+                DontDestroyOnLoad(rootCanvas.gameObject);
+                Debug.Log($"[RewardToastManager] Canvas '{rootCanvas.gameObject.name}'를 DontDestroyOnLoad로 설정");
             }
-            DontDestroyOnLoad(gameObject);
+            else
+            {
+                // Canvas가 없거나 루트가 아니면 자기 자신을 분리 후 DontDestroyOnLoad
+                if (transform.parent != null)
+                {
+                    transform.SetParent(null);
+                }
+                DontDestroyOnLoad(gameObject);
+            }
 
             if (toastPanel != null)
             {
@@ -79,6 +91,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void ShowReward(int itemId, int amount)
         {
+            Debug.Log($"[RewardToastManager] ShowReward 호출됨: itemId={itemId}, amount={amount}, toastPanel={toastPanel != null}");
             rewardQueue.Enqueue((itemId, amount));
 
             if (!isShowingToast)
@@ -129,9 +142,11 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private async UniTask ShowSingleToastAsync(int itemId, int amount)
         {
+            Debug.Log($"[RewardToastManager] ShowSingleToastAsync 시작: itemId={itemId}, amount={amount}");
+
             if (toastPanel == null || toastCanvasGroup == null)
             {
-                Debug.LogWarning("[RewardToastManager] Toast panel references not assigned!");
+                Debug.LogWarning($"[RewardToastManager] Toast panel references not assigned! toastPanel={toastPanel != null}, canvasGroup={toastCanvasGroup != null}");
                 return;
             }
 

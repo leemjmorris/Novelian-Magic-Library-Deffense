@@ -40,7 +40,9 @@ public class BookMarkUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI recipePanelTitleText;
     [SerializeField] private Button closeRecipePanelButton;
     [SerializeField] private Button[] statRecipeButtons;
+    [SerializeField] private Button[] statRecipeTextButtons;
     [SerializeField] private Button[] skillRecipeButtons;
+    [SerializeField] private Button[] skillRecipeTextButtons;
 
     [Header("Stat Craft Panel")]
     [SerializeField] private GameObject craftPanel;
@@ -109,18 +111,36 @@ public class BookMarkUI : MonoBehaviour
         statCraftButton.onClick.AddListener(OnCraftButtonClicked);
         skillCraftButton.onClick.AddListener(OnCraftButtonClicked);
 
-        // JML: Stat Recipe Selection Buttons
+        // JML: Stat Recipe Selection Buttons (아이콘 버튼)
         for (int i = 0; i < statRecipeButtons.Length && i < statRecipes.Count; i++)
         {
+            if (statRecipeButtons[i] == null) continue;
             int index = i;
             statRecipeButtons[i].onClick.AddListener(() => OnRecipeSelected(statRecipes[index]));
         }
 
-        // JML: Skill Recipe Selection Buttons
+        // CBL: Stat Recipe Selection Buttons (텍스트 버튼)
+        for (int i = 0; i < statRecipeTextButtons.Length && i < statRecipes.Count; i++)
+        {
+            if (statRecipeTextButtons[i] == null) continue;
+            int index = i;
+            statRecipeTextButtons[i].onClick.AddListener(() => OnRecipeSelected(statRecipes[index]));
+        }
+
+        // JML: Skill Recipe Selection Buttons (아이콘 버튼)
         for (int i = 0; i < skillRecipeButtons.Length && i < skillRecipes.Count; i++)
         {
+            if (skillRecipeButtons[i] == null) continue;
             int index = i;
             skillRecipeButtons[i].onClick.AddListener(() => OnRecipeSelected(skillRecipes[index]));
+        }
+
+        // CBL: Skill Recipe Selection Buttons (텍스트 버튼)
+        for (int i = 0; i < skillRecipeTextButtons.Length && i < skillRecipes.Count; i++)
+        {
+            if (skillRecipeTextButtons[i] == null) continue;
+            int index = i;
+            skillRecipeTextButtons[i].onClick.AddListener(() => OnRecipeSelected(skillRecipes[index]));
         }
         // JML: Close Craft Panel Button
         closeCraftPanelButton.onClick.AddListener(OnClickCloseCraftPanelButton);
@@ -157,15 +177,31 @@ public class BookMarkUI : MonoBehaviour
         statCraftButton.onClick.RemoveListener(OnCraftButtonClicked);
         skillCraftButton.onClick.RemoveListener(OnCraftButtonClicked);
 
-        // JML: Remove Recipe Selection Buttons
+        // JML: Remove Recipe Selection Buttons (아이콘 버튼)
         for (int i = 0; i < statRecipeButtons.Length; i++)
         {
+            if (statRecipeButtons[i] == null) continue;
             statRecipeButtons[i].onClick.RemoveAllListeners();
+        }
+
+        // CBL: Remove Recipe Selection Buttons (텍스트 버튼)
+        for (int i = 0; i < statRecipeTextButtons.Length; i++)
+        {
+            if (statRecipeTextButtons[i] == null) continue;
+            statRecipeTextButtons[i].onClick.RemoveAllListeners();
         }
 
         for (int i = 0; i < skillRecipeButtons.Length; i++)
         {
+            if (skillRecipeButtons[i] == null) continue;
             skillRecipeButtons[i].onClick.RemoveAllListeners();
+        }
+
+        // CBL: Remove Skill Recipe Text Buttons
+        for (int i = 0; i < skillRecipeTextButtons.Length; i++)
+        {
+            if (skillRecipeTextButtons[i] == null) continue;
+            skillRecipeTextButtons[i].onClick.RemoveAllListeners();
         }
 
         // JML: 책갈피 추가 이벤트 구독 해제
