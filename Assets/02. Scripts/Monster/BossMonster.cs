@@ -2,6 +2,7 @@
 using NovelianMagicLibraryDefense.Managers;
 using Novelian.Combat;
 using UnityEngine;
+using UnityEngine.UI;
 //JML: Boss monster entity with enhanced stats and wall attack behavior
 public class BossMonster : BaseEntity, ITargetable, IMovable
 {
@@ -15,6 +16,9 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
     [SerializeField] private Collider collider3D;
     [SerializeField] private Rigidbody rb;
     [SerializeField] private MonsterMove monsterMove;
+
+    // HP Bar (런타임에 GetComponentInChildren으로 찾음)
+    private Slider hpBar;
 
     [Header("Stats")]
     [SerializeField] private float moveSpeed = 2f;
@@ -94,6 +98,8 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         if (rb == null) rb = GetComponent<Rigidbody>();
         if (monsterMove == null) monsterMove = GetComponent<MonsterMove>();
 
+        // HP Bar 자동 연결 (중첩 프리팹의 Slider)
+        if (hpBar == null) hpBar = GetComponentInChildren<Slider>();
     }
 
     /// <summary>
@@ -308,6 +314,9 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         // Issue #476: 스턴 게이지는 보스가 결계를 공격할 때만 증가 (캐릭터 공격 시 아님)
 
         base.TakeDamage(finalDamage);
+
+        // HP 바 업데이트
+        UpdateHPBar();
     }
 
     /// <summary>
@@ -766,9 +775,21 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         }
     }
 
+    /// <summary>
+    /// HP 바 업데이트
+    /// </summary>
+    private void UpdateHPBar()
+    {
+        if (hpBar != null)
+        {
+            hpBar.value = currentHealth / maxHealth;
+        }
+    }
+
     public override void OnSpawn()
     {
         base.OnSpawn(); // Initialize health
+        UpdateHPBar(); // HP 바 초기화
         isDead = false;
 
         isWallHit = false;
