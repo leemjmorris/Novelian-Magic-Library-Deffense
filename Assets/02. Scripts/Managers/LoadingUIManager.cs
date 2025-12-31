@@ -113,7 +113,8 @@ namespace NovelianMagicLibraryDefense.Managers
             if (loadingPanel == null || !isShowing) return;
 
             // LCB: 최소 표시 시간 보장 (UX 개선)
-            await UniTask.Delay((int)(minimumDisplayTime * 1000));
+            // Issue #605: TimeScale = 0에서도 동작하도록 ignoreTimeScale: true
+            await UniTask.Delay((int)(minimumDisplayTime * 1000), ignoreTimeScale: true);
 
             loadingPanel.SetActive(false);
 
@@ -167,7 +168,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 float progress = i / 100f; // LCB: 1%, 2%, 3%, ..., 100%
                 SetProgress(progress);
 
-                await UniTask.Delay(stepDelay, cancellationToken: ct); // LCB: 각 1%마다 딜레이
+                // Issue #605: ignoreTimeScale: true로 TimeScale = 0에서도 동작하도록
+                await UniTask.Delay(stepDelay, ignoreTimeScale: true, cancellationToken: ct);
             }
         }
 
@@ -231,7 +233,8 @@ namespace NovelianMagicLibraryDefense.Managers
                     float progress = Mathf.Lerp(startProgress, target, t); // LCB: 선형 보간
                     SetProgress(progress);
 
-                    await UniTask.Delay(stepDelay, cancellationToken: ct);
+                    // Issue #605: TimeScale = 0에서도 동작하도록 ignoreTimeScale: true
+                    await UniTask.Delay(stepDelay, ignoreTimeScale: true, cancellationToken: ct);
                 }
 
                 SetProgress(target); // LCB: 각 단계 최종 값 보장
@@ -264,7 +267,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 await FakeLoadAsync(ct);
 
                 // Step 3: 100% 상태를 잠깐 보여줌 (선택적)
-                await UniTask.Delay(200, cancellationToken: ct);
+                // Issue #605: TimeScale = 0에서도 동작하도록 ignoreTimeScale: true
+                await UniTask.Delay(200, ignoreTimeScale: true, cancellationToken: ct);
 
                 // Step 4: 씬 로드 (LoadingUI는 켜진 상태에서)
                 await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(addressableKey);

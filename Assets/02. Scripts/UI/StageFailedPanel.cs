@@ -168,6 +168,9 @@ namespace NovelianMagicLibraryDefense.UI
 
         private async UniTaskVoid LoadLobbySceneAsync()
         {
+            // Issue #605: 로비 전환 전 모든 사운드 정지 및 게임 일시정지
+            AudioManager.Instance?.StopAllSounds();
+            TimeManager.Instance?.Pause();
             await FadeController.Instance.LoadSceneWithFade("LobbyScene");
         }
 

@@ -203,8 +203,9 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <param name="forceRestart">If true, restart even if same BGM is playing</param>
         public async void PlayBGM(string clipName, bool forceRestart = false)
         {
-            // Skip if same BGM is already playing
-            if (!forceRestart && currentBGMName == clipName && bgmSource.isPlaying)
+            // Skip if same BGM is already playing or transitioning to
+            // Issue #605: bgmSource.isPlaying 체크 제거 - 페이드 중에도 중복 방지
+            if (!forceRestart && currentBGMName == clipName)
             {
                 Debug.Log($"[AudioManager] BGM already playing: {clipName}");
                 return;
@@ -232,8 +233,9 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <param name="forceRestart">If true, restart even if same BGM is playing</param>
         public async void PlayBGMWithFade(string clipName, float fadeDuration = 1f, bool forceRestart = false)
         {
-            // Skip if same BGM is already playing
-            if (!forceRestart && currentBGMName == clipName && bgmSource.isPlaying)
+            // Skip if same BGM is already playing or transitioning to
+            // Issue #605: bgmSource.isPlaying 체크 제거 - 페이드 중에도 중복 방지
+            if (!forceRestart && currentBGMName == clipName)
             {
                 Debug.Log($"[AudioManager] BGM already playing: {clipName}");
                 return;
@@ -279,6 +281,33 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
+        /// Issue #605: 모든 사운드 정지 (BGM + SFX + Voice)
+        /// 씬 전환 시 사용
+        /// </summary>
+        public void StopAllSounds()
+        {
+            // BGM 정지
+            StopBGM();
+
+            // SFX 정지
+            foreach (var sfxSource in sfxPool)
+            {
+                if (sfxSource != null && sfxSource.isPlaying)
+                {
+                    sfxSource.Stop();
+                }
+            }
+
+            // Voice 정지
+            StopVoice();
+
+            // Voice Queue 초기화
+            ClearVoiceQueue();
+
+            Debug.Log("[AudioManager] All sounds stopped");
+        }
+
+        /// <summary>
         /// Crossfade from current BGM to new BGM
         /// </summary>
         /// <param name="clipName">Addressable key for the new audio clip</param>
@@ -286,8 +315,9 @@ namespace NovelianMagicLibraryDefense.Managers
         /// <param name="forceRestart">If true, crossfade even if same BGM is playing</param>
         public async void CrossfadeBGM(string clipName, float fadeDuration = 1f, bool forceRestart = false)
         {
-            // Skip if same BGM is already playing
-            if (!forceRestart && currentBGMName == clipName && bgmSource.isPlaying)
+            // Skip if same BGM is already playing or transitioning to
+            // Issue #605: bgmSource.isPlaying 체크 제거 - 페이드 중에도 중복 방지
+            if (!forceRestart && currentBGMName == clipName)
             {
                 Debug.Log($"[AudioManager] BGM already playing: {clipName}");
                 return;

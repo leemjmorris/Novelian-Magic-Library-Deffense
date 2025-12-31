@@ -425,8 +425,10 @@ namespace NovelianMagicLibraryDefense.UI
         private void OnLobbyButton()
         {
             Debug.Log("[BossDungeonResultPopup] 로비 버튼 클릭");
-            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
-            TimeManager.Instance?.ResetTimeScale();
+
+            // Issue #605: 로비 전환 전 모든 사운드 정지 및 게임 일시정지
+            AudioManager.Instance?.StopAllSounds();
+            TimeManager.Instance?.Pause();
 
             // 선택 데이터 초기화
             SelectedBossDungeon.Clear();

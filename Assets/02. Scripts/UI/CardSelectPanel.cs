@@ -67,7 +67,6 @@ namespace NovelianMagicLibraryDefense.UI
         public event Action<CardData> OnCardSelected;
 
         private GameObject[] cardInstances;
-        private float previousTimeScale = 1f;
         private bool isPaused = false;
 
         // JML: 카드 슬롯 시스템용 활성 카드 데이터 추적

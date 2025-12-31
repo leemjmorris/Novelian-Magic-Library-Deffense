@@ -24,7 +24,6 @@ namespace NovelianMagicLibraryDefense.UI
 
         private bool isOpen = false;
         private bool isInitializingSliders = false;
-        private float previousTimeScale = 1f;
 
         private void Awake()
         {
@@ -180,8 +179,9 @@ namespace NovelianMagicLibraryDefense.UI
                 GameManager.Instance.Stage.IsExitingStage = true;
             }
 
-            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
-            TimeManager.Instance?.ResetTimeScale();
+            // Issue #605: 로비 전환 전 모든 사운드 정지 및 게임 일시정지
+            AudioManager.Instance?.StopAllSounds();
+            TimeManager.Instance?.Pause();
             LoadSceneWithLoadingUI("LobbyScene").Forget();
         }
 
@@ -203,7 +203,8 @@ namespace NovelianMagicLibraryDefense.UI
             await LoadingUIManager.Instance.FakeLoadAsync();
 
             // Step 2: 100% 상태 잠깐 보여주기
-            await UniTask.Delay(200);
+            // Issue #605: TimeScale = 0에서도 동작하도록 ignoreTimeScale: true
+            await UniTask.Delay(200, ignoreTimeScale: true);
 
             // Step 3: 페이드 아웃 (화면 어두워짐)
             FadeController.Instance.fadePanel.SetActive(true);
