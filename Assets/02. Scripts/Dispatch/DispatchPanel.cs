@@ -1,10 +1,13 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using TMPro;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Managers;
+using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.UI;
 
 namespace Dispatch
 {
@@ -78,6 +81,12 @@ namespace Dispatch
         [SerializeField] private Image deckCharacterImage2;
         [SerializeField] private Image deckCharacterImage3;
         [SerializeField] private Image deckCharacterImage4;
+
+        [Header("덱 슬롯 버튼 (빈 슬롯 클릭 시 덱 설정으로 이동)")]
+        [SerializeField] private Button deckSlotButton1;
+        [SerializeField] private Button deckSlotButton2;
+        [SerializeField] private Button deckSlotButton3;
+        [SerializeField] private Button deckSlotButton4;
 
         [Header("파견 실행 버튼")]
         [SerializeField] private Button dispatchStartButton;  // 파견하기 버튼
@@ -382,6 +391,9 @@ namespace Dispatch
 
             // 아이템 슬롯 버튼 이벤트 등록 (각 슬롯 클릭 시 해당 파견의 보상 정보 패널 표시)
             SetupItemSlotButtons();
+
+            // CBL: 덱 슬롯 버튼 이벤트 등록 (빈 슬롯 클릭 시 덱 설정으로 이동)
+            SetupDeckSlotButtons();
         }
 
         /// <summary>
@@ -486,6 +498,80 @@ namespace Dispatch
                 clickHandler.OnSlotClicked += OnItemSlotClicked;
 
                 Debug.Log($"[DispatchPanel] ItemSlot{i + 1} ItemSlotClickHandler 등록 완료");
+            }
+        }
+
+        /// <summary>
+        /// 덱 슬롯 버튼 이벤트 설정 (빈 슬롯 클릭 시 덱 설정으로 이동)
+        /// </summary>
+        private void SetupDeckSlotButtons()
+        {
+            Button[] deckSlotButtons = { deckSlotButton1, deckSlotButton2, deckSlotButton3, deckSlotButton4 };
+
+            for (int i = 0; i < deckSlotButtons.Length; i++)
+            {
+                if (deckSlotButtons[i] == null) continue;
+
+                int slotIndex = i; // 클로저 캡처용
+                deckSlotButtons[i].onClick.AddListener(() => OnDeckSlotButtonClicked(slotIndex));
+            }
+        }
+
+        /// <summary>
+        /// 덱 슬롯 버튼 클릭 시 덱 설정 씬으로 이동
+        /// </summary>
+        private void OnDeckSlotButtonClicked(int slotIndex)
+        {
+            Debug.Log($"[DispatchPanel] OnDeckSlotButtonClicked 호출됨! slotIndex={slotIndex}");
+            AddLog($"덱 슬롯 {slotIndex + 1} 클릭 - 덱 설정으로 이동");
+            NavigateToLibraryManagementScene().Forget();
+        }
+
+        /// <summary>
+        /// LibraryManagementScene으로 씬 전환 (페이드 효과)
+        /// 덱 설정 탭으로 바로 이동
+        /// </summary>
+        private async UniTaskVoid NavigateToLibraryManagementScene()
+        {
+            // CBL: 씬 전환 전 덱 설정 탭 바로 열기 플래그 설정
+            NovelianMagicLibraryDefense.UI.TabButton.ShouldOpenTeamSetup = true;
+            Debug.Log($"[DispatchPanel] ShouldOpenTeamSetup 플래그 설정됨: {NovelianMagicLibraryDefense.UI.TabButton.ShouldOpenTeamSetup}");
+
+            // FadeController의 LoadSceneWithFade 사용 (깜빡임 방지)
+            if (FadeController.Instance != null)
+            {
+                await FadeController.Instance.LoadSceneWithFade(SceneName.LibraryManagementScene);
+            }
+            else
+            {
+                Debug.LogWarning("[DispatchPanel] FadeController not available, loading scene directly");
+                await SceneManager.LoadSceneAsync(SceneName.LibraryManagementScene);
+            }
+        }
+
+        /// <summary>
+        /// 덱 슬롯 버튼 활성화/비활성화 업데이트
+        /// 빈 슬롯일 때만 버튼 활성화
+        /// </summary>
+        private void UpdateDeckSlotButtons()
+        {
+            if (DeckManager.Instance == null) return;
+
+            var localDeck = presetSelector != null ? presetSelector.GetLocalSelectedDeck() : DeckManager.Instance.GetDeck();
+            Button[] deckSlotButtons = { deckSlotButton1, deckSlotButton2, deckSlotButton3, deckSlotButton4 };
+
+            for (int i = 0; i < deckSlotButtons.Length; i++)
+            {
+                if (deckSlotButtons[i] == null) continue;
+
+                int characterId = (i < localDeck.Count) ? localDeck[i] : -1;
+                bool isEmpty = characterId <= 0;
+
+                // 빈 슬롯일 때만 버튼 활성화 (interactable)
+                deckSlotButtons[i].interactable = isEmpty;
+
+                // 빈 슬롯일 때 버튼 게임오브젝트도 활성화
+                deckSlotButtons[i].gameObject.SetActive(isEmpty);
             }
         }
 
@@ -2136,6 +2222,9 @@ namespace Dispatch
                     AddLog($"✓ 슬롯 {i + 1}: 빈 슬롯 (투명)");
                 }
             }
+
+            // CBL: 덱 슬롯 버튼 활성화/비활성화 업데이트
+            UpdateDeckSlotButtons();
 
             AddLog("=== 덱 캐릭터 로드 완료 ===");
         }
