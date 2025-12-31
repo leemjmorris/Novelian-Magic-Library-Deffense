@@ -102,11 +102,10 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void Open()
         {
-            // Save current time scale and pause if needed
+            // Issue #602: TimeManager 스택 기반 일시정지
             if (pauseOnOpen)
             {
-                previousTimeScale = Time.timeScale;
-                Time.timeScale = 0f;
+                TimeManager.Instance?.PushTimeScale(0f);
             }
 
             gameObject.SetActive(true);
@@ -148,14 +147,26 @@ namespace NovelianMagicLibraryDefense.UI
                 AudioManager.Instance.SaveAudioSettings();
             }
 
-            // Restore previous time scale
+            // Issue #602: TimeManager 스택에서 복구
             if (pauseOnOpen)
             {
-                Time.timeScale = previousTimeScale;
+                TimeManager.Instance?.PopTimeScale();
             }
 
             isOpen = false;
             gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Issue #602: 패널이 비활성화될 때 TimeScale 복구 보장
+        /// </summary>
+        private void OnDisable()
+        {
+            if (isOpen && pauseOnOpen)
+            {
+                TimeManager.Instance?.PopTimeScale();
+                isOpen = false;
+            }
         }
 
         /// <summary>
@@ -169,8 +180,8 @@ namespace NovelianMagicLibraryDefense.UI
                 GameManager.Instance.Stage.IsExitingStage = true;
             }
 
-            // Restore time scale before scene change
-            Time.timeScale = 1f;
+            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
             LoadSceneWithLoadingUI("LobbyScene").Forget();
         }
 

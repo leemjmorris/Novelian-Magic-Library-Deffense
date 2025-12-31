@@ -116,14 +116,9 @@ namespace NovelianMagicLibraryDefense.Managers
                     Debug.Log("[BossDungeonManager] dungeonUI 초기화 완료");
                 }
 
-                // Issue #564: 다음 층 진입 시 TimeScale이 0인 경우 복원
-                // BossDungeonClearPanel에서 Time.timeScale=1f 설정 후 씬 로드하지만,
-                // 씬 전환 중 다른 코드에서 0으로 변경되었을 수 있음
-                if (Time.timeScale == 0f)
-                {
-                    Debug.LogWarning("[BossDungeonManager] TimeScale이 0! 1로 복원합니다.");
-                    Time.timeScale = 1f;
-                }
+                // Issue #602: 씬 진입 시 TimeManager로 TimeScale 리셋
+                // (이전 씬에서 스택이 남아있을 수 있으므로 깨끗하게 초기화)
+                TimeManager.Instance?.ResetTimeScale();
 
                 // Issue #476: 카드 선택 시퀀스 시작
                 Debug.Log("[BossDungeonManager] StartCardSelectionSequence 호출...");

@@ -145,7 +145,8 @@ namespace NovelianMagicLibraryDefense.UI
             }
 
             Close();
-            Time.timeScale = 1f;
+            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
             SelectedStage.Clear();
             LoadLobbySceneAsync().Forget();
         }
@@ -157,7 +158,8 @@ namespace NovelianMagicLibraryDefense.UI
         {
             Debug.Log("[StageFailedPanel] Retry button clicked - Reloading GameScene");
             Close();
-            Time.timeScale = 1f;
+            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
             // SelectedStage.Data는 유지하여 같은 스테이지 재시작
             LoadGameSceneAsync().Forget();
         }

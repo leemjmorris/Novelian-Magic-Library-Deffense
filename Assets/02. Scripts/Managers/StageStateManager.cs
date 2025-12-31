@@ -39,7 +39,8 @@ namespace NovelianMagicLibraryDefense.Managers
         protected override void OnInitialize()
         {
             CurrentState = StageState.Playing;
-            Time.timeScale = 1f; // Issue #564: 씬 로드 시 TimeScale 초기화
+            // Issue #602: TimeManager 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
 
             // JML: Tag로 Wall 참조 찾기 (동적 맵 로드 지원)
             FindWallReferences();
@@ -127,7 +128,8 @@ namespace NovelianMagicLibraryDefense.Managers
         protected override void OnReset()
         {
             CurrentState = StageState.Playing;
-            Time.timeScale = 1f;
+            // Issue #602: TimeManager 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
         }
 
         protected override void OnDispose()
@@ -201,7 +203,8 @@ namespace NovelianMagicLibraryDefense.Managers
         public void SetStageState(StageState newState)
         {
             CurrentState = newState;
-            Time.timeScale = 0f;
+            // Issue #602: 스테이지 종료 시 일시정지 (클리어/실패 패널 표시용)
+            TimeManager.Instance?.Pause();
 
             // LMJ: Use EventChannel instead of static event
             if (stageEvents != null)

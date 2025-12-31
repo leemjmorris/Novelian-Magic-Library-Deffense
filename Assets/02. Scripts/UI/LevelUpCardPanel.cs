@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.UI
 {
@@ -30,7 +31,7 @@ namespace NovelianMagicLibraryDefense.UI
         public event Action<int> OnCardSelected; // Fires when card is clicked and upgrade is applied
 
         private GameObject[] cardInstances;
-        private float previousTimeScale = 1f;
+        private bool isPaused = false;
 
         private void Awake()
         {
@@ -59,11 +60,11 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (panel == null) return;
 
-            // Pause game if needed
+            // Issue #602: TimeManager 스택 기반 일시정지
             if (pauseOnOpen)
             {
-                previousTimeScale = Time.timeScale;
-                Time.timeScale = 0f;
+                TimeManager.Instance?.PushTimeScale(0f);
+                isPaused = true;
             }
 
             panel.SetActive(true);
@@ -94,14 +95,27 @@ namespace NovelianMagicLibraryDefense.UI
 
             panel.SetActive(false);
 
-            // Resume game
-            if (pauseOnOpen)
+            // Issue #602: TimeManager 스택에서 복구
+            if (isPaused)
             {
-                Time.timeScale = previousTimeScale;
+                TimeManager.Instance?.PopTimeScale();
+                isPaused = false;
             }
 
             // Cleanup card instances
             ClearCards();
+        }
+
+        /// <summary>
+        /// Issue #602: 패널이 비활성화될 때 TimeScale 복구 보장
+        /// </summary>
+        private void OnDisable()
+        {
+            if (isPaused)
+            {
+                TimeManager.Instance?.PopTimeScale();
+                isPaused = false;
+            }
         }
 
         /// <summary>

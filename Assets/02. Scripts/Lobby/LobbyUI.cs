@@ -41,8 +41,8 @@ public class LobbyUI : MonoBehaviour
 
     private void OnEnable()
     {
-        // 로비 진입 시 타임스케일 복구 (도전던전 등에서 일시정지 상태로 넘어올 경우 대비)
-        Time.timeScale = 1f;
+        // Issue #602: 로비 진입 시 TimeScale 스택 리셋
+        TimeManager.Instance?.ResetTimeScale();
 
         // Lobby BGM 재생 (다른 씬에서 돌아올 때 크로스페이드)
         if (AudioManager.Instance != null)
