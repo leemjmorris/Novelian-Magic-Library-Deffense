@@ -1127,6 +1127,14 @@ PrefabInstance:
       propertyPath: m_AnchorMin.x
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1230550777792419629, guid: 18333e1254515404abbe66659d6d182b, type: 3}
+      propertyPath: skillVolumeSlider
+      value: 
+      objectReference: {fileID: 652516356}
+    - target: {fileID: 1230550777792419629, guid: 18333e1254515404abbe66659d6d182b, type: 3}
+      propertyPath: voiceVolumeSlider
+      value: 
+      objectReference: {fileID: 652516357}
     - target: {fileID: 1340401123128567317, guid: 18333e1254515404abbe66659d6d182b, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -1740,6 +1748,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a56e9a6c75835c94190984e7cd41074d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &652516356 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1293012220426110624, guid: 18333e1254515404abbe66659d6d182b, type: 3}
+  m_PrefabInstance: {fileID: 652516353}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &652516357 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8989208027834359351, guid: 18333e1254515404abbe66659d6d182b, type: 3}
+  m_PrefabInstance: {fileID: 652516353}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &706902247
 GameObject:
   m_ObjectHideFlags: 0
@@ -2133,6 +2163,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioMixer: {fileID: 24100000, guid: 9a29770f8235e564f8623cc67024b384, type: 2}
+  bgmGroup: {fileID: 0}
+  sfxGroup: {fileID: 0}
+  voiceGroup: {fileID: 0}
+  skillGroup: {fileID: 0}
   bgmSource: {fileID: 0}
   sfxPoolSize: 10
 --- !u!1 &1026878129
