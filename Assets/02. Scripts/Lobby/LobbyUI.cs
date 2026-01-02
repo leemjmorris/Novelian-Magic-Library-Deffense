@@ -39,6 +39,9 @@ public class LobbyUI : MonoBehaviour
     [Header("Boss Dungeon Panel (Issue #476)")]
     [SerializeField] private GameObject bossDungeonSelectPanel; // 도전던전 선택 패널
 
+    [Header("Account UI Panel")]
+    [SerializeField] private GameObject accountUIPanel; // 계정/환경설정 패널
+
     private void OnEnable()
     {
         // Issue #602: 로비 진입 시 TimeScale 스택 리셋
@@ -214,9 +217,15 @@ public class LobbyUI : MonoBehaviour
     }
 
     // 오른쪽 버튼들
+    /// <summary>
+    /// 설정 버튼 클릭 시 Account UI 패널 활성화
+    /// </summary>
     public void OnSettingsButton()
     {
-        WarningUIManager.Instance.ShowWarning(WarningText.FeatureNotReady);
+        if (accountUIPanel != null)
+        {
+            accountUIPanel.SetActive(true);
+        }
     }
 
     /// <summary>
