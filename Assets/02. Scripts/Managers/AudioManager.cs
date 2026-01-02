@@ -22,6 +22,12 @@ namespace NovelianMagicLibraryDefense.Managers
         [Header("Audio Mixer")]
         [SerializeField] private AudioMixer audioMixer;
 
+        [Header("Audio Mixer Groups")]
+        [SerializeField] private AudioMixerGroup bgmGroup;
+        [SerializeField] private AudioMixerGroup sfxGroup;
+        [SerializeField] private AudioMixerGroup voiceGroup;
+        [SerializeField] private AudioMixerGroup skillGroup;
+
         [Header("Audio Sources")]
         [SerializeField] private AudioSource bgmSource;
         [SerializeField] private int sfxPoolSize = 10;
@@ -126,13 +132,9 @@ namespace NovelianMagicLibraryDefense.Managers
                 bgmSource.loop = true;
                 bgmSource.playOnAwake = false;
 
-                if (audioMixer != null)
+                if (bgmGroup != null)
                 {
-                    AudioMixerGroup[] groups = audioMixer.FindMatchingGroups("BGM");
-                    if (groups.Length > 0)
-                    {
-                        bgmSource.outputAudioMixerGroup = groups[0];
-                    }
+                    bgmSource.outputAudioMixerGroup = bgmGroup;
                 }
             }
 
@@ -156,17 +158,6 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void CreateSFXPool()
         {
-            AudioMixerGroup sfxGroup = null;
-
-            if (audioMixer != null)
-            {
-                AudioMixerGroup[] groups = audioMixer.FindMatchingGroups("SFX");
-                if (groups.Length > 0)
-                {
-                    sfxGroup = groups[0];
-                }
-            }
-
             for (int i = 0; i < sfxPoolSize; i++)
             {
                 AudioSource sfxSource = gameObject.AddComponent<AudioSource>();
@@ -181,7 +172,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 sfxPool.Add(sfxSource);
             }
 
-            Debug.Log($"[AudioManager] Created SFX pool with {sfxPoolSize} AudioSources");
+            Debug.Log($"[AudioManager] Created SFX pool with {sfxPoolSize} AudioSources (Group: {(sfxGroup != null ? sfxGroup.name : "None")})");
         }
 
         /// <summary>
@@ -189,17 +180,6 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void CreateSkillPool()
         {
-            AudioMixerGroup skillGroup = null;
-
-            if (audioMixer != null)
-            {
-                AudioMixerGroup[] groups = audioMixer.FindMatchingGroups("Skill");
-                if (groups.Length > 0)
-                {
-                    skillGroup = groups[0];
-                }
-            }
-
             // 스킬 풀은 SFX 풀과 동일한 크기로 생성
             for (int i = 0; i < sfxPoolSize; i++)
             {
@@ -215,7 +195,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 skillPool.Add(skillSource);
             }
 
-            Debug.Log($"[AudioManager] Created Skill pool with {sfxPoolSize} AudioSources");
+            Debug.Log($"[AudioManager] Created Skill pool with {sfxPoolSize} AudioSources (Group: {(skillGroup != null ? skillGroup.name : "None")})");
         }
 
         /// <summary>
@@ -228,17 +208,12 @@ namespace NovelianMagicLibraryDefense.Managers
             voiceSource.loop = false;
             voiceSource.playOnAwake = false;
 
-            if (audioMixer != null)
+            if (voiceGroup != null)
             {
-                // Voice 그룹에 연결 (캐릭터 대사 볼륨 분리)
-                AudioMixerGroup[] groups = audioMixer.FindMatchingGroups("Voice");
-                if (groups.Length > 0)
-                {
-                    voiceSource.outputAudioMixerGroup = groups[0];
-                }
+                voiceSource.outputAudioMixerGroup = voiceGroup;
             }
 
-            Debug.Log("[AudioManager] Created Voice AudioSource for exclusive playback");
+            Debug.Log($"[AudioManager] Created Voice AudioSource (Group: {(voiceGroup != null ? voiceGroup.name : "None")})");
         }
 
         #region BGM Control

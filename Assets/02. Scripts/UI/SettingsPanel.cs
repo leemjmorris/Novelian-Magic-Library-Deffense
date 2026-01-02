@@ -21,6 +21,8 @@ namespace NovelianMagicLibraryDefense.UI
         [SerializeField] private Slider masterVolumeSlider;
         [SerializeField] private Slider bgmVolumeSlider;
         [SerializeField] private Slider sfxVolumeSlider;
+        [SerializeField] private Slider voiceVolumeSlider;
+        [SerializeField] private Slider skillVolumeSlider;
 
         private bool isOpen = false;
         private bool isInitializingSliders = false;
@@ -69,6 +71,34 @@ namespace NovelianMagicLibraryDefense.UI
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.SetSFXVolume(value);
+            }
+        }
+
+        /// <summary>
+        /// Called when Voice volume slider value changes
+        /// Inspector에서 Slider의 OnValueChanged에 할당
+        /// </summary>
+        public void OnVoiceVolumeChanged(float value)
+        {
+            Debug.Log($"[SettingsPanel] OnVoiceVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            if (isInitializingSliders) return;
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetVoiceVolume(value);
+            }
+        }
+
+        /// <summary>
+        /// Called when Skill volume slider value changes
+        /// Inspector에서 Slider의 OnValueChanged에 할당
+        /// </summary>
+        public void OnSkillVolumeChanged(float value)
+        {
+            Debug.Log($"[SettingsPanel] OnSkillVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            if (isInitializingSliders) return;
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.SetSkillVolume(value);
             }
         }
 
@@ -131,6 +161,12 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (sfxVolumeSlider != null)
                 sfxVolumeSlider.value = AudioManager.Instance.GetSFXVolume();
+
+            if (voiceVolumeSlider != null)
+                voiceVolumeSlider.value = AudioManager.Instance.GetVoiceVolume();
+
+            if (skillVolumeSlider != null)
+                skillVolumeSlider.value = AudioManager.Instance.GetSkillVolume();
 
             isInitializingSliders = false;
         }
