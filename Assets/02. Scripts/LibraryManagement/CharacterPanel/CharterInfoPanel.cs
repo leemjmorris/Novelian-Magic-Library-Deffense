@@ -56,6 +56,9 @@ public class CharacterInfoPanel : MonoBehaviour
     private int selectedSlotIndex = 0;
     private LibraryCharacterSlot currentSlot;
 
+    // 현재 로드 중인 캐릭터 ID (다른 캐릭터 선택 시 이전 로드 무시용)
+    private int loadingCharacterId = 0;
+
     public void InitInfo(int characterID, int level, LibraryCharacterSlot slot = null)
     {
         CharacterID = characterID;
@@ -78,6 +81,10 @@ public class CharacterInfoPanel : MonoBehaviour
     {
         if (characterSprite == null || characterData == null) return;
 
+        // 로드 중인 캐릭터 ID 기록 (다른 캐릭터 선택 시 이전 로드 무시용)
+        loadingCharacterId = characterData.Character_ID;
+        int expectedCharacterId = loadingCharacterId;
+
         string spriteKey = AddressableKey.Icon_Character;
 
         // Path_ID가 있으면 PathTable에서 개별 아이콘 키 조회
@@ -92,6 +99,10 @@ public class CharacterInfoPanel : MonoBehaviour
 
         Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
         {
+            // 오브젝트가 파괴되었거나 다른 캐릭터로 변경된 경우 무시
+            if (this == null || characterSprite == null) return;
+            if (loadingCharacterId != expectedCharacterId) return;
+
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
                 characterSprite.sprite = handle.Result;

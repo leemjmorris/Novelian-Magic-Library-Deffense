@@ -14,6 +14,9 @@ public class IngredientManager : MonoBehaviour
     // 재료 변경 이벤트 (ingredientId, newAmount)
     public event Action<int, int> OnIngredientChanged;
 
+    // Firebase 데이터 로드 완료 플래그
+    public bool IsDataLoaded { get; private set; } = false;
+
     private void Awake()
     {
         if (instance != null && instance != this)
@@ -141,7 +144,11 @@ public class IngredientManager : MonoBehaviour
     /// </summary>
     public void SetIngredientsFromFirebase(System.Collections.Generic.Dictionary<string, int> ingredients)
     {
-        if (ingredients == null) return;
+        if (ingredients == null)
+        {
+            IsDataLoaded = true;
+            return;
+        }
 
         Ingredients.Clear();
         foreach (var kvp in ingredients)
@@ -152,6 +159,7 @@ public class IngredientManager : MonoBehaviour
             }
         }
 
+        IsDataLoaded = true;
         Debug.Log($"<color=#3EB489>[IngredientManager]</color> Firebase에서 재료 로드: {Ingredients.Count}종");
     }
 

@@ -92,6 +92,9 @@ public class DeckCharacterSlot : MonoBehaviour
 
         Addressables.LoadAssetAsync<Sprite>(spriteKey).Completed += handle =>
         {
+            // 오브젝트가 파괴되었는지 확인
+            if (this == null || chaImage == null) return;
+
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
                 chaImage.sprite = handle.Result;
@@ -112,6 +115,9 @@ public class DeckCharacterSlot : MonoBehaviour
 
         Addressables.LoadAssetAsync<Sprite>(genreKey).Completed += handle =>
         {
+            // 오브젝트가 파괴되었는지 확인
+            if (this == null || genreIcon == null) return;
+
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
                 genreIcon.sprite = handle.Result;
