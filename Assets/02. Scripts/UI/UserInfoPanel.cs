@@ -27,6 +27,9 @@ public class UserInfoPanel : MonoBehaviour
     [SerializeField] private TextMeshProUGUI killCountText;
     [SerializeField] private TextMeshProUGUI rankText;
 
+    [Header("Title")]
+    [SerializeField] private TMP_Dropdown titleDropdown;
+
     private bool isSubscribed = false;
     private Sprite defaultProfileSprite; // 프리팹의 기본 이미지 저장
     private Sprite defaultFrameSprite; // 프리팹의 기본 프레임 이미지 저장
@@ -57,6 +60,12 @@ public class UserInfoPanel : MonoBehaviour
             nicknameInputField.onEndEdit.AddListener(OnNicknameEndEdit);
         }
 
+        // 칭호 드롭다운 이벤트 등록
+        if (titleDropdown != null)
+        {
+            titleDropdown.onValueChanged.AddListener(OnTitleChanged);
+        }
+
         // 프로필 매니저 이벤트 구독 시도
         TrySubscribeToManager();
     }
@@ -69,6 +78,7 @@ public class UserInfoPanel : MonoBehaviour
         RefreshFrameImage();
         RefreshNickname();
         RefreshStatsDisplay();
+        RefreshTitleDropdown();
     }
 
     private void TrySubscribeToManager()
@@ -95,6 +105,11 @@ public class UserInfoPanel : MonoBehaviour
         if (nicknameInputField != null)
         {
             nicknameInputField.onEndEdit.RemoveListener(OnNicknameEndEdit);
+        }
+
+        if (titleDropdown != null)
+        {
+            titleDropdown.onValueChanged.RemoveListener(OnTitleChanged);
         }
 
         if (ProfilePictureManager.Instance != null && isSubscribed)
@@ -380,6 +395,60 @@ public class UserInfoPanel : MonoBehaviour
         {
             rankText.text = $"#{rank}";
         }
+    }
+
+    #endregion
+
+    #region Title
+
+    /// <summary>
+    /// 저장된 칭호 인덱스로 Dropdown 선택 갱신
+    /// </summary>
+    private void RefreshTitleDropdown()
+    {
+        if (titleDropdown == null) return;
+
+        int savedTitleIndex = 0;
+        if (FirebaseSaveManager.Instance != null && FirebaseSaveManager.Instance.CachedData?.profile != null)
+        {
+            savedTitleIndex = FirebaseSaveManager.Instance.CachedData.profile.equippedTitleIndex;
+        }
+
+        // 유효한 인덱스인지 확인
+        if (savedTitleIndex >= 0 && savedTitleIndex < titleDropdown.options.Count)
+        {
+            titleDropdown.SetValueWithoutNotify(savedTitleIndex);
+        }
+    }
+
+    /// <summary>
+    /// 칭호 선택 변경 시 Firebase에 저장
+    /// </summary>
+    private void OnTitleChanged(int index)
+    {
+        SaveTitleAsync(index).Forget();
+    }
+
+    /// <summary>
+    /// 칭호를 Firebase에 저장
+    /// </summary>
+    private async UniTaskVoid SaveTitleAsync(int titleIndex)
+    {
+        if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance == null)
+        {
+            Debug.LogWarning("[UserInfoPanel] Firebase 매니저가 초기화되지 않았습니다.");
+            return;
+        }
+
+        string userId = FirebaseManager.Instance.CurrentUserId;
+        if (string.IsNullOrEmpty(userId))
+        {
+            Debug.LogWarning("[UserInfoPanel] 로그인된 유저가 없습니다.");
+            return;
+        }
+
+        await FirebaseSaveManager.Instance.SaveTitleAsync(userId, titleIndex);
+        Debug.Log($"[UserInfoPanel] 칭호 저장 완료: 인덱스 {titleIndex}");
     }
 
     #endregion

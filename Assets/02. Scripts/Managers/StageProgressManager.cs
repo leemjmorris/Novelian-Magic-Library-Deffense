@@ -56,11 +56,14 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (FirebaseSaveManager.Instance != null && FirebaseManager.Instance?.CurrentUserId != null)
             {
+                var cachedProgression = FirebaseSaveManager.Instance.CachedData?.progression;
                 var progression = new ProgressionData
                 {
                     highestClearedStage = highestClearedStage,
-                    playerLevel = FirebaseSaveManager.Instance.CachedData?.progression?.playerLevel ?? 1,
-                    playerExp = FirebaseSaveManager.Instance.CachedData?.progression?.playerExp ?? 0
+                    playerLevel = cachedProgression?.playerLevel ?? 1,
+                    playerExp = cachedProgression?.playerExp ?? 0,
+                    bossDungeonProgress = cachedProgression?.bossDungeonProgress ?? 1,
+                    totalKilledMonsters = cachedProgression?.totalKilledMonsters ?? 0
                 };
 
                 FirebaseSaveManager.Instance.SaveProgressionAsync(

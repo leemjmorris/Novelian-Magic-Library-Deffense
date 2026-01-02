@@ -30,8 +30,9 @@ public class LobbyUI : MonoBehaviour
     [Header("Profile Panel")]
     [SerializeField] private GameObject profileDetailPanel; // 프로필 상세 패널 (버튼 누르면 열림)
 
-    [Header("User Nickname")]
+    [Header("User Info Display")]
     [SerializeField] private TextMeshProUGUI nicknameText; // 로비 화면에 표시되는 닉네임 (UserText (1))
+    [SerializeField] private TextMeshProUGUI levelText; // 로비 화면에 표시되는 레벨 (Text (TMP))
 
     [Header("Shop Panel")]
     [SerializeField] private GameObject shopPanel; // 상점 패널
@@ -490,21 +491,31 @@ public class LobbyUI : MonoBehaviour
     }
 
     /// <summary>
-    /// 로비 화면에 닉네임 표시
-    /// Firebase에서 캐시된 닉네임을 UserText (1)에 표시
+    /// 로비 화면에 레벨과 닉네임 표시
+    /// Firebase에서 캐시된 데이터를 각각의 텍스트에 표시
     /// </summary>
     public void RefreshNickname()
     {
-        if (nicknameText == null) return;
+        int playerLevel = 1;
+        string nickname = "Guest";
 
         if (FirebaseSaveManager.Instance != null && FirebaseSaveManager.Instance.CachedData != null)
         {
-            string nickname = FirebaseSaveManager.Instance.CachedData.nickname;
-            nicknameText.text = string.IsNullOrEmpty(nickname) ? "Guest" : nickname;
+            var cachedData = FirebaseSaveManager.Instance.CachedData;
+            playerLevel = cachedData.progression?.playerLevel ?? 1;
+            nickname = string.IsNullOrEmpty(cachedData.nickname) ? "Guest" : cachedData.nickname;
         }
-        else
+
+        // 닉네임 표시
+        if (nicknameText != null)
         {
-            nicknameText.text = "Guest";
+            nicknameText.text = nickname;
+        }
+
+        // 레벨 표시
+        if (levelText != null)
+        {
+            levelText.text = $"LV. {playerLevel}";
         }
     }
 }

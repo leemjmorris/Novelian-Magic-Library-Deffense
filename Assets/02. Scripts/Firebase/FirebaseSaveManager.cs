@@ -482,7 +482,8 @@ public class FirebaseSaveManager : MonoBehaviour
             var data = new Dictionary<string, object>
             {
                 { "equippedPictureId", pictureId },
-                { "equippedFrameId", frameId }
+                { "equippedFrameId", frameId },
+                { "equippedTitleIndex", cachedUserData.profile.equippedTitleIndex }
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("profile").SetValueAsync(data);
@@ -491,6 +492,31 @@ public class FirebaseSaveManager : MonoBehaviour
         catch (Exception e)
         {
             Debug.LogError($"{LOG_PREFIX} 프로필 저장 실패: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 칭호 저장
+    /// </summary>
+    public async UniTask SaveTitleAsync(string userId, int titleIndex)
+    {
+        if (!isInitialized) return;
+
+        try
+        {
+            if (cachedUserData.profile == null)
+            {
+                cachedUserData.profile = new ProfileSaveData();
+            }
+
+            cachedUserData.profile.equippedTitleIndex = titleIndex;
+
+            await databaseRef.Child(USERS_PATH).Child(userId).Child("profile").Child("equippedTitleIndex").SetValueAsync(titleIndex);
+            Debug.Log($"{LOG_PREFIX} 칭호 저장 완료 (인덱스: {titleIndex})");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 칭호 저장 실패: {e.Message}");
         }
     }
 
@@ -575,7 +601,8 @@ public class FirebaseSaveManager : MonoBehaviour
             { "profile", new Dictionary<string, object>
                 {
                     { "equippedPictureId", data.profile?.equippedPictureId ?? -1 },
-                    { "equippedFrameId", data.profile?.equippedFrameId ?? -1 }
+                    { "equippedFrameId", data.profile?.equippedFrameId ?? -1 },
+                    { "equippedTitleIndex", data.profile?.equippedTitleIndex ?? 0 }
                 }
             }
         };
@@ -757,12 +784,13 @@ public class FirebaseSaveManager : MonoBehaviour
             }
         }
 
-        // profile (프로필 사진/프레임)
+        // profile (프로필 사진/프레임/칭호)
         var profileSnap = snapshot.Child("profile");
         if (profileSnap.Exists)
         {
             data.profile.equippedPictureId = GetIntValue(profileSnap.Child("equippedPictureId"), -1);
             data.profile.equippedFrameId = GetIntValue(profileSnap.Child("equippedFrameId"), -1);
+            data.profile.equippedTitleIndex = GetIntValue(profileSnap.Child("equippedTitleIndex"), 0);
         }
 
         return data;
@@ -870,8 +898,11 @@ public class FirebaseSaveManager : MonoBehaviour
 
             var snapshot = await query.GetValueAsync();
             int higherCount = (int)snapshot.ChildrenCount;
+            int rank = higherCount + 1;
 
-            return higherCount + 1;
+            Debug.Log($"{LOG_PREFIX} 랭킹 조회: 내 킬={myKillCount}, 나보다 높은 유저={higherCount}명, 내 순위=#{rank}");
+
+            return rank;
         }
         catch (Exception e)
         {
