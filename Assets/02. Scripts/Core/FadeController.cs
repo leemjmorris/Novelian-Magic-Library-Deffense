@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.Core
 {
@@ -90,23 +91,38 @@ namespace NovelianMagicLibraryDefense.Core
         }
 
         /// <summary>
-        /// LCB: 페이드 아웃/인 효과와 함께 씬 로딩 수행 (간소화 버전)
+        /// LCB: 로딩 UI + 페이드 효과와 함께 씬 로딩 수행
+        /// 로딩 UI 표시 → 진행률 애니메이션 → 페이드 아웃 → 씬 로드 → 페이드 인 → 로딩 UI 숨김
         /// </summary>
         public async UniTask LoadSceneWithFade(string sceneName)
         {
-            // Activate fade panel
-            fadePanel.SetActive(true);
+            // Step 1: 로딩 UI 표시 (LoadingUIManager가 있는 경우)
+            if (LoadingUIManager.Instance != null)
+            {
+                LoadingUIManager.Instance.Show();
+                await LoadingUIManager.Instance.FakeLoadAsync();
 
-            // Fade out (빠르게)
+                // 100% 상태 잠깐 보여주기
+                await UniTask.Delay(200, ignoreTimeScale: true);
+            }
+
+            // Step 2: 페이드 아웃
+            fadePanel.SetActive(true);
             await FadeOut(0.3f);
 
-            // 씬 로드
+            // Step 3: 로딩 UI 숨기기 (페이드 아웃 후)
+            if (LoadingUIManager.Instance != null)
+            {
+                await LoadingUIManager.Instance.Hide();
+            }
+
+            // Step 4: 씬 로드
             await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
 
-            // Fade in (빠르게)
+            // Step 5: 페이드 인
             await FadeIn(0.3f);
 
-            // Deactivate fade panel
+            // Step 6: 페이드 패널 비활성화
             fadePanel.SetActive(false);
         }
 

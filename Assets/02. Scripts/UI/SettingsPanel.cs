@@ -179,9 +179,10 @@ namespace NovelianMagicLibraryDefense.UI
                 GameManager.Instance.Stage.IsExitingStage = true;
             }
 
-            // Issue #605: 로비 전환 전 모든 사운드 정지 및 게임 일시정지
+            // Issue #605: 로비 전환 전 모든 사운드 정지
             AudioManager.Instance?.StopAllSounds();
-            TimeManager.Instance?.Pause();
+            // Issue #639: Pause() 제거 - 로딩 UI 애니메이션이 멈추는 문제
+            // 게임 일시정지는 이미 Open()에서 PushTimeScale(0f)로 처리됨
             LoadSceneWithLoadingUI("LobbyScene").Forget();
         }
 
@@ -190,6 +191,10 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private async UniTaskVoid LoadSceneWithLoadingUI(string sceneName)
         {
+            // Issue #639: 로딩 UI 애니메이션을 위해 TimeScale 복구
+            // 환경설정 패널 Open()에서 PushTimeScale(0f)로 일시정지된 상태
+            TimeManager.Instance?.ResetTimeScale();
+
             // 매니저가 없으면 직접 씬 로드 (fallback)
             if (LoadingUIManager.Instance == null || FadeController.Instance == null)
             {
