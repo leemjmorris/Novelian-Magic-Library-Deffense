@@ -1,11 +1,17 @@
 using NovelianMagicLibraryDefense.Managers;
-using Unity.VisualScripting;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class ShopPanel : MonoBehaviour
 {
     [SerializeField] private Button closeButton;
+
+    [Header("Currency Display")]
+    [SerializeField] private TextMeshProUGUI apText;
+    [SerializeField] private TextMeshProUGUI goldText;
+    [SerializeField] private TextMeshProUGUI premiumText;
+    private int maxAP = 30;
 
     [Header("Shop")]
     [SerializeField] private Button shopButton;
@@ -37,6 +43,13 @@ public class ShopPanel : MonoBehaviour
         if (bookmarkGachaButton != null) bookmarkGachaButton.onClick.AddListener(OnFeatureNotReadyClicked);
         if (costumeGachaButton != null) costumeGachaButton.onClick.AddListener(OnFeatureNotReadyClicked);
 
+        // 재화 UI 초기화 및 이벤트 구독
+        InitializeCurrency();
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
+        }
+
         // Shop BGM 재생 (Lobby BGM 일시정지 후 크로스페이드)
         if (AudioManager.Instance != null)
         {
@@ -54,12 +67,94 @@ public class ShopPanel : MonoBehaviour
         if (bookmarkGachaButton != null) bookmarkGachaButton.onClick.RemoveListener(OnFeatureNotReadyClicked);
         if (costumeGachaButton != null) costumeGachaButton.onClick.RemoveListener(OnFeatureNotReadyClicked);
 
+        // 재화 이벤트 구독 해제
+        if (CurrencyManager.Instance != null)
+        {
+            CurrencyManager.Instance.OnCurrencyChanged -= OnCurrencyChanged;
+        }
+
         // Shop 닫힐 때 Lobby BGM 재개 (크로스페이드)
         if (AudioManager.Instance != null && AudioManager.Instance.HasPausedBGM)
         {
             AudioManager.Instance.StopAndResumePausedBGM(1f);
         }
     }
+
+    #region Currency Display
+
+    private void InitializeCurrency()
+    {
+        // CurrencyTable에서 최대 AP 조회
+        if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
+        {
+            var currencyData = CSVLoader.Instance.GetData<CurrencyData>(CurrencyManager.AP_ID);
+            if (currencyData != null && currencyData.Currency_Max_Count > 0)
+            {
+                maxAP = currencyData.Currency_Max_Count;
+            }
+        }
+
+        UpdateAPText();
+        UpdateGoldText();
+        UpdatePremiumText();
+    }
+
+    private void UpdateAPText()
+    {
+        if (apText == null) return;
+
+        int currentAP = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
+        }
+
+        apText.text = $"{currentAP}/{maxAP}";
+    }
+
+    private void UpdateGoldText()
+    {
+        if (goldText == null) return;
+
+        int gold = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            gold = CurrencyManager.Instance.GetCurrency(CurrencyManager.GOLD_ID);
+        }
+
+        goldText.text = CurrencyManager.FormatCurrency(gold);
+    }
+
+    private void UpdatePremiumText()
+    {
+        if (premiumText == null) return;
+
+        int magicStone = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            magicStone = CurrencyManager.Instance.GetCurrency(CurrencyManager.MAGIC_STONE_ID);
+        }
+
+        premiumText.text = $"{magicStone}";
+    }
+
+    private void OnCurrencyChanged(int currencyId, int newAmount)
+    {
+        if (currencyId == CurrencyManager.AP_ID && apText != null)
+        {
+            apText.text = $"{newAmount}/{maxAP}";
+        }
+        else if (currencyId == CurrencyManager.GOLD_ID && goldText != null)
+        {
+            goldText.text = CurrencyManager.FormatCurrency(newAmount);
+        }
+        else if (currencyId == CurrencyManager.MAGIC_STONE_ID && premiumText != null)
+        {
+            premiumText.text = $"{newAmount}";
+        }
+    }
+
+    #endregion
 
     public void OnCloseButtonClicked()
     {
