@@ -159,7 +159,7 @@ public class FirebaseSaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 진행도 저장 (스테이지, 레벨)
+    /// 진행도 저장 (스테이지, 레벨, 처치 몬스터 수)
     /// </summary>
     public async UniTask SaveProgressionAsync(string userId, ProgressionData progression)
     {
@@ -173,7 +173,8 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "highestClearedStage", progression.highestClearedStage },
                 { "playerLevel", progression.playerLevel },
                 { "playerExp", progression.playerExp },
-                { "bossDungeonProgress", progression.bossDungeonProgress } // Issue #476
+                { "bossDungeonProgress", progression.bossDungeonProgress }, // Issue #476
+                { "totalKilledMonsters", progression.totalKilledMonsters }
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("progression").UpdateChildrenAsync(data);
@@ -521,7 +522,8 @@ public class FirebaseSaveManager : MonoBehaviour
                     { "highestClearedStage", data.progression.highestClearedStage },
                     { "playerLevel", data.progression.playerLevel },
                     { "playerExp", data.progression.playerExp },
-                    { "bossDungeonProgress", data.progression.bossDungeonProgress } // Issue #476
+                    { "bossDungeonProgress", data.progression.bossDungeonProgress }, // Issue #476
+                    { "totalKilledMonsters", data.progression.totalKilledMonsters }
                 }
             },
             { "characters", new Dictionary<string, object>
@@ -644,6 +646,7 @@ public class FirebaseSaveManager : MonoBehaviour
             data.progression.playerLevel = GetIntValue(progressionSnap.Child("playerLevel"));
             data.progression.playerExp = GetIntValue(progressionSnap.Child("playerExp"));
             data.progression.bossDungeonProgress = GetIntValue(progressionSnap.Child("bossDungeonProgress"), 1); // Issue #476: 기본값 1
+            data.progression.totalKilledMonsters = GetLongValue(progressionSnap.Child("totalKilledMonsters"));
         }
 
         // characters
@@ -818,6 +821,63 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         if (snap.Value == null) return 0L;
         return Convert.ToInt64(snap.Value);
+    }
+
+    #endregion
+
+    #region 랭킹 시스템
+
+    private const string LEADERBOARD_PATH = "leaderboard";
+
+    /// <summary>
+    /// 리더보드에 내 기록 업데이트
+    /// </summary>
+    public async UniTask UpdateLeaderboardAsync(string oderId, long totalKilledMonsters)
+    {
+        if (!isInitialized || string.IsNullOrEmpty(oderId)) return;
+
+        try
+        {
+            var data = new Dictionary<string, object>
+            {
+                { "oderId", oderId },
+                { "totalKilledMonsters", totalKilledMonsters },
+                { "lastUpdated", DateTime.UtcNow.ToString("o") }
+            };
+
+            await databaseRef.Child(LEADERBOARD_PATH).Child(oderId).SetValueAsync(data);
+            Debug.Log($"{LOG_PREFIX} 리더보드 업데이트 완료: {totalKilledMonsters}");
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 리더보드 업데이트 실패: {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 내 랭킹 조회 (나보다 높은 유저 수 + 1)
+    /// </summary>
+    public async UniTask<int> GetMyRankAsync(long myKillCount)
+    {
+        if (!isInitialized) return 1;
+
+        try
+        {
+            // 나보다 처치 수가 많은 유저 수 카운트
+            var query = databaseRef.Child(LEADERBOARD_PATH)
+                .OrderByChild("totalKilledMonsters")
+                .StartAt(myKillCount + 1);
+
+            var snapshot = await query.GetValueAsync();
+            int higherCount = (int)snapshot.ChildrenCount;
+
+            return higherCount + 1;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"{LOG_PREFIX} 랭킹 조회 실패: {e.Message}");
+            return 1;
+        }
     }
 
     #endregion

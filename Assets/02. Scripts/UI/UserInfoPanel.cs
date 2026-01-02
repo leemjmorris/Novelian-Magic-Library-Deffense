@@ -21,6 +21,12 @@ public class UserInfoPanel : MonoBehaviour
     [SerializeField] private TMP_InputField nicknameInputField;
     [SerializeField] private LobbyUI lobbyUI;
 
+    [Header("Stats Display")]
+    [SerializeField] private TextMeshProUGUI levelText;
+    [SerializeField] private TextMeshProUGUI stageClearText;
+    [SerializeField] private TextMeshProUGUI killCountText;
+    [SerializeField] private TextMeshProUGUI rankText;
+
     private bool isSubscribed = false;
     private Sprite defaultProfileSprite; // 프리팹의 기본 이미지 저장
     private Sprite defaultFrameSprite; // 프리팹의 기본 프레임 이미지 저장
@@ -62,6 +68,7 @@ public class UserInfoPanel : MonoBehaviour
         RefreshProfileImage();
         RefreshFrameImage();
         RefreshNickname();
+        RefreshStatsDisplay();
     }
 
     private void TrySubscribeToManager()
@@ -303,6 +310,76 @@ public class UserInfoPanel : MonoBehaviour
 
         await FirebaseSaveManager.Instance.SaveNicknameAsync(userId, nickname);
         Debug.Log($"[UserInfoPanel] 닉네임 저장 완료: {nickname}");
+    }
+
+    #endregion
+
+    #region Stats Display
+
+    /// <summary>
+    /// 유저 통계 정보 표시 (레벨, 스테이지, 몬스터 수, 랭킹)
+    /// </summary>
+    private void RefreshStatsDisplay()
+    {
+        var progression = FirebaseSaveManager.Instance?.CachedData?.progression;
+        if (progression == null)
+        {
+            Debug.LogWarning("[UserInfoPanel] Progression 데이터 없음");
+            return;
+        }
+
+        // 레벨 표시
+        if (levelText != null)
+        {
+            levelText.text = $"Lv{progression.playerLevel}";
+        }
+
+        // 스테이지 클리어 표시
+        if (stageClearText != null)
+        {
+            stageClearText.text = $"스테이지 {progression.highestClearedStage}";
+        }
+
+        // 처치 몬스터 수 표시
+        if (killCountText != null)
+        {
+            killCountText.text = $"{progression.totalKilledMonsters}마리";
+        }
+
+        // 랭킹 비동기 조회
+        RefreshRankAsync().Forget();
+    }
+
+    /// <summary>
+    /// 랭킹 비동기 조회 및 표시
+    /// </summary>
+    private async UniTaskVoid RefreshRankAsync()
+    {
+        if (rankText == null) return;
+
+        // 로딩 중 표시
+        rankText.text = "#...";
+
+        var progression = FirebaseSaveManager.Instance?.CachedData?.progression;
+        if (progression == null)
+        {
+            rankText.text = "#-";
+            return;
+        }
+
+        if (FirebaseSaveManager.Instance == null)
+        {
+            rankText.text = "#-";
+            return;
+        }
+
+        int rank = await FirebaseSaveManager.Instance.GetMyRankAsync(progression.totalKilledMonsters);
+
+        // 패널이 비활성화되었을 수 있으므로 체크
+        if (rankText != null && gameObject.activeInHierarchy)
+        {
+            rankText.text = $"#{rank}";
+        }
     }
 
     #endregion
