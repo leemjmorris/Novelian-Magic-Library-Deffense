@@ -477,7 +477,7 @@ public class CurrencyManager : MonoBehaviour
         // 다중 레벨업 처리 (한번에 많은 경험치 획득 시)
         while (currentLevel < MAX_PLAYER_LEVEL)
         {
-            int nextLevelId = PLAYER_LEVEL_TABLE_BASE * 100 + currentLevel + 1; // 0702, 0703...
+            int nextLevelId = PLAYER_LEVEL_TABLE_BASE + currentLevel + 1; // 702, 703...
             var nextLevelData = levelTable.GetId(nextLevelId);
 
             if (nextLevelData == null)
@@ -537,7 +537,7 @@ public class CurrencyManager : MonoBehaviour
 
         if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit) return 0;
 
-        int nextLevelId = PLAYER_LEVEL_TABLE_BASE * 100 + currentLevel + 1;
+        int nextLevelId = PLAYER_LEVEL_TABLE_BASE + currentLevel + 1;
         var nextLevelData = CSVLoader.Instance.GetData<PlayerLevelData>(nextLevelId);
         if (nextLevelData == null) return 0;
 
@@ -555,8 +555,8 @@ public class CurrencyManager : MonoBehaviour
 
         if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit) return 0f;
 
-        int currentLevelId = PLAYER_LEVEL_TABLE_BASE * 100 + currentLevel;
-        int nextLevelId = PLAYER_LEVEL_TABLE_BASE * 100 + currentLevel + 1;
+        int currentLevelId = PLAYER_LEVEL_TABLE_BASE + currentLevel;
+        int nextLevelId = PLAYER_LEVEL_TABLE_BASE + currentLevel + 1;
 
         var currentLevelData = CSVLoader.Instance.GetData<PlayerLevelData>(currentLevelId);
         var nextLevelData = CSVLoader.Instance.GetData<PlayerLevelData>(nextLevelId);

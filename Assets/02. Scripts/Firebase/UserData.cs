@@ -439,18 +439,20 @@ namespace Firebase.Data
     }
 
     /// <summary>
-    /// 프로필 사진/프레임 저장 데이터
+    /// 프로필 사진/프레임/칭호 저장 데이터
     /// </summary>
     [Serializable]
     public class ProfileSaveData
     {
         public int equippedPictureId;  // 장착된 프로필 사진 ID (캐릭터 ID 기반)
         public int equippedFrameId;    // 장착된 프레임 ID (1~12)
+        public int equippedTitleIndex; // 장착된 칭호 인덱스 (Dropdown 옵션 인덱스)
 
         public ProfileSaveData()
         {
             equippedPictureId = -1;  // -1 = 장착 안 함
             equippedFrameId = -1;    // -1 = 장착 안 함
+            equippedTitleIndex = 0;  // 0 = 첫 번째 칭호 (기본값)
         }
     }
 }
