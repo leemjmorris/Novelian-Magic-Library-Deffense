@@ -812,7 +812,7 @@ namespace Novelian.Combat
             Debug.Log($"[HitSound] skillId={mainSkill.skill_id}, hitSoundKey={hitSoundKey ?? "null"}, AudioManager={AudioManager.Instance != null}");
             if (!string.IsNullOrEmpty(hitSoundKey))
             {
-                AudioManager.Instance?.PlaySFX(hitSoundKey);
+                AudioManager.Instance?.PlaySkillSFX(hitSoundKey);
             }
         }
 

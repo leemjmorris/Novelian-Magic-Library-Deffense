@@ -5516,9 +5516,9 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.SettingsPanel, Assembly-CSharp
-        m_MethodName: OnSFXVolumeChanged
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
+        m_MethodName: OnSkillVolumeChanged
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -11867,8 +11867,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25
-  m_fontSizeBase: 25
+  m_fontSize: 18
+  m_fontSizeBase: 18
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -27439,7 +27439,7 @@ RectTransform:
   m_AnchorMin: {x: 0.612, y: 0}
   m_AnchorMax: {x: 0.612, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 0}
+  m_SizeDelta: {x: 100, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &679544551
 MonoBehaviour:
@@ -30199,8 +30199,8 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.SettingsPanel, Assembly-CSharp
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
         m_MethodName: OnSFXVolumeChanged
         m_Mode: 0
         m_Arguments:
@@ -33107,9 +33107,9 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.SettingsPanel, Assembly-CSharp
-        m_MethodName: OnSFXVolumeChanged
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
+        m_MethodName: OnVoiceVolumeChanged
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -33690,7 +33690,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 873571558}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
+        m_MethodName: OnLoginButton
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &873571558
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -38500,7 +38512,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 995629511}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
+        m_MethodName: OnLogoutButton
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &995629511
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -44083,7 +44107,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1120664827}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
+        m_MethodName: OnExitGameButton
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1120664827
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -53752,7 +53788,7 @@ RectTransform:
   m_AnchorMin: {x: 0.649, y: 0}
   m_AnchorMax: {x: 0.649, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 0}
+  m_SizeDelta: {x: 100, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1358500272
 MonoBehaviour:
@@ -54227,7 +54263,7 @@ RectTransform:
   m_AnchorMin: {x: 0.649, y: 0}
   m_AnchorMax: {x: 0.649, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 0}
+  m_SizeDelta: {x: 100, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1366536755
 MonoBehaviour:
@@ -56349,6 +56385,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   accountUIPanel: {fileID: 1415266919}
+  masterVolumeSlider: {fileID: 1654097367}
+  bgmVolumeSlider: {fileID: 1858339214}
+  sfxVolumeSlider: {fileID: 807682869}
+  voiceVolumeSlider: {fileID: 861886256}
+  skillVolumeSlider: {fileID: 116354195}
+  accountText: {fileID: 2081973095}
+  uidText: {fileID: 285901405}
 --- !u!1 &1416177140
 GameObject:
   m_ObjectHideFlags: 0
@@ -60907,7 +60950,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1521372743}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
+        m_MethodName: OnDeleteAccountButton
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &1521372743
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -65723,8 +65778,8 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.SettingsPanel, Assembly-CSharp
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
         m_MethodName: OnMasterVolumeChanged
         m_Mode: 0
         m_Arguments:
@@ -73023,7 +73078,7 @@ RectTransform:
   m_AnchorMin: {x: 0.649, y: 0}
   m_AnchorMax: {x: 0.649, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 0}
+  m_SizeDelta: {x: 100, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1835669975
 MonoBehaviour:
@@ -73098,7 +73153,7 @@ RectTransform:
   m_AnchorMin: {x: 0.649, y: 0}
   m_AnchorMax: {x: 0.649, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 80, y: 0}
+  m_SizeDelta: {x: 100, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1835714311
 MonoBehaviour:
@@ -74627,8 +74682,8 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.SettingsPanel, Assembly-CSharp
+      - m_Target: {fileID: 1415266924}
+        m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.AccountUI, Assembly-CSharp
         m_MethodName: OnBGMVolumeChanged
         m_Mode: 0
         m_Arguments:

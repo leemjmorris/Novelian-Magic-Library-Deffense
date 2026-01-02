@@ -27,6 +27,7 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private int sfxPoolSize = 10;
 
         private List<AudioSource> sfxPool = new List<AudioSource>();
+        private List<AudioSource> skillPool = new List<AudioSource>(); // 스킬 효과음 전용 풀
         private AudioSource voiceSource; // 음성 전용 AudioSource (덱 장착 등 - 이전 음성 정지 후 재생)
         private Dictionary<string, AudioClip> loadedClips = new Dictionary<string, AudioClip>();
         private Dictionary<string, AsyncOperationHandle<AudioClip>> loadedHandles = new Dictionary<string, AsyncOperationHandle<AudioClip>>();
@@ -36,16 +37,22 @@ namespace NovelianMagicLibraryDefense.Managers
         private float masterVolume = 1.0f;
         private float bgmVolume = 1.0f;
         private float sfxVolume = 1.0f;
+        private float voiceVolume = 1.0f;
+        private float skillVolume = 1.0f;
 
         // PlayerPrefs keys
         private const string MASTER_VOLUME_KEY = "MasterVolume";
         private const string BGM_VOLUME_KEY = "BGMVolume";
         private const string SFX_VOLUME_KEY = "SFXVolume";
+        private const string VOICE_VOLUME_KEY = "VoiceVolume";
+        private const string SKILL_VOLUME_KEY = "SkillVolume";
 
         // Audio Mixer parameter names
         private const string MASTER_VOLUME_PARAM = "MasterVolume";
         private const string BGM_VOLUME_PARAM = "BGMVolume";
         private const string SFX_VOLUME_PARAM = "SFXVolume";
+        private const string VOICE_VOLUME_PARAM = "VoiceVolume";
+        private const string SKILL_VOLUME_PARAM = "SkillVolume";
 
         // Current BGM tracking
         private string currentBGMName = "";
@@ -101,6 +108,8 @@ namespace NovelianMagicLibraryDefense.Managers
             SetMasterVolume(masterVolume);
             SetBGMVolume(bgmVolume);
             SetSFXVolume(sfxVolume);
+            SetVoiceVolume(voiceVolume);
+            SetSkillVolume(skillVolume);
 
             Debug.Log("[AudioManager] Audio settings re-applied after initialization");
         }
@@ -129,6 +138,9 @@ namespace NovelianMagicLibraryDefense.Managers
 
             // Create SFX AudioSource pool
             CreateSFXPool();
+
+            // Create Skill AudioSource pool (스킬 효과음 전용)
+            CreateSkillPool();
 
             // Create Voice AudioSource (for exclusive voice playback)
             CreateVoiceSource();
@@ -173,6 +185,40 @@ namespace NovelianMagicLibraryDefense.Managers
         }
 
         /// <summary>
+        /// Create pool of AudioSources for skill sound effects
+        /// </summary>
+        private void CreateSkillPool()
+        {
+            AudioMixerGroup skillGroup = null;
+
+            if (audioMixer != null)
+            {
+                AudioMixerGroup[] groups = audioMixer.FindMatchingGroups("Skill");
+                if (groups.Length > 0)
+                {
+                    skillGroup = groups[0];
+                }
+            }
+
+            // 스킬 풀은 SFX 풀과 동일한 크기로 생성
+            for (int i = 0; i < sfxPoolSize; i++)
+            {
+                AudioSource skillSource = gameObject.AddComponent<AudioSource>();
+                skillSource.loop = false;
+                skillSource.playOnAwake = false;
+
+                if (skillGroup != null)
+                {
+                    skillSource.outputAudioMixerGroup = skillGroup;
+                }
+
+                skillPool.Add(skillSource);
+            }
+
+            Debug.Log($"[AudioManager] Created Skill pool with {sfxPoolSize} AudioSources");
+        }
+
+        /// <summary>
         /// Create dedicated AudioSource for exclusive voice playback
         /// Stops previous voice before playing new one (used for deck equip, etc.)
         /// </summary>
@@ -184,7 +230,8 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (audioMixer != null)
             {
-                AudioMixerGroup[] groups = audioMixer.FindMatchingGroups("SFX");
+                // Voice 그룹에 연결 (캐릭터 대사 볼륨 분리)
+                AudioMixerGroup[] groups = audioMixer.FindMatchingGroups("Voice");
                 if (groups.Length > 0)
                 {
                     voiceSource.outputAudioMixerGroup = groups[0];
@@ -295,6 +342,15 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (sfxSource != null && sfxSource.isPlaying)
                 {
                     sfxSource.Stop();
+                }
+            }
+
+            // Skill SFX 정지
+            foreach (var skillSource in skillPool)
+            {
+                if (skillSource != null && skillSource.isPlaying)
+                {
+                    skillSource.Stop();
                 }
             }
 
@@ -457,6 +513,70 @@ namespace NovelianMagicLibraryDefense.Managers
 
             // If all sources are playing, return the first one (it will overlap)
             return sfxPool.Count > 0 ? sfxPool[0] : null;
+        }
+
+        #endregion
+
+        #region Skill SFX Control
+
+        /// <summary>
+        /// Play skill sound effect by addressable key
+        /// Uses dedicated Skill AudioMixer group for separate volume control
+        /// </summary>
+        public async void PlaySkillSFX(string clipName)
+        {
+            AudioClip clip = await LoadAudioClipAsync(clipName);
+
+            if (clip != null)
+            {
+                AudioSource availableSource = GetAvailableSkillSource();
+
+                if (availableSource != null)
+                {
+                    availableSource.PlayOneShot(clip);
+                    Debug.Log($"[AudioManager] Playing Skill SFX: {clipName}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[AudioManager] No available Skill AudioSource for: {clipName}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Play skill sound effect with volume adjustment
+        /// </summary>
+        public async void PlaySkillSFX(string clipName, float volumeScale)
+        {
+            AudioClip clip = await LoadAudioClipAsync(clipName);
+
+            if (clip != null)
+            {
+                AudioSource availableSource = GetAvailableSkillSource();
+
+                if (availableSource != null)
+                {
+                    availableSource.PlayOneShot(clip, volumeScale);
+                    Debug.Log($"[AudioManager] Playing Skill SFX: {clipName} with volume: {volumeScale}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Get available AudioSource from skill pool (not currently playing)
+        /// </summary>
+        private AudioSource GetAvailableSkillSource()
+        {
+            foreach (AudioSource source in skillPool)
+            {
+                if (!source.isPlaying)
+                {
+                    return source;
+                }
+            }
+
+            // If all sources are playing, return the first one (it will overlap)
+            return skillPool.Count > 0 ? skillPool[0] : null;
         }
 
         #endregion
@@ -659,6 +779,54 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public float GetSFXVolume() => sfxVolume;
 
+        /// <summary>
+        /// Set Voice volume (0.0 to 1.0) - 캐릭터 대사 볼륨
+        /// </summary>
+        public void SetVoiceVolume(float volume)
+        {
+            voiceVolume = Mathf.Clamp01(volume);
+
+            if (audioMixer != null)
+            {
+                float db = voiceVolume > 0 ? 20f * Mathf.Log10(voiceVolume) : -80f;
+                bool success = audioMixer.SetFloat(VOICE_VOLUME_PARAM, db);
+                Debug.Log($"[AudioManager] SetVoiceVolume: input={volume}, clamped={voiceVolume}, db={db}, success={success}");
+            }
+            else
+            {
+                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set voice volume.");
+            }
+        }
+
+        /// <summary>
+        /// Get current Voice volume
+        /// </summary>
+        public float GetVoiceVolume() => voiceVolume;
+
+        /// <summary>
+        /// Set Skill volume (0.0 to 1.0) - 스킬 효과음 볼륨
+        /// </summary>
+        public void SetSkillVolume(float volume)
+        {
+            skillVolume = Mathf.Clamp01(volume);
+
+            if (audioMixer != null)
+            {
+                float db = skillVolume > 0 ? 20f * Mathf.Log10(skillVolume) : -80f;
+                bool success = audioMixer.SetFloat(SKILL_VOLUME_PARAM, db);
+                Debug.Log($"[AudioManager] SetSkillVolume: input={volume}, clamped={skillVolume}, db={db}, success={success}");
+            }
+            else
+            {
+                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set skill volume.");
+            }
+        }
+
+        /// <summary>
+        /// Get current Skill volume
+        /// </summary>
+        public float GetSkillVolume() => skillVolume;
+
         #endregion
 
         #region Settings Persistence
@@ -671,6 +839,8 @@ namespace NovelianMagicLibraryDefense.Managers
             PlayerPrefs.SetFloat(MASTER_VOLUME_KEY, masterVolume);
             PlayerPrefs.SetFloat(BGM_VOLUME_KEY, bgmVolume);
             PlayerPrefs.SetFloat(SFX_VOLUME_KEY, sfxVolume);
+            PlayerPrefs.SetFloat(VOICE_VOLUME_KEY, voiceVolume);
+            PlayerPrefs.SetFloat(SKILL_VOLUME_KEY, skillVolume);
             PlayerPrefs.Save();
 
             Debug.Log("[AudioManager] Audio settings saved");
@@ -686,6 +856,8 @@ namespace NovelianMagicLibraryDefense.Managers
             float defaultMaster = GetMixerVolumeAsLinear(MASTER_VOLUME_PARAM);
             float defaultBGM = GetMixerVolumeAsLinear(BGM_VOLUME_PARAM);
             float defaultSFX = GetMixerVolumeAsLinear(SFX_VOLUME_PARAM);
+            float defaultVoice = GetMixerVolumeAsLinear(VOICE_VOLUME_PARAM);
+            float defaultSkill = GetMixerVolumeAsLinear(SKILL_VOLUME_PARAM);
 
             // PlayerPrefs에 저장된 값이 있으면 사용, 없으면 Mixer 기본값 사용
             // HasKey로 명시적으로 저장된 값이 있는지 확인
@@ -698,14 +870,21 @@ namespace NovelianMagicLibraryDefense.Managers
             sfxVolume = PlayerPrefs.HasKey(SFX_VOLUME_KEY)
                 ? PlayerPrefs.GetFloat(SFX_VOLUME_KEY)
                 : defaultSFX;
+            voiceVolume = PlayerPrefs.HasKey(VOICE_VOLUME_KEY)
+                ? PlayerPrefs.GetFloat(VOICE_VOLUME_KEY)
+                : defaultVoice;
+            skillVolume = PlayerPrefs.HasKey(SKILL_VOLUME_KEY)
+                ? PlayerPrefs.GetFloat(SKILL_VOLUME_KEY)
+                : defaultSkill;
 
             // Apply loaded settings
             SetMasterVolume(masterVolume);
             SetBGMVolume(bgmVolume);
             SetSFXVolume(sfxVolume);
+            SetVoiceVolume(voiceVolume);
+            SetSkillVolume(skillVolume);
 
-            Debug.Log($"[AudioManager] Audio settings loaded - Master: {masterVolume:F2}, BGM: {bgmVolume:F2}, SFX: {sfxVolume:F2} " +
-                      $"(Mixer defaults - Master: {defaultMaster:F2}, BGM: {defaultBGM:F2}, SFX: {defaultSFX:F2})");
+            Debug.Log($"[AudioManager] Audio settings loaded - Master: {masterVolume:F2}, BGM: {bgmVolume:F2}, SFX: {sfxVolume:F2}, Voice: {voiceVolume:F2}, Skill: {skillVolume:F2}");
         }
 
         /// <summary>
