@@ -183,6 +183,12 @@ public class CurrencyManager : MonoBehaviour
 
         OnCurrencyChanged?.Invoke(currencyId, currencies[currencyId]);
         SaveToFirebase();
+
+        // 경험치인 경우 레벨업 체크
+        if (currencyId == EXP_ID)
+        {
+            CheckAndProcessLevelUp();
+        }
     }
 
     /// <summary>
@@ -426,6 +432,146 @@ public class CurrencyManager : MonoBehaviour
     public bool SpendGold(int amount)
     {
         return SpendCurrency(GOLD_ID, amount);
+    }
+
+    #endregion
+
+    #region 레벨업 시스템
+
+    // 레벨업 이벤트
+    public event Action<int> OnLevelUp; // (newLevel)
+
+    private const int PLAYER_LEVEL_TABLE_BASE = 700; // PlayerLevelTable ID 기준 (0701, 0702...)
+    private const int MAX_PLAYER_LEVEL = 50;
+
+    /// <summary>
+    /// 경험치 획득 시 레벨업 체크 및 처리
+    /// </summary>
+    private void CheckAndProcessLevelUp()
+    {
+        if (FirebaseSaveManager.Instance?.CachedData?.progression == null)
+        {
+            Debug.LogWarning("[CurrencyManager] 캐시 데이터 없음 - 레벨업 체크 스킵");
+            return;
+        }
+
+        if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
+        {
+            Debug.LogWarning("[CurrencyManager] CSVLoader 미초기화 - 레벨업 체크 스킵");
+            return;
+        }
+
+        var progression = FirebaseSaveManager.Instance.CachedData.progression;
+        int currentLevel = progression.playerLevel;
+        int totalExp = GetCurrency(EXP_ID); // 누적 경험치
+
+        var levelTable = CSVLoader.Instance.GetTable<PlayerLevelData>();
+        if (levelTable == null)
+        {
+            Debug.LogWarning("[CurrencyManager] PlayerLevelTable 로드 실패");
+            return;
+        }
+
+        bool leveledUp = false;
+
+        // 다중 레벨업 처리 (한번에 많은 경험치 획득 시)
+        while (currentLevel < MAX_PLAYER_LEVEL)
+        {
+            int nextLevelId = PLAYER_LEVEL_TABLE_BASE * 100 + currentLevel + 1; // 0702, 0703...
+            var nextLevelData = levelTable.GetId(nextLevelId);
+
+            if (nextLevelData == null)
+            {
+                Debug.Log($"[CurrencyManager] 최대 레벨 도달 또는 테이블 데이터 없음 (ID: {nextLevelId})");
+                break;
+            }
+
+            // 누적 경험치가 다음 레벨 필요량보다 적으면 중단
+            if (totalExp < nextLevelData.Tot_EXP)
+            {
+                break;
+            }
+
+            // 레벨업!
+            currentLevel++;
+            leveledUp = true;
+            Debug.Log($"[CurrencyManager] 레벨업! Lv{currentLevel - 1} → Lv{currentLevel} (누적 EXP: {totalExp})");
+
+            OnLevelUp?.Invoke(currentLevel);
+        }
+
+        // 레벨이 변경되었으면 저장
+        if (leveledUp)
+        {
+            progression.playerLevel = currentLevel;
+            SavePlayerLevelAsync(progression).Forget();
+        }
+    }
+
+    /// <summary>
+    /// 플레이어 레벨 저장
+    /// </summary>
+    private async UniTaskVoid SavePlayerLevelAsync(ProgressionData progression)
+    {
+        if (FirebaseSaveManager.Instance == null) return;
+        if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId)) return;
+
+        await FirebaseSaveManager.Instance.SaveProgressionAsync(FirebaseManager.Instance.CurrentUserId, progression);
+    }
+
+    /// <summary>
+    /// 현재 플레이어 레벨 반환
+    /// </summary>
+    public int GetPlayerLevel()
+    {
+        return FirebaseSaveManager.Instance?.CachedData?.progression?.playerLevel ?? 1;
+    }
+
+    /// <summary>
+    /// 다음 레벨까지 필요한 경험치 반환
+    /// </summary>
+    public int GetExpToNextLevel()
+    {
+        int currentLevel = GetPlayerLevel();
+        if (currentLevel >= MAX_PLAYER_LEVEL) return 0;
+
+        if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit) return 0;
+
+        int nextLevelId = PLAYER_LEVEL_TABLE_BASE * 100 + currentLevel + 1;
+        var nextLevelData = CSVLoader.Instance.GetData<PlayerLevelData>(nextLevelId);
+        if (nextLevelData == null) return 0;
+
+        int currentExp = GetCurrency(EXP_ID);
+        return Mathf.Max(0, (int)nextLevelData.Tot_EXP - currentExp);
+    }
+
+    /// <summary>
+    /// 현재 레벨 진행률 반환 (0.0 ~ 1.0)
+    /// </summary>
+    public float GetLevelProgress()
+    {
+        int currentLevel = GetPlayerLevel();
+        if (currentLevel >= MAX_PLAYER_LEVEL) return 1f;
+
+        if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit) return 0f;
+
+        int currentLevelId = PLAYER_LEVEL_TABLE_BASE * 100 + currentLevel;
+        int nextLevelId = PLAYER_LEVEL_TABLE_BASE * 100 + currentLevel + 1;
+
+        var currentLevelData = CSVLoader.Instance.GetData<PlayerLevelData>(currentLevelId);
+        var nextLevelData = CSVLoader.Instance.GetData<PlayerLevelData>(nextLevelId);
+
+        if (currentLevelData == null || nextLevelData == null) return 0f;
+
+        int currentExp = GetCurrency(EXP_ID);
+        float prevTotExp = currentLevelData.Tot_EXP;
+        float nextTotExp = nextLevelData.Tot_EXP;
+        float reqExp = nextTotExp - prevTotExp;
+
+        if (reqExp <= 0) return 1f;
+
+        float progress = (currentExp - prevTotExp) / reqExp;
+        return Mathf.Clamp01(progress);
     }
 
     #endregion

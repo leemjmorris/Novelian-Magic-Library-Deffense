@@ -83,7 +83,14 @@ namespace NovelianMagicLibraryDefense.UI
             // 스테이지 정보 표시
             UpdateStageInfo();
 
-            Debug.Log($"[StageFailedPanel] Shown - Time: {progressTime:F1}s, Remaining: {remainingMonsters}");
+            // 처치 몬스터 수 누적 저장 (실패해도 카운트)
+            int killCount = GameManager.Instance?.Wave?.GetKillCount() ?? 0;
+            if (killCount > 0)
+            {
+                SaveKillCountAsync(killCount).Forget();
+            }
+
+            Debug.Log($"[StageFailedPanel] Shown - Time: {progressTime:F1}s, Remaining: {remainingMonsters}, Kills: {killCount}");
         }
 
         /// <summary>
@@ -163,6 +170,48 @@ namespace NovelianMagicLibraryDefense.UI
             // SelectedStage.Data는 유지하여 같은 스테이지 재시작
             LoadGameSceneAsync().Forget();
         }
+
+        #region Kill Count Tracking
+
+        /// <summary>
+        /// 처치 몬스터 수 누적 저장 (실패해도 카운트)
+        /// </summary>
+        private async UniTaskVoid SaveKillCountAsync(int killCount)
+        {
+            if (killCount <= 0) return;
+
+            if (FirebaseSaveManager.Instance == null || FirebaseSaveManager.Instance.CachedData == null)
+            {
+                Debug.LogWarning("[StageFailedPanel] Firebase 캐시 없음 - 킬 카운트 저장 스킵");
+                return;
+            }
+
+            var progression = FirebaseSaveManager.Instance.CachedData.progression;
+            if (progression == null)
+            {
+                Debug.LogWarning("[StageFailedPanel] Progression 데이터 없음 - 킬 카운트 저장 스킵");
+                return;
+            }
+
+            // 킬 카운트 누적
+            progression.totalKilledMonsters += killCount;
+            Debug.Log($"[StageFailedPanel] 처치 몬스터 누적 (실패): +{killCount}, 총합: {progression.totalKilledMonsters}");
+
+            string oderId = FirebaseManager.Instance?.CurrentUserId;
+            if (string.IsNullOrEmpty(oderId))
+            {
+                Debug.LogWarning("[StageFailedPanel] 유저 ID 없음 - Firebase 저장 스킵");
+                return;
+            }
+
+            // Firebase에 진행도 저장
+            await FirebaseSaveManager.Instance.SaveProgressionAsync(oderId, progression);
+
+            // 리더보드 업데이트
+            await FirebaseSaveManager.Instance.UpdateLeaderboardAsync(oderId, progression.totalKilledMonsters);
+        }
+
+        #endregion
 
         #region Scene Loading
 

@@ -98,6 +98,7 @@ namespace Firebase.Data
         public int playerLevel;
         public int playerExp;
         public int bossDungeonProgress; // Issue #476: 도전던전 해금된 최대 층
+        public long totalKilledMonsters; // 총 처치한 몬스터 수 (랭킹용)
 
         public ProgressionData()
         {
@@ -105,6 +106,7 @@ namespace Firebase.Data
             playerLevel = 1;
             playerExp = 0;
             bossDungeonProgress = 1; // 1층부터 시작
+            totalKilledMonsters = 0;
         }
     }
 

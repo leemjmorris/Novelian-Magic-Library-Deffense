@@ -95,6 +95,9 @@ namespace NovelianMagicLibraryDefense.UI
             // 다음 스테이지 버튼 활성화/비활성화 체크
             UpdateNextStageButton();
 
+            // 처치 몬스터 수 누적 저장
+            SaveKillCountAsync(killCount).Forget();
+
             Debug.Log($"[StageClearPanel] Shown - Time: {progressTime:F1}s, Kills: {killCount}, WallHP: {wallHpRatio:P0}");
         }
 
@@ -518,6 +521,48 @@ namespace NovelianMagicLibraryDefense.UI
             StageData nextStage = table.Find(s => s.Chapter_Number == nextChapter);
             return nextStage;
         }
+
+        #region Kill Count Tracking
+
+        /// <summary>
+        /// 처치 몬스터 수 누적 저장 (랭킹용)
+        /// </summary>
+        private async UniTaskVoid SaveKillCountAsync(int killCount)
+        {
+            if (killCount <= 0) return;
+
+            if (FirebaseSaveManager.Instance == null || FirebaseSaveManager.Instance.CachedData == null)
+            {
+                Debug.LogWarning("[StageClearPanel] Firebase 캐시 없음 - 킬 카운트 저장 스킵");
+                return;
+            }
+
+            var progression = FirebaseSaveManager.Instance.CachedData.progression;
+            if (progression == null)
+            {
+                Debug.LogWarning("[StageClearPanel] Progression 데이터 없음 - 킬 카운트 저장 스킵");
+                return;
+            }
+
+            // 킬 카운트 누적
+            progression.totalKilledMonsters += killCount;
+            Debug.Log($"[StageClearPanel] 처치 몬스터 누적: +{killCount}, 총합: {progression.totalKilledMonsters}");
+
+            string oderId = FirebaseManager.Instance?.CurrentUserId;
+            if (string.IsNullOrEmpty(oderId))
+            {
+                Debug.LogWarning("[StageClearPanel] 유저 ID 없음 - Firebase 저장 스킵");
+                return;
+            }
+
+            // Firebase에 진행도 저장
+            await FirebaseSaveManager.Instance.SaveProgressionAsync(oderId, progression);
+
+            // 리더보드 업데이트
+            await FirebaseSaveManager.Instance.UpdateLeaderboardAsync(oderId, progression.totalKilledMonsters);
+        }
+
+        #endregion
 
         #region Scene Loading
 
