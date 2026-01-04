@@ -312,6 +312,23 @@ namespace NovelianMagicLibraryDefense.Managers
             StopBGM();
 
             // SFX 정지
+            StopAllSFX();
+
+            // Voice 정지
+            StopVoice();
+
+            // Voice Queue 초기화
+            ClearVoiceQueue();
+
+            Debug.Log("[AudioManager] All sounds stopped");
+        }
+
+        /// <summary>
+        /// 모든 SFX 정지 (BGM, Voice 제외)
+        /// </summary>
+        public void StopAllSFX()
+        {
+            // SFX 정지
             foreach (var sfxSource in sfxPool)
             {
                 if (sfxSource != null && sfxSource.isPlaying)
@@ -329,13 +346,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
             }
 
-            // Voice 정지
-            StopVoice();
-
-            // Voice Queue 초기화
-            ClearVoiceQueue();
-
-            Debug.Log("[AudioManager] All sounds stopped");
+            Debug.Log("[AudioManager] All SFX stopped");
         }
 
         /// <summary>

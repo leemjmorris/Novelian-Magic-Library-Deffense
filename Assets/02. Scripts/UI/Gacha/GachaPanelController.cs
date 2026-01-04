@@ -578,6 +578,9 @@ public class GachaPanelController : MonoBehaviour
             await UniTask.Delay(500);
         }
 
+        // 가챠 결과 효과음 재생 (BGM 일시 감소)
+        DuckBGMForResultSFX("gacha_result").Forget();
+
         // 4. 결과 패널 활성화
         if (isSinglePull)
         {
@@ -703,6 +706,33 @@ public class GachaPanelController : MonoBehaviour
             else
                 gachaX10CostText.text = $"{CurrencyManager.FormatCurrency(PULL_COST_GOLD * 10)} 골드";
         }
+    }
+
+    /// <summary>
+    /// 가챠 결과 효과음 재생 시 BGM 볼륨 일시 감소
+    /// </summary>
+    private async UniTaskVoid DuckBGMForResultSFX(string sfxName)
+    {
+        var audioManager = AudioManager.Instance;
+        if (audioManager == null) return;
+
+        // 원래 볼륨 저장
+        float originalVolume = audioManager.GetBGMVolume();
+
+        // 볼륨 낮추기 (0.2 = 20%)
+        audioManager.SetBGMVolume(0.2f);
+
+        // 효과음 재생
+        audioManager.PlaySFX(sfxName);
+
+        // 3초 대기 (효과음 재생 시간)
+        await UniTask.Delay(3000, ignoreTimeScale: true);
+
+        // 효과음 정지
+        audioManager.StopAllSFX();
+
+        // 원래 볼륨으로 복구
+        audioManager.SetBGMVolume(originalVolume);
     }
 
     #endregion
