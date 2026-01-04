@@ -99,6 +99,7 @@ namespace Firebase.Data
         public int playerExp;
         public int bossDungeonProgress; // Issue #476: 도전던전 해금된 최대 층
         public long totalKilledMonsters; // 총 처치한 몬스터 수 (랭킹용)
+        public Dictionary<string, int> stageRanks; // Issue #645: 스테이지별 클리어 랭크 (stageNumber → rankIndex: 0=S, 1=A, 2=B, 3=F)
 
         public ProgressionData()
         {
@@ -107,6 +108,7 @@ namespace Firebase.Data
             playerExp = 0;
             bossDungeonProgress = 1; // 1층부터 시작
             totalKilledMonsters = 0;
+            stageRanks = new Dictionary<string, int>();
         }
     }
 

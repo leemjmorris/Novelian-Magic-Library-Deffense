@@ -98,6 +98,9 @@ namespace NovelianMagicLibraryDefense.UI
             // 처치 몬스터 수 누적 저장
             SaveKillCountAsync(killCount).Forget();
 
+            // Issue #645: 스테이지 랭크 저장
+            SaveStageRank();
+
             Debug.Log($"[StageClearPanel] Shown - Time: {progressTime:F1}s, Kills: {killCount}, WallHP: {wallHpRatio:P0}");
         }
 
@@ -521,6 +524,34 @@ namespace NovelianMagicLibraryDefense.UI
             StageData nextStage = table.Find(s => s.Chapter_Number == nextChapter);
             return nextStage;
         }
+
+        #region Issue #645 - Stage Rank Saving
+
+        /// <summary>
+        /// 스테이지 클리어 랭크 저장
+        /// </summary>
+        private void SaveStageRank()
+        {
+            if (!SelectedStage.HasSelection)
+            {
+                Debug.LogWarning("[StageClearPanel] 스테이지 정보 없음 - 랭크 저장 스킵");
+                return;
+            }
+
+            int stageNumber = SelectedStage.Data.Chapter_Number;
+            int rankIndex = CalculateRankIndex();
+
+            if (StageProgressManager.Instance != null)
+            {
+                StageProgressManager.Instance.SaveStageRank(stageNumber, rankIndex);
+            }
+            else
+            {
+                Debug.LogWarning("[StageClearPanel] StageProgressManager 없음 - 랭크 저장 스킵");
+            }
+        }
+
+        #endregion
 
         #region Kill Count Tracking
 
