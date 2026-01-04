@@ -10,6 +10,9 @@ namespace Dispatch
     /// </summary>
     public class DispatchManager : MonoBehaviour
     {
+        [Header("시간 동기화 설정")]
+        [SerializeField] private bool useServerTime = true; // Firebase 서버 시간 사용 (시간 조작 방지)
+
         [Header("테스트 모드")]
         [SerializeField] private bool useTestMode = true;
         [SerializeField] private float testTimeScale = 900f; // 4시간(14400초) → 16초로 테스트
@@ -33,21 +36,41 @@ namespace Dispatch
         private void InitializeTimeProvider()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // 테스트 모드가 최우선
             if (useTestMode)
             {
                 var testProvider = new TestTimeProvider(testTimeScale);
                 timeProvider = testProvider;
                 Debug.Log($"<color=yellow>[DispatchManager] 테스트 모드 활성화 - 시간 배율: x{testTimeScale}</color>");
                 Debug.Log($"<color=yellow>[DispatchManager] 4시간 파견 → 약 {14400f / testTimeScale:F1}초로 테스트</color>");
+                return;
+            }
+
+            // 테스트 모드가 아니면 서버 시간 사용 여부 확인
+            if (useServerTime)
+            {
+                timeProvider = new ServerTimeProvider();
+                Debug.Log("<color=cyan>[DispatchManager] 서버 시간 모드 (Firebase 기준, 시간 조작 방지)</color>");
             }
             else
             {
+                // Fallback: 기존 로컬 시간 방식
                 timeProvider = new RealTimeProvider();
-                Debug.Log("[DispatchManager] 실시간 모드");
+                Debug.Log("<color=yellow>[DispatchManager] 로컬 시간 모드 (Fallback)</color>");
             }
 #else
-            timeProvider = new RealTimeProvider();
-            Debug.Log("[DispatchManager] 실시간 모드 (빌드)");
+            // 릴리즈 빌드: 항상 서버 시간 사용 (보안)
+            if (useServerTime)
+            {
+                timeProvider = new ServerTimeProvider();
+                Debug.Log("[DispatchManager] 서버 시간 모드 (빌드)");
+            }
+            else
+            {
+                // Fallback: 로컬 시간 (서버 시간 비활성화 시)
+                timeProvider = new RealTimeProvider();
+                Debug.Log("[DispatchManager] 로컬 시간 모드 (빌드 Fallback)");
+            }
 #endif
         }
 
