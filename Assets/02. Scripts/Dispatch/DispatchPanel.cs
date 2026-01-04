@@ -1302,6 +1302,9 @@ namespace Dispatch
         /// </summary>
         private void OnClaimReward()
         {
+            // 파견 보상 획득 사운드 재생
+            AudioManager.Instance?.PlaySFX("Dispatch_result");
+
             AddLog("\n==============================================");
             AddLog("🎁 보상 획득!");
 
