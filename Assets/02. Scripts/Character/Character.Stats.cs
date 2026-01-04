@@ -4,6 +4,7 @@ namespace Novelian.Combat
     using UnityEngine;
     using Cysharp.Threading.Tasks;
     using NovelianMagicLibraryDefense.Managers;
+    using NovelianMagicLibraryDefense.Audio; // CharacterVoiceHelper 사용
 
     /// <summary>
     /// 캐릭터 스탯 관리
@@ -61,6 +62,13 @@ namespace Novelian.Combat
             ApplyStatBuff(StatType.AttackSpeed, upgradeBonus);
 
             Debug.Log($"[Character] 성급 업그레이드! {oldStarTier}성 → {starTier}성 (배율: {oldTierMultiplier} → {newTierMultiplier}, 증가분: +{upgradeBonus * 100:F0}%)");
+
+            // 3성 달성 시 특별 대사 재생
+            if (starTier == 3)
+            {
+                PlayThreeStarVoice();
+            }
+
             return true;
         }
 
@@ -125,6 +133,28 @@ namespace Novelian.Combat
                 3 => 1.5f,
                 _ => 1.0f
             };
+        }
+
+        /// <summary>
+        /// 3성 달성 시 특별 대사 재생
+        /// </summary>
+        private void PlayThreeStarVoice()
+        {
+            if (AudioManager.Instance == null)
+            {
+                Debug.LogWarning("[Character] AudioManager not available");
+                return;
+            }
+
+            string voiceKey = CharacterVoiceHelper.GetThreeStarVoiceKey(characterId);
+            if (string.IsNullOrEmpty(voiceKey))
+            {
+                Debug.LogWarning($"[Character] 3성 음성 키를 찾을 수 없습니다. CharacterID: {characterId}");
+                return;
+            }
+
+            Debug.Log($"<color=yellow>[Character] 3성 달성! 특별 대사 재생: {voiceKey}</color>");
+            AudioManager.Instance.PlayVoice(voiceKey);
         }
 
         #endregion
