@@ -611,6 +611,9 @@ namespace NovelianMagicLibraryDefense.Managers
                 currentExp -= maxExp;
                 level++;
 
+                // 레벨업 사운드 재생
+                AudioManager.Instance?.PlaySFX("Level_Up");
+
                 // 다음 레벨의 필요 경험치로 갱신
                 maxExp = GetRequiredExpForNextLevel();
                 ui?.UpdateExperience(currentExp, maxExp);
