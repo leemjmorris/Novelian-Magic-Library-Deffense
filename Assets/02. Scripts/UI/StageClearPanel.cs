@@ -98,6 +98,9 @@ namespace NovelianMagicLibraryDefense.UI
             // 처치 몬스터 수 누적 저장
             SaveKillCountAsync(killCount).Forget();
 
+            // Issue #645: 스테이지 랭크 저장
+            SaveStageRank();
+
             Debug.Log($"[StageClearPanel] Shown - Time: {progressTime:F1}s, Kills: {killCount}, WallHP: {wallHpRatio:P0}");
         }
 
@@ -522,6 +525,34 @@ namespace NovelianMagicLibraryDefense.UI
             return nextStage;
         }
 
+        #region Issue #645 - Stage Rank Saving
+
+        /// <summary>
+        /// 스테이지 클리어 랭크 저장
+        /// </summary>
+        private void SaveStageRank()
+        {
+            if (!SelectedStage.HasSelection)
+            {
+                Debug.LogWarning("[StageClearPanel] 스테이지 정보 없음 - 랭크 저장 스킵");
+                return;
+            }
+
+            int stageNumber = SelectedStage.Data.Chapter_Number;
+            int rankIndex = CalculateRankIndex();
+
+            if (StageProgressManager.Instance != null)
+            {
+                StageProgressManager.Instance.SaveStageRank(stageNumber, rankIndex);
+            }
+            else
+            {
+                Debug.LogWarning("[StageClearPanel] StageProgressManager 없음 - 랭크 저장 스킵");
+            }
+        }
+
+        #endregion
+
         #region Kill Count Tracking
 
         /// <summary>
@@ -568,9 +599,10 @@ namespace NovelianMagicLibraryDefense.UI
 
         private async UniTaskVoid LoadLobbySceneAsync()
         {
-            // Issue #605: 로비 전환 전 모든 사운드 정지 및 게임 일시정지
+            // Issue #605: 로비 전환 전 모든 사운드 정지
             AudioManager.Instance?.StopAllSounds();
-            TimeManager.Instance?.Pause();
+            // Issue #645: Pause() 제거 - 씬 전환 중 애니메이션 멈춤 방지
+            // LobbyUI에서 ResetTimeScale()을 호출하여 TimeScale이 복구됨
             await FadeController.Instance.LoadSceneWithFade("LobbyScene");
         }
 

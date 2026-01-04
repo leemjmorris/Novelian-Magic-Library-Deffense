@@ -159,7 +159,7 @@ public class FirebaseSaveManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 진행도 저장 (스테이지, 레벨, 처치 몬스터 수)
+    /// 진행도 저장 (스테이지, 레벨, 처치 몬스터 수, 랭크)
     /// </summary>
     public async UniTask SaveProgressionAsync(string userId, ProgressionData progression)
     {
@@ -168,16 +168,39 @@ public class FirebaseSaveManager : MonoBehaviour
         try
         {
             cachedUserData.progression = progression;
+
+            // Issue #645: stageRanks를 Dictionary<string, object>로 변환
+            var stageRanksData = new Dictionary<string, object>();
+            if (progression.stageRanks != null)
+            {
+                foreach (var kvp in progression.stageRanks)
+                {
+                    stageRanksData[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // Issue #645: bossDungeonAttempted를 Dictionary<string, object>로 변환
+            var bossDungeonAttemptedData = new Dictionary<string, object>();
+            if (progression.bossDungeonAttempted != null)
+            {
+                foreach (var kvp in progression.bossDungeonAttempted)
+                {
+                    bossDungeonAttemptedData[kvp.Key] = kvp.Value;
+                }
+            }
+
             var data = new Dictionary<string, object>
             {
                 { "highestClearedStage", progression.highestClearedStage },
                 { "playerLevel", progression.playerLevel },
                 { "playerExp", progression.playerExp },
                 { "bossDungeonProgress", progression.bossDungeonProgress }, // Issue #476
-                { "totalKilledMonsters", progression.totalKilledMonsters }
+                { "totalKilledMonsters", progression.totalKilledMonsters },
+                { "stageRanks", stageRanksData }, // Issue #645
+                { "bossDungeonAttempted", bossDungeonAttemptedData } // Issue #645
             };
 
-            await databaseRef.Child(USERS_PATH).Child(userId).Child("progression").UpdateChildrenAsync(data);
+            await databaseRef.Child(USERS_PATH).Child(userId).Child("progression").SetValueAsync(data);
             Debug.Log($"{LOG_PREFIX} 진행도 저장 완료");
         }
         catch (Exception e)
@@ -549,7 +572,9 @@ public class FirebaseSaveManager : MonoBehaviour
                     { "playerLevel", data.progression.playerLevel },
                     { "playerExp", data.progression.playerExp },
                     { "bossDungeonProgress", data.progression.bossDungeonProgress }, // Issue #476
-                    { "totalKilledMonsters", data.progression.totalKilledMonsters }
+                    { "totalKilledMonsters", data.progression.totalKilledMonsters },
+                    { "stageRanks", data.progression.stageRanks ?? new Dictionary<string, int>() }, // Issue #645
+                    { "bossDungeonAttempted", data.progression.bossDungeonAttempted ?? new Dictionary<string, bool>() } // Issue #645
                 }
             },
             { "characters", new Dictionary<string, object>
@@ -674,6 +699,28 @@ public class FirebaseSaveManager : MonoBehaviour
             data.progression.playerExp = GetIntValue(progressionSnap.Child("playerExp"));
             data.progression.bossDungeonProgress = GetIntValue(progressionSnap.Child("bossDungeonProgress"), 1); // Issue #476: 기본값 1
             data.progression.totalKilledMonsters = GetLongValue(progressionSnap.Child("totalKilledMonsters"));
+
+            // Issue #645: stageRanks 로드
+            var stageRanksSnap = progressionSnap.Child("stageRanks");
+            if (stageRanksSnap.Exists)
+            {
+                data.progression.stageRanks = new Dictionary<string, int>();
+                foreach (var child in stageRanksSnap.Children)
+                {
+                    data.progression.stageRanks[child.Key] = GetIntValue(child);
+                }
+            }
+
+            // Issue #645: bossDungeonAttempted 로드
+            var bossDungeonAttemptedSnap = progressionSnap.Child("bossDungeonAttempted");
+            if (bossDungeonAttemptedSnap.Exists)
+            {
+                data.progression.bossDungeonAttempted = new Dictionary<string, bool>();
+                foreach (var child in bossDungeonAttemptedSnap.Children)
+                {
+                    data.progression.bossDungeonAttempted[child.Key] = child.Value != null && (bool)child.Value;
+                }
+            }
         }
 
         // characters

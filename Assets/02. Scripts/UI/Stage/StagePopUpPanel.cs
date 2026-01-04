@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
+using NovelianMagicLibraryDefense.Managers;
 using System.Collections.Generic;
 
 namespace NovelianMagicLibraryDefense.UI
@@ -11,11 +12,17 @@ namespace NovelianMagicLibraryDefense.UI
     /// 스테이지 선택 팝업 패널
     /// 선택된 스테이지 번호에 맞게 텍스트를 업데이트
     /// 획득 가능 보상 아이콘 표시 (RewardIconHelper 사용)
+    /// 클리어 등급 표시 (Issue #645)
     /// </summary>
     public class StagePopUpPanel : MonoBehaviour
     {
         [Header("Stage Name Text")]
         [SerializeField] private TextMeshProUGUI stageNameText;
+
+        [Header("Clear Rank Display (Issue #645)")]
+        [SerializeField] private Image clearRankImage;          // 랭크 이미지 (S/A/B/F)
+        [SerializeField] private TextMeshProUGUI clearRankText; // 랭크 텍스트 ("-" 표시용)
+        [SerializeField] private Sprite[] rankSprites;          // 순서: S(0), A(1), B(2), F(3)
 
         [Header("Reward Icons")]
         [SerializeField] private Transform rewardIconContainer; // Content 오브젝트
@@ -28,6 +35,7 @@ namespace NovelianMagicLibraryDefense.UI
         private void OnEnable()
         {
             UpdateStageText();
+            UpdateClearRank(); // Issue #645: 클리어 랭크 표시
             RewardIconHelper.HideAllTooltips(spawnedIcons);
             // 한 프레임 대기 후 아이콘 업데이트 (SerializedField 초기화 보장)
             DelayedUpdateRewardIcons().Forget();
@@ -82,6 +90,84 @@ namespace NovelianMagicLibraryDefense.UI
             if (stageNameText != null)
             {
                 stageNameText.text = $"스테이지 {stageNumber}";
+            }
+        }
+
+        /// <summary>
+        /// Issue #645: 클리어 랭크 표시 업데이트
+        /// 클리어 안 했으면 "-", 클리어 했으면 랭크 이미지 표시
+        /// </summary>
+        public void UpdateClearRank()
+        {
+            if (!SelectedStage.HasSelection)
+            {
+                ShowNotCleared();
+                return;
+            }
+
+            int stageNumber = SelectedStage.Data.Chapter_Number;
+            int rankIndex = StageProgressManager.Instance != null
+                ? StageProgressManager.Instance.GetStageRank(stageNumber)
+                : -1;
+
+            if (rankIndex < 0)
+            {
+                // 클리어 안 함 - "-" 표시
+                ShowNotCleared();
+            }
+            else
+            {
+                // 클리어 함 - 랭크 이미지 표시
+                ShowRank(rankIndex);
+            }
+        }
+
+        /// <summary>
+        /// 클리어 안 한 상태 표시 ("-")
+        /// </summary>
+        private void ShowNotCleared()
+        {
+            // 이미지 숨기고 텍스트 표시
+            if (clearRankImage != null)
+            {
+                clearRankImage.gameObject.SetActive(false);
+            }
+
+            if (clearRankText != null)
+            {
+                clearRankText.gameObject.SetActive(true);
+                clearRankText.text = "-";
+            }
+        }
+
+        /// <summary>
+        /// 랭크 이미지 표시
+        /// </summary>
+        private void ShowRank(int rankIndex)
+        {
+            // 텍스트 숨기고 이미지 표시
+            if (clearRankText != null)
+            {
+                clearRankText.gameObject.SetActive(false);
+            }
+
+            if (clearRankImage != null && rankSprites != null && rankIndex >= 0 && rankIndex < rankSprites.Length)
+            {
+                clearRankImage.gameObject.SetActive(true);
+                clearRankImage.sprite = rankSprites[rankIndex];
+            }
+            else if (clearRankText != null)
+            {
+                // 스프라이트 없으면 텍스트로 표시
+                clearRankText.gameObject.SetActive(true);
+                clearRankText.text = rankIndex switch
+                {
+                    0 => "S",
+                    1 => "A",
+                    2 => "B",
+                    3 => "F",
+                    _ => "-"
+                };
             }
         }
 

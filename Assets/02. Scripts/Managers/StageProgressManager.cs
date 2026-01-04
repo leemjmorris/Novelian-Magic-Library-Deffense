@@ -57,19 +57,36 @@ namespace NovelianMagicLibraryDefense.Managers
             if (FirebaseSaveManager.Instance != null && FirebaseManager.Instance?.CurrentUserId != null)
             {
                 var cachedProgression = FirebaseSaveManager.Instance.CachedData?.progression;
-                var progression = new ProgressionData
-                {
-                    highestClearedStage = highestClearedStage,
-                    playerLevel = cachedProgression?.playerLevel ?? 1,
-                    playerExp = cachedProgression?.playerExp ?? 0,
-                    bossDungeonProgress = cachedProgression?.bossDungeonProgress ?? 1,
-                    totalKilledMonsters = cachedProgression?.totalKilledMonsters ?? 0
-                };
 
-                FirebaseSaveManager.Instance.SaveProgressionAsync(
-                    FirebaseManager.Instance.CurrentUserId,
-                    progression
-                ).Forget();
+                // Issue #645: 캐시된 progression이 있으면 그대로 사용 (stageRanks 등 수정된 값 유지)
+                if (cachedProgression != null)
+                {
+                    cachedProgression.highestClearedStage = highestClearedStage;
+
+                    FirebaseSaveManager.Instance.SaveProgressionAsync(
+                        FirebaseManager.Instance.CurrentUserId,
+                        cachedProgression
+                    ).Forget();
+                }
+                else
+                {
+                    // 캐시 없으면 새 객체 생성
+                    var progression = new ProgressionData
+                    {
+                        highestClearedStage = highestClearedStage,
+                        playerLevel = 1,
+                        playerExp = 0,
+                        bossDungeonProgress = 1,
+                        totalKilledMonsters = 0,
+                        stageRanks = new System.Collections.Generic.Dictionary<string, int>(),
+                        bossDungeonAttempted = new System.Collections.Generic.Dictionary<string, bool>()
+                    };
+
+                    FirebaseSaveManager.Instance.SaveProgressionAsync(
+                        FirebaseManager.Instance.CurrentUserId,
+                        progression
+                    ).Forget();
+                }
             }
             Debug.Log($"{LOG_PREFIX} 진행도 저장: 클리어한 최고 스테이지 = {highestClearedStage}");
         }
@@ -130,6 +147,92 @@ namespace NovelianMagicLibraryDefense.Managers
                 Debug.Log($"[StageProgressManager] 스테이지 {stageNumber}까지 해금됨 (디버그)");
             }
         }
+
+        #region Issue #645 - 스테이지 랭크 시스템
+
+        /// <summary>
+        /// 스테이지 클리어 랭크 저장 (더 높은 랭크일 때만 갱신)
+        /// </summary>
+        /// <param name="stageNumber">스테이지 번호</param>
+        /// <param name="rankIndex">랭크 인덱스 (0=S, 1=A, 2=B, 3=F - 낮을수록 높은 랭크)</param>
+        public void SaveStageRank(int stageNumber, int rankIndex)
+        {
+            if (FirebaseSaveManager.Instance?.CachedData?.progression == null)
+            {
+                Debug.LogWarning($"{LOG_PREFIX} Firebase 캐시 없음 - 랭크 저장 스킵");
+                return;
+            }
+
+            var progression = FirebaseSaveManager.Instance.CachedData.progression;
+
+            // stageRanks가 null이면 초기화
+            if (progression.stageRanks == null)
+            {
+                progression.stageRanks = new System.Collections.Generic.Dictionary<string, int>();
+            }
+
+            string key = stageNumber.ToString();
+
+            // 기존 랭크가 있으면 더 높은 랭크(낮은 인덱스)일 때만 갱신
+            if (progression.stageRanks.TryGetValue(key, out int existingRank))
+            {
+                if (rankIndex < existingRank)
+                {
+                    progression.stageRanks[key] = rankIndex;
+                    Debug.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 랭크 갱신: {GetRankString(existingRank)} → {GetRankString(rankIndex)}");
+                    SaveProgress();
+                }
+                else
+                {
+                    Debug.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 기존 랭크 {GetRankString(existingRank)}가 더 높음 (신규: {GetRankString(rankIndex)})");
+                }
+            }
+            else
+            {
+                // 새로운 랭크 저장
+                progression.stageRanks[key] = rankIndex;
+                Debug.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 첫 클리어 랭크: {GetRankString(rankIndex)}");
+                SaveProgress();
+            }
+        }
+
+        /// <summary>
+        /// 스테이지 클리어 랭크 조회
+        /// </summary>
+        /// <param name="stageNumber">스테이지 번호</param>
+        /// <returns>랭크 인덱스 (0=S, 1=A, 2=B, 3=F), 클리어 안 했으면 -1</returns>
+        public int GetStageRank(int stageNumber)
+        {
+            if (FirebaseSaveManager.Instance?.CachedData?.progression?.stageRanks == null)
+            {
+                return -1;
+            }
+
+            string key = stageNumber.ToString();
+            if (FirebaseSaveManager.Instance.CachedData.progression.stageRanks.TryGetValue(key, out int rankIndex))
+            {
+                return rankIndex;
+            }
+
+            return -1;
+        }
+
+        /// <summary>
+        /// 랭크 인덱스를 문자열로 변환
+        /// </summary>
+        private string GetRankString(int rankIndex)
+        {
+            return rankIndex switch
+            {
+                0 => "S",
+                1 => "A",
+                2 => "B",
+                3 => "F",
+                _ => "-"
+            };
+        }
+
+        #endregion
 
         #region Issue #576 - 기능 해금 시스템
 

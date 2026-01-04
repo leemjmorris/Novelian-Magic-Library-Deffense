@@ -343,18 +343,38 @@ namespace NovelianMagicLibraryDefense.UI
             if (FirebaseSaveManager.Instance?.CachedData?.progression != null &&
                 FirebaseManager.Instance != null)
             {
-                int currentProgress = FirebaseSaveManager.Instance.CachedData.progression.bossDungeonProgress;
+                var progression = FirebaseSaveManager.Instance.CachedData.progression;
+                int currentProgress = progression.bossDungeonProgress;
 
                 if (clearedFloor >= currentProgress)
                 {
                     int nextFloor = clearedFloor + 1;
-                    FirebaseSaveManager.Instance.CachedData.progression.bossDungeonProgress = nextFloor;
+                    progression.bossDungeonProgress = nextFloor;
+
+                    // Issue #645: 클리어한 층의 실패 기록 제거
+                    RemoveAttemptRecord(clearedFloor, progression);
+
                     FirebaseSaveManager.Instance.SaveProgressionAsync(
                         FirebaseManager.Instance.CurrentUserId,
-                        FirebaseSaveManager.Instance.CachedData.progression
+                        progression
                     ).Forget();
                     Debug.Log($"[BossDungeonClearPanel] 다음 층 해금: {nextFloor}층");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Issue #645: 클리어한 층의 실패 기록 제거
+        /// </summary>
+        private void RemoveAttemptRecord(int floorIndex, Firebase.Data.ProgressionData progression)
+        {
+            if (progression.bossDungeonAttempted == null) return;
+
+            string key = floorIndex.ToString();
+            if (progression.bossDungeonAttempted.ContainsKey(key))
+            {
+                progression.bossDungeonAttempted.Remove(key);
+                Debug.Log($"[BossDungeonClearPanel] 실패 기록 제거: {floorIndex}층");
             }
         }
 
@@ -421,9 +441,10 @@ namespace NovelianMagicLibraryDefense.UI
 
         private async UniTaskVoid LoadLobbySceneAsync()
         {
-            // Issue #605: 로비 전환 전 모든 사운드 정지 및 게임 일시정지
+            // Issue #605: 로비 전환 전 모든 사운드 정지
             AudioManager.Instance?.StopAllSounds();
-            TimeManager.Instance?.Pause();
+            // Issue #645: Pause() 제거 - 씬 전환 중 애니메이션 멈춤 방지
+            // LobbyUI에서 ResetTimeScale()을 호출하여 TimeScale이 복구됨
             await FadeController.Instance.LoadSceneWithFade(SceneName.LobbyScene);
         }
 
