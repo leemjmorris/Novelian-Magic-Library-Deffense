@@ -163,7 +163,39 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnRetryButtonClicked()
         {
-            Debug.Log("[StageFailedPanel] Retry button clicked - Reloading GameScene");
+            Debug.Log("[StageFailedPanel] Retry button clicked - Checking AP and reloading GameScene");
+
+            // 1. SelectedStage 데이터 확인
+            if (!SelectedStage.HasSelection)
+            {
+                Debug.LogError("[StageFailedPanel] 스테이지가 선택되지 않음");
+                return;
+            }
+
+            var stageData = SelectedStage.Data;
+            int apCost = stageData.AP_Cost;
+
+            // 2. CurrencyManager 확인
+            if (CurrencyManager.Instance == null)
+            {
+                Debug.LogError("[StageFailedPanel] CurrencyManager가 초기화되지 않음");
+                return;
+            }
+
+            // 3. AP 잔량 확인
+            if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.AP_ID, apCost))
+            {
+                int currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
+                Debug.LogWarning($"[StageFailedPanel] AP 부족! 필요: {apCost}, 보유: {currentAP}");
+                WarningUIManager.Instance?.ShowWarning("AP가 부족합니다");
+                return;
+            }
+
+            // 4. AP 소모
+            CurrencyManager.Instance.SpendCurrency(CurrencyManager.AP_ID, apCost);
+            Debug.Log($"[StageFailedPanel] AP {apCost} 소모. 재시작 진행");
+
+            // 5. 씬 전환
             Close();
             // Issue #602: 씬 전환 전 TimeScale 스택 리셋
             TimeManager.Instance?.ResetTimeScale();

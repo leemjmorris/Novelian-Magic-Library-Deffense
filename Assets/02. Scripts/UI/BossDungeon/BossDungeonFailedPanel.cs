@@ -143,7 +143,38 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnRetryButtonClicked()
         {
-            Debug.Log("[BossDungeonFailedPanel] Retry button clicked - Reloading BossDungeonScene");
+            Debug.Log("[BossDungeonFailedPanel] Retry button clicked - Checking dungeon pass and reloading");
+
+            // 1. SelectedBossDungeon 데이터 확인
+            if (!SelectedBossDungeon.HasSelection)
+            {
+                Debug.LogError("[BossDungeonFailedPanel] 선택된 던전이 없습니다");
+                return;
+            }
+
+            // 2. CurrencyManager 확인
+            if (CurrencyManager.Instance == null)
+            {
+                Debug.LogError("[BossDungeonFailedPanel] CurrencyManager가 초기화되지 않음");
+                return;
+            }
+
+            const int ENTRY_COST = 1;
+
+            // 3. 던전 출입증 잔량 확인
+            if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.DUNGEON_PASS_ID, ENTRY_COST))
+            {
+                int owned = CurrencyManager.Instance.GetCurrency(CurrencyManager.DUNGEON_PASS_ID);
+                Debug.LogWarning($"[BossDungeonFailedPanel] 던전 출입증 부족! 필요: {ENTRY_COST}, 보유: {owned}");
+                WarningUIManager.Instance?.ShowWarning("던전 출입증이 부족합니다");
+                return;
+            }
+
+            // 4. 던전 출입증 소모
+            CurrencyManager.Instance.SpendCurrency(CurrencyManager.DUNGEON_PASS_ID, ENTRY_COST);
+            Debug.Log($"[BossDungeonFailedPanel] 던전 출입증 {ENTRY_COST}개 소모. 재도전 진행");
+
+            // 5. 씬 전환
             Close();
             // Issue #602: 씬 전환 전 TimeScale 스택 리셋
             TimeManager.Instance?.ResetTimeScale();

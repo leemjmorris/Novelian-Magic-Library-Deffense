@@ -11,7 +11,9 @@ public class LobbyUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI apText;
     [SerializeField] private TextMeshProUGUI goldText;
     [SerializeField] private TextMeshProUGUI premiumText;
+    [SerializeField] private TextMeshProUGUI ticketText;
     private int maxAP = 30;
+    private int maxDungeonPass = 5;
 
     [Header("Dispatch Red Dot")]
     [SerializeField] private GameObject dispatchRedDot; // 파견 버튼 Red Dot
@@ -85,19 +87,26 @@ public class LobbyUI : MonoBehaviour
 
     private void InitializeAP()
     {
-        // CurrencyTable에서 최대 AP 조회
+        // CurrencyTable에서 최대 AP 및 던전 출입증 조회
         if (CSVLoader.Instance != null && CSVLoader.Instance.IsInit)
         {
-            var currencyData = CSVLoader.Instance.GetData<CurrencyData>(CurrencyManager.AP_ID);
-            if (currencyData != null && currencyData.Currency_Max_Count > 0)
+            var apData = CSVLoader.Instance.GetData<CurrencyData>(CurrencyManager.AP_ID);
+            if (apData != null && apData.Currency_Max_Count > 0)
             {
-                maxAP = currencyData.Currency_Max_Count;
+                maxAP = apData.Currency_Max_Count;
+            }
+
+            var dungeonPassData = CSVLoader.Instance.GetData<CurrencyData>(CurrencyManager.DUNGEON_PASS_ID);
+            if (dungeonPassData != null && dungeonPassData.Currency_Max_Count > 0)
+            {
+                maxDungeonPass = dungeonPassData.Currency_Max_Count;
             }
         }
 
         UpdateAPText();
         UpdateGoldText();
         UpdatePremiumText();
+        UpdateTicketText();
     }
 
     private void UpdateAPText()
@@ -139,6 +148,19 @@ public class LobbyUI : MonoBehaviour
         premiumText.text = $"{magicStone}";
     }
 
+    private void UpdateTicketText()
+    {
+        if (ticketText == null) return;
+
+        int currentDungeonPass = 0;
+        if (CurrencyManager.Instance != null)
+        {
+            currentDungeonPass = CurrencyManager.Instance.GetCurrency(CurrencyManager.DUNGEON_PASS_ID);
+        }
+
+        ticketText.text = $"{currentDungeonPass}/{maxDungeonPass}";
+    }
+
     private void OnCurrencyChanged(int currencyId, int newAmount)
     {
         if (currencyId == CurrencyManager.AP_ID && apText != null)
@@ -152,6 +174,10 @@ public class LobbyUI : MonoBehaviour
         else if (currencyId == CurrencyManager.MAGIC_STONE_ID && premiumText != null)
         {
             premiumText.text = $"{newAmount}";
+        }
+        else if (currencyId == CurrencyManager.DUNGEON_PASS_ID && ticketText != null)
+        {
+            ticketText.text = $"{newAmount}/{maxDungeonPass}";
         }
     }
 
