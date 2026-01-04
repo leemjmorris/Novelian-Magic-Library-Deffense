@@ -68,6 +68,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void Show(float remainingTime, float timeLimit)
         {
+            // BGM 일시적으로 낮추고 승리 효과음 재생
+            DuckBGMForResultSFX("VictorySFX").Forget();
+
             cachedRemainingTime = remainingTime;
             cachedTimeLimit = timeLimit;
             currentDungeonData = SelectedBossDungeon.Data;
@@ -437,14 +440,43 @@ namespace NovelianMagicLibraryDefense.UI
             LoadBossDungeonSceneAsync().Forget();
         }
 
+        #region Audio Ducking
+
+        /// <summary>
+        /// 결과 효과음 재생 시 BGM 볼륨 일시 감소
+        /// </summary>
+        private async UniTaskVoid DuckBGMForResultSFX(string sfxName)
+        {
+            var audioManager = AudioManager.Instance;
+            if (audioManager == null) return;
+
+            // 원래 볼륨 저장
+            float originalVolume = audioManager.GetBGMVolume();
+
+            // 볼륨 낮추기 (0.2 = 20%)
+            audioManager.SetBGMVolume(0.2f);
+
+            // 효과음 재생
+            audioManager.PlaySFX(sfxName);
+
+            // 2초 대기 (효과음 길이 고려)
+            await UniTask.Delay(2000, ignoreTimeScale: true);
+
+            // 원래 볼륨으로 복구
+            audioManager.SetBGMVolume(originalVolume);
+        }
+
+        #endregion
+
         #region Scene Loading
 
         private async UniTaskVoid LoadLobbySceneAsync()
         {
+            // Issue #605: 로비 전환 전 게임 일시정지 (사운드 방지)
+            TimeManager.Instance?.Pause();
             // Issue #605: 로비 전환 전 모든 사운드 정지
             AudioManager.Instance?.StopAllSounds();
-            // Issue #645: Pause() 제거 - 씬 전환 중 애니메이션 멈춤 방지
-            // LobbyUI에서 ResetTimeScale()을 호출하여 TimeScale이 복구됨
+            // FadeController는 Time.unscaledDeltaTime 사용으로 Pause 영향 없음
             await FadeController.Instance.LoadSceneWithFade(SceneName.LobbyScene);
         }
 

@@ -30,6 +30,10 @@ namespace NovelianMagicLibraryDefense.Managers
         [SerializeField] private TextMeshProUGUI progressText;
         [SerializeField] private TextMeshProUGUI loadingTipText;
 
+        [Header("Animators (TimeScale 무시)")]
+        [SerializeField] private Animator bookAniAnimator;
+        [SerializeField] private Animator aniAnimator;
+
         [Header("Loading Tips")]
         private string[] loadingTips = new string[] // LCB: 로딩 중 표시할 팁 목록
         {
@@ -61,6 +65,17 @@ namespace NovelianMagicLibraryDefense.Managers
 
             instance = this;
             DontDestroyOnLoad(gameObject);
+
+            // Issue #605: BookAni, Ani 애니메이션을 TimeScale에서 제외
+            if (bookAniAnimator != null)
+            {
+                bookAniAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
+            }
+
+            if (aniAnimator != null)
+            {
+                aniAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
+            }
 
             // LCB: 시작 시 로딩 패널 및 Canvas 비활성화
             if (loadingPanel != null)

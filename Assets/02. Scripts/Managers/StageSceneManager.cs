@@ -227,10 +227,11 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private async UniTaskVoid LoadLobbySceneAsync()
         {
+            // Issue #605: 로비 전환 전 게임 일시정지 (사운드 방지)
+            TimeManager.Instance?.Pause();
             // Issue #605: 로비 전환 전 모든 사운드 정지
             AudioManager.Instance?.StopAllSounds();
-            // Issue #645: Pause() 제거 - 씬 전환 중 애니메이션 멈춤 방지
-            // LobbyUI에서 ResetTimeScale()을 호출하여 TimeScale이 복구됨
+            // FadeController는 Time.unscaledDeltaTime 사용으로 Pause 영향 없음
             await FadeController.Instance.LoadSceneWithFade(SceneName.LobbyScene);
         }
 

@@ -215,10 +215,11 @@ namespace NovelianMagicLibraryDefense.UI
                 GameManager.Instance.Stage.IsExitingStage = true;
             }
 
+            // Issue #605: 로비 전환 전 게임 일시정지 (사운드 방지)
+            TimeManager.Instance?.Pause();
             // Issue #605: 로비 전환 전 모든 사운드 정지
             AudioManager.Instance?.StopAllSounds();
-            // Issue #639: Pause() 제거 - 로딩 UI 애니메이션이 멈추는 문제
-            // 게임 일시정지는 이미 Open()에서 PushTimeScale(0f)로 처리됨
+            // FadeController는 Time.unscaledDeltaTime 사용으로 Pause 영향 없음
             LoadSceneWithLoadingUI("LobbyScene").Forget();
         }
 
