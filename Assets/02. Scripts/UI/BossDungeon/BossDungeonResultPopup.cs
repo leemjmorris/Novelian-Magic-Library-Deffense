@@ -426,9 +426,10 @@ namespace NovelianMagicLibraryDefense.UI
         {
             Debug.Log("[BossDungeonResultPopup] 로비 버튼 클릭");
 
-            // Issue #605: 로비 전환 전 모든 사운드 정지 및 게임 일시정지
+            // Issue #605: 로비 전환 전 모든 사운드 정지
             AudioManager.Instance?.StopAllSounds();
-            TimeManager.Instance?.Pause();
+            // Issue #645: Pause() 제거 - 씬 전환 중 애니메이션 멈춤 방지
+            // LobbyUI에서 ResetTimeScale()을 호출하여 TimeScale이 복구됨
 
             // 선택 데이터 초기화
             SelectedBossDungeon.Clear();
