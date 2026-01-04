@@ -105,21 +105,92 @@ public class CurrencyManager : MonoBehaviour
 
         int currentAP = currencies[AP_ID];
 
-        // AP가 최대치면 회복 불필요 - 타이머 리셋
+        // AP가 최대치면 회복 불필요
         if (currentAP >= maxAP)
         {
             apRecoveryTimer = 0f;
+            // 서버 시간 사용 가능하면 동기화 시간 업데이트
+            if (CanUseServerTime())
+            {
+                lastAPSyncTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
+            }
             return;
         }
 
-        // AP가 최대치 미만이면 회복 타이머 작동
+        // 서버 시간 사용 가능 여부 확인
+        if (CanUseServerTime())
+        {
+            UpdateAPRecoveryWithServerTime();
+        }
+        else
+        {
+            // Fallback: 기존 로컬 시간 방식 사용 (안전 모드)
+            UpdateAPRecoveryWithLocalTime();
+        }
+    }
+
+    /// <summary>
+    /// 서버 시간 사용 가능 여부 확인
+    /// </summary>
+    private bool CanUseServerTime()
+    {
+        return ServerTimeManager.Instance != null && ServerTimeManager.Instance.IsSynced;
+    }
+
+    /// <summary>
+    /// 서버 시간 기반 AP 회복 (메인 로직)
+    /// </summary>
+    private void UpdateAPRecoveryWithServerTime()
+    {
+        long currentServerTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
+
+        // 마지막 동기화 시간이 없으면 현재 시간으로 초기화
+        if (lastAPSyncTimeMs <= 0)
+        {
+            lastAPSyncTimeMs = currentServerTimeMs;
+            return;
+        }
+
+        // 시간 유효성 검증 (시간 조작 방지)
+        if (currentServerTimeMs < lastAPSyncTimeMs)
+        {
+            Debug.LogWarning("[CurrencyManager] 서버 시간 역행 감지! Fallback으로 전환");
+            UpdateAPRecoveryWithLocalTime();
+            return;
+        }
+
+        // 경과 시간 계산
+        long elapsedMs = currentServerTimeMs - lastAPSyncTimeMs;
+        int recoveryCount = (int)(elapsedMs / AP_RECOVERY_INTERVAL_MS);
+
+        if (recoveryCount > 0)
+        {
+            // AP 회복 (최대치 초과 방지)
+            int actualRecovery = Mathf.Min(recoveryCount, maxAP - currencies[AP_ID]);
+            if (actualRecovery > 0)
+            {
+                AddCurrency(AP_ID, actualRecovery);
+                Debug.Log($"<color=cyan>[CurrencyManager]</color> AP 회복 (서버 시간)! +{actualRecovery}, 현재: {GetCurrency(AP_ID)}/{maxAP}");
+            }
+
+            // 마지막 동기화 시간 업데이트 (정확한 회복 시간으로)
+            lastAPSyncTimeMs += recoveryCount * AP_RECOVERY_INTERVAL_MS;
+        }
+    }
+
+    /// <summary>
+    /// 로컬 시간 기반 AP 회복 (Fallback - 기존 로직 보존)
+    /// ServerTimeManager 사용 불가 시 자동으로 이 로직 사용
+    /// </summary>
+    private void UpdateAPRecoveryWithLocalTime()
+    {
         apRecoveryTimer += Time.deltaTime;
 
         if (apRecoveryTimer >= AP_RECOVERY_INTERVAL_SECONDS)
         {
             apRecoveryTimer = 0f;
             AddCurrency(AP_ID, 1);
-            Debug.Log($"[CurrencyManager] AP 회복! 현재 AP: {GetCurrency(AP_ID)}/{maxAP}");
+            Debug.Log($"<color=yellow>[CurrencyManager]</color> AP 회복 (로컬 시간 Fallback)! 현재 AP: {GetCurrency(AP_ID)}/{maxAP}");
         }
     }
 
@@ -133,6 +204,17 @@ public class CurrencyManager : MonoBehaviour
         {
             return 0f;
         }
+
+        // 서버 시간 사용 가능하면 서버 시간 기준 계산
+        if (CanUseServerTime() && lastAPSyncTimeMs > 0)
+        {
+            long currentServerTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
+            long elapsedMs = currentServerTimeMs - lastAPSyncTimeMs;
+            long remainingMs = AP_RECOVERY_INTERVAL_MS - (elapsedMs % AP_RECOVERY_INTERVAL_MS);
+            return remainingMs / 1000f; // 밀리초 → 초 변환
+        }
+
+        // Fallback: 기존 로컬 시간 방식
         return AP_RECOVERY_INTERVAL_SECONDS - apRecoveryTimer;
     }
 
