@@ -177,6 +177,10 @@ namespace Dispatch
             {
                 presetSelector.OnPresetSelected += OnPresetChanged;
             }
+
+            // 현재 로컬 선택 프리셋에 맞게 덱 캐릭터 이미지 갱신
+            // (씬 재진입 시 1번 프리셋으로 초기화되므로 해당 프리셋의 캐릭터로 표시)
+            LoadDeckCharacters();
         }
 
         /// <summary>
@@ -560,18 +564,35 @@ namespace Dispatch
             var localDeck = presetSelector != null ? presetSelector.GetLocalSelectedDeck() : DeckManager.Instance.GetDeck();
             Button[] deckSlotButtons = { deckSlotButton1, deckSlotButton2, deckSlotButton3, deckSlotButton4 };
 
+            // 프리셋에 캐릭터가 하나라도 있는지 확인
+            bool hasAnyCharacter = false;
+            foreach (int id in localDeck)
+            {
+                if (id > 0)
+                {
+                    hasAnyCharacter = true;
+                    break;
+                }
+            }
+
+            // 프리셋에 캐릭터가 하나라도 있으면 모든 버튼 비활성화
+            // 프리셋이 완전히 비어있을 때만 버튼 표시
             for (int i = 0; i < deckSlotButtons.Length; i++)
             {
                 if (deckSlotButtons[i] == null) continue;
 
-                int characterId = (i < localDeck.Count) ? localDeck[i] : -1;
-                bool isEmpty = characterId <= 0;
-
-                // 빈 슬롯일 때만 버튼 활성화 (interactable)
-                deckSlotButtons[i].interactable = isEmpty;
-
-                // 빈 슬롯일 때 버튼 게임오브젝트도 활성화
-                deckSlotButtons[i].gameObject.SetActive(isEmpty);
+                if (hasAnyCharacter)
+                {
+                    // 프리셋에 캐릭터가 있으면 모든 버튼 비활성화
+                    deckSlotButtons[i].interactable = false;
+                    deckSlotButtons[i].gameObject.SetActive(false);
+                }
+                else
+                {
+                    // 프리셋이 완전히 비어있으면 버튼 활성화
+                    deckSlotButtons[i].interactable = true;
+                    deckSlotButtons[i].gameObject.SetActive(true);
+                }
             }
         }
 
