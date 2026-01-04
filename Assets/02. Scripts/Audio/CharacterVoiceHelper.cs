@@ -57,6 +57,17 @@ namespace NovelianMagicLibraryDefense.Audio
         }
 
         /// <summary>
+        /// Character_ID로 3성 달성 음성 Addressable 키 반환 (항상 _3)
+        /// </summary>
+        /// <param name="characterId">CharacterTable의 Character_ID</param>
+        /// <returns>음성 Addressable 키 (예: "Greum_3"), 실패 시 null</returns>
+        public static string GetThreeStarVoiceKey(int characterId)
+        {
+            string baseKey = GetVoiceKeyBaseByCharacterId(characterId);
+            return baseKey != null ? $"{baseKey}_3" : null;
+        }
+
+        /// <summary>
         /// Character_ID로 음성 키 베이스 조회 (내부 헬퍼)
         /// </summary>
         private static string GetVoiceKeyBaseByCharacterId(int characterId)
