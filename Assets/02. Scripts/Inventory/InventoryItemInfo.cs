@@ -54,7 +54,7 @@ public class InventoryItemInfo
         MaxStackCount = Mathf.Max(1, ingredientData.Max_Stack); // 한 슬롯당 최대 스택 개수
         MaxTotalCount = Mathf.Max(MaxStackCount, ingredientData.Max_Count); // 전체 최대 보유 가능 개수
         IconPath = GetIconPath(ingredientData.Ingredient_ID);           // 아이템 ID 기반 아이콘 경로
-        Description = GetDescription(ingredientData.Ingredient_ID);     // 아이템 ID 기반 설명
+        Description = GetDescription(ingredientData);                   // Item_Description_ID 기반 설명
         CurrentCount = currentCount;
     }
 
@@ -117,68 +117,16 @@ public class InventoryItemInfo
     }
 
     /// <summary>
-    /// 아이템 ID 기반 설명 반환 (하드코딩)
+    /// IngredientData의 Item_Description_ID를 사용하여 StringTable에서 설명 반환
     /// </summary>
-    private string GetDescription(int itemId)
+    private string GetDescription(IngredientData ingredientData)
     {
-        // 정수 아이템 (10215~10234) - 캐릭터별 정수
-        if (itemId >= 10215 && itemId <= 10234)
+        if (ingredientData == null || ingredientData.Item_Description_ID <= 0)
         {
-            return GetEssenceDescription(itemId);
+            return "아이템 설명이 없습니다.";
         }
 
-        return itemId switch
-        {
-            // 기존 아이템
-            101611 => "게임 내 기본 화폐입니다.",
-            103622 => "사서의 성장에 필요한 경험치입니다.",
-            102113 => "희미한 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            102214 => "응축된 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            102315 => "비범한 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            102416 => "고대의 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            102517 => "신성한 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            102118 => "책갈피 제작에 필요한\n마법의 잉크입니다.",
-            // 파견 보상 아이템
-            10101 => "희미한 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            10102 => "응축된 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            10103 => "비범한 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            10104 => "신성한 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            10105 => "고대의 마력이 깃든 종이\n책갈피 제작에 사용됩니다.",
-            10106 => "책갈피 제작에 필요한\n마법의 잉크입니다.",
-            10207 => "로맨스 장르의 페이지입니다.\n책갈피 제작에 사용됩니다.",
-            10208 => "코미디 장르의 페이지입니다.\n책갈피 제작에 사용됩니다.",
-            10209 => "모험 장르의 페이지입니다.\n책갈피 제작에 사용됩니다.",
-            10210 => "공포 장르의 페이지입니다.\n책갈피 제작에 사용됩니다.",
-            10211 => "추리 장르의 페이지입니다.\n책갈피 제작에 사용됩니다.",
-            10313 => "책갈피를 고정하는 클립입니다.\n책갈피 제작에 사용됩니다.",
-            10114 => "마법이 깃든 룬석입니다.\n책갈피 강화에 사용됩니다.",
-            _ => "아이템 설명이 없습니다."
-        };
-    }
-
-    /// <summary>
-    /// 정수 아이템 설명 반환 (캐릭터별 장르 기반)
-    /// </summary>
-    private string GetEssenceDescription(int essenceId)
-    {
-        // 정수 ID와 캐릭터 풀 인덱스 매핑
-        // 10215~10218: Horror (공포) - 캐릭터 21001~21004
-        // 10219~10222: Romance (로맨스) - 캐릭터 22005~22008
-        // 10223~10226: Adventure (모험) - 캐릭터 23009~23012
-        // 10227~10230: Comedy (코미디) - 캐릭터 24013~24016
-        // 10231~10234: Mystery (추리) - 캐릭터 25017~25020
-
-        int index = essenceId - 10215;
-        string genreName = index switch
-        {
-            >= 0 and <= 3 => "공포",
-            >= 4 and <= 7 => "로맨스",
-            >= 8 and <= 11 => "모험",
-            >= 12 and <= 15 => "코미디",
-            >= 16 and <= 19 => "추리",
-            _ => "알 수 없는"
-        };
-
-        return $"{genreName} 장르의 정수입니다.\n캐릭터 승급에 사용됩니다.";
+        var stringData = CSVLoader.Instance.GetData<StringTable>(ingredientData.Item_Description_ID);
+        return stringData?.Text ?? "아이템 설명이 없습니다.";
     }
 }
