@@ -21,6 +21,11 @@ public class Wall : MonoBehaviour, IEntity
     // 테스트용 무적 모드
     private bool isInvincible = false;
 
+    [Header("Shield Hit Sound")]
+    [SerializeField] [Range(0f, 1f)] [Tooltip("피격 사운드 재생 간격 (초)")]
+    private float shieldHitSoundCooldown = 0.2f;
+    private float lastShieldHitSoundTime = -999f;
+
     private void Awake()
     {
         health = maxHealth;
@@ -43,6 +48,13 @@ public class Wall : MonoBehaviour, IEntity
     {
         // 무적 모드일 때는 데미지 무시
         if (isInvincible) return;
+
+        // 피격 사운드 재생 (쿨다운 적용)
+        if (Time.time - lastShieldHitSoundTime >= shieldHitSoundCooldown)
+        {
+            AudioManager.Instance?.PlaySFX("ShieldHit");
+            lastShieldHitSoundTime = Time.time;
+        }
 
         float remainingDamage = damage;
 
