@@ -12,6 +12,9 @@ public class ServerTimeTest : MonoBehaviour
     [Header("시간 점프 테스트")]
     [SerializeField] private int jumpHours = 1;
 
+    [Header("파견 시스템")]
+    [SerializeField] private Dispatch.DispatchManager dispatchManager;
+
     [ContextMenu("1. AP를 20으로 설정")]
     private void SetAPTo20()
     {
@@ -80,7 +83,6 @@ public class ServerTimeTest : MonoBehaviour
     [ContextMenu("6. 파견 시스템 모드 확인")]
     private void CheckDispatchMode()
     {
-        var dispatchManager = FindObjectOfType<Dispatch.DispatchManager>();
         if (dispatchManager != null)
         {
             Debug.Log("<color=cyan>=== 파견 시스템 상태 ===</color>");
@@ -89,7 +91,7 @@ public class ServerTimeTest : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("DispatchManager를 찾을 수 없습니다!");
+            Debug.LogWarning("DispatchManager가 Inspector에서 연결되지 않았습니다!");
         }
     }
 

@@ -134,18 +134,14 @@ namespace NovelianMagicLibraryDefense.UI
         }
 
         /// <summary>
-        /// 랭크 인덱스 계산 (남은 시간 비율 기반)
-        /// S(0): 91~100%, A(1): 71~90%, B(2): 51~70%, F(3): 0~50%
+        /// 랭크 인덱스 계산
+        /// 도전던전: 클리어하면 무조건 S랭크 반환
+        /// (일반 스테이지와 달리 시간 기반 랭크 미사용)
         /// </summary>
         private int CalculateRankIndex()
         {
-            if (cachedTimeLimit <= 0) return 3; // F
-
-            float ratio = cachedRemainingTime / cachedTimeLimit;
-            if (ratio >= 0.91f) return 0; // S
-            if (ratio >= 0.71f) return 1; // A
-            if (ratio >= 0.51f) return 2; // B
-            return 3; // F
+            // 도전던전 전용: 클리어 = S랭크 (index 0)
+            return 0;
         }
 
         /// <summary>
