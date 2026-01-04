@@ -41,6 +41,7 @@ public class LobbyUI : MonoBehaviour
 
     [Header("Boss Dungeon Panel (Issue #476)")]
     [SerializeField] private GameObject bossDungeonSelectPanel; // 도전던전 선택 패널
+    [SerializeField] private TextMeshProUGUI ticketTimeText; // 던전 출입증 충전 타이머
 
     [Header("Account UI Panel")]
     [SerializeField] private GameObject accountUIPanel; // 계정/환경설정 패널
@@ -83,6 +84,36 @@ public class LobbyUI : MonoBehaviour
 
         // 주기적 확인 중지
         CancelInvoke(nameof(CheckDispatchState));
+    }
+
+    private void Update()
+    {
+        UpdateTicketTimeText();
+    }
+
+    /// <summary>
+    /// 던전 출입증 충전 타이머 업데이트
+    /// </summary>
+    private void UpdateTicketTimeText()
+    {
+        if (ticketTimeText == null) return;
+        if (CurrencyManager.Instance == null) return;
+
+        int currentTicket = CurrencyManager.Instance.GetCurrency(CurrencyManager.DUNGEON_PASS_ID);
+
+        // 티켓이 최대치면 텍스트 비활성화
+        if (currentTicket >= maxDungeonPass)
+        {
+            ticketTimeText.gameObject.SetActive(false);
+            return;
+        }
+
+        // 티켓이 최대치 미만이면 남은 시간 표시
+        ticketTimeText.gameObject.SetActive(true);
+        float remainingSeconds = CurrencyManager.Instance.GetDungeonPassRecoveryRemainingTime();
+        int minutes = Mathf.FloorToInt(remainingSeconds / 60f);
+        int seconds = Mathf.FloorToInt(remainingSeconds % 60f);
+        ticketTimeText.text = $"{minutes:D2}:{seconds:D2}";
     }
 
     private void InitializeAP()
