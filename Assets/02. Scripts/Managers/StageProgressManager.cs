@@ -57,20 +57,36 @@ namespace NovelianMagicLibraryDefense.Managers
             if (FirebaseSaveManager.Instance != null && FirebaseManager.Instance?.CurrentUserId != null)
             {
                 var cachedProgression = FirebaseSaveManager.Instance.CachedData?.progression;
-                var progression = new ProgressionData
-                {
-                    highestClearedStage = highestClearedStage,
-                    playerLevel = cachedProgression?.playerLevel ?? 1,
-                    playerExp = cachedProgression?.playerExp ?? 0,
-                    bossDungeonProgress = cachedProgression?.bossDungeonProgress ?? 1,
-                    totalKilledMonsters = cachedProgression?.totalKilledMonsters ?? 0,
-                    stageRanks = cachedProgression?.stageRanks ?? new System.Collections.Generic.Dictionary<string, int>()
-                };
 
-                FirebaseSaveManager.Instance.SaveProgressionAsync(
-                    FirebaseManager.Instance.CurrentUserId,
-                    progression
-                ).Forget();
+                // Issue #645: 캐시된 progression이 있으면 그대로 사용 (stageRanks 등 수정된 값 유지)
+                if (cachedProgression != null)
+                {
+                    cachedProgression.highestClearedStage = highestClearedStage;
+
+                    FirebaseSaveManager.Instance.SaveProgressionAsync(
+                        FirebaseManager.Instance.CurrentUserId,
+                        cachedProgression
+                    ).Forget();
+                }
+                else
+                {
+                    // 캐시 없으면 새 객체 생성
+                    var progression = new ProgressionData
+                    {
+                        highestClearedStage = highestClearedStage,
+                        playerLevel = 1,
+                        playerExp = 0,
+                        bossDungeonProgress = 1,
+                        totalKilledMonsters = 0,
+                        stageRanks = new System.Collections.Generic.Dictionary<string, int>(),
+                        bossDungeonAttempted = new System.Collections.Generic.Dictionary<string, bool>()
+                    };
+
+                    FirebaseSaveManager.Instance.SaveProgressionAsync(
+                        FirebaseManager.Instance.CurrentUserId,
+                        progression
+                    ).Forget();
+                }
             }
             Debug.Log($"{LOG_PREFIX} 진행도 저장: 클리어한 최고 스테이지 = {highestClearedStage}");
         }

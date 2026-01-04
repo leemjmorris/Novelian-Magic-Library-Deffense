@@ -343,18 +343,38 @@ namespace NovelianMagicLibraryDefense.UI
             if (FirebaseSaveManager.Instance?.CachedData?.progression != null &&
                 FirebaseManager.Instance != null)
             {
-                int currentProgress = FirebaseSaveManager.Instance.CachedData.progression.bossDungeonProgress;
+                var progression = FirebaseSaveManager.Instance.CachedData.progression;
+                int currentProgress = progression.bossDungeonProgress;
 
                 if (clearedFloor >= currentProgress)
                 {
                     int nextFloor = clearedFloor + 1;
-                    FirebaseSaveManager.Instance.CachedData.progression.bossDungeonProgress = nextFloor;
+                    progression.bossDungeonProgress = nextFloor;
+
+                    // Issue #645: 클리어한 층의 실패 기록 제거
+                    RemoveAttemptRecord(clearedFloor, progression);
+
                     FirebaseSaveManager.Instance.SaveProgressionAsync(
                         FirebaseManager.Instance.CurrentUserId,
-                        FirebaseSaveManager.Instance.CachedData.progression
+                        progression
                     ).Forget();
                     Debug.Log($"[BossDungeonClearPanel] 다음 층 해금: {nextFloor}층");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Issue #645: 클리어한 층의 실패 기록 제거
+        /// </summary>
+        private void RemoveAttemptRecord(int floorIndex, Firebase.Data.ProgressionData progression)
+        {
+            if (progression.bossDungeonAttempted == null) return;
+
+            string key = floorIndex.ToString();
+            if (progression.bossDungeonAttempted.ContainsKey(key))
+            {
+                progression.bossDungeonAttempted.Remove(key);
+                Debug.Log($"[BossDungeonClearPanel] 실패 기록 제거: {floorIndex}층");
             }
         }
 

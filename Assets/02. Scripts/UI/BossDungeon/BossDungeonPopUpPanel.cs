@@ -30,6 +30,11 @@ namespace NovelianMagicLibraryDefense.UI
         [Header("Warning Panel")]
         [SerializeField] private GameObject deckSetupWarningPanel;
 
+        [Header("Clear Info (Issue #645)")]
+        [SerializeField] private Image clearInfoImage;             // S 랭크 이미지 (클리어 시)
+        [SerializeField] private Sprite clearSpriteS;              // S 랭크 스프라이트
+        [SerializeField] private TextMeshProUGUI clearInfoText;    // "-" 텍스트 (미클리어 시)
+
         // 동적 생성된 아이콘 오브젝트 리스트
         private List<GameObject> spawnedIcons = new List<GameObject>();
 
@@ -72,6 +77,9 @@ namespace NovelianMagicLibraryDefense.UI
                 floorText.text = $"{dungeonData.Floor_Index}층";
 
             UpdateCostText();
+
+            // Issue #645: 클리어 정보 업데이트
+            UpdateClearInfo(dungeonData.Floor_Index);
 
             // 보상 아이콘 업데이트
             UpdateRewardIcons().Forget();
@@ -134,6 +142,44 @@ namespace NovelianMagicLibraryDefense.UI
 
             costText.text = $"{owned}/{ENTRY_COST}";
             costText.color = owned >= ENTRY_COST ? normalColor : insufficientColor;
+        }
+
+        /// <summary>
+        /// Issue #645: 클리어 정보 업데이트 (S: 성공, -: 미클리어)
+        /// </summary>
+        private void UpdateClearInfo(int floorIndex)
+        {
+            var progression = FirebaseSaveManager.Instance?.CachedData?.progression;
+            if (progression == null)
+            {
+                if (clearInfoImage != null) clearInfoImage.gameObject.SetActive(false);
+                if (clearInfoText != null) clearInfoText.gameObject.SetActive(false);
+                return;
+            }
+
+            // 클리어 여부 확인: 현재 층이 해금된 최대 층보다 작으면 클리어한 것
+            bool isCleared = floorIndex < progression.bossDungeonProgress;
+
+            if (isCleared)
+            {
+                // 클리어한 층 = S 이미지
+                if (clearInfoImage != null)
+                {
+                    clearInfoImage.gameObject.SetActive(true);
+                    clearInfoImage.sprite = clearSpriteS;
+                }
+                if (clearInfoText != null) clearInfoText.gameObject.SetActive(false);
+            }
+            else
+            {
+                // 미클리어 층 = "-" 텍스트
+                if (clearInfoImage != null) clearInfoImage.gameObject.SetActive(false);
+                if (clearInfoText != null)
+                {
+                    clearInfoText.gameObject.SetActive(true);
+                    clearInfoText.text = "-";
+                }
+            }
         }
 
         /// <summary>
