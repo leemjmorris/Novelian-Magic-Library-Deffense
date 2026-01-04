@@ -97,8 +97,8 @@ namespace NovelianMagicLibraryDefense.Managers
                 // 페이드 인
                 await FadeCanvasGroupAsync(0f, 1f, fadeDuration, token);
 
-                // 대기
-                await UniTask.Delay((int)(displayDuration * 1000), cancellationToken: token);
+                // 대기 (타임스케일 무시)
+                await UniTask.Delay((int)(displayDuration * 1000), ignoreTimeScale: true, cancellationToken: token);
 
                 // 페이드 아웃
                 await FadeCanvasGroupAsync(1f, 0f, fadeDuration, token);

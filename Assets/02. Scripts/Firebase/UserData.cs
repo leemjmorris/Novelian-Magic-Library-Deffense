@@ -73,6 +73,7 @@ namespace Firebase.Data
         public int dungeonPass;    // 1606: 던전 출입증
         public int ap;             // 1607: 행동력
         public long apLastSyncTimeMs; // AP 마지막 동기화 시간 (서버 시간, 밀리초)
+        public long dungeonPassLastSyncTimeMs; // 던전 출입증 마지막 동기화 시간 (서버 시간, 밀리초)
 
         // 하위 호환용 (마이그레이션용, deprecated)
         public string apRecoveryTime;
@@ -84,9 +85,10 @@ namespace Firebase.Data
             application = 0;
             recommendation = 0;
             magicStone = 0;
-            dungeonPass = 0;
+            dungeonPass = 5; // 기본 던전 출입증 5개
             ap = 30; // 기본 AP
             apLastSyncTimeMs = 0;
+            dungeonPassLastSyncTimeMs = 0;
             apRecoveryTime = "";
         }
     }

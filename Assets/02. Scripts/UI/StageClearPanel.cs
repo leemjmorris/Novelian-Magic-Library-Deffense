@@ -464,7 +464,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnNextStageButtonClicked()
         {
-            Debug.Log("[StageClearPanel] Next Stage button clicked");
+            Debug.Log("[StageClearPanel] Next Stage button clicked - Checking AP");
 
             StageData nextStage = GetNextStageData();
             if (nextStage == null)
@@ -483,9 +483,29 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
+            // AP 잔량 확인 및 소모
+            if (CurrencyManager.Instance == null)
+            {
+                Debug.LogError("[StageClearPanel] CurrencyManager가 초기화되지 않음");
+                return;
+            }
+
+            int apCost = nextStage.AP_Cost;
+
+            if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.AP_ID, apCost))
+            {
+                int currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
+                Debug.LogWarning($"[StageClearPanel] AP 부족! 필요: {apCost}, 보유: {currentAP}");
+                WarningUIManager.Instance?.ShowWarning("AP가 부족합니다");
+                return;
+            }
+
+            // AP 소모
+            CurrencyManager.Instance.SpendCurrency(CurrencyManager.AP_ID, apCost);
+            Debug.Log($"[StageClearPanel] AP {apCost} 소모. 다음 스테이지로 이동: Chapter {nextStage.Chapter_Number}, Stage_ID={nextStage.Stage_ID}");
+
             // 다음 스테이지 설정 및 게임 시작
             SelectedStage.Data = nextStage;
-            Debug.Log($"[StageClearPanel] 다음 스테이지로 이동: Chapter {nextStage.Chapter_Number}, Stage_ID={nextStage.Stage_ID}");
 
             Close();
             // Issue #602: 씬 전환 전 TimeScale 스택 리셋

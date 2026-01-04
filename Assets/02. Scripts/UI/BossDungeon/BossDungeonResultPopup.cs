@@ -411,7 +411,38 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void OnRetryButton()
         {
-            Debug.Log("[BossDungeonResultPopup] 재도전 버튼 클릭");
+            Debug.Log("[BossDungeonResultPopup] 재도전 버튼 클릭 - 던전 출입증 확인");
+
+            // 1. SelectedBossDungeon 데이터 확인
+            if (!SelectedBossDungeon.HasSelection)
+            {
+                Debug.LogError("[BossDungeonResultPopup] 선택된 던전이 없습니다");
+                return;
+            }
+
+            // 2. CurrencyManager 확인
+            if (CurrencyManager.Instance == null)
+            {
+                Debug.LogError("[BossDungeonResultPopup] CurrencyManager가 초기화되지 않음");
+                return;
+            }
+
+            const int ENTRY_COST = 1;
+
+            // 3. 던전 출입증 잔량 확인
+            if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.DUNGEON_PASS_ID, ENTRY_COST))
+            {
+                int owned = CurrencyManager.Instance.GetCurrency(CurrencyManager.DUNGEON_PASS_ID);
+                Debug.LogWarning($"[BossDungeonResultPopup] 던전 출입증 부족! 필요: {ENTRY_COST}, 보유: {owned}");
+                WarningUIManager.Instance?.ShowWarning("던전 출입증이 부족합니다");
+                return;
+            }
+
+            // 4. 던전 출입증 소모
+            CurrencyManager.Instance.SpendCurrency(CurrencyManager.DUNGEON_PASS_ID, ENTRY_COST);
+            Debug.Log($"[BossDungeonResultPopup] 던전 출입증 {ENTRY_COST}개 소모. 재도전 진행");
+
+            // 5. 씬 전환
             // Issue #602: 씬 전환 전 TimeScale 스택 리셋
             TimeManager.Instance?.ResetTimeScale();
 
@@ -444,28 +475,53 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (currentDungeonData == null) return;
 
-            Debug.Log("[BossDungeonResultPopup] 다음 층 버튼 클릭");
-            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
-            TimeManager.Instance?.ResetTimeScale();
+            Debug.Log("[BossDungeonResultPopup] 다음 층 버튼 클릭 - 던전 출입증 확인");
 
-            // 다음 층 데이터 설정
+            // 1. CurrencyManager 확인
+            if (CurrencyManager.Instance == null)
+            {
+                Debug.LogError("[BossDungeonResultPopup] CurrencyManager가 초기화되지 않음");
+                return;
+            }
+
+            const int ENTRY_COST = 1;
+
+            // 2. 던전 출입증 잔량 확인
+            if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.DUNGEON_PASS_ID, ENTRY_COST))
+            {
+                int owned = CurrencyManager.Instance.GetCurrency(CurrencyManager.DUNGEON_PASS_ID);
+                Debug.LogWarning($"[BossDungeonResultPopup] 던전 출입증 부족! 필요: {ENTRY_COST}, 보유: {owned}");
+                WarningUIManager.Instance?.ShowWarning("던전 출입증이 부족합니다");
+                return;
+            }
+
+            // 3. 다음 층 데이터 설정
             int nextFloorIndex = currentDungeonData.Floor_Index + 1;
             var nextDungeonData = CSVLoader.Instance.GetTable<BossDungeonData>()
                 .Find(d => d.Floor_Index == nextFloorIndex);
 
-            if (nextDungeonData != null && nextDungeonData.IsImplemented)
-            {
-                SelectedBossDungeon.Data = nextDungeonData;
-                LoadSceneAsync(SceneName.BossDungeonScene).Forget();
-            }
-            else if (nextDungeonData != null && !nextDungeonData.IsImplemented)
-            {
-                Debug.LogError($"[BossDungeonResultPopup] 다음 층({nextFloorIndex})은 아직 구현되지 않았습니다!");
-            }
-            else
+            if (nextDungeonData == null)
             {
                 Debug.LogError($"[BossDungeonResultPopup] 다음 층({nextFloorIndex}) 데이터를 찾을 수 없습니다!");
+                return;
             }
+
+            if (!nextDungeonData.IsImplemented)
+            {
+                Debug.LogError($"[BossDungeonResultPopup] 다음 층({nextFloorIndex})은 아직 구현되지 않았습니다!");
+                return;
+            }
+
+            // 4. 던전 출입증 소모
+            CurrencyManager.Instance.SpendCurrency(CurrencyManager.DUNGEON_PASS_ID, ENTRY_COST);
+            Debug.Log($"[BossDungeonResultPopup] 던전 출입증 {ENTRY_COST}개 소모. 다음 층 진행");
+
+            // 5. 씬 전환
+            // Issue #602: 씬 전환 전 TimeScale 스택 리셋
+            TimeManager.Instance?.ResetTimeScale();
+
+            SelectedBossDungeon.Data = nextDungeonData;
+            LoadSceneAsync(SceneName.BossDungeonScene).Forget();
         }
 
         /// <summary>
