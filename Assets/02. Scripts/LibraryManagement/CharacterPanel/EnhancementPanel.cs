@@ -41,6 +41,9 @@ public class EnhancementPanel : MonoBehaviour
     private bool hasMaterial2Icon = false;
     private bool hasMaterial3Icon = false;
 
+    // 현재 로드 중인 캐릭터 ID (다른 캐릭터 선택 시 이전 로드 무시용)
+    private int loadingCharacterId = 0;
+
     private void OnEnable()
     {
         raycastPanel?.SetActive(true);
@@ -52,6 +55,29 @@ public class EnhancementPanel : MonoBehaviour
     public void Initialize(int characterID)
     {
         this.characterID = characterID;
+        this.loadingCharacterId = characterID;
+        InitializeAsync().Forget();
+    }
+
+    /// <summary>
+    /// 비동기 초기화 (Firebase 데이터 로드 대기)
+    /// </summary>
+    private async UniTaskVoid InitializeAsync()
+    {
+        // Firebase 데이터 로드 완료 대기 (최대 3초 타임아웃)
+        float timeout = 3f;
+        float elapsed = 0f;
+
+        while (elapsed < timeout)
+        {
+            if (IngredientManager.Instance != null && IngredientManager.Instance.IsDataLoaded)
+                break;
+
+            await UniTask.Delay(100);
+            elapsed += 0.1f;
+        }
+
+        // 타임아웃 시에도 UI 갱신 시도 (0으로 표시될 수 있음)
         RefreshEnhancementUI();
     }
 
@@ -69,93 +95,91 @@ public class EnhancementPanel : MonoBehaviour
         // 현재 강화 레벨
         int currentLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterID);
         int nextLevel = currentLevel + 1;
-
-        // 최대 레벨 체크
-        if (currentLevel >= 10)
-        {
-            if (enhancementLevelText != null)
-                enhancementLevelText.text = "최대 레벨 달성!";
-            if (upgradeButton != null)
-                upgradeButton.interactable = false;
-
-            // 재료 텍스트 비활성화
-            if (material1Text != null) material1Text.text = "-";
-            if (material2Text != null) material2Text.text = "-";
-            if (material3Text != null) material3Text.text = "-";
-            return;
-        }
+        bool isMaxLevel = currentLevel >= 10;
 
         // 강화 레벨 텍스트
         if (enhancementLevelText != null)
         {
-            enhancementLevelText.text = $"Lv {currentLevel} → Lv {nextLevel}";
+            enhancementLevelText.text = isMaxLevel ? "최대 레벨 달성!" : $"Lv {currentLevel} → Lv {nextLevel}";
         }
 
-        // 다음 강화 정보 가져오기
-        EnhancementLevelData nextInfo = CharacterEnhancementManager.Instance.GetNextEnhancementInfo(characterID);
-        if (nextInfo == null)
+        // 최대 레벨일 경우 버튼 비활성화
+        if (isMaxLevel && upgradeButton != null)
         {
-            Debug.LogError("Failed to get next enhancement info");
+            upgradeButton.interactable = false;
+        }
+
+        // 강화 정보 가져오기 (최대 레벨이면 현재 레벨 정보, 아니면 다음 레벨 정보)
+        EnhancementLevelData enhancementInfo = isMaxLevel
+            ? CharacterEnhancementManager.Instance.GetCurrentEnhancementInfo(characterID)
+            : CharacterEnhancementManager.Instance.GetNextEnhancementInfo(characterID);
+
+        if (enhancementInfo == null)
+        {
+            Debug.LogError("Failed to get enhancement info");
+            // 정보가 없어도 빈 값으로 표시
+            DisplayMaterialInfo(1, 0, 0, material1Text, material1CountText, material1Icon);
+            DisplayMaterialInfo(2, 0, 0, material2Text, material2CountText, material2Icon);
+            DisplayMaterialInfo(3, 0, 0, material3Text, material3CountText, material3Icon);
+            if (goldText != null) goldText.text = "소모 골드: 0G";
             return;
         }
 
         // 재료 1 표시
-        if (material1Text != null)
-        {
-            string mat1Name = IngredientManager.Instance.GetIngredientName(nextInfo.Material_1_ID);
-            int mat1Current = IngredientManager.Instance.GetIngredientCount(nextInfo.Material_1_ID);
-
-            int mat1Required = nextInfo.Material_1_Count;
-            bool mat1Enough = mat1Current >= mat1Required;
-
-            material1Text.text = $"{mat1Name}";
-            material1CountText.text = $"{mat1Current}/{mat1Required}";
-            material1CountText.color = mat1Enough ? Color.white : Color.red;
-
-            // 재료 1 아이콘 로드
-            LoadMaterialIcon(nextInfo.Material_1_ID, material1Icon, 1).Forget();
-        }
+        DisplayMaterialInfo(1, enhancementInfo.Material_1_ID, enhancementInfo.Material_1_Count, material1Text, material1CountText, material1Icon);
 
         // 재료 2 표시
-        if (material2Text != null)
-        {
-            string mat2Name = IngredientManager.Instance.GetIngredientName(nextInfo.Material_2_ID);
-            int mat2Current = IngredientManager.Instance.GetIngredientCount(nextInfo.Material_2_ID);
-            int mat2Required = nextInfo.Material_2_Count;
-            bool mat2Enough = mat2Current >= mat2Required;
-
-            material2Text.text = $"{mat2Name}";
-            material2CountText.text = $"{mat2Current}/{mat2Required}";
-            material2CountText.color = mat2Enough ? Color.white : Color.red;
-
-            // 재료 2 아이콘 로드
-            LoadMaterialIcon(nextInfo.Material_2_ID, material2Icon, 2).Forget();
-        }
+        DisplayMaterialInfo(2, enhancementInfo.Material_2_ID, enhancementInfo.Material_2_Count, material2Text, material2CountText, material2Icon);
 
         // 재료 3 표시
-        if (material3Text != null)
-        {
-            string mat3Name = IngredientManager.Instance.GetIngredientName(nextInfo.Material_3_ID);
-            int mat3Current = IngredientManager.Instance.GetIngredientCount(nextInfo.Material_3_ID);
-            int mat3Required = nextInfo.Material_3_Count;
-            bool mat3Enough = mat3Current >= mat3Required;
+        DisplayMaterialInfo(3, enhancementInfo.Material_3_ID, enhancementInfo.Material_3_Count, material3Text, material3CountText, material3Icon);
 
-            material3Text.text = $"{mat3Name}";
-            material3CountText.text = $"{mat3Current}/{mat3Required}";
-            material3CountText.color = mat3Enough ? Color.white : Color.red;
+        // 골드 표시
+        if (goldText != null)
+            goldText.text = $"소모 골드: {enhancementInfo.Material_4_Count}G";
 
-            // 재료 3 아이콘 로드
-            LoadMaterialIcon(nextInfo.Material_3_ID, material3Icon, 3).Forget();
-        }
-
-        goldText.text = $"소모 골드: {nextInfo.Material_4_Count}G";
-
-        // 버튼 활성화/비활성화
-        if (upgradeButton != null)
+        // 버튼 활성화/비활성화 (최대 레벨이면 이미 비활성화됨)
+        if (!isMaxLevel && upgradeButton != null)
         {
             bool canEnhance = CharacterEnhancementManager.Instance.CanEnhance(characterID, out _);
             upgradeButton.interactable = canEnhance;
         }
+    }
+
+    /// <summary>
+    /// 재료 정보 표시 헬퍼 메서드
+    /// </summary>
+    private void DisplayMaterialInfo(int slotIndex, int materialId, int requiredCount,
+        TextMeshProUGUI nameText, TextMeshProUGUI countText, Image iconImage)
+    {
+        // 재료 ID가 0이면 빈 값으로 표시
+        if (materialId == 0)
+        {
+            if (nameText != null) nameText.text = "-";
+            if (countText != null)
+            {
+                countText.text = "-";
+                countText.color = Color.white;
+            }
+            if (iconImage != null) iconImage.enabled = false;
+            return;
+        }
+
+        string matName = IngredientManager.Instance.GetIngredientName(materialId);
+        int matCurrent = IngredientManager.Instance.GetIngredientCount(materialId);
+        bool matEnough = matCurrent >= requiredCount;
+
+        if (nameText != null)
+            nameText.text = matName;
+
+        if (countText != null)
+        {
+            countText.text = $"{matCurrent}/{requiredCount}";
+            countText.color = matEnough ? Color.white : Color.red;
+        }
+
+        // 아이콘 로드
+        LoadMaterialIcon(materialId, iconImage, slotIndex).Forget();
     }
 
     /// <summary>
@@ -236,6 +260,9 @@ public class EnhancementPanel : MonoBehaviour
             return;
         }
 
+        // 로드 시작 시 현재 캐릭터 ID 기록
+        int expectedCharacterId = loadingCharacterId;
+
         // 이전에 로드한 아이콘 해제
         ReleaseMaterialIcon(slotIndex);
 
@@ -279,7 +306,17 @@ public class EnhancementPanel : MonoBehaviour
             var handle = Addressables.LoadAssetAsync<Sprite>(iconPath);
             Sprite icon = await handle.Task;
 
-            if (icon != null && iconImage != null)
+            // 오브젝트가 파괴되었거나 다른 캐릭터로 변경된 경우 무시
+            if (this == null || iconImage == null) return;
+            if (loadingCharacterId != expectedCharacterId)
+            {
+                // 이전 캐릭터의 로드 결과는 해제
+                if (handle.IsValid())
+                    Addressables.Release(handle);
+                return;
+            }
+
+            if (icon != null)
             {
                 iconImage.sprite = icon;
                 iconImage.enabled = true;
@@ -305,7 +342,8 @@ public class EnhancementPanel : MonoBehaviour
         catch (System.Exception e)
         {
             Debug.LogWarning($"[EnhancementPanel] Failed to load material icon: {iconPath}\n{e.Message}");
-            iconImage.enabled = false;
+            if (iconImage != null)
+                iconImage.enabled = false;
         }
     }
 

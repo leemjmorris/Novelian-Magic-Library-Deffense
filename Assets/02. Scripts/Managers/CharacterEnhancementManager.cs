@@ -141,6 +141,35 @@ public class CharacterEnhancementManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 현재 강화 레벨 정보 가져오기 (최대 레벨에서 표시용)
+    /// </summary>
+    public EnhancementLevelData GetCurrentEnhancementInfo(int characterId)
+    {
+        int currentLevel = GetEnhancementLevel(characterId);
+
+        // CharacterEnhancementTable에서 캐릭터의 강화 정보 가져오기
+        CharacterEnhancementData charEnhancement = GetCharacterEnhancementData(characterId);
+        if (charEnhancement == null)
+        {
+            Debug.LogError($"CharacterEnhancementData not found for ID: {characterId}");
+            return null;
+        }
+
+        // 현재 레벨의 Pw_Level ID 가져오기
+        int currentPwLevelId = GetPwLevelId(charEnhancement, currentLevel);
+
+        // EnhancementLevelTable에서 해당 Pw_Level 정보 가져오기
+        EnhancementLevelData enhancementData = CSVLoader.Instance.GetData<EnhancementLevelData>(currentPwLevelId);
+        if (enhancementData == null)
+        {
+            Debug.LogError($"EnhancementLevelData not found for Pw_Level: {currentPwLevelId}");
+            return null;
+        }
+
+        return enhancementData;
+    }
+
+    /// <summary>
     /// 강화 가능 여부 확인 (재료 + 골드 체크)
     /// </summary>
     public bool CanEnhance(int characterId, out string failReason)
