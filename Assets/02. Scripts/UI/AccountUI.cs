@@ -356,6 +356,21 @@ namespace NovelianMagicLibraryDefense.UI
                 return;
             }
 
+            // 확인 팝업 표시
+            if (WarningUIManager.Instance == null)
+            {
+                Debug.LogWarning("[AccountUI] WarningUIManager not found");
+                return;
+            }
+
+            bool confirmed = await WarningUIManager.Instance.ShowConfirmAsync("정말 계정을 삭제하시겠습니까?\n삭제된 계정은 복구할 수 없습니다.");
+
+            if (!confirmed)
+            {
+                Debug.Log("[AccountUI] 계정 삭제 취소됨");
+                return;
+            }
+
             try
             {
                 // 볼륨 설정 저장
