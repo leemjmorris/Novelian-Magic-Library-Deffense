@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
@@ -24,6 +25,12 @@ namespace NovelianMagicLibraryDefense.Managers
         [Header("Warning Panel (Assign in Inspector)")]
         [SerializeField] private GameObject warningPanel;
 
+        [Header("Confirm Panel (Assign in Inspector)")]
+        [SerializeField] private GameObject confirmPanel;
+        [SerializeField] private TextMeshProUGUI confirmMessageText;
+        [SerializeField] private Button confirmYesButton;
+        [SerializeField] private Button confirmNoButton;
+
         [Header("Settings")]
         [SerializeField] private float fadeDuration = 0.3f;
         [SerializeField] private float displayDuration = 1.5f;
@@ -31,6 +38,10 @@ namespace NovelianMagicLibraryDefense.Managers
         private CanvasGroup warningCanvasGroup;
         private TextMeshProUGUI warningText;
         private CancellationTokenSource warningCts;
+
+        // 확인 팝업용
+        private CanvasGroup confirmCanvasGroup;
+        private UniTaskCompletionSource<bool> confirmTcs;
 
         private void Awake()
         {
@@ -49,6 +60,19 @@ namespace NovelianMagicLibraryDefense.Managers
                 warningCanvasGroup = warningPanel.GetComponent<CanvasGroup>();
                 warningText = warningPanel.GetComponentInChildren<TextMeshProUGUI>();
                 warningPanel.SetActive(false);
+            }
+
+            // 확인 팝업 초기화
+            if (confirmPanel != null)
+            {
+                confirmCanvasGroup = confirmPanel.GetComponent<CanvasGroup>();
+                confirmPanel.SetActive(false);
+
+                // 버튼 리스너 등록
+                if (confirmYesButton != null)
+                    confirmYesButton.onClick.AddListener(OnConfirmYes);
+                if (confirmNoButton != null)
+                    confirmNoButton.onClick.AddListener(OnConfirmNo);
             }
 
             Debug.Log("[WarningUIManager] Initialized");
@@ -136,6 +160,68 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             warningCts?.Cancel();
             warningCts?.Dispose();
+
+            // 버튼 리스너 해제
+            if (confirmYesButton != null)
+                confirmYesButton.onClick.RemoveListener(OnConfirmYes);
+            if (confirmNoButton != null)
+                confirmNoButton.onClick.RemoveListener(OnConfirmNo);
         }
+
+        #region Confirm Popup
+
+        /// <summary>
+        /// 확인 팝업 표시 (예/아니오)
+        /// </summary>
+        /// <param name="message">표시할 메시지</param>
+        /// <returns>예 버튼 클릭 시 true, 아니오 버튼 클릭 시 false</returns>
+        public async UniTask<bool> ShowConfirmAsync(string message)
+        {
+            if (confirmPanel == null || confirmMessageText == null)
+            {
+                Debug.LogWarning("[WarningUIManager] Confirm panel references not assigned!");
+                return false;
+            }
+
+            // 메시지 설정 및 패널 표시
+            confirmMessageText.text = message;
+
+            if (confirmCanvasGroup != null)
+                confirmCanvasGroup.alpha = 1f;
+
+            confirmPanel.SetActive(true);
+
+            // UniTaskCompletionSource로 버튼 클릭 대기
+            confirmTcs = new UniTaskCompletionSource<bool>();
+
+            try
+            {
+                bool result = await confirmTcs.Task;
+                return result;
+            }
+            finally
+            {
+                confirmPanel.SetActive(false);
+                confirmTcs = null;
+            }
+        }
+
+        /// <summary>
+        /// 확인 버튼(예) 클릭 시 호출
+        /// </summary>
+        private void OnConfirmYes()
+        {
+            confirmTcs?.TrySetResult(true);
+        }
+
+        /// <summary>
+        /// 취소 버튼(아니오) 클릭 시 호출
+        /// </summary>
+        private void OnConfirmNo()
+        {
+            confirmTcs?.TrySetResult(false);
+        }
+
+        #endregion
     }
 }
