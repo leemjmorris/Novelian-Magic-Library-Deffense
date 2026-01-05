@@ -68,6 +68,17 @@ namespace NovelianMagicLibraryDefense.Audio
         }
 
         /// <summary>
+        /// Character_ID로 로비 터치 음성 Addressable 키 반환 (항상 _4)
+        /// </summary>
+        /// <param name="characterId">CharacterTable의 Character_ID</param>
+        /// <returns>음성 Addressable 키 (예: "Greum_4"), 실패 시 null</returns>
+        public static string GetLobbyVoiceKey(int characterId)
+        {
+            string baseKey = GetVoiceKeyBaseByCharacterId(characterId);
+            return baseKey != null ? $"{baseKey}_4" : null;
+        }
+
+        /// <summary>
         /// Character_ID로 음성 키 베이스 조회 (내부 헬퍼)
         /// </summary>
         private static string GetVoiceKeyBaseByCharacterId(int characterId)

@@ -20,7 +20,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
 #if UNITY_EDITOR
         [Header("Editor Test Settings")]
-        [Tooltip("체크하면 에디터에서 터치 입력 시뮬레이션 (Android 테스트용)")]
+        [Tooltip("체크하면 에디터에서 터치 입력 시뮬레이션 (Android 테스트용) - 기본값 false로 마우스 입력 사용")]
         [SerializeField] private bool simulateTouchInEditor = false;
 #endif
 
