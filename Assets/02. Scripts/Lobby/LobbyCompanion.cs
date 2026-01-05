@@ -8,7 +8,7 @@ namespace NovelianMagicLibraryDefense.Lobby
     /// <summary>
     /// 로비 동반자 캐릭터 동작 관리
     /// - 랜덤 워크 AI (Idle/Walk 전환)
-    /// - 클릭 시 음성 재생 (_1, _2 중 랜덤)
+    /// - 클릭 시 음성 재생 (_4 로비 대사)
     /// - 콜라이더 벽 충돌 시 방향 전환
     /// </summary>
     public class LobbyCompanion : MonoBehaviour
@@ -33,6 +33,7 @@ namespace NovelianMagicLibraryDefense.Lobby
         private float lastVoiceTime;
         private bool isInitialized;
         private Rigidbody rb;
+        private Collider myCollider;
 
         // 이동 범위 제한 (LobbyCompanionManager에서 설정)
         private float minX, maxX, minZ, maxZ;
@@ -56,14 +57,15 @@ namespace NovelianMagicLibraryDefense.Lobby
             rb.useGravity = true;
             rb.constraints = RigidbodyConstraints.FreezeRotation | RigidbodyConstraints.FreezePositionY; // 회전 고정 + Y 위치 고정
 
-            // Collider 추가 (충돌 감지)
-            CapsuleCollider collider = GetComponent<CapsuleCollider>();
-            if (collider == null)
+            // Collider 추가 (충돌 감지 + 터치 감지)
+            myCollider = GetComponent<CapsuleCollider>();
+            if (myCollider == null)
             {
-                collider = gameObject.AddComponent<CapsuleCollider>();
-                collider.radius = 0.5f;
-                collider.height = 2f;
-                collider.center = new Vector3(0f, 1f, 0f);
+                var capsule = gameObject.AddComponent<CapsuleCollider>();
+                capsule.radius = 0.5f;
+                capsule.height = 2f;
+                capsule.center = new Vector3(0f, 1f, 0f);
+                myCollider = capsule;
                 Debug.Log($"<color=cyan>[LobbyCompanion]</color> CapsuleCollider 추가: CharacterID {charId}");
             }
 
@@ -85,6 +87,9 @@ namespace NovelianMagicLibraryDefense.Lobby
 
             isInitialized = true;
             lastVoiceTime = -voiceCooldown; // 즉시 재생 가능하도록
+
+            // InputManager 터치 이벤트 구독
+            InputManager.OnShortPress += OnScreenTouched;
 
             // 랜덤 워크 시작
             StartRandomWalkLoop().Forget();
@@ -197,12 +202,34 @@ namespace NovelianMagicLibraryDefense.Lobby
         }
 
         /// <summary>
-        /// 클릭 감지 (마우스 클릭)
+        /// 화면 터치 시 Raycast로 자신이 클릭됐는지 확인
         /// </summary>
-        private void OnMouseDown()
+        private void OnScreenTouched(Vector2 screenPosition)
         {
             if (!isInitialized) return;
 
+            // 메인 카메라로 Raycast
+            Camera mainCamera = Camera.main;
+            if (mainCamera == null) return;
+
+            Ray ray = mainCamera.ScreenPointToRay(screenPosition);
+            RaycastHit[] hits = Physics.RaycastAll(ray, 100f);
+
+            foreach (var hit in hits)
+            {
+                if (hit.collider == myCollider)
+                {
+                    OnCharacterTouched();
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 캐릭터가 터치됐을 때 처리
+        /// </summary>
+        private void OnCharacterTouched()
+        {
             // 쿨타임 체크
             if (Time.time - lastVoiceTime < voiceCooldown)
             {
@@ -210,14 +237,14 @@ namespace NovelianMagicLibraryDefense.Lobby
                 return;
             }
 
-            PlayRandomVoice();
+            PlayLobbyVoice();
             lastVoiceTime = Time.time;
         }
 
         /// <summary>
-        /// 랜덤 음성 재생 (_1 또는 _2)
+        /// 로비 터치 음성 재생 (_4)
         /// </summary>
-        private void PlayRandomVoice()
+        private void PlayLobbyVoice()
         {
             if (AudioManager.Instance == null)
             {
@@ -225,10 +252,7 @@ namespace NovelianMagicLibraryDefense.Lobby
                 return;
             }
 
-            // _1 또는 _2 중 랜덤 선택
-            string voiceKey = Random.value > 0.5f
-                ? CharacterVoiceHelper.GetRandomVoiceKey(characterId)  // _1 (소환 대사)
-                : CharacterVoiceHelper.GetEquipVoiceKey(characterId);   // _2 (장착 대사)
+            string voiceKey = CharacterVoiceHelper.GetLobbyVoiceKey(characterId);
 
             if (string.IsNullOrEmpty(voiceKey))
             {
@@ -254,6 +278,9 @@ namespace NovelianMagicLibraryDefense.Lobby
         private void OnDestroy()
         {
             isInitialized = false;
+
+            // 이벤트 구독 해제
+            InputManager.OnShortPress -= OnScreenTouched;
         }
     }
 }
