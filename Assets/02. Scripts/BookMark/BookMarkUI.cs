@@ -537,9 +537,9 @@ public class BookMarkUI : MonoBehaviour
     {
         return type switch
         {
-            BookmarkType.Stat => "PictoIcon_Buff",
-            BookmarkType.Skill => "PictoIcon_Battle",
-            _ => "PictoIcon_Battle"
+            BookmarkType.Stat => "Stat_Bookmark",
+            BookmarkType.Skill => "Skill_Bookmark",
+            _ => "Skill_Bookmark"
         };
     }
 
