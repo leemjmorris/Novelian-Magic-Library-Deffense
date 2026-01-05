@@ -632,6 +632,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         /// <summary>
         /// 음성 큐 순차 처리
+        /// Issue #646: Voice 그룹으로 재생하도록 수정
         /// </summary>
         private async UniTaskVoid ProcessVoiceQueueAsync()
         {
@@ -650,18 +651,15 @@ namespace NovelianMagicLibraryDefense.Managers
                     string voiceKey = voiceQueue.Dequeue();
                     AudioClip clip = await LoadAudioClipAsync(voiceKey);
 
-                    if (clip != null)
+                    if (clip != null && voiceSource != null)
                     {
-                        AudioSource availableSource = GetAvailableSFXSource();
-                        if (availableSource != null)
-                        {
-                            availableSource.PlayOneShot(clip);
-                            Debug.Log($"[AudioManager] Playing voice: {voiceKey}");
+                        // Issue #646: Voice 그룹을 사용하는 voiceSource로 재생
+                        voiceSource.PlayOneShot(clip);
+                        Debug.Log($"[AudioManager] Playing voice (queue): {voiceKey}");
 
-                            // 클립 재생 시간 + 딜레이만큼 대기
-                            float waitTime = clip.length + VOICE_DELAY;
-                            await UniTask.Delay((int)(waitTime * 1000), cancellationToken: token);
-                        }
+                        // 클립 재생 시간 + 딜레이만큼 대기
+                        float waitTime = clip.length + VOICE_DELAY;
+                        await UniTask.Delay((int)(waitTime * 1000), cancellationToken: token);
                     }
                 }
             }
