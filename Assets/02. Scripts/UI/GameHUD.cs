@@ -2,17 +2,22 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Events;
+using NovelianMagicLibraryDefense.Managers;
 
 namespace NovelianMagicLibraryDefense.UI
 {
     /// <summary>
-    /// LMJ: Displays in-game HUD information (monsters, timer, wall health, experience)
+    /// LMJ: Displays in-game HUD information (monsters, timer, wall health, experience, currency)
     /// Single responsibility: Display game state information
     /// </summary>
     public class GameHUD : MonoBehaviour
     {
         [Header("Event Channels")]
         [SerializeField] private WallEvents wallEvents;
+
+        [Header("Currency Display")]
+        [SerializeField] private TextMeshProUGUI goldText;
+        [SerializeField] private TextMeshProUGUI crystalText;
 
         [Header("Monster Display")]
         [SerializeField] private TextMeshProUGUI remainingMonstersText;
@@ -39,6 +44,16 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 wallEvents.AddHealthChangedListener(UpdateWallHealth);
             }
+
+            // Subscribe to currency changes
+            if (CurrencyManager.Instance != null)
+            {
+                CurrencyManager.Instance.OnCurrencyChanged += OnCurrencyChanged;
+            }
+
+            // Initialize currency display
+            UpdateGoldText();
+            UpdateCrystalText();
         }
 
         private void OnDisable()
@@ -47,6 +62,12 @@ namespace NovelianMagicLibraryDefense.UI
             if (wallEvents != null)
             {
                 wallEvents.RemoveHealthChangedListener(UpdateWallHealth);
+            }
+
+            // Unsubscribe from currency changes
+            if (CurrencyManager.Instance != null)
+            {
+                CurrencyManager.Instance.OnCurrencyChanged -= OnCurrencyChanged;
             }
         }
 
@@ -134,5 +155,56 @@ namespace NovelianMagicLibraryDefense.UI
             if (wallHealthSlider != null)
                 wallHealthSlider.value = 1f;
         }
+
+        #region Currency Display
+
+        /// <summary>
+        /// Update gold text display
+        /// </summary>
+        private void UpdateGoldText()
+        {
+            if (goldText == null) return;
+
+            int gold = 0;
+            if (CurrencyManager.Instance != null)
+            {
+                gold = CurrencyManager.Instance.GetCurrency(CurrencyManager.GOLD_ID);
+            }
+
+            goldText.text = CurrencyManager.FormatCurrency(gold);
+        }
+
+        /// <summary>
+        /// Update crystal (magic stone) text display
+        /// </summary>
+        private void UpdateCrystalText()
+        {
+            if (crystalText == null) return;
+
+            int crystal = 0;
+            if (CurrencyManager.Instance != null)
+            {
+                crystal = CurrencyManager.Instance.GetCurrency(CurrencyManager.MAGIC_STONE_ID);
+            }
+
+            crystalText.text = $"{crystal}";
+        }
+
+        /// <summary>
+        /// Callback for currency changes
+        /// </summary>
+        private void OnCurrencyChanged(int currencyId, int newAmount)
+        {
+            if (currencyId == CurrencyManager.GOLD_ID && goldText != null)
+            {
+                goldText.text = CurrencyManager.FormatCurrency(newAmount);
+            }
+            else if (currencyId == CurrencyManager.MAGIC_STONE_ID && crystalText != null)
+            {
+                crystalText.text = $"{newAmount}";
+            }
+        }
+
+        #endregion
     }
 }
