@@ -163,9 +163,6 @@ namespace NovelianMagicLibraryDefense.Lobby
             GameObject companion = Instantiate(characterPrefab, spawnPosition, Quaternion.identity);
             companion.name = $"LobbyCompanion_{characterId}";
 
-            // LobbyCompanion 레이어 설정 (클릭 감지용 - UI/Character 레이어 사용)
-            companion.layer = LayerMask.NameToLayer("UI/Character");
-
             // Character 전투 컴포넌트 비활성화
             DisableCombatComponents(companion);
 
