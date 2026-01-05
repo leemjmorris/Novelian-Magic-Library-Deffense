@@ -159,7 +159,7 @@ public class CharacterInfoPanel : MonoBehaviour
 
             if (bookmark != null)
             {
-                UpdateSlotText(i, bookmark.Name);
+                UpdateSlotText(i, bookmark.DisplayName);
             }
             else
             {

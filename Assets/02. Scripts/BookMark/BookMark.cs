@@ -12,6 +12,23 @@ public class BookMark
     public Grade Grade { get; private set; }
     public BookmarkType Type { get; private set; }
 
+    /// <summary>
+    /// JML: UI 표시용 이름 - 스킬 책갈피는 실제 스킬 이름 반환
+    /// </summary>
+    public string DisplayName
+    {
+        get
+        {
+            if (Type == BookmarkType.Skill && SkillID > 0)
+            {
+                string skillName = GetSkillNameFromCSV(SkillID);
+                if (!string.IsNullOrEmpty(skillName))
+                    return skillName;
+            }
+            return Name;
+        }
+    }
+
     // JML: BookMark Skill ID
     public int SkillID { get; private set; }
 
@@ -164,5 +181,33 @@ public class BookMark
             default:
                 return ((OptionType)optionType).ToString();
         }
+    }
+
+    /// <summary>
+    /// JML: 스킬 ID로 CSV에서 스킬 이름 가져오기
+    /// ID 범위: 39xxx = MainSkill, 40xxx = SupportSkill
+    /// </summary>
+    private static string GetSkillNameFromCSV(int skillID)
+    {
+        if (CSVLoader.Instance == null)
+            return null;
+
+        // ID 범위로 테이블 판단 (39xxx = Main, 40xxx = Support)
+        if (skillID >= 40000)
+        {
+            // SupportSkillTable에서 검색
+            var supportSkillData = CSVLoader.Instance.GetData<SupportSkillData>(skillID);
+            if (supportSkillData != null && !string.IsNullOrEmpty(supportSkillData.support_name))
+                return supportSkillData.support_name;
+        }
+        else if (skillID >= 39000)
+        {
+            // MainSkillTable에서 검색
+            var mainSkillData = CSVLoader.Instance.GetData<MainSkillData>(skillID);
+            if (mainSkillData != null && !string.IsNullOrEmpty(mainSkillData.skill_name))
+                return mainSkillData.skill_name;
+        }
+
+        return null;
     }
 }

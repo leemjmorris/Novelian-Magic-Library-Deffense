@@ -732,39 +732,9 @@ public class BookMarkUI : MonoBehaviour
         }
         else // Skill
         {
-            // JML: CSV에서 스킬 이름 가져오기
-            string skillName = GetSkillName(bookMark.SkillID);
-            return $"{gradeName} 등급\n{skillName}\n책갈피 제작 성공!";
+            // JML: BookMark.DisplayName으로 스킬 이름 가져오기
+            return $"{gradeName} 등급\n{bookMark.DisplayName}\n책갈피 제작 성공!";
         }
-    }
-
-    /// <summary>
-    /// JML: 스킬 ID로 스킬 이름 가져오기 (MainSkillTable/SupportSkillTable 연동)
-    /// ID 범위: 39xxx = MainSkill, 40xxx = SupportSkill
-    /// </summary>
-    private string GetSkillName(int skillID)
-    {
-        // ID 범위로 테이블 판단 (39xxx = Main, 40xxx = Support)
-        if (skillID >= 40000)
-        {
-            // SupportSkillTable에서 검색
-            var supportSkillData = CSVLoader.Instance.GetData<SupportSkillData>(skillID);
-            if (supportSkillData != null && !string.IsNullOrEmpty(supportSkillData.support_name))
-            {
-                return supportSkillData.support_name;
-            }
-        }
-        else if (skillID >= 39000)
-        {
-            // MainSkillTable에서 검색
-            var mainSkillData = CSVLoader.Instance.GetData<MainSkillData>(skillID);
-            if (mainSkillData != null && !string.IsNullOrEmpty(mainSkillData.skill_name))
-            {
-                return mainSkillData.skill_name;
-            }
-        }
-
-        return $"알 수 없는 스킬 ({skillID})";
     }
 
     /// <summary>

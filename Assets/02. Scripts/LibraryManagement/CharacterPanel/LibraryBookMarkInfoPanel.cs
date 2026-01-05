@@ -154,7 +154,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
         if (success)
         {
             // UI 업데이트
-            characterInfoPanel.UpdateSlotText(slotIndex, currentBookmark.Name);
+            characterInfoPanel.UpdateSlotText(slotIndex, currentBookmark.DisplayName);
             characterInfoPanel.RefreshBookmarkUI();
 
             // 슬롯의 장착 아이콘 활성화
@@ -301,7 +301,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
         if (equipSuccess)
         {
             // UI 업데이트
-            characterInfoPanel.UpdateSlotText(targetSlotIndex, currentBookmark.Name);
+            characterInfoPanel.UpdateSlotText(targetSlotIndex, currentBookmark.DisplayName);
 
             // 새 책갈피 슬롯의 장착 아이콘 활성화
             if (currentSlot != null)
@@ -323,7 +323,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
                 if (swapSuccess)
                 {
                     // 스왑된 책갈피의 슬롯 UI 업데이트
-                    characterInfoPanel.UpdateSlotText(oldSlotIndex, bookmarkToSwap.Name);
+                    characterInfoPanel.UpdateSlotText(oldSlotIndex, bookmarkToSwap.DisplayName);
 
                     // 스왑된 책갈피의 equipIcon은 여전히 활성 상태 유지
                     if (previousSlot != null)

@@ -107,7 +107,7 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
         {
             libraryBookMarkInfoPanel.OpenInfoPanel(
                 loadedBookmarkSprite,
-                bookMarkData.Name,
+                bookMarkData.DisplayName,
                 description,
                 bookMarkData,
                 this  // 슬롯 참조 전달
@@ -116,7 +116,7 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
         // BookMarkInfo 사용 (BookMarkCraftScene)
         else if (bookMarkInfo != null)
         {
-            bookMarkInfo.OpenInfoPanel(loadedBookmarkSprite, bookMarkData.Name, description);
+            bookMarkInfo.OpenInfoPanel(loadedBookmarkSprite, bookMarkData.DisplayName, description);
         }
         else
         {
@@ -141,39 +141,9 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
         }
         else // Skill
         {
-            // JML: CSV에서 스킬 이름 가져오기
-            string skillName = GetSkillName(bookMark.SkillID);
-            return $"등급: {gradeName}\n{skillName}";
+            // JML: BookMark.DisplayName으로 스킬 이름 가져오기
+            return $"등급: {gradeName}\n{bookMark.DisplayName}";
         }
-    }
-
-    /// <summary>
-    /// JML: 스킬 ID로 스킬 이름 가져오기 (MainSkillTable/SupportSkillTable 연동)
-    /// ID 범위: 39xxx = MainSkill, 40xxx = SupportSkill
-    /// </summary>
-    private string GetSkillName(int skillID)
-    {
-        // ID 범위로 테이블 판단 (39xxx = Main, 40xxx = Support)
-        if (skillID >= 40000)
-        {
-            // SupportSkillTable에서 검색
-            var supportSkillData = CSVLoader.Instance.GetData<SupportSkillData>(skillID);
-            if (supportSkillData != null && !string.IsNullOrEmpty(supportSkillData.support_name))
-            {
-                return supportSkillData.support_name;
-            }
-        }
-        else if (skillID >= 39000)
-        {
-            // MainSkillTable에서 검색
-            var mainSkillData = CSVLoader.Instance.GetData<MainSkillData>(skillID);
-            if (mainSkillData != null && !string.IsNullOrEmpty(mainSkillData.skill_name))
-            {
-                return mainSkillData.skill_name;
-            }
-        }
-
-        return $"알 수 없는 스킬 ({skillID})";
     }
 
     /// <summary>
