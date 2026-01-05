@@ -146,11 +146,13 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "dungeonPass", currencies.dungeonPass },
                 { "ap", currencies.ap },
                 { "apLastSyncTimeMs", currencies.apLastSyncTimeMs },
+                { "dungeonPassLastSyncTimeMs", currencies.dungeonPassLastSyncTimeMs }, // Issue #646: 던전 출입증 sync time 저장
                 { "apRecoveryTime", currencies.apRecoveryTime } // 레거시 호환
             };
 
+            Debug.Log($"<color=#FF6B6B>[FirebaseSaveManager]</color> 저장 시도 - dungeonPassLastSyncTimeMs: {currencies.dungeonPassLastSyncTimeMs}");
             await databaseRef.Child(USERS_PATH).Child(userId).Child("currencies").UpdateChildrenAsync(data);
-            Debug.Log($"{LOG_PREFIX} 재화 저장 완료");
+            Debug.Log($"{LOG_PREFIX} 재화 저장 완료 - dungeonPassLastSyncTimeMs 저장됨: {currencies.dungeonPassLastSyncTimeMs}");
         }
         catch (Exception e)
         {
@@ -563,6 +565,7 @@ public class FirebaseSaveManager : MonoBehaviour
                     { "dungeonPass", data.currencies.dungeonPass },
                     { "ap", data.currencies.ap },
                     { "apLastSyncTimeMs", data.currencies.apLastSyncTimeMs },
+                    { "dungeonPassLastSyncTimeMs", data.currencies.dungeonPassLastSyncTimeMs }, // Issue #646: 던전 출입증 sync time
                     { "apRecoveryTime", data.currencies.apRecoveryTime } // 레거시 호환
                 }
             },
@@ -686,6 +689,8 @@ public class FirebaseSaveManager : MonoBehaviour
             data.currencies.dungeonPass = GetIntValue(currenciesSnap.Child("dungeonPass"));
             data.currencies.ap = GetIntValue(currenciesSnap.Child("ap"));
             data.currencies.apLastSyncTimeMs = GetLongValue(currenciesSnap.Child("apLastSyncTimeMs"));
+            data.currencies.dungeonPassLastSyncTimeMs = GetLongValue(currenciesSnap.Child("dungeonPassLastSyncTimeMs")); // Issue #646
+            Debug.Log($"<color=#FF6B6B>[FirebaseSaveManager]</color> ParseUserData - dungeonPassLastSyncTimeMs 로드: {data.currencies.dungeonPassLastSyncTimeMs}");
             if (currenciesSnap.Child("apRecoveryTime").Exists)
                 data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value?.ToString() ?? "";
         }
