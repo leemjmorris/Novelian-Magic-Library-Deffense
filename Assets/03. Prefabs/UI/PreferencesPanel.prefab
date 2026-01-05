@@ -3265,6 +3265,8 @@ MonoBehaviour:
   masterVolumeSlider: {fileID: 6845157615935422892}
   bgmVolumeSlider: {fileID: 3566245249421599555}
   sfxVolumeSlider: {fileID: 2601056676066172592}
+  voiceVolumeSlider: {fileID: 8989208027834359351}
+  skillVolumeSlider: {fileID: 1293012220426110624}
 --- !u!1 &7824648316548035830
 GameObject:
   m_ObjectHideFlags: 0
@@ -3534,7 +3536,7 @@ GameObject:
   - component: {fileID: 239163342459850205}
   - component: {fileID: 1293012220426110624}
   m_Layer: 5
-  m_Name: SoundEffectSlider
+  m_Name: SkillSoundEffectSlider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3615,7 +3617,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1230550777792419629}
         m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.SettingsPanel, Assembly-CSharp
-        m_MethodName: OnSFXVolumeChanged
+        m_MethodName: OnSkillVolumeChanged
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3725,7 +3727,7 @@ GameObject:
   - component: {fileID: 2973464657727499366}
   - component: {fileID: 8989208027834359351}
   m_Layer: 5
-  m_Name: SoundEffectSlider
+  m_Name: CharacterSoundEffectSlider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3806,7 +3808,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1230550777792419629}
         m_TargetAssemblyTypeName: NovelianMagicLibraryDefense.UI.SettingsPanel, Assembly-CSharp
-        m_MethodName: OnSFXVolumeChanged
+        m_MethodName: OnVoiceVolumeChanged
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

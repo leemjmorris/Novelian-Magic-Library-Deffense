@@ -194,12 +194,22 @@ namespace NovelianMagicLibraryDefense.UI
 
         /// <summary>
         /// Issue #602: 패널이 비활성화될 때 TimeScale 복구 보장
+        /// Issue #646: 패널이 비활성화될 때 오디오 설정 저장 보장
         /// </summary>
         private void OnDisable()
         {
-            if (isOpen && pauseOnOpen)
+            if (isOpen)
             {
-                TimeManager.Instance?.PopTimeScale();
+                // Issue #646: Close()를 거치지 않고 SetActive(false)로 닫힌 경우에도 설정 저장
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.SaveAudioSettings();
+                }
+
+                if (pauseOnOpen)
+                {
+                    TimeManager.Instance?.PopTimeScale();
+                }
                 isOpen = false;
             }
         }
