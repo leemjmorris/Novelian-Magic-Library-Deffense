@@ -40,6 +40,9 @@ public class MainSkillData
     [Name("//description")]
     [Optional]
     public string description { get; set; }
+    
+    [Name("grade_id")]
+    public int grade_id { get; set; }
 
     #region Behavior Type Helpers
 
