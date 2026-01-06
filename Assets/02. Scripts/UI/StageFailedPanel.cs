@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
@@ -93,7 +93,7 @@ namespace NovelianMagicLibraryDefense.UI
                 SaveKillCountAsync(killCount).Forget();
             }
 
-            Debug.Log($"[StageFailedPanel] Shown - Time: {progressTime:F1}s, Remaining: {remainingMonsters}, Kills: {killCount}");
+            GameLog.Log($"[StageFailedPanel] Shown - Time: {progressTime:F1}s, Remaining: {remainingMonsters}, Kills: {killCount}");
         }
 
         /// <summary>
@@ -146,7 +146,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnLobbyButtonClicked()
         {
-            Debug.Log("[StageFailedPanel] Lobby button clicked - Loading LobbyScene");
+            GameLog.Log("[StageFailedPanel] Lobby button clicked - Loading LobbyScene");
 
             // Issue #570: 씬 전환 중 레벨업 방지를 위해 플래그 설정
             if (GameManager.Instance?.Stage != null)
@@ -166,12 +166,12 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnRetryButtonClicked()
         {
-            Debug.Log("[StageFailedPanel] Retry button clicked - Checking AP and reloading GameScene");
+            GameLog.Log("[StageFailedPanel] Retry button clicked - Checking AP and reloading GameScene");
 
             // 1. SelectedStage 데이터 확인
             if (!SelectedStage.HasSelection)
             {
-                Debug.LogError("[StageFailedPanel] 스테이지가 선택되지 않음");
+                GameLog.LogError("[StageFailedPanel] 스테이지가 선택되지 않음");
                 return;
             }
 
@@ -181,7 +181,7 @@ namespace NovelianMagicLibraryDefense.UI
             // 2. CurrencyManager 확인
             if (CurrencyManager.Instance == null)
             {
-                Debug.LogError("[StageFailedPanel] CurrencyManager가 초기화되지 않음");
+                GameLog.LogError("[StageFailedPanel] CurrencyManager가 초기화되지 않음");
                 return;
             }
 
@@ -189,14 +189,14 @@ namespace NovelianMagicLibraryDefense.UI
             if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.AP_ID, apCost))
             {
                 int currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
-                Debug.LogWarning($"[StageFailedPanel] AP 부족! 필요: {apCost}, 보유: {currentAP}");
+                GameLog.LogWarning($"[StageFailedPanel] AP 부족! 필요: {apCost}, 보유: {currentAP}");
                 WarningUIManager.Instance?.ShowWarning("AP가 부족합니다");
                 return;
             }
 
             // 4. AP 소모
             CurrencyManager.Instance.SpendCurrency(CurrencyManager.AP_ID, apCost);
-            Debug.Log($"[StageFailedPanel] AP {apCost} 소모. 재시작 진행");
+            GameLog.Log($"[StageFailedPanel] AP {apCost} 소모. 재시작 진행");
 
             // 5. 씬 전환
             Close();
@@ -217,25 +217,25 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (FirebaseSaveManager.Instance == null || FirebaseSaveManager.Instance.CachedData == null)
             {
-                Debug.LogWarning("[StageFailedPanel] Firebase 캐시 없음 - 킬 카운트 저장 스킵");
+                GameLog.LogWarning("[StageFailedPanel] Firebase 캐시 없음 - 킬 카운트 저장 스킵");
                 return;
             }
 
             var progression = FirebaseSaveManager.Instance.CachedData.progression;
             if (progression == null)
             {
-                Debug.LogWarning("[StageFailedPanel] Progression 데이터 없음 - 킬 카운트 저장 스킵");
+                GameLog.LogWarning("[StageFailedPanel] Progression 데이터 없음 - 킬 카운트 저장 스킵");
                 return;
             }
 
             // 킬 카운트 누적
             progression.totalKilledMonsters += killCount;
-            Debug.Log($"[StageFailedPanel] 처치 몬스터 누적 (실패): +{killCount}, 총합: {progression.totalKilledMonsters}");
+            GameLog.Log($"[StageFailedPanel] 처치 몬스터 누적 (실패): +{killCount}, 총합: {progression.totalKilledMonsters}");
 
             string oderId = FirebaseManager.Instance?.CurrentUserId;
             if (string.IsNullOrEmpty(oderId))
             {
-                Debug.LogWarning("[StageFailedPanel] 유저 ID 없음 - Firebase 저장 스킵");
+                GameLog.LogWarning("[StageFailedPanel] 유저 ID 없음 - Firebase 저장 스킵");
                 return;
             }
 

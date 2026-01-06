@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
@@ -45,7 +45,7 @@ namespace NovelianMagicLibraryDefense.UI
                 {
                     child.gameObject.SetActive(false);
                     closedAny = true;
-                    Debug.Log($"[LobbyUIController] {child.name} 패널 닫힘");
+                    GameLog.Log($"[LobbyUIController] {child.name} 패널 닫힘");
                 }
             }
 
@@ -53,7 +53,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (closedAny && mapObject != null)
             {
                 mapObject.SetActive(true);
-                Debug.Log("[LobbyUIController] Map 활성화");
+                GameLog.Log("[LobbyUIController] Map 활성화");
             }
 
             return closedAny;
@@ -68,7 +68,7 @@ namespace NovelianMagicLibraryDefense.UI
             // 매니저가 없으면 직접 씬 로드 (fallback)
             if (FadeController.Instance == null)
             {
-                Debug.LogWarning("FadeController not available, loading scene directly");
+                GameLog.LogWarning("FadeController not available, loading scene directly");
                 await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
                 return;
             }
@@ -96,7 +96,7 @@ namespace NovelianMagicLibraryDefense.UI
             // 매니저가 없으면 직접 씬 로드 (fallback)
             if (LoadingUIManager.Instance == null || FadeController.Instance == null)
             {
-                Debug.LogWarning("LoadingUIManager or FadeController not available, loading scene directly");
+                GameLog.LogWarning("LoadingUIManager or FadeController not available, loading scene directly");
                 await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
                 return;
             }

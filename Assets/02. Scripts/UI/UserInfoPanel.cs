@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -157,7 +157,7 @@ public class UserInfoPanel : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[UserInfoPanel] ProfilePicturePanel이 연결되지 않았습니다.");
+            GameLog.LogWarning("[UserInfoPanel] ProfilePicturePanel이 연결되지 않았습니다.");
         }
     }
 
@@ -231,7 +231,7 @@ public class UserInfoPanel : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[UserInfoPanel] 프로필 이미지 로드 실패: {spriteKey}");
+                GameLog.LogWarning($"[UserInfoPanel] 프로필 이미지 로드 실패: {spriteKey}");
             }
         };
     }
@@ -274,7 +274,7 @@ public class UserInfoPanel : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[UserInfoPanel] 프레임 이미지 로드 실패: {spriteKey}");
+                GameLog.LogWarning($"[UserInfoPanel] 프레임 이미지 로드 실패: {spriteKey}");
             }
         };
     }
@@ -312,19 +312,19 @@ public class UserInfoPanel : MonoBehaviour
     {
         if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance == null)
         {
-            Debug.LogWarning("[UserInfoPanel] Firebase 매니저가 초기화되지 않았습니다.");
+            GameLog.LogWarning("[UserInfoPanel] Firebase 매니저가 초기화되지 않았습니다.");
             return;
         }
 
         string userId = FirebaseManager.Instance.CurrentUserId;
         if (string.IsNullOrEmpty(userId))
         {
-            Debug.LogWarning("[UserInfoPanel] 로그인된 유저가 없습니다.");
+            GameLog.LogWarning("[UserInfoPanel] 로그인된 유저가 없습니다.");
             return;
         }
 
         await FirebaseSaveManager.Instance.SaveNicknameAsync(userId, nickname);
-        Debug.Log($"[UserInfoPanel] 닉네임 저장 완료: {nickname}");
+        GameLog.Log($"[UserInfoPanel] 닉네임 저장 완료: {nickname}");
     }
 
     #endregion
@@ -339,7 +339,7 @@ public class UserInfoPanel : MonoBehaviour
         var progression = FirebaseSaveManager.Instance?.CachedData?.progression;
         if (progression == null)
         {
-            Debug.LogWarning("[UserInfoPanel] Progression 데이터 없음");
+            GameLog.LogWarning("[UserInfoPanel] Progression 데이터 없음");
             return;
         }
 
@@ -436,19 +436,19 @@ public class UserInfoPanel : MonoBehaviour
     {
         if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance == null)
         {
-            Debug.LogWarning("[UserInfoPanel] Firebase 매니저가 초기화되지 않았습니다.");
+            GameLog.LogWarning("[UserInfoPanel] Firebase 매니저가 초기화되지 않았습니다.");
             return;
         }
 
         string userId = FirebaseManager.Instance.CurrentUserId;
         if (string.IsNullOrEmpty(userId))
         {
-            Debug.LogWarning("[UserInfoPanel] 로그인된 유저가 없습니다.");
+            GameLog.LogWarning("[UserInfoPanel] 로그인된 유저가 없습니다.");
             return;
         }
 
         await FirebaseSaveManager.Instance.SaveTitleAsync(userId, titleIndex);
-        Debug.Log($"[UserInfoPanel] 칭호 저장 완료: 인덱스 {titleIndex}");
+        GameLog.Log($"[UserInfoPanel] 칭호 저장 완료: 인덱스 {titleIndex}");
     }
 
     #endregion

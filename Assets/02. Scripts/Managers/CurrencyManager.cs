@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Firebase.Data;
@@ -67,7 +67,7 @@ public class CurrencyManager : MonoBehaviour
         // 이미 초기화되었으면 스킵 (타이틀씬에서 재시작 시 기존 데이터 유지)
         if (isInitialized)
         {
-            Debug.Log($"[CurrencyManager] 이미 초기화됨 - 기존 데이터 유지. 골드: {currencies[GOLD_ID]}, 던전출입증: {currencies[DUNGEON_PASS_ID]}");
+            GameLog.Log($"[CurrencyManager] 이미 초기화됨 - 기존 데이터 유지. 골드: {currencies[GOLD_ID]}, 던전출입증: {currencies[DUNGEON_PASS_ID]}");
             return;
         }
 
@@ -98,7 +98,7 @@ public class CurrencyManager : MonoBehaviour
         }
 
         isInitialized = true;
-        Debug.Log($"[CurrencyManager] 초기화 완료. 재화 종류: {currencies.Count}개, 최대 AP: {maxAP}");
+        GameLog.Log($"[CurrencyManager] 초기화 완료. 재화 종류: {currencies.Count}개, 최대 AP: {maxAP}");
     }
 
     private void Update()
@@ -162,7 +162,7 @@ public class CurrencyManager : MonoBehaviour
         // 시간 유효성 검증 (시간 조작 방지)
         if (currentServerTimeMs < lastAPSyncTimeMs)
         {
-            Debug.LogWarning("[CurrencyManager] 서버 시간 역행 감지! Fallback으로 전환");
+            GameLog.LogWarning("[CurrencyManager] 서버 시간 역행 감지! Fallback으로 전환");
             UpdateAPRecoveryWithLocalTime();
             return;
         }
@@ -178,7 +178,7 @@ public class CurrencyManager : MonoBehaviour
             if (actualRecovery > 0)
             {
                 AddCurrency(AP_ID, actualRecovery);
-                Debug.Log($"<color=cyan>[CurrencyManager]</color> AP 회복 (서버 시간)! +{actualRecovery}, 현재: {GetCurrency(AP_ID)}/{maxAP}");
+                GameLog.Log($"<color=cyan>[CurrencyManager]</color> AP 회복 (서버 시간)! +{actualRecovery}, 현재: {GetCurrency(AP_ID)}/{maxAP}");
             }
 
             // 마지막 동기화 시간 업데이트 (정확한 회복 시간으로)
@@ -198,7 +198,7 @@ public class CurrencyManager : MonoBehaviour
         {
             apRecoveryTimer = 0f;
             AddCurrency(AP_ID, 1);
-            Debug.Log($"<color=yellow>[CurrencyManager]</color> AP 회복 (로컬 시간 Fallback)! 현재 AP: {GetCurrency(AP_ID)}/{maxAP}");
+            GameLog.Log($"<color=yellow>[CurrencyManager]</color> AP 회복 (로컬 시간 Fallback)! 현재 AP: {GetCurrency(AP_ID)}/{maxAP}");
         }
     }
 
@@ -241,7 +241,7 @@ public class CurrencyManager : MonoBehaviour
         {
             dungeonPassRecoveryTimer = 0f;
             AddCurrency(DUNGEON_PASS_ID, 1);
-            Debug.Log($"<color=yellow>[CurrencyManager]</color> 던전 출입증 회복 (로컬 시간 Fallback)! 현재: {GetCurrency(DUNGEON_PASS_ID)}/{maxDungeonPass}");
+            GameLog.Log($"<color=yellow>[CurrencyManager]</color> 던전 출입증 회복 (로컬 시간 Fallback)! 현재: {GetCurrency(DUNGEON_PASS_ID)}/{maxDungeonPass}");
         }
     }
 
@@ -255,7 +255,7 @@ public class CurrencyManager : MonoBehaviour
         // 마지막 동기화 시간이 없으면 현재 시간으로 초기화
         if (lastDungeonPassSyncTimeMs <= 0)
         {
-            Debug.Log($"<color=yellow>[CurrencyManager]</color> 던전출입증 syncTime이 0 - 현재 시간으로 초기화: {currentServerTimeMs}");
+            GameLog.Log($"<color=yellow>[CurrencyManager]</color> 던전출입증 syncTime이 0 - 현재 시간으로 초기화: {currentServerTimeMs}");
             lastDungeonPassSyncTimeMs = currentServerTimeMs;
             SaveToFirebase(); // Issue #646: 초기화된 syncTime 저장
             return;
@@ -264,7 +264,7 @@ public class CurrencyManager : MonoBehaviour
         // 시간 유효성 검증 (시간 조작 방지)
         if (currentServerTimeMs < lastDungeonPassSyncTimeMs)
         {
-            Debug.LogWarning("[CurrencyManager] 서버 시간 역행 감지! (던전 출입증)");
+            GameLog.LogWarning("[CurrencyManager] 서버 시간 역행 감지! (던전 출입증)");
             return;
         }
 
@@ -279,7 +279,7 @@ public class CurrencyManager : MonoBehaviour
             if (actualRecovery > 0)
             {
                 AddCurrency(DUNGEON_PASS_ID, actualRecovery);
-                Debug.Log($"<color=cyan>[CurrencyManager]</color> 던전 출입증 회복! +{actualRecovery}, 현재: {GetCurrency(DUNGEON_PASS_ID)}/{maxDungeonPass}");
+                GameLog.Log($"<color=cyan>[CurrencyManager]</color> 던전 출입증 회복! +{actualRecovery}, 현재: {GetCurrency(DUNGEON_PASS_ID)}/{maxDungeonPass}");
             }
 
             // 마지막 동기화 시간 업데이트 (정확한 회복 시간으로)
@@ -364,7 +364,7 @@ public class CurrencyManager : MonoBehaviour
         {
             return amount;
         }
-        Debug.LogWarning($"[CurrencyManager] 존재하지 않는 재화 ID: {currencyId}");
+        GameLog.LogWarning($"[CurrencyManager] 존재하지 않는 재화 ID: {currencyId}");
         return 0;
     }
 
@@ -375,20 +375,20 @@ public class CurrencyManager : MonoBehaviour
     {
         if (amount < 0)
         {
-            Debug.LogError($"[CurrencyManager] 음수 값을 추가할 수 없습니다: {amount}");
+            GameLog.LogError($"[CurrencyManager] 음수 값을 추가할 수 없습니다: {amount}");
             return;
         }
 
         if (!currencies.ContainsKey(currencyId))
         {
-            Debug.LogWarning($"[CurrencyManager] 존재하지 않는 재화 ID: {currencyId}. 새로 생성합니다.");
+            GameLog.LogWarning($"[CurrencyManager] 존재하지 않는 재화 ID: {currencyId}. 새로 생성합니다.");
             currencies[currencyId] = 0;
         }
 
         currencies[currencyId] += amount;
 
         string currencyName = GetCurrencyName(currencyId);
-        Debug.Log($"[CurrencyManager] {currencyName} +{amount}. 현재: {currencies[currencyId]}");
+        GameLog.Log($"[CurrencyManager] {currencyName} +{amount}. 현재: {currencies[currencyId]}");
 
         OnCurrencyChanged?.Invoke(currencyId, currencies[currencyId]);
         SaveToFirebase();
@@ -407,14 +407,14 @@ public class CurrencyManager : MonoBehaviour
     {
         if (amount < 0)
         {
-            Debug.LogError($"[CurrencyManager] 음수 값을 소비할 수 없습니다: {amount}");
+            GameLog.LogError($"[CurrencyManager] 음수 값을 소비할 수 없습니다: {amount}");
             return false;
         }
 
         if (!HasEnoughCurrency(currencyId, amount))
         {
             string currencyName = GetCurrencyName(currencyId);
-            Debug.LogWarning($"[CurrencyManager] {currencyName}이(가) 부족합니다. 필요: {amount}, 보유: {GetCurrency(currencyId)}");
+            GameLog.LogWarning($"[CurrencyManager] {currencyName}이(가) 부족합니다. 필요: {amount}, 보유: {GetCurrency(currencyId)}");
             return false;
         }
 
@@ -437,17 +437,17 @@ public class CurrencyManager : MonoBehaviour
             if (currencyId == AP_ID)
             {
                 lastAPSyncTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
-                Debug.Log($"[CurrencyManager] AP 최대치에서 사용 - 회복 타이머 시작");
+                GameLog.Log($"[CurrencyManager] AP 최대치에서 사용 - 회복 타이머 시작");
             }
             else if (currencyId == DUNGEON_PASS_ID)
             {
                 lastDungeonPassSyncTimeMs = ServerTimeManager.Instance.GetServerTimeMs();
-                Debug.Log($"[CurrencyManager] 던전출입증 최대치에서 사용 - 회복 타이머 시작");
+                GameLog.Log($"[CurrencyManager] 던전출입증 최대치에서 사용 - 회복 타이머 시작");
             }
         }
 
         string name = GetCurrencyName(currencyId);
-        Debug.Log($"[CurrencyManager] {name} -{amount}. 현재: {currencies[currencyId]}");
+        GameLog.Log($"[CurrencyManager] {name} -{amount}. 현재: {currencies[currencyId]}");
 
         OnCurrencyChanged?.Invoke(currencyId, currencies[currencyId]);
         SaveToFirebase();
@@ -469,7 +469,7 @@ public class CurrencyManager : MonoBehaviour
     {
         if (amount < 0)
         {
-            Debug.LogError($"[CurrencyManager] 음수 값으로 설정할 수 없습니다: {amount}");
+            GameLog.LogError($"[CurrencyManager] 음수 값으로 설정할 수 없습니다: {amount}");
             return;
         }
 
@@ -508,7 +508,7 @@ public class CurrencyManager : MonoBehaviour
         // 던전 출입증 오프라인 회복 계산
         int loadedDungeonPass = data.dungeonPass;
         lastDungeonPassSyncTimeMs = data.dungeonPassLastSyncTimeMs;
-        Debug.Log($"<color=#3EB489>[CurrencyManager]</color> 던전출입증 로드 - 수량: {loadedDungeonPass}, syncTime: {lastDungeonPassSyncTimeMs}");
+        GameLog.Log($"<color=#3EB489>[CurrencyManager]</color> 던전출입증 로드 - 수량: {loadedDungeonPass}, syncTime: {lastDungeonPassSyncTimeMs}");
 
         int offlineRecoveredDungeonPass = CalculateOfflineDungeonPassRecovery(loadedDungeonPass, lastDungeonPassSyncTimeMs);
         int finalDungeonPass = Mathf.Min(loadedDungeonPass + offlineRecoveredDungeonPass, maxDungeonPass); // 최대치 제한
@@ -526,7 +526,7 @@ public class CurrencyManager : MonoBehaviour
                 {
                     // sync time이 0이면 현재 시간으로 초기화 (기존 데이터 마이그레이션)
                     lastAPSyncTimeMs = currentServerTimeMs;
-                    Debug.Log($"<color=#3EB489>[CurrencyManager]</color> AP syncTime 초기화: {lastAPSyncTimeMs}");
+                    GameLog.Log($"<color=#3EB489>[CurrencyManager]</color> AP syncTime 초기화: {lastAPSyncTimeMs}");
                 }
                 else if (offlineRecoveredAP > 0)
                 {
@@ -542,7 +542,7 @@ public class CurrencyManager : MonoBehaviour
                 {
                     // sync time이 0이면 현재 시간으로 초기화 (기존 데이터 마이그레이션)
                     lastDungeonPassSyncTimeMs = currentServerTimeMs;
-                    Debug.Log($"<color=#3EB489>[CurrencyManager]</color> 던전출입증 syncTime 초기화: {lastDungeonPassSyncTimeMs}");
+                    GameLog.Log($"<color=#3EB489>[CurrencyManager]</color> 던전출입증 syncTime 초기화: {lastDungeonPassSyncTimeMs}");
                 }
                 else if (offlineRecoveredDungeonPass > 0)
                 {
@@ -555,11 +555,11 @@ public class CurrencyManager : MonoBehaviour
             if (lastAPSyncTimeMs != data.apLastSyncTimeMs || lastDungeonPassSyncTimeMs != data.dungeonPassLastSyncTimeMs)
             {
                 SaveToFirebase();
-                Debug.Log($"<color=#3EB489>[CurrencyManager]</color> syncTime 저장 - AP: {lastAPSyncTimeMs}, 던전출입증: {lastDungeonPassSyncTimeMs}");
+                GameLog.Log($"<color=#3EB489>[CurrencyManager]</color> syncTime 저장 - AP: {lastAPSyncTimeMs}, 던전출입증: {lastDungeonPassSyncTimeMs}");
             }
         }
 
-        Debug.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase에서 재화 로드 완료 - 골드: {data.gold}, AP: {loadedAP}→{finalAP} (오프라인 +{offlineRecoveredAP}), 던전출입증: {loadedDungeonPass}→{finalDungeonPass} (오프라인 +{offlineRecoveredDungeonPass}), 마석: {data.magicStone}");
+        GameLog.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase에서 재화 로드 완료 - 골드: {data.gold}, AP: {loadedAP}→{finalAP} (오프라인 +{offlineRecoveredAP}), 던전출입증: {loadedDungeonPass}→{finalDungeonPass} (오프라인 +{offlineRecoveredDungeonPass}), 마석: {data.magicStone}");
 
         // Issue #646: UI 업데이트를 위해 이벤트 발생
         OnCurrencyChanged?.Invoke(GOLD_ID, currencies[GOLD_ID]);
@@ -579,21 +579,21 @@ public class CurrencyManager : MonoBehaviour
         // ServerTimeManager 확인
         if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
         {
-            Debug.LogWarning("[CurrencyManager] ServerTimeManager가 초기화되지 않아 오프라인 회복 계산 불가");
+            GameLog.LogWarning("[CurrencyManager] ServerTimeManager가 초기화되지 않아 오프라인 회복 계산 불가");
             return 0;
         }
 
         // 마지막 동기화 시간이 없으면 회복 없음
         if (lastSyncTimeMs <= 0)
         {
-            Debug.Log("[CurrencyManager] 마지막 동기화 시간 없음 - 오프라인 회복 0");
+            GameLog.Log("[CurrencyManager] 마지막 동기화 시간 없음 - 오프라인 회복 0");
             return 0;
         }
 
         // 시간 유효성 검증 (미래 시간이면 무효)
         if (!ServerTimeManager.Instance.IsValidSavedTime(lastSyncTimeMs))
         {
-            Debug.LogWarning("[CurrencyManager] 저장된 시간이 유효하지 않음 - 오프라인 회복 0 (시간 조작 의심)");
+            GameLog.LogWarning("[CurrencyManager] 저장된 시간이 유효하지 않음 - 오프라인 회복 0 (시간 조작 의심)");
             return 0;
         }
 
@@ -616,7 +616,7 @@ public class CurrencyManager : MonoBehaviour
         if (actualRecovery > 0)
         {
             float offlineHours = offlineElapsedMs / 3600000f;
-            Debug.Log($"[CurrencyManager] 오프라인 AP 회복: {offlineHours:F1}시간 경과, {actualRecovery} AP 회복");
+            GameLog.Log($"[CurrencyManager] 오프라인 AP 회복: {offlineHours:F1}시간 경과, {actualRecovery} AP 회복");
         }
 
         return actualRecovery;
@@ -633,21 +633,21 @@ public class CurrencyManager : MonoBehaviour
         // ServerTimeManager 확인
         if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
         {
-            Debug.LogWarning("[CurrencyManager] ServerTimeManager가 초기화되지 않아 오프라인 던전 출입증 회복 계산 불가");
+            GameLog.LogWarning("[CurrencyManager] ServerTimeManager가 초기화되지 않아 오프라인 던전 출입증 회복 계산 불가");
             return 0;
         }
 
         // 마지막 동기화 시간이 없으면 회복 없음
         if (lastSyncTimeMs <= 0)
         {
-            Debug.Log("[CurrencyManager] 마지막 동기화 시간 없음 - 오프라인 던전 출입증 회복 0");
+            GameLog.Log("[CurrencyManager] 마지막 동기화 시간 없음 - 오프라인 던전 출입증 회복 0");
             return 0;
         }
 
         // 시간 유효성 검증 (미래 시간이면 무효)
         if (!ServerTimeManager.Instance.IsValidSavedTime(lastSyncTimeMs))
         {
-            Debug.LogWarning("[CurrencyManager] 저장된 시간이 유효하지 않음 - 오프라인 던전 출입증 회복 0 (시간 조작 의심)");
+            GameLog.LogWarning("[CurrencyManager] 저장된 시간이 유효하지 않음 - 오프라인 던전 출입증 회복 0 (시간 조작 의심)");
             return 0;
         }
 
@@ -670,7 +670,7 @@ public class CurrencyManager : MonoBehaviour
         if (actualRecovery > 0)
         {
             float offlineHours = offlineElapsedMs / 3600000f;
-            Debug.Log($"[CurrencyManager] 오프라인 던전 출입증 회복: {offlineHours:F1}시간 경과, {actualRecovery} 던전 출입증 회복");
+            GameLog.Log($"[CurrencyManager] 오프라인 던전 출입증 회복: {offlineHours:F1}시간 경과, {actualRecovery} 던전 출입증 회복");
         }
 
         return actualRecovery;
@@ -708,7 +708,7 @@ public class CurrencyManager : MonoBehaviour
             apRecoveryTime = "" // 레거시 필드 (더 이상 사용 안 함)
         };
 
-        Debug.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase 저장 - 던전출입증: {data.dungeonPass}, syncTime: {data.dungeonPassLastSyncTimeMs}");
+        GameLog.Log($"<color=#3EB489>[CurrencyManager]</color> Firebase 저장 - 던전출입증: {data.dungeonPass}, syncTime: {data.dungeonPassLastSyncTimeMs}");
         FirebaseSaveManager.Instance.SaveCurrenciesAsync(FirebaseManager.Instance.CurrentUserId, data).Forget();
     }
 
@@ -786,13 +786,13 @@ public class CurrencyManager : MonoBehaviour
     {
         if (FirebaseSaveManager.Instance?.CachedData?.progression == null)
         {
-            Debug.LogWarning("[CurrencyManager] 캐시 데이터 없음 - 레벨업 체크 스킵");
+            GameLog.LogWarning("[CurrencyManager] 캐시 데이터 없음 - 레벨업 체크 스킵");
             return;
         }
 
         if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
         {
-            Debug.LogWarning("[CurrencyManager] CSVLoader 미초기화 - 레벨업 체크 스킵");
+            GameLog.LogWarning("[CurrencyManager] CSVLoader 미초기화 - 레벨업 체크 스킵");
             return;
         }
 
@@ -803,7 +803,7 @@ public class CurrencyManager : MonoBehaviour
         var levelTable = CSVLoader.Instance.GetTable<PlayerLevelData>();
         if (levelTable == null)
         {
-            Debug.LogWarning("[CurrencyManager] PlayerLevelTable 로드 실패");
+            GameLog.LogWarning("[CurrencyManager] PlayerLevelTable 로드 실패");
             return;
         }
 
@@ -817,7 +817,7 @@ public class CurrencyManager : MonoBehaviour
 
             if (nextLevelData == null)
             {
-                Debug.Log($"[CurrencyManager] 최대 레벨 도달 또는 테이블 데이터 없음 (ID: {nextLevelId})");
+                GameLog.Log($"[CurrencyManager] 최대 레벨 도달 또는 테이블 데이터 없음 (ID: {nextLevelId})");
                 break;
             }
 
@@ -830,7 +830,7 @@ public class CurrencyManager : MonoBehaviour
             // 레벨업!
             currentLevel++;
             leveledUp = true;
-            Debug.Log($"[CurrencyManager] 레벨업! Lv{currentLevel - 1} → Lv{currentLevel} (누적 EXP: {totalExp})");
+            GameLog.Log($"[CurrencyManager] 레벨업! Lv{currentLevel - 1} → Lv{currentLevel} (누적 EXP: {totalExp})");
 
             OnLevelUp?.Invoke(currentLevel);
         }
@@ -916,11 +916,11 @@ public class CurrencyManager : MonoBehaviour
     [ContextMenu("모든 재화 출력")]
     private void PrintAllCurrencies()
     {
-        Debug.Log("=== 보유 재화 목록 ===");
+        GameLog.Log("=== 보유 재화 목록 ===");
         foreach (var kvp in currencies)
         {
             string name = GetCurrencyName(kvp.Key);
-            Debug.Log($"{name} (ID: {kvp.Key}): {kvp.Value}");
+            GameLog.Log($"{name} (ID: {kvp.Key}): {kvp.Value}");
         }
     }
 

@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.Spawners;
@@ -66,7 +66,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void Awake()
         {
-            Debug.Log("[BossDungeonManager] Awake 호출됨");
+            GameLog.Log("[BossDungeonManager] Awake 호출됨");
 
             // BossDungeon BGM 재생 (크로스페이드)
             if (AudioManager.Instance != null)
@@ -79,41 +79,41 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnInitialize()
         {
-            Debug.Log("[BossDungeonManager] OnInitialize 시작");
+            GameLog.Log("[BossDungeonManager] OnInitialize 시작");
 
             // 이벤트 구독
             if (monsterEvents != null)
             {
                 monsterEvents.AddBossDiedListener(HandleBossDied);
-                Debug.Log("[BossDungeonManager] MonsterEvents 구독 완료");
+                GameLog.Log("[BossDungeonManager] MonsterEvents 구독 완료");
             }
             else
             {
-                Debug.LogWarning("[BossDungeonManager] MonsterEvents가 null입니다!");
+                GameLog.LogWarning("[BossDungeonManager] MonsterEvents가 null입니다!");
             }
 
             // Issue #476: Inspector에서 연결 필수 (Find 메서드 사용 금지)
             if (characterPlacementManager == null)
-                Debug.LogError("[BossDungeonManager] CharacterPlacementManager가 Inspector에서 연결되지 않았습니다!");
+                GameLog.LogError("[BossDungeonManager] CharacterPlacementManager가 Inspector에서 연결되지 않았습니다!");
             if (characterCardGridManager == null)
-                Debug.LogError("[BossDungeonManager] CharacterCardGridManager가 Inspector에서 연결되지 않았습니다!");
+                GameLog.LogError("[BossDungeonManager] CharacterCardGridManager가 Inspector에서 연결되지 않았습니다!");
             if (cardSelectPanel == null)
-                Debug.LogError("[BossDungeonManager] CardSelectPanel이 Inspector에서 연결되지 않았습니다!");
+                GameLog.LogError("[BossDungeonManager] CardSelectPanel이 Inspector에서 연결되지 않았습니다!");
 
             // SelectedBossDungeon에서 던전 데이터 가져오기
-            Debug.Log($"[BossDungeonManager] SelectedBossDungeon.HasSelection = {SelectedBossDungeon.HasSelection}");
+            GameLog.Log($"[BossDungeonManager] SelectedBossDungeon.HasSelection = {SelectedBossDungeon.HasSelection}");
 
             if (SelectedBossDungeon.HasSelection)
             {
                 dungeonData = SelectedBossDungeon.Data;
-                Debug.Log($"[BossDungeonManager] 던전 데이터 로드됨: Floor={dungeonData?.Floor_Index}, Dungeon_ID={dungeonData?.Dungeon_ID}");
+                GameLog.Log($"[BossDungeonManager] 던전 데이터 로드됨: Floor={dungeonData?.Floor_Index}, Dungeon_ID={dungeonData?.Dungeon_ID}");
                 InitializeDungeonData();
 
                 // Issue #476: UI 초기화
                 if (dungeonUI != null)
                 {
                     dungeonUI.Initialize(dungeonData);
-                    Debug.Log("[BossDungeonManager] dungeonUI 초기화 완료");
+                    GameLog.Log("[BossDungeonManager] dungeonUI 초기화 완료");
                 }
 
                 // Issue #602: 씬 진입 시 TimeManager로 TimeScale 리셋
@@ -121,12 +121,12 @@ namespace NovelianMagicLibraryDefense.Managers
                 TimeManager.Instance?.ResetTimeScale();
 
                 // Issue #476: 카드 선택 시퀀스 시작
-                Debug.Log("[BossDungeonManager] StartCardSelectionSequence 호출...");
+                GameLog.Log("[BossDungeonManager] StartCardSelectionSequence 호출...");
                 StartCardSelectionSequence().Forget();
             }
             else
             {
-                Debug.LogError("[BossDungeonManager] 선택된 던전 데이터가 없습니다! " +
+                GameLog.LogError("[BossDungeonManager] 선택된 던전 데이터가 없습니다! " +
                                "LobbyScene에서 BossDungeonButton 클릭 시 SelectedBossDungeon.Data가 설정되어야 합니다.");
             }
         }
@@ -145,7 +145,7 @@ namespace NovelianMagicLibraryDefense.Managers
             maxStunGauge = dungeonData.Stun_Gauge;
             currentStunGauge = 0f;
 
-            Debug.Log($"[BossDungeonManager] 던전 초기화: Floor={dungeonData.Floor_Index}, " +
+            GameLog.Log($"[BossDungeonManager] 던전 초기화: Floor={dungeonData.Floor_Index}, " +
                       $"Boss_ID={dungeonData.Boss_ID}, Time_Limit={dungeonData.Time_Limit}초, " +
                       $"Stun_Gauge={dungeonData.Stun_Gauge}, Stun_Damage={dungeonData.Stun_Damage}");
         }
@@ -188,24 +188,24 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private async UniTask StartCardSelectionSequence()
         {
-            Debug.Log("[BossDungeonManager] ===== 도전던전 초기화 시작 =====");
+            GameLog.Log("[BossDungeonManager] ===== 도전던전 초기화 시작 =====");
 
             // 1. 덱의 모든 캐릭터 자동 소환
-            Debug.Log("[BossDungeonManager] STEP 1: 덱 캐릭터 소환 시작...");
+            GameLog.Log("[BossDungeonManager] STEP 1: 덱 캐릭터 소환 시작...");
             await SpawnAllDeckCharacters();
-            Debug.Log("[BossDungeonManager] STEP 1 완료: 덱 캐릭터 소환 끝");
+            GameLog.Log("[BossDungeonManager] STEP 1 완료: 덱 캐릭터 소환 끝");
 
             // 2. 카드 선택 시퀀스 (4번)
             cardSelectionCount = 0;
-            Debug.Log("[BossDungeonManager] STEP 2: 카드 선택 시퀀스 시작 (4회)");
-            Debug.Log($"[BossDungeonManager] cardSelectPanel: {(cardSelectPanel != null ? "있음" : "NULL!")}");
+            GameLog.Log("[BossDungeonManager] STEP 2: 카드 선택 시퀀스 시작 (4회)");
+            GameLog.Log($"[BossDungeonManager] cardSelectPanel: {(cardSelectPanel != null ? "있음" : "NULL!")}");
 
             if (cardSelectPanel == null)
             {
-                Debug.LogError("[BossDungeonManager] cardSelectPanel이 null입니다! " +
+                GameLog.LogError("[BossDungeonManager] cardSelectPanel이 null입니다! " +
                                "Inspector에서 CardSelectPanel을 연결해주세요.");
                 // 카드 선택 없이 바로 던전 시작
-                Debug.Log("[BossDungeonManager] 카드 선택 없이 던전 시작...");
+                GameLog.Log("[BossDungeonManager] 카드 선택 없이 던전 시작...");
                 await StartDungeonAsync();
                 return;
             }
@@ -222,21 +222,21 @@ namespace NovelianMagicLibraryDefense.Managers
 
             while (cardSelectionCount < MAX_CARD_SELECTIONS)
             {
-                Debug.Log($"[BossDungeonManager] 카드 선택 {cardSelectionCount + 1}/{MAX_CARD_SELECTIONS} 시작...");
+                GameLog.Log($"[BossDungeonManager] 카드 선택 {cardSelectionCount + 1}/{MAX_CARD_SELECTIONS} 시작...");
 
                 // 도전던전 전용 카드 선택 패널 (캐릭터 3장 + 스탯 1장)
                 cardSelectPanel.OpenForBossDungeon();
-                Debug.Log("[BossDungeonManager] OpenForBossDungeon 호출됨, 패널 닫힘 대기...");
+                GameLog.Log("[BossDungeonManager] OpenForBossDungeon 호출됨, 패널 닫힘 대기...");
 
                 // 카드 선택 완료 대기
                 await UniTask.WaitUntil(() => !cardSelectPanel.IsOpen);
 
                 cardSelectionCount++;
-                Debug.Log($"[BossDungeonManager] 카드 선택 {cardSelectionCount}/{MAX_CARD_SELECTIONS} 완료!");
+                GameLog.Log($"[BossDungeonManager] 카드 선택 {cardSelectionCount}/{MAX_CARD_SELECTIONS} 완료!");
             }
 
-            Debug.Log("[BossDungeonManager] STEP 2 완료: 카드 선택 시퀀스 끝!");
-            Debug.Log("[BossDungeonManager] STEP 3: 던전 시작...");
+            GameLog.Log("[BossDungeonManager] STEP 2 완료: 카드 선택 시퀀스 끝!");
+            GameLog.Log("[BossDungeonManager] STEP 3: 던전 시작...");
 
             // 던전 시작
             await StartDungeonAsync();
@@ -247,13 +247,13 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private async UniTask SpawnAllDeckCharacters()
         {
-            Debug.Log("[BossDungeonManager] SpawnAllDeckCharacters 시작");
+            GameLog.Log("[BossDungeonManager] SpawnAllDeckCharacters 시작");
 
             // Issue #476: CSV 로딩 대기 (GameScene의 CardSelectPanel과 동일하게)
             // 두 번째 진입 시 CSVLoader가 아직 초기화 안됐으면 ChaCard.Initialize()가 실패함
             if (CSVLoader.Instance != null && !CSVLoader.Instance.IsInit)
             {
-                Debug.Log("[BossDungeonManager] CSV 로딩 대기 중...");
+                GameLog.Log("[BossDungeonManager] CSV 로딩 대기 중...");
                 int maxWaitFrames = 600;
                 int frameCount = 0;
                 while (!CSVLoader.Instance.IsInit && frameCount < maxWaitFrames)
@@ -261,34 +261,34 @@ namespace NovelianMagicLibraryDefense.Managers
                     await UniTask.Yield(PlayerLoopTiming.Update);
                     frameCount++;
                 }
-                Debug.Log($"[BossDungeonManager] CSV 로딩 완료 (IsInit: {CSVLoader.Instance.IsInit})");
+                GameLog.Log($"[BossDungeonManager] CSV 로딩 완료 (IsInit: {CSVLoader.Instance.IsInit})");
             }
 
             // CharacterPlacementManager 확인 (Inspector에서 할당 필수)
             if (characterPlacementManager == null)
             {
-                Debug.LogError("[BossDungeonManager] CharacterPlacementManager가 null입니다! " +
+                GameLog.LogError("[BossDungeonManager] CharacterPlacementManager가 null입니다! " +
                                "Inspector에서 CharacterPlacementManager를 할당해주세요.");
                 return;
             }
-            Debug.Log("[BossDungeonManager] CharacterPlacementManager 확인됨!");
+            GameLog.Log("[BossDungeonManager] CharacterPlacementManager 확인됨!");
 
             // Issue #476: CharacterPlacementManager 초기화 완료 대기 (프리로드 + 그리드 생성)
-            Debug.Log("[BossDungeonManager] CharacterPlacementManager 초기화 대기 중...");
+            GameLog.Log("[BossDungeonManager] CharacterPlacementManager 초기화 대기 중...");
             await characterPlacementManager.WaitForInitializationAsync();
-            Debug.Log($"[BossDungeonManager] CharacterPlacementManager 초기화 완료 (IsFullyInitialized: {characterPlacementManager.IsFullyInitialized})");
+            GameLog.Log($"[BossDungeonManager] CharacterPlacementManager 초기화 완료 (IsFullyInitialized: {characterPlacementManager.IsFullyInitialized})");
 
             // 덱에서 캐릭터 목록 가져오기
-            Debug.Log($"[BossDungeonManager] DeckManager.Instance: {(DeckManager.Instance != null ? "있음" : "NULL!")}");
+            GameLog.Log($"[BossDungeonManager] DeckManager.Instance: {(DeckManager.Instance != null ? "있음" : "NULL!")}");
             var deckCharacters = DeckManager.Instance?.GetValidCharacters();
             if (deckCharacters == null || deckCharacters.Count == 0)
             {
-                Debug.LogError("[BossDungeonManager] DeckManager가 없거나 덱이 비어있습니다! " +
+                GameLog.LogError("[BossDungeonManager] DeckManager가 없거나 덱이 비어있습니다! " +
                                "LobbyScene에서 덱 설정이 되어 있는지 확인하세요.");
                 return;
             }
 
-            Debug.Log($"[BossDungeonManager] 덱 캐릭터 {deckCharacters.Count}명 소환 시작: [{string.Join(", ", deckCharacters)}]");
+            GameLog.Log($"[BossDungeonManager] 덱 캐릭터 {deckCharacters.Count}명 소환 시작: [{string.Join(", ", deckCharacters)}]");
 
             // Issue #476: 카드 초기화 작업 수집 (병렬 실행 후 모두 완료 대기)
             var cardInitTasks = new System.Collections.Generic.List<UniTask>();
@@ -296,17 +296,17 @@ namespace NovelianMagicLibraryDefense.Managers
 
             foreach (int characterId in deckCharacters)
             {
-                Debug.Log($"[BossDungeonManager] 캐릭터 {characterId} 소환 시도...");
+                GameLog.Log($"[BossDungeonManager] 캐릭터 {characterId} 소환 시도...");
                 bool spawned = characterPlacementManager.SpawnCharacterById(characterId);
 
                 if (spawned)
                 {
-                    Debug.Log($"[BossDungeonManager] 캐릭터 {characterId} 소환 완료!");
+                    GameLog.Log($"[BossDungeonManager] 캐릭터 {characterId} 소환 완료!");
 
                     // CharacterCardGrid UI 업데이트
                     if (characterCardGridManager != null)
                     {
-                        Debug.Log($"[BossDungeonManager] characterCardGridManager.instanceId={characterCardGridManager.GetInstanceID()}");
+                        GameLog.Log($"[BossDungeonManager] characterCardGridManager.instanceId={characterCardGridManager.GetInstanceID()}");
                         var spawnedCharacter = characterPlacementManager.GetCharacterById(characterId);
                         int starTier = spawnedCharacter?.GetStarTier() ?? 1;
                         // Issue #476: .Forget() 대신 Task 수집 → 나중에 일괄 대기
@@ -316,7 +316,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
                 else
                 {
-                    Debug.LogWarning($"[BossDungeonManager] 캐릭터 {characterId} 소환 실패!");
+                    GameLog.LogWarning($"[BossDungeonManager] 캐릭터 {characterId} 소환 실패!");
                 }
             }
 
@@ -324,10 +324,10 @@ namespace NovelianMagicLibraryDefense.Managers
             if (cardInitTasks.Count > 0)
             {
                 await UniTask.WhenAll(cardInitTasks);
-                Debug.Log($"[BossDungeonManager] 모든 카드 UI 초기화 완료");
+                GameLog.Log($"[BossDungeonManager] 모든 카드 UI 초기화 완료");
             }
 
-            Debug.Log($"[BossDungeonManager] 덱 캐릭터 소환 완료: {uiSlotIndex}명");
+            GameLog.Log($"[BossDungeonManager] 덱 캐릭터 소환 완료: {uiSlotIndex}명");
         }
 
         #endregion
@@ -339,7 +339,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (dungeonData == null)
             {
-                Debug.LogError("[BossDungeonManager] 던전 데이터가 없어서 시작할 수 없습니다!");
+                GameLog.LogError("[BossDungeonManager] 던전 데이터가 없어서 시작할 수 없습니다!");
                 return;
             }
 
@@ -349,7 +349,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // 타이머 시작
             StartTimer();
 
-            Debug.Log("[BossDungeonManager] 도전던전 시작!");
+            GameLog.Log("[BossDungeonManager] 도전던전 시작!");
         }
 
         /// <summary>
@@ -365,7 +365,7 @@ namespace NovelianMagicLibraryDefense.Managers
             bossAddressableKey = AddressableKey.GetMonsterAddressableKey(dungeonData.Boss_ID);
             if (string.IsNullOrEmpty(bossAddressableKey))
             {
-                Debug.LogError($"[BossDungeonManager] Boss_ID {dungeonData.Boss_ID}의 Addressable Key를 찾을 수 없습니다!");
+                GameLog.LogError($"[BossDungeonManager] Boss_ID {dungeonData.Boss_ID}의 Addressable Key를 찾을 수 없습니다!");
                 return;
             }
 
@@ -375,7 +375,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 bool success = await poolManager.CreatePoolByKeyAsync<Monster>(bossAddressableKey, defaultCapacity: 1, maxSize: 3);
                 if (!success)
                 {
-                    Debug.LogError($"[BossDungeonManager] 보스 풀 생성 실패: {bossAddressableKey}");
+                    GameLog.LogError($"[BossDungeonManager] 보스 풀 생성 실패: {bossAddressableKey}");
                     return;
                 }
             }
@@ -396,11 +396,11 @@ namespace NovelianMagicLibraryDefense.Managers
                 // Monster 컴포넌트 즉시 제거 (Despawn 충돌 방지 + OnEnable/OnDisable 꼬임 방지)
                 // Object.Destroy()는 프레임 끝에 실행되어 SetActive 시 Monster.OnEnable()이 호출될 수 있음
                 DestroyImmediate(monsterComponent);
-                Debug.Log($"[BossDungeonManager] Monster 컴포넌트 즉시 제거됨");
+                GameLog.Log($"[BossDungeonManager] Monster 컴포넌트 즉시 제거됨");
 
                 // 태그 변경: Monster → BossMonster (Projectile 충돌 판정용)
                 bossObject.tag = Tag.BossMonster;
-                Debug.Log($"[BossDungeonManager] 태그 변경: {Tag.BossMonster}");
+                GameLog.Log($"[BossDungeonManager] 태그 변경: {Tag.BossMonster}");
 
                 // BossMonster 컴포넌트 가져오기 또는 추가
                 currentBoss = bossObject.GetComponent<BossMonster>();
@@ -414,7 +414,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
                     // 다시 활성화 → OnEnable 시 참조가 이미 있음
                     bossObject.SetActive(true);
-                    Debug.Log($"[BossDungeonManager] BossMonster 컴포넌트 런타임 추가됨");
+                    GameLog.Log($"[BossDungeonManager] BossMonster 컴포넌트 런타임 추가됨");
                 }
 
                 // BossMonster 활성화
@@ -441,11 +441,11 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (bossCollider != null)
                 {
                     bossCollider.enabled = true;
-                    Debug.Log($"[BossDungeonManager] 보스 콜라이더 재활성화");
+                    GameLog.Log($"[BossDungeonManager] 보스 콜라이더 재활성화");
                 }
 
                 isBossSpawned = true;
-                Debug.Log($"[BossDungeonManager] 보스 스폰 완료: {bossAddressableKey}");
+                GameLog.Log($"[BossDungeonManager] 보스 스폰 완료: {bossAddressableKey}");
 
                 // Issue #583: 남은 몬스터 수 UI 업데이트
                 if (dungeonUI != null)
@@ -472,14 +472,14 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             else
             {
-                Debug.LogWarning("[BossDungeonManager] Wall 참조가 설정되지 않았습니다! " +
+                GameLog.LogWarning("[BossDungeonManager] Wall 참조가 설정되지 않았습니다! " +
                                  "Inspector에서 wallComponent와 wallCollider를 연결해주세요.");
             }
 
             // 공격 주기 설정
             boss.SetAttackInterval(dungeonData.Attack_Period);
 
-            Debug.Log($"[BossDungeonManager] 보스 설정 완료: Attack_Period={dungeonData.Attack_Period}초, " +
+            GameLog.Log($"[BossDungeonManager] 보스 설정 완료: Attack_Period={dungeonData.Attack_Period}초, " +
                       $"Wall={wallComponent != null}, WallCollider={wallCollider != null}");
         }
 
@@ -569,7 +569,7 @@ namespace NovelianMagicLibraryDefense.Managers
             currentStunGauge += dungeonData.Stun_Damage;
             currentStunGauge = Mathf.Min(currentStunGauge, maxStunGauge);
 
-            Debug.Log($"[BossDungeonManager] 결계 스턴 게이지: {currentStunGauge}/{maxStunGauge}");
+            GameLog.Log($"[BossDungeonManager] 결계 스턴 게이지: {currentStunGauge}/{maxStunGauge}");
 
             // UI 업데이트
             if (dungeonUI != null)
@@ -613,7 +613,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 dungeonUI.ShowCharacterStunEffect(stunDuration);
             }
 
-            Debug.Log($"[BossDungeonManager] 캐릭터들 스턴! 지속시간: {stunDuration}초");
+            GameLog.Log($"[BossDungeonManager] 캐릭터들 스턴! 지속시간: {stunDuration}초");
 
             // 스턴 해제 및 게이지 리셋 예약
             ReleaseCharacterStunAsync(stunDuration).Forget();
@@ -649,7 +649,7 @@ namespace NovelianMagicLibraryDefense.Managers
                     }
                 }
 
-                Debug.Log("[BossDungeonManager] 캐릭터들 스턴 해제");
+                GameLog.Log("[BossDungeonManager] 캐릭터들 스턴 해제");
 
                 // 2초 대기 후 게이지 감소 시작
                 await UniTask.Delay((int)(STUN_GAUGE_RECHARGE_DELAY * 1000), cancellationToken: token);
@@ -657,7 +657,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 // 게이지 빠르게 감소 (0.4초 동안)
                 await DrainStunGaugeAsync(token);
 
-                Debug.Log("[BossDungeonManager] 스턴 게이지 리셋 완료");
+                GameLog.Log("[BossDungeonManager] 스턴 게이지 리셋 완료");
             }
             catch (System.OperationCanceledException)
             {
@@ -715,11 +715,11 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void HandleBossDied(BossMonster boss)
         {
-            Debug.Log($"[BossDungeonManager] HandleBossDied 호출됨! boss={boss}, currentBoss={currentBoss}, 일치={boss == currentBoss}");
+            GameLog.Log($"[BossDungeonManager] HandleBossDied 호출됨! boss={boss}, currentBoss={currentBoss}, 일치={boss == currentBoss}");
 
             if (boss != currentBoss)
             {
-                Debug.LogWarning($"[BossDungeonManager] boss != currentBoss 불일치로 무시됨");
+                GameLog.LogWarning($"[BossDungeonManager] boss != currentBoss 불일치로 무시됨");
                 return;
             }
 
@@ -737,30 +737,30 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void OnDungeonCleared()
         {
-            Debug.Log($"[BossDungeonManager] OnDungeonCleared 호출됨! IsCleared={IsCleared}, IsFailed={IsFailed}");
+            GameLog.Log($"[BossDungeonManager] OnDungeonCleared 호출됨! IsCleared={IsCleared}, IsFailed={IsFailed}");
 
             if (IsCleared || IsFailed)
             {
-                Debug.LogWarning("[BossDungeonManager] 이미 클리어/실패 상태라 무시됨");
+                GameLog.LogWarning("[BossDungeonManager] 이미 클리어/실패 상태라 무시됨");
                 return;
             }
 
             IsCleared = true;
             StopTimer();
 
-            Debug.Log($"[BossDungeonManager] 던전 클리어! 남은 시간: {remainingTime:F1}초");
+            GameLog.Log($"[BossDungeonManager] 던전 클리어! 남은 시간: {remainingTime:F1}초");
 
             // UI에 클리어 결과 표시
-            Debug.Log($"[BossDungeonManager] dungeonUI: {(dungeonUI != null ? "있음" : "NULL!")}");
+            GameLog.Log($"[BossDungeonManager] dungeonUI: {(dungeonUI != null ? "있음" : "NULL!")}");
             if (dungeonUI != null)
             {
-                Debug.Log("[BossDungeonManager] ShowClearResult 호출 중...");
+                GameLog.Log("[BossDungeonManager] ShowClearResult 호출 중...");
                 float timeLimit = dungeonData?.Time_Limit ?? 60f;
                 dungeonUI.ShowClearResult(remainingTime, timeLimit);
             }
             else
             {
-                Debug.LogError("[BossDungeonManager] dungeonUI가 null이라 클리어 패널 표시 불가!");
+                GameLog.LogError("[BossDungeonManager] dungeonUI가 null이라 클리어 패널 표시 불가!");
             }
 
             // Note: BossDungeon은 자체 결과 처리(dungeonUI)를 사용하므로
@@ -772,24 +772,24 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void OnDungeonFailed(string reason)
         {
-            Debug.Log($"[BossDungeonManager] OnDungeonFailed 호출됨! reason={reason}, IsCleared={IsCleared}, IsFailed={IsFailed}");
+            GameLog.Log($"[BossDungeonManager] OnDungeonFailed 호출됨! reason={reason}, IsCleared={IsCleared}, IsFailed={IsFailed}");
 
             if (IsCleared || IsFailed)
             {
-                Debug.LogWarning("[BossDungeonManager] 이미 클리어/실패 상태라 무시됨");
+                GameLog.LogWarning("[BossDungeonManager] 이미 클리어/실패 상태라 무시됨");
                 return;
             }
 
             IsFailed = true;
             StopTimer();
 
-            Debug.Log($"[BossDungeonManager] 던전 실패: {reason}");
+            GameLog.Log($"[BossDungeonManager] 던전 실패: {reason}");
 
             // UI에 실패 결과 표시
-            Debug.Log($"[BossDungeonManager] dungeonUI: {(dungeonUI != null ? "있음" : "NULL!")}");
+            GameLog.Log($"[BossDungeonManager] dungeonUI: {(dungeonUI != null ? "있음" : "NULL!")}");
             if (dungeonUI != null)
             {
-                Debug.Log("[BossDungeonManager] ShowFailResult 호출 중...");
+                GameLog.Log("[BossDungeonManager] ShowFailResult 호출 중...");
                 // 게임 진행 시간 계산 (초기 제한시간 - 남은 시간)
                 float timeLimit = dungeonData?.Time_Limit ?? 60f;
                 float progressTime = timeLimit - remainingTime;
@@ -797,7 +797,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             else
             {
-                Debug.LogError("[BossDungeonManager] dungeonUI가 null이라 실패 패널 표시 불가!");
+                GameLog.LogError("[BossDungeonManager] dungeonUI가 null이라 실패 패널 표시 불가!");
             }
         }
 

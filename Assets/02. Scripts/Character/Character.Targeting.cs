@@ -1,4 +1,4 @@
-//LMJ : Character partial class - Targeting Logic (Chain targets, AOE position)
+﻿//LMJ : Character partial class - Targeting Logic (Chain targets, AOE position)
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -40,7 +40,7 @@ namespace Novelian.Combat
             if (chainCount <= 0 || chainRange <= 0)
                 return targets;
 
-            Debug.Log($"[Character] Building chain targets: {chainCount} additional targets within {chainRange} range");
+            GameLog.Log($"[Character] Building chain targets: {chainCount} additional targets within {chainRange} range");
 
             // 체인 타겟 탐색
             ITargetable currentTarget = primaryTarget;
@@ -52,7 +52,7 @@ namespace Novelian.Combat
 
                 if (nextTarget == null)
                 {
-                    Debug.Log($"[Character] Chain ended at {i + 1} targets (no more valid targets)");
+                    GameLog.Log($"[Character] Chain ended at {i + 1} targets (no more valid targets)");
                     break;
                 }
 
@@ -61,7 +61,7 @@ namespace Novelian.Combat
                 currentTarget = nextTarget;
             }
 
-            Debug.Log($"[Character] Built chain with {targets.Count} targets");
+            GameLog.Log($"[Character] Built chain with {targets.Count} targets");
             return targets;
         }
 
@@ -181,7 +181,7 @@ namespace Novelian.Combat
 
             if (validTargets.Count == 0)
             {
-                Debug.Log("[Character] FindBestAOETargetPosition: No valid targets");
+                GameLog.Log("[Character] FindBestAOETargetPosition: No valid targets");
                 return Vector3.zero;
             }
 
@@ -208,7 +208,7 @@ namespace Novelian.Combat
                 }
             }
 
-            Debug.Log($"[Character] Best AOE position found: {bestPosition} (hits {bestHitCount} targets)");
+            GameLog.Log($"[Character] Best AOE position found: {bestPosition} (hits {bestHitCount} targets)");
             return bestPosition;
         }
 

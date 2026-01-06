@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
@@ -192,23 +192,23 @@ public class TitleSceneController : MonoBehaviour
         }
 
         // 2. Firebase 초기화
-        Debug.Log($"{LOG_PREFIX} Firebase 초기화 중...");
+        GameLog.Log($"{LOG_PREFIX} Firebase 초기화 중...");
         bool initialized = await FirebaseManager.Instance.InitializeAsync();
 
         if (!initialized)
         {
-            Debug.LogError($"{LOG_PREFIX} Firebase 초기화 실패!");
+            GameLog.LogError($"{LOG_PREFIX} Firebase 초기화 실패!");
             return;
         }
 
         // 3. 자동 로그인 여부 확인
         if (FirebaseManager.Instance.IsSignedIn)
         {
-            Debug.Log($"{LOG_PREFIX} 자동 로그인 완료! UserId: {FirebaseManager.Instance.CurrentUserId}");
+            GameLog.Log($"{LOG_PREFIX} 자동 로그인 완료! UserId: {FirebaseManager.Instance.CurrentUserId}");
         }
         else
         {
-            Debug.Log($"{LOG_PREFIX} 로그인 필요. 버튼을 눌러주세요.");
+            GameLog.Log($"{LOG_PREFIX} 로그인 필요. 버튼을 눌러주세요.");
         }
     }
 
@@ -244,28 +244,28 @@ public class TitleSceneController : MonoBehaviour
             // 이미 로그인되어 있는지 확인
             if (FirebaseManager.Instance.IsSignedIn)
             {
-                Debug.Log($"{LOG_PREFIX} 이미 로그인됨! UserId: {FirebaseManager.Instance.CurrentUserId}");
+                GameLog.Log($"{LOG_PREFIX} 이미 로그인됨! UserId: {FirebaseManager.Instance.CurrentUserId}");
                 LoadBootScene();
                 return;
             }
 
             // 구글 로그인
-            Debug.Log($"{LOG_PREFIX} 구글 로그인 시도 중...");
+            GameLog.Log($"{LOG_PREFIX} 구글 로그인 시도 중...");
             string userId = await FirebaseManager.Instance.SignInWithGoogleAsync();
 
             if (string.IsNullOrEmpty(userId))
             {
-                Debug.LogError($"{LOG_PREFIX} 구글 로그인 실패!");
+                GameLog.LogError($"{LOG_PREFIX} 구글 로그인 실패!");
                 isProcessing = false;
                 return;
             }
 
-            Debug.Log($"{LOG_PREFIX} 구글 로그인 성공! UserId: {userId}");
+            GameLog.Log($"{LOG_PREFIX} 구글 로그인 성공! UserId: {userId}");
             LoadBootScene();
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 구글 로그인 에러: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 구글 로그인 에러: {e.Message}");
             isProcessing = false;
         }
     }
@@ -277,7 +277,7 @@ public class TitleSceneController : MonoBehaviour
     {
         if (FirebaseManager.Instance == null || !FirebaseManager.Instance.IsSignedIn)
         {
-            Debug.LogWarning($"{LOG_PREFIX} 로그인 되지 않음.");
+            GameLog.LogWarning($"{LOG_PREFIX} 로그인 되지 않음.");
             return;
         }
 
@@ -294,30 +294,30 @@ public class TitleSceneController : MonoBehaviour
             // 이미 로그인되어 있는지 확인
             if (FirebaseManager.Instance.IsSignedIn)
             {
-                Debug.Log($"{LOG_PREFIX} 이미 로그인됨! UserId: {FirebaseManager.Instance.CurrentUserId}");
-                Debug.Log($"{LOG_PREFIX} BootScene으로 이동합니다...");
+                GameLog.Log($"{LOG_PREFIX} 이미 로그인됨! UserId: {FirebaseManager.Instance.CurrentUserId}");
+                GameLog.Log($"{LOG_PREFIX} BootScene으로 이동합니다...");
                 LoadBootScene();
                 return;
             }
 
             // 익명 로그인
-            Debug.Log($"{LOG_PREFIX} 익명 로그인 시도 중...");
+            GameLog.Log($"{LOG_PREFIX} 익명 로그인 시도 중...");
             string userId = await FirebaseManager.Instance.SignInAnonymouslyAsync();
 
             if (string.IsNullOrEmpty(userId))
             {
-                Debug.LogError($"{LOG_PREFIX} 익명 로그인 실패!");
+                GameLog.LogError($"{LOG_PREFIX} 익명 로그인 실패!");
                 isProcessing = false;
                 return;
             }
 
-            Debug.Log($"{LOG_PREFIX} 로그인 성공! UserId: {userId}");
-            Debug.Log($"{LOG_PREFIX} BootScene으로 이동합니다...");
+            GameLog.Log($"{LOG_PREFIX} 로그인 성공! UserId: {userId}");
+            GameLog.Log($"{LOG_PREFIX} BootScene으로 이동합니다...");
             LoadBootScene();
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 에러: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 에러: {e.Message}");
             isProcessing = false;
         }
     }
@@ -340,7 +340,7 @@ public class TitleSceneController : MonoBehaviour
         // 이미 로그인된 상태면 바로 BootScene으로
         if (FirebaseManager.Instance != null && FirebaseManager.Instance.IsSignedIn)
         {
-            Debug.Log($"{LOG_PREFIX} 이미 로그인됨! BootScene으로 이동합니다...");
+            GameLog.Log($"{LOG_PREFIX} 이미 로그인됨! BootScene으로 이동합니다...");
             LoadBootScene();
             return;
         }
@@ -354,6 +354,6 @@ public class TitleSceneController : MonoBehaviour
         if (pressText != null)
             pressText.SetActive(false);
 
-        Debug.Log($"{LOG_PREFIX} 로그인 필요 - 로그인 패널 표시");
+        GameLog.Log($"{LOG_PREFIX} 로그인 필요 - 로그인 패널 표시");
     }
 }

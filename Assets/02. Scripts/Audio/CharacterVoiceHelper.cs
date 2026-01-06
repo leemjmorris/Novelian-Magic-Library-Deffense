@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Audio
@@ -85,20 +85,20 @@ namespace NovelianMagicLibraryDefense.Audio
         {
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.LogWarning("[CharacterVoiceHelper] CSVLoader not initialized");
+                GameLog.LogWarning("[CharacterVoiceHelper] CSVLoader not initialized");
                 return null;
             }
 
             var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
             if (characterData == null)
             {
-                Debug.LogWarning($"[CharacterVoiceHelper] CharacterData not found for ID: {characterId}");
+                GameLog.LogWarning($"[CharacterVoiceHelper] CharacterData not found for ID: {characterId}");
                 return null;
             }
 
             if (!VoiceKeyMap.TryGetValue(characterData.Path_ID, out string baseKey))
             {
-                Debug.LogWarning($"[CharacterVoiceHelper] Voice key not found for Path_ID: {characterData.Path_ID}");
+                GameLog.LogWarning($"[CharacterVoiceHelper] Voice key not found for Path_ID: {characterData.Path_ID}");
                 return null;
             }
 

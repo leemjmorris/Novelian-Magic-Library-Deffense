@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
@@ -104,7 +104,7 @@ namespace NovelianMagicLibraryDefense.UI
             // Issue #645: 스테이지 랭크 저장
             SaveStageRank();
 
-            Debug.Log($"[StageClearPanel] Shown - Time: {progressTime:F1}s, Kills: {killCount}, WallHP: {wallHpRatio:P0}");
+            GameLog.Log($"[StageClearPanel] Shown - Time: {progressTime:F1}s, Kills: {killCount}, WallHP: {wallHpRatio:P0}");
         }
 
         /// <summary>
@@ -295,7 +295,7 @@ namespace NovelianMagicLibraryDefense.UI
             RewardGroupData rewardGroup = rewardGroupTable.GetId(rewardGroupId);
             if (rewardGroup == null)
             {
-                Debug.LogWarning($"[StageClearPanel] RewardGroup not found: {rewardGroupId}");
+                GameLog.LogWarning($"[StageClearPanel] RewardGroup not found: {rewardGroupId}");
                 return;
             }
 
@@ -321,7 +321,7 @@ namespace NovelianMagicLibraryDefense.UI
 
                 if (!shouldGive)
                 {
-                    Debug.Log($"[StageClearPanel] 확률 실패: Item_ID={reward.Item_ID}, Probability={reward.Probability * 100:F1}%");
+                    GameLog.Log($"[StageClearPanel] 확률 실패: Item_ID={reward.Item_ID}, Probability={reward.Probability * 100:F1}%");
                     continue;
                 }
 
@@ -347,7 +347,7 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 CurrencyManager.Instance.AddCurrency(currencyId, amount);
                 earnedRewards.Add((currencyId, amount));
-                Debug.Log($"[StageClearPanel] Fallback 보상 지급: {amount}G");
+                GameLog.Log($"[StageClearPanel] Fallback 보상 지급: {amount}G");
             }
         }
 
@@ -372,11 +372,11 @@ namespace NovelianMagicLibraryDefense.UI
                     CurrencyManager.Instance.AddCurrency(itemId, finalAmount);
                     if (finalAmount != amount)
                     {
-                        Debug.Log($"[StageClearPanel] Currency 지급: ID={itemId}, 기본={amount}, 최종={finalAmount} (골드 modifier 적용)");
+                        GameLog.Log($"[StageClearPanel] Currency 지급: ID={itemId}, 기본={amount}, 최종={finalAmount} (골드 modifier 적용)");
                     }
                     else
                     {
-                        Debug.Log($"[StageClearPanel] Currency 지급: ID={itemId}, Amount={finalAmount}");
+                        GameLog.Log($"[StageClearPanel] Currency 지급: ID={itemId}, Amount={finalAmount}");
                     }
                 }
             }
@@ -386,12 +386,12 @@ namespace NovelianMagicLibraryDefense.UI
                 if (IngredientManager.Instance != null)
                 {
                     IngredientManager.Instance.AddIngredient(itemId, finalAmount);
-                    Debug.Log($"[StageClearPanel] Ingredient 지급: ID={itemId}, Amount={finalAmount}");
+                    GameLog.Log($"[StageClearPanel] Ingredient 지급: ID={itemId}, Amount={finalAmount}");
                 }
             }
             else
             {
-                Debug.LogWarning($"[StageClearPanel] 알 수 없는 Item_ID: {itemId}");
+                GameLog.LogWarning($"[StageClearPanel] 알 수 없는 Item_ID: {itemId}");
             }
         }
 
@@ -450,7 +450,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (!hasNextStage)
             {
-                Debug.Log("[StageClearPanel] 마지막 스테이지 - 다음 스테이지 버튼 비활성화");
+                GameLog.Log("[StageClearPanel] 마지막 스테이지 - 다음 스테이지 버튼 비활성화");
             }
         }
 
@@ -470,7 +470,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnLobbyButtonClicked()
         {
-            Debug.Log("[StageClearPanel] Lobby button clicked - Loading LobbyScene");
+            GameLog.Log("[StageClearPanel] Lobby button clicked - Loading LobbyScene");
 
             // Issue #570: 씬 전환 중 레벨업 방지를 위해 플래그 설정
             if (GameManager.Instance?.Stage != null)
@@ -490,12 +490,12 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnNextStageButtonClicked()
         {
-            Debug.Log("[StageClearPanel] Next Stage button clicked - Checking AP");
+            GameLog.Log("[StageClearPanel] Next Stage button clicked - Checking AP");
 
             StageData nextStage = GetNextStageData();
             if (nextStage == null)
             {
-                Debug.LogWarning("[StageClearPanel] 다음 스테이지가 없음 - 로비로 이동");
+                GameLog.LogWarning("[StageClearPanel] 다음 스테이지가 없음 - 로비로 이동");
                 OnLobbyButtonClicked();
                 return;
             }
@@ -504,7 +504,7 @@ namespace NovelianMagicLibraryDefense.UI
             bool isUnlocked = StageProgressManager.Instance?.IsStageUnlocked(nextStage.Chapter_Number) ?? false;
             if (!isUnlocked)
             {
-                Debug.LogWarning($"[StageClearPanel] 스테이지 {nextStage.Chapter_Number}이 해금되지 않음");
+                GameLog.LogWarning($"[StageClearPanel] 스테이지 {nextStage.Chapter_Number}이 해금되지 않음");
                 OnLobbyButtonClicked();
                 return;
             }
@@ -512,7 +512,7 @@ namespace NovelianMagicLibraryDefense.UI
             // AP 잔량 확인 및 소모
             if (CurrencyManager.Instance == null)
             {
-                Debug.LogError("[StageClearPanel] CurrencyManager가 초기화되지 않음");
+                GameLog.LogError("[StageClearPanel] CurrencyManager가 초기화되지 않음");
                 return;
             }
 
@@ -521,14 +521,14 @@ namespace NovelianMagicLibraryDefense.UI
             if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.AP_ID, apCost))
             {
                 int currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
-                Debug.LogWarning($"[StageClearPanel] AP 부족! 필요: {apCost}, 보유: {currentAP}");
+                GameLog.LogWarning($"[StageClearPanel] AP 부족! 필요: {apCost}, 보유: {currentAP}");
                 WarningUIManager.Instance?.ShowWarning("AP가 부족합니다");
                 return;
             }
 
             // AP 소모
             CurrencyManager.Instance.SpendCurrency(CurrencyManager.AP_ID, apCost);
-            Debug.Log($"[StageClearPanel] AP {apCost} 소모. 다음 스테이지로 이동: Chapter {nextStage.Chapter_Number}, Stage_ID={nextStage.Stage_ID}");
+            GameLog.Log($"[StageClearPanel] AP {apCost} 소모. 다음 스테이지로 이동: Chapter {nextStage.Chapter_Number}, Stage_ID={nextStage.Stage_ID}");
 
             // 다음 스테이지 설정 및 게임 시작
             SelectedStage.Data = nextStage;
@@ -546,7 +546,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (!SelectedStage.HasSelection)
             {
-                Debug.LogWarning("[StageClearPanel] 현재 스테이지 정보 없음");
+                GameLog.LogWarning("[StageClearPanel] 현재 스테이지 정보 없음");
                 return null;
             }
 
@@ -556,14 +556,14 @@ namespace NovelianMagicLibraryDefense.UI
             // CSV에서 다음 Chapter_Number 스테이지 찾기
             if (CSVLoader.Instance == null)
             {
-                Debug.LogError("[StageClearPanel] CSVLoader가 초기화되지 않음");
+                GameLog.LogError("[StageClearPanel] CSVLoader가 초기화되지 않음");
                 return null;
             }
 
             var table = CSVLoader.Instance.GetTable<StageData>();
             if (table == null)
             {
-                Debug.LogError("[StageClearPanel] StageTable이 로드되지 않음");
+                GameLog.LogError("[StageClearPanel] StageTable이 로드되지 않음");
                 return null;
             }
 
@@ -580,7 +580,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (!SelectedStage.HasSelection)
             {
-                Debug.LogWarning("[StageClearPanel] 스테이지 정보 없음 - 랭크 저장 스킵");
+                GameLog.LogWarning("[StageClearPanel] 스테이지 정보 없음 - 랭크 저장 스킵");
                 return;
             }
 
@@ -593,7 +593,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
             else
             {
-                Debug.LogWarning("[StageClearPanel] StageProgressManager 없음 - 랭크 저장 스킵");
+                GameLog.LogWarning("[StageClearPanel] StageProgressManager 없음 - 랭크 저장 스킵");
             }
         }
 
@@ -610,25 +610,25 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (FirebaseSaveManager.Instance == null || FirebaseSaveManager.Instance.CachedData == null)
             {
-                Debug.LogWarning("[StageClearPanel] Firebase 캐시 없음 - 킬 카운트 저장 스킵");
+                GameLog.LogWarning("[StageClearPanel] Firebase 캐시 없음 - 킬 카운트 저장 스킵");
                 return;
             }
 
             var progression = FirebaseSaveManager.Instance.CachedData.progression;
             if (progression == null)
             {
-                Debug.LogWarning("[StageClearPanel] Progression 데이터 없음 - 킬 카운트 저장 스킵");
+                GameLog.LogWarning("[StageClearPanel] Progression 데이터 없음 - 킬 카운트 저장 스킵");
                 return;
             }
 
             // 킬 카운트 누적
             progression.totalKilledMonsters += killCount;
-            Debug.Log($"[StageClearPanel] 처치 몬스터 누적: +{killCount}, 총합: {progression.totalKilledMonsters}");
+            GameLog.Log($"[StageClearPanel] 처치 몬스터 누적: +{killCount}, 총합: {progression.totalKilledMonsters}");
 
             string oderId = FirebaseManager.Instance?.CurrentUserId;
             if (string.IsNullOrEmpty(oderId))
             {
-                Debug.LogWarning("[StageClearPanel] 유저 ID 없음 - Firebase 저장 스킵");
+                GameLog.LogWarning("[StageClearPanel] 유저 ID 없음 - Firebase 저장 스킵");
                 return;
             }
 

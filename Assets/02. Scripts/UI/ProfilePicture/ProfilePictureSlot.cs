@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -103,7 +103,7 @@ public class ProfilePictureSlot : MonoBehaviour
         // 캐릭터 아이콘 로드
         LoadCharacterIcon(characterId);
 
-        Debug.Log($"[ProfilePictureSlot] InitPictureSlot: ID={characterId}, Locked={isLocked}, Button={slotButton != null}");
+        GameLog.Log($"[ProfilePictureSlot] InitPictureSlot: ID={characterId}, Locked={isLocked}, Button={slotButton != null}");
     }
 
     /// <summary>
@@ -225,7 +225,7 @@ public class ProfilePictureSlot : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[ProfilePictureSlot] 캐릭터 아이콘 로드 실패: {spriteKey}");
+                GameLog.LogWarning($"[ProfilePictureSlot] 캐릭터 아이콘 로드 실패: {spriteKey}");
             }
         };
     }
@@ -246,7 +246,7 @@ public class ProfilePictureSlot : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[ProfilePictureSlot] 프레임 이미지 로드 실패: {spriteKey}");
+                GameLog.LogWarning($"[ProfilePictureSlot] 프레임 이미지 로드 실패: {spriteKey}");
             }
         };
     }

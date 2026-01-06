@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,7 +25,7 @@ public class PartySynergyInfoPanel : MonoBehaviour
     {
         if (data == null)
         {
-            Debug.LogError("[PartySynergyInfoPanel] PartySynergyData is null!");
+            GameLog.LogError("[PartySynergyInfoPanel] PartySynergyData is null!");
             return;
         }
 
@@ -73,7 +73,7 @@ public class PartySynergyInfoPanel : MonoBehaviour
             }
         }
 
-        Debug.Log($"[PartySynergyInfoPanel] Initialized - PartyID: {partyId}, Name: {partyNameText?.text}");
+        GameLog.Log($"[PartySynergyInfoPanel] Initialized - PartyID: {partyId}, Name: {partyNameText?.text}");
     }
 
     private void InitializeCharacterSlots(PartySynergyData data)
@@ -130,11 +130,11 @@ public class PartySynergyInfoPanel : MonoBehaviour
     {
         if (enhancementPanel == null)
         {
-            Debug.LogWarning("[PartySynergyInfoPanel] EnhancementPanel is not set!");
+            GameLog.LogWarning("[PartySynergyInfoPanel] EnhancementPanel is not set!");
             return;
         }
 
-        Debug.Log($"[PartySynergyInfoPanel] Enhance button clicked - PartyID: {partyId}");
+        GameLog.Log($"[PartySynergyInfoPanel] Enhance button clicked - PartyID: {partyId}");
         enhancementPanel.Initialize(synergyData);
         enhancementPanel.ShowPanel();
     }

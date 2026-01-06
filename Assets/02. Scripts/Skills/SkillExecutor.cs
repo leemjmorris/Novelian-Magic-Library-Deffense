@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Audio;
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
@@ -28,7 +28,7 @@ namespace Novelian.Combat
 
                     if (_instance == null)
                     {
-                        Debug.LogError("[SkillExecutor] Instance not found in scene! SkillExecutor 태그가 있는 GameObject에 SkillExecutor 컴포넌트를 추가하세요.");
+                        GameLog.LogError("[SkillExecutor] Instance not found in scene! SkillExecutor 태그가 있는 GameObject에 SkillExecutor 컴포넌트를 추가하세요.");
                     }
                 }
                 return _instance;
@@ -132,20 +132,20 @@ namespace Novelian.Combat
 
             if (mainSkill == null)
             {
-                Debug.LogError("[SkillExecutor] MainSkillData is null");
+                GameLog.LogError("[SkillExecutor] MainSkillData is null");
                 return false;
             }
 
             if (vfxDatabase == null)
             {
-                Debug.LogError("[SkillExecutor] VFXDatabase is not assigned!");
+                GameLog.LogError("[SkillExecutor] VFXDatabase is not assigned!");
                 return false;
             }
 
             prefab = vfxDatabase.GetVFXPrefab(mainSkill.skill_id);
             if (prefab == null)
             {
-                Debug.LogError($"[SkillExecutor] VFX prefab not found for skill_id: {mainSkill.skill_id}");
+                GameLog.LogError($"[SkillExecutor] VFX prefab not found for skill_id: {mainSkill.skill_id}");
                 return false;
             }
 
@@ -167,7 +167,7 @@ namespace Novelian.Combat
             // 조합 규칙 데이터가 없으면 모든 조합 허용 (경고 출력)
             if (combinationRuleData == null)
             {
-                Debug.LogWarning("[SkillExecutor] CombinationRuleData가 할당되지 않았습니다. 모든 조합이 허용됩니다.");
+                GameLog.LogWarning("[SkillExecutor] CombinationRuleData가 할당되지 않았습니다. 모든 조합이 허용됩니다.");
                 return true;
             }
 
@@ -175,7 +175,7 @@ namespace Novelian.Combat
 
             if (!isValid)
             {
-                Debug.LogWarning($"[SkillExecutor] 유효하지 않은 스킬 조합: {mainSkill.behavior_type} + {supportSkill.support_type}");
+                GameLog.LogWarning($"[SkillExecutor] 유효하지 않은 스킬 조합: {mainSkill.behavior_type} + {supportSkill.support_type}");
             }
 
             return isValid;
@@ -275,7 +275,7 @@ namespace Novelian.Combat
                     break;
 
                 default:
-                    Debug.LogWarning($"[SkillExecutor] Unknown behavior_type: {mainSkill.behavior_type}");
+                    GameLog.LogWarning($"[SkillExecutor] Unknown behavior_type: {mainSkill.behavior_type}");
                     break;
             }
         }
@@ -356,7 +356,7 @@ namespace Novelian.Combat
         {
             if (target == null || !target.IsAlive())
             {
-                Debug.LogWarning("[SkillExecutor] Invalid target for projectile");
+                GameLog.LogWarning("[SkillExecutor] Invalid target for projectile");
                 return;
             }
 
@@ -1284,7 +1284,7 @@ namespace Novelian.Combat
         private void PlaySkillSound(int skillId)
         {
             string soundKey = SkillSoundHelper.GetSkillSoundKey(skillId);
-            Debug.Log($"[SkillSound] skillId={skillId}, soundKey={soundKey ?? "null"}, AudioManager={AudioManager.Instance != null}");
+            GameLog.Log($"[SkillSound] skillId={skillId}, soundKey={soundKey ?? "null"}, AudioManager={AudioManager.Instance != null}");
             if (!string.IsNullOrEmpty(soundKey))
             {
                 AudioManager.Instance?.PlaySkillSFX(soundKey);

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Managers
 {
@@ -39,7 +39,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (preventScreenSleep)
             {
                 Screen.sleepTimeout = SleepTimeout.NeverSleep;
-                Debug.Log("[ApplicationSettings] 화면 꺼짐 방지 활성화");
+                GameLog.Log("[ApplicationSettings] 화면 꺼짐 방지 활성화");
             }
 
             // 추후 추가 가능한 설정들:
@@ -55,7 +55,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             preventScreenSleep = prevent;
             Screen.sleepTimeout = prevent ? SleepTimeout.NeverSleep : SleepTimeout.SystemSetting;
-            Debug.Log($"[ApplicationSettings] 화면 꺼짐 방지: {prevent}");
+            GameLog.Log($"[ApplicationSettings] 화면 꺼짐 방지: {prevent}");
         }
     }
 }

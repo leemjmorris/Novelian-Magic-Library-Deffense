@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace Dispatch
@@ -45,7 +45,7 @@ namespace Dispatch
         public void SetTimeScale(float scale)
         {
             timeScale = scale;
-            Debug.Log($"[TestTimeProvider] 시간 배율 변경: x{scale}");
+            GameLog.Log($"[TestTimeProvider] 시간 배율 변경: x{scale}");
         }
     }
 }

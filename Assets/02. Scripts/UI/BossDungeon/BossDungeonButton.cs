@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using NovelianMagicLibraryDefense.Managers;
@@ -90,14 +90,14 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (CSVLoader.Instance == null)
             {
-                Debug.LogError("[BossDungeonButton] CSVLoader가 초기화되지 않음");
+                GameLog.LogError("[BossDungeonButton] CSVLoader가 초기화되지 않음");
                 return;
             }
 
             var table = CSVLoader.Instance.GetTable<BossDungeonData>();
             if (table == null)
             {
-                Debug.LogError("[BossDungeonButton] BossDungeonTable이 로드되지 않음");
+                GameLog.LogError("[BossDungeonButton] BossDungeonTable이 로드되지 않음");
                 return;
             }
 
@@ -106,7 +106,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (cachedDungeonData == null)
             {
-                Debug.LogError($"[BossDungeonButton] Floor {floorIndex}에 해당하는 던전을 찾을 수 없음");
+                GameLog.LogError($"[BossDungeonButton] Floor {floorIndex}에 해당하는 던전을 찾을 수 없음");
                 return;
             }
 
@@ -120,8 +120,8 @@ namespace NovelianMagicLibraryDefense.UI
             // SelectedBossDungeon에 저장 (씬 전환 후에도 유지)
             SelectedBossDungeon.Data = cachedDungeonData;
 
-            Debug.Log($"[BossDungeonButton] ===== 던전 선택 완료 =====");
-            Debug.Log($"[BossDungeonButton] Dungeon_ID={cachedDungeonData.Dungeon_ID}, " +
+            GameLog.Log($"[BossDungeonButton] ===== 던전 선택 완료 =====");
+            GameLog.Log($"[BossDungeonButton] Dungeon_ID={cachedDungeonData.Dungeon_ID}, " +
                       $"Floor={cachedDungeonData.Floor_Index}, Boss_ID={cachedDungeonData.Boss_ID}, " +
                       $"Time_Limit={cachedDungeonData.Time_Limit}초");
 
@@ -129,11 +129,11 @@ namespace NovelianMagicLibraryDefense.UI
             if (popUpPanel != null)
             {
                 popUpPanel.Show();
-                Debug.Log("[BossDungeonButton] 확인 패널 표시");
+                GameLog.Log("[BossDungeonButton] 확인 패널 표시");
             }
             else
             {
-                Debug.LogWarning("[BossDungeonButton] popUpPanel이 연결되지 않음! Inspector에서 연결해주세요.");
+                GameLog.LogWarning("[BossDungeonButton] popUpPanel이 연결되지 않음! Inspector에서 연결해주세요.");
             }
         }
 

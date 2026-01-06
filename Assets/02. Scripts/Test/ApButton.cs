@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
@@ -35,12 +35,12 @@ public class ApButton : MonoBehaviour
     {
         if (CurrencyManager.Instance == null)
         {
-            Debug.LogWarning("[ApButton] CurrencyManager가 없습니다.");
+            GameLog.LogWarning("[ApButton] CurrencyManager가 없습니다.");
             return;
         }
 
         CurrencyManager.Instance.AddCurrency(CurrencyManager.AP_ID, apAmount);
-        Debug.Log($"[ApButton] AP +{apAmount} 추가됨. 현재 AP: {CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID)}");
+        GameLog.Log($"[ApButton] AP +{apAmount} 추가됨. 현재 AP: {CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID)}");
     }
 
     /// <summary>
@@ -50,12 +50,12 @@ public class ApButton : MonoBehaviour
     {
         if (CurrencyManager.Instance == null)
         {
-            Debug.LogWarning("[ApButton] CurrencyManager가 없습니다.");
+            GameLog.LogWarning("[ApButton] CurrencyManager가 없습니다.");
             return;
         }
 
         CurrencyManager.Instance.AddCurrency(CurrencyManager.AP_ID, amount);
-        Debug.Log($"[ApButton] AP +{amount} 추가됨. 현재 AP: {CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID)}");
+        GameLog.Log($"[ApButton] AP +{amount} 추가됨. 현재 AP: {CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID)}");
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public class ApButton : MonoBehaviour
     {
         if (CurrencyManager.Instance == null)
         {
-            Debug.LogWarning("[ApButton] CurrencyManager가 없습니다.");
+            GameLog.LogWarning("[ApButton] CurrencyManager가 없습니다.");
             return;
         }
 
@@ -76,11 +76,11 @@ public class ApButton : MonoBehaviour
         if (needed > 0)
         {
             CurrencyManager.Instance.AddCurrency(CurrencyManager.AP_ID, needed);
-            Debug.Log($"[ApButton] AP 최대치로 채움. 현재 AP: {maxAP}/{maxAP}");
+            GameLog.Log($"[ApButton] AP 최대치로 채움. 현재 AP: {maxAP}/{maxAP}");
         }
         else
         {
-            Debug.Log($"[ApButton] AP가 이미 최대치입니다. 현재 AP: {currentAP}/{maxAP}");
+            GameLog.Log($"[ApButton] AP가 이미 최대치입니다. 현재 AP: {currentAP}/{maxAP}");
         }
     }
 }

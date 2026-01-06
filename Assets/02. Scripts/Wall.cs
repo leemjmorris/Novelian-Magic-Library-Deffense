@@ -1,4 +1,4 @@
-using NovelianMagicLibraryDefense.Events;
+﻿using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
 
@@ -66,13 +66,13 @@ public class Wall : MonoBehaviour, IEntity
                 // Shield가 충분히 많으면 전부 흡수
                 shield -= remainingDamage;
                 remainingDamage = 0;
-                Debug.Log($"[Wall] Shield absorbed {damage} damage. Shield: {shield}/{maxShield}");
+                GameLog.Log($"[Wall] Shield absorbed {damage} damage. Shield: {shield}/{maxShield}");
             }
             else
             {
                 // Shield가 부족하면 남은 데미지는 HP로
                 remainingDamage -= shield;
-                Debug.Log($"[Wall] Shield depleted! Absorbed {shield}, remaining damage: {remainingDamage}");
+                GameLog.Log($"[Wall] Shield depleted! Absorbed {shield}, remaining damage: {remainingDamage}");
                 shield = 0;
             }
 
@@ -86,7 +86,7 @@ public class Wall : MonoBehaviour, IEntity
         if (remainingDamage > 0)
         {
             health -= remainingDamage;
-            // Debug.Log($"[Wall] HP damaged: -{remainingDamage}. HP: {health}/{maxHealth}");
+            // GameLog.Log($"[Wall] HP damaged: -{remainingDamage}. HP: {health}/{maxHealth}");
 
             if (wallEvents != null)
             {
@@ -117,7 +117,7 @@ public class Wall : MonoBehaviour, IEntity
     public void SetInvincible(bool invincible)
     {
         isInvincible = invincible;
-        Debug.Log($"[Wall] 무적 모드: {(invincible ? "ON" : "OFF")}");
+        GameLog.Log($"[Wall] 무적 모드: {(invincible ? "ON" : "OFF")}");
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public class Wall : MonoBehaviour, IEntity
         shield = Mathf.Min(shield + amount, maxShield);
         float actualShield = shield - previousShield;
 
-        Debug.Log($"[Wall] Shield 추가: +{actualShield} ({previousShield} → {shield}/{maxShield})");
+        GameLog.Log($"[Wall] Shield 추가: +{actualShield} ({previousShield} → {shield}/{maxShield})");
 
         if (wallEvents != null)
         {
@@ -163,7 +163,7 @@ public class Wall : MonoBehaviour, IEntity
     public void SetMaxShield(float max)
     {
         maxShield = max;
-        Debug.Log($"[Wall] MaxShield set to {maxShield}");
+        GameLog.Log($"[Wall] MaxShield set to {maxShield}");
     }
 
     #endregion
@@ -179,7 +179,7 @@ public class Wall : MonoBehaviour, IEntity
         health = Mathf.Min(health + amount, maxHealth);
         float actualHeal = health - previousHealth;
 
-        Debug.Log($"[Wall] 체력 회복: +{actualHeal} ({previousHealth} → {health}/{maxHealth})");
+        GameLog.Log($"[Wall] 체력 회복: +{actualHeal} ({previousHealth} → {health}/{maxHealth})");
 
         if (wallEvents != null)
         {
@@ -204,7 +204,7 @@ public class Wall : MonoBehaviour, IEntity
     {
         maxHealth = hp;
         health = maxHealth;
-        Debug.Log($"[Wall] MaxHealth set to {maxHealth} from CSV");
+        GameLog.Log($"[Wall] MaxHealth set to {maxHealth} from CSV");
     }
 
     public void Die()
@@ -214,7 +214,7 @@ public class Wall : MonoBehaviour, IEntity
 
     private void GameOver()
     {
-        // Debug.Log("Game Over!");
+        // GameLog.Log("Game Over!");
 
         // LMJ: Use EventChannel instead of static event
         if (wallEvents != null)

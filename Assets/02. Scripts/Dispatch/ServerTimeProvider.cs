@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace Dispatch
 {
@@ -24,7 +24,7 @@ namespace Dispatch
             else
             {
                 // Fallback: 로컬 시간 사용 (안전 모드)
-                UnityEngine.Debug.LogWarning($"{LOG_PREFIX} ServerTimeManager 미동기화. 로컬 시간 사용 (Fallback)");
+                GameLog.LogWarning($"{LOG_PREFIX} ServerTimeManager 미동기화. 로컬 시간 사용 (Fallback)");
                 return DateTime.UtcNow;
             }
         }
@@ -40,7 +40,7 @@ namespace Dispatch
             // 시간 역행 방지 (시간 조작 의심)
             if (elapsed.TotalSeconds < 0)
             {
-                UnityEngine.Debug.LogWarning($"{LOG_PREFIX} 시간 역행 감지! 0으로 반환");
+                GameLog.LogWarning($"{LOG_PREFIX} 시간 역행 감지! 0으로 반환");
                 return TimeSpan.Zero;
             }
 

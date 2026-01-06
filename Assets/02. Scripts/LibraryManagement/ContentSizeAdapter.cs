@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 namespace NovelianMagicLibraryDefense.LibraryManagement
@@ -107,7 +107,7 @@ namespace NovelianMagicLibraryDefense.LibraryManagement
                 (int)actualSpacing   // bottom
             );
 
-            Debug.Log($"[ContentSizeAdapter] Content: {contentWidth:F0}px, " +
+            GameLog.Log($"[ContentSizeAdapter] Content: {contentWidth:F0}px, " +
                       $"Columns: {optimalColumns}, Cell: {actualCellWidth:F0}x{actualCellHeight:F0}, " +
                       $"Spacing: {actualSpacing:F0}");
         }

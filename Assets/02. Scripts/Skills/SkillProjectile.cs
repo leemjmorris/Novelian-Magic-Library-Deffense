@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Audio;
 using NovelianMagicLibraryDefense.Managers;
 using System.Collections.Generic;
@@ -529,7 +529,7 @@ namespace Novelian.Combat
             float ccDuration = supportSkill.duration > 0 ? supportSkill.duration : DEFAULT_CC_DURATION;
             CCType ccType = supportSkill.GetCCType();
 
-            Debug.Log($"[SkillProjectile] CC 효과 시도: {targetTransform.name}, 타입: {ccType}, 지속시간: {ccDuration:F1}초");
+            GameLog.Log($"[SkillProjectile] CC 효과 시도: {targetTransform.name}, 타입: {ccType}, 지속시간: {ccDuration:F1}초");
 
             // 일반 몬스터
             if (targetTransform.CompareTag(Tag.Monster))
@@ -548,7 +548,7 @@ namespace Novelian.Combat
                 }
                 else
                 {
-                    Debug.LogWarning($"[SkillProjectile] Monster 컴포넌트 없음: {targetTransform.name}");
+                    GameLog.LogWarning($"[SkillProjectile] Monster 컴포넌트 없음: {targetTransform.name}");
                 }
             }
             // 보스 몬스터
@@ -562,7 +562,7 @@ namespace Novelian.Combat
             }
             else
             {
-                Debug.LogWarning($"[SkillProjectile] CC 대상이 Monster/BossMonster 태그가 아님: {targetTransform.name}, Tag: {targetTransform.tag}");
+                GameLog.LogWarning($"[SkillProjectile] CC 대상이 Monster/BossMonster 태그가 아님: {targetTransform.name}, Tag: {targetTransform.tag}");
             }
         }
 
@@ -740,7 +740,7 @@ namespace Novelian.Combat
             GameObject prefab = SkillExecutor.Instance.GetVFXPrefab(mainSkill.skill_id);
             if (prefab == null)
             {
-                Debug.LogError($"[SkillProjectile] Projectile prefab not found for skill_id: {mainSkill.skill_id}");
+                GameLog.LogError($"[SkillProjectile] Projectile prefab not found for skill_id: {mainSkill.skill_id}");
                 return;
             }
 
@@ -809,7 +809,7 @@ namespace Novelian.Combat
             if (mainSkill == null) return;
 
             string hitSoundKey = SkillSoundHelper.GetHitSoundKey(mainSkill.skill_id);
-            Debug.Log($"[HitSound] skillId={mainSkill.skill_id}, hitSoundKey={hitSoundKey ?? "null"}, AudioManager={AudioManager.Instance != null}");
+            GameLog.Log($"[HitSound] skillId={mainSkill.skill_id}, hitSoundKey={hitSoundKey ?? "null"}, AudioManager={AudioManager.Instance != null}");
             if (!string.IsNullOrEmpty(hitSoundKey))
             {
                 AudioManager.Instance?.PlaySkillSFX(hitSoundKey);

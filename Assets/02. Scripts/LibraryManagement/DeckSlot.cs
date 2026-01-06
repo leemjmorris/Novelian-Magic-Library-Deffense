@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.AddressableAssets;
@@ -78,7 +78,7 @@ public class DeckSlot : MonoBehaviour
         var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
         if (characterData == null)
         {
-            Debug.LogWarning($"[DeckSlot] CharacterData not found for ID: {characterId}");
+            GameLog.LogWarning($"[DeckSlot] CharacterData not found for ID: {characterId}");
             return;
         }
 
@@ -113,7 +113,7 @@ public class DeckSlot : MonoBehaviour
         if (levelText != null)
             levelText.gameObject.SetActive(true);
 
-        Debug.Log($"[DeckSlot] 슬롯 {slotIndex}에 캐릭터 '{stringData?.Text}' (ID: {characterId}) 설정");
+        GameLog.Log($"[DeckSlot] 슬롯 {slotIndex}에 캐릭터 '{stringData?.Text}' (ID: {characterId}) 설정");
     }
 
     /// <summary>
@@ -130,7 +130,7 @@ public class DeckSlot : MonoBehaviour
         if (levelText != null)
             levelText.text = $"Lv {level}";
 
-        Debug.Log($"[DeckSlot] 슬롯 {slotIndex} 캐릭터 정보 갱신 완료 (Lv {level})");
+        GameLog.Log($"[DeckSlot] 슬롯 {slotIndex} 캐릭터 정보 갱신 완료 (Lv {level})");
     }
 
     /// <summary>

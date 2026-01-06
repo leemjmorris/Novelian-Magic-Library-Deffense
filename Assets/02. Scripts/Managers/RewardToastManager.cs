@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
@@ -51,7 +51,7 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 // Canvas 루트를 DontDestroyOnLoad
                 DontDestroyOnLoad(rootCanvas.gameObject);
-                Debug.Log($"[RewardToastManager] Canvas '{rootCanvas.gameObject.name}'를 DontDestroyOnLoad로 설정");
+                GameLog.Log($"[RewardToastManager] Canvas '{rootCanvas.gameObject.name}'를 DontDestroyOnLoad로 설정");
             }
             else
             {
@@ -73,7 +73,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 toastPanel.SetActive(false);
             }
 
-            Debug.Log("[RewardToastManager] Initialized");
+            GameLog.Log("[RewardToastManager] Initialized");
         }
 
         private void OnDestroy()
@@ -91,7 +91,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void ShowReward(int itemId, int amount)
         {
-            Debug.Log($"[RewardToastManager] ShowReward 호출됨: itemId={itemId}, amount={amount}, toastPanel={toastPanel != null}");
+            GameLog.Log($"[RewardToastManager] ShowReward 호출됨: itemId={itemId}, amount={amount}, toastPanel={toastPanel != null}");
             rewardQueue.Enqueue((itemId, amount));
 
             if (!isShowingToast)
@@ -142,11 +142,11 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private async UniTask ShowSingleToastAsync(int itemId, int amount)
         {
-            Debug.Log($"[RewardToastManager] ShowSingleToastAsync 시작: itemId={itemId}, amount={amount}");
+            GameLog.Log($"[RewardToastManager] ShowSingleToastAsync 시작: itemId={itemId}, amount={amount}");
 
             if (toastPanel == null || toastCanvasGroup == null)
             {
-                Debug.LogWarning($"[RewardToastManager] Toast panel references not assigned! toastPanel={toastPanel != null}, canvasGroup={toastCanvasGroup != null}");
+                GameLog.LogWarning($"[RewardToastManager] Toast panel references not assigned! toastPanel={toastPanel != null}, canvasGroup={toastCanvasGroup != null}");
                 return;
             }
 
@@ -220,7 +220,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (pathId <= 0)
             {
-                Debug.LogWarning($"[RewardToastManager] Path_ID 없음: itemId={itemId}");
+                GameLog.LogWarning($"[RewardToastManager] Path_ID 없음: itemId={itemId}");
                 return;
             }
 
@@ -228,7 +228,7 @@ namespace NovelianMagicLibraryDefense.Managers
             var pathData = CSVLoader.Instance.GetData<PathData>(pathId);
             if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
             {
-                Debug.LogWarning($"[RewardToastManager] PathData 없음 또는 키 없음: Path_ID={pathId}");
+                GameLog.LogWarning($"[RewardToastManager] PathData 없음 또는 키 없음: Path_ID={pathId}");
                 return;
             }
 
@@ -247,7 +247,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             catch (System.Exception e)
             {
-                Debug.LogWarning($"[RewardToastManager] Failed to load icon for item {itemId} (key: {iconKey}): {e.Message}");
+                GameLog.LogWarning($"[RewardToastManager] Failed to load icon for item {itemId} (key: {iconKey}): {e.Message}");
             }
         }
 

@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -29,18 +29,18 @@ public class BuffCard : MonoBehaviour
         // Test: Deactivate card panel
         if (cardPanel != null)
         {
-            Debug.Log($"[BuffCard] Card panel deactivated: {cardPanel.name}");
+            GameLog.Log($"[BuffCard] Card panel deactivated: {cardPanel.name}");
             cardPanel.SetActive(false);
         }
 
         // Test: Log current stat text
         if (statText != null)
         {
-            Debug.Log($"[BuffCard] Stat text: {statText.text}");
+            GameLog.Log($"[BuffCard] Stat text: {statText.text}");
         }
         else
         {
-            Debug.LogWarning("[BuffCard] statText is not assigned!");
+            GameLog.LogWarning("[BuffCard] statText is not assigned!");
         }
 
         // TODO: Add actual buff application logic

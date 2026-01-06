@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -21,7 +21,7 @@ public class StageCard : MonoBehaviour
         var cardData = CSVLoader.Instance.GetData<CardData>(cardId);
         if (cardData == null)
         {
-            Debug.LogError($"[StageCard] CardData not found: {cardId}");
+            GameLog.LogError($"[StageCard] CardData not found: {cardId}");
             return;
         }
 

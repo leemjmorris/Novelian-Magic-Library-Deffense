@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
@@ -72,7 +72,7 @@ public class BookmarkEquipPanel : MonoBehaviour
             }
         }
 
-        Debug.Log($"[BookmarkEquipPanel] 책갈피 슬롯 {allBookmarks.Count}개 생성 완료");
+        GameLog.Log($"[BookmarkEquipPanel] 책갈피 슬롯 {allBookmarks.Count}개 생성 완료");
     }
 
     /// <summary>

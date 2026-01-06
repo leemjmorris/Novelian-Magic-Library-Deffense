@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -138,7 +138,7 @@ namespace NovelianMagicLibraryDefense.UI
                 PlayWarningEffectAsync(isCritical).Forget();
             }
 
-            Debug.Log($"[BossDungeonUI] 시간 경고! Critical: {isCritical}");
+            GameLog.Log($"[BossDungeonUI] 시간 경고! Critical: {isCritical}");
         }
 
         /// <summary>
@@ -190,7 +190,7 @@ namespace NovelianMagicLibraryDefense.UI
                 HideCharacterStunEffectAfterDelayAsync(duration).Forget();
             }
 
-            Debug.Log($"[BossDungeonUI] 캐릭터들 스턴! 지속시간: {duration}초");
+            GameLog.Log($"[BossDungeonUI] 캐릭터들 스턴! 지속시간: {duration}초");
         }
 
         /// <summary>
@@ -213,7 +213,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (attackCountdownText == null)
             {
-                Debug.LogWarning("[BossDungeonUI] attackCountdownText가 null입니다! Inspector에서 연결해주세요.");
+                GameLog.LogWarning("[BossDungeonUI] attackCountdownText가 null입니다! Inspector에서 연결해주세요.");
                 return;
             }
 

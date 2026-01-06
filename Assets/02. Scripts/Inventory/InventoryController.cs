@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -56,7 +56,7 @@ public class InventoryController : MonoBehaviour
         {
             GameObject managerObj = new GameObject("IngredientManager");
             managerObj.AddComponent<IngredientManager>();
-            Debug.LogWarning("[InventoryController] IngredientManager가 없어서 생성했습니다. (테스트용)");
+            GameLog.LogWarning("[InventoryController] IngredientManager가 없어서 생성했습니다. (테스트용)");
         }
 
         LoadInventoryData();
@@ -86,7 +86,7 @@ public class InventoryController : MonoBehaviour
             sortDropdown.AddOptions(new List<string> { "최신순", "이름순(가나다)" });
             sortDropdown.value = (int)currentSortType;
             sortDropdown.onValueChanged.AddListener(OnSortDropdownValueChanged);
-            Debug.Log("[InventoryController] 정렬 드롭다운 초기화 완료");
+            GameLog.Log("[InventoryController] 정렬 드롭다운 초기화 완료");
         }
     }
 
@@ -97,13 +97,13 @@ public class InventoryController : MonoBehaviour
     {
         if (IngredientManager.Instance == null)
         {
-            Debug.LogError("[InventoryController] IngredientManager 인스턴스가 없습니다!");
+            GameLog.LogError("[InventoryController] IngredientManager 인스턴스가 없습니다!");
             return;
         }
 
         if (CSVLoader.Instance == null)
         {
-            Debug.LogError("[InventoryController] CSVLoader 인스턴스가 없습니다!");
+            GameLog.LogError("[InventoryController] CSVLoader 인스턴스가 없습니다!");
             return;
         }
 
@@ -117,7 +117,7 @@ public class InventoryController : MonoBehaviour
         var allIngredientData = CSVLoader.Instance.GetTable<IngredientData>();
         if (allIngredientData == null)
         {
-            Debug.LogError("[InventoryController] IngredientData 테이블을 불러올 수 없습니다!");
+            GameLog.LogError("[InventoryController] IngredientData 테이블을 불러올 수 없습니다!");
             return;
         }
 
@@ -177,7 +177,7 @@ public class InventoryController : MonoBehaviour
             }
         }
 
-        Debug.Log($"[InventoryController] 인벤토리 UI 갱신 완료: {displayedItems.Count}종 아이템, {totalSlotsNeeded}개 슬롯");
+        GameLog.Log($"[InventoryController] 인벤토리 UI 갱신 완료: {displayedItems.Count}종 아이템, {totalSlotsNeeded}개 슬롯");
     }
 
     /// <summary>
@@ -197,7 +197,7 @@ public class InventoryController : MonoBehaviour
 
         if (slot == null)
         {
-            Debug.LogError("[InventoryController] itemSlotPrefab에 InventoryItemSlot 컴포넌트가 없습니다!");
+            GameLog.LogError("[InventoryController] itemSlotPrefab에 InventoryItemSlot 컴포넌트가 없습니다!");
             slot = slotObj.AddComponent<InventoryItemSlot>();
         }
 
@@ -260,7 +260,7 @@ public class InventoryController : MonoBehaviour
             popupItemCurrentCountText.text = $"현재 보유량: {itemInfo.CurrentCount}";
         }
 
-        Debug.Log($"[InventoryController] 아이템 정보 팝업 표시: {itemInfo.ItemName}");
+        GameLog.Log($"[InventoryController] 아이템 정보 팝업 표시: {itemInfo.ItemName}");
     }
 
     /// <summary>
@@ -289,7 +289,7 @@ public class InventoryController : MonoBehaviour
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogWarning($"[InventoryController] 팝업 아이콘 로드 실패: {itemInfo.IconPath}\n{e.Message}");
+                    GameLog.LogWarning($"[InventoryController] 팝업 아이콘 로드 실패: {itemInfo.IconPath}\n{e.Message}");
                     popupItemIcon.enabled = false;
                 }
             }
@@ -331,7 +331,7 @@ public class InventoryController : MonoBehaviour
         if (itemDetailPopup != null)
         {
             itemDetailPopup.SetActive(false);
-            Debug.Log("[InventoryController] 아이템 정보 팝업 닫기");
+            GameLog.Log("[InventoryController] 아이템 정보 팝업 닫기");
         }
     }
 
@@ -345,7 +345,7 @@ public class InventoryController : MonoBehaviour
     private void OnSortDropdownValueChanged(int value)
     {
         currentSortType = (SortType)value;
-        Debug.Log($"[InventoryController] 정렬 방식 변경: {currentSortType}");
+        GameLog.Log($"[InventoryController] 정렬 방식 변경: {currentSortType}");
 
         // 정렬 적용 및 UI 갱신
         ApplySorting();
@@ -362,13 +362,13 @@ public class InventoryController : MonoBehaviour
             case SortType.Newest:
                 // 최신순: ItemID가 높을수록 최근에 추가된 아이템 (역순 정렬)
                 displayedItems = displayedItems.OrderByDescending(item => item.ItemID).ToList();
-                Debug.Log("[InventoryController] 최신순 정렬 완료");
+                GameLog.Log("[InventoryController] 최신순 정렬 완료");
                 break;
 
             case SortType.Name:
                 // 이름순(가나다): 한글 이름 기준 오름차순
                 displayedItems = displayedItems.OrderBy(item => item.ItemName).ToList();
-                Debug.Log("[InventoryController] 이름순 정렬 완료");
+                GameLog.Log("[InventoryController] 이름순 정렬 완료");
                 break;
         }
     }
@@ -383,7 +383,7 @@ public class InventoryController : MonoBehaviour
     private void OnBackButtonClicked()
     {
         // TODO: 로딩 화면 표시 후 로비 씬으로 이동
-        Debug.Log("[InventoryController] 뒤로가기 버튼 클릭 - 로비로 이동");
+        GameLog.Log("[InventoryController] 뒤로가기 버튼 클릭 - 로비로 이동");
         SceneManager.LoadScene("LobbyScene");
     }
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -152,16 +152,16 @@ public class LevelUpCardUI : MonoBehaviour
             {
                 btn1.onClick.RemoveAllListeners();
                 btn1.onClick.AddListener(OnCard1Click);
-                Debug.Log("[LevelUpCardUI] Card1 버튼 onClick 이벤트 연결 완료");
+                GameLog.Log("[LevelUpCardUI] Card1 버튼 onClick 이벤트 연결 완료");
             }
             else
             {
-                Debug.LogWarning("[LevelUpCardUI] Card1에 Button 컴포넌트가 없습니다!");
+                GameLog.LogWarning("[LevelUpCardUI] Card1에 Button 컴포넌트가 없습니다!");
             }
         }
         else
         {
-            Debug.LogError("[LevelUpCardUI] card1이 null입니다! Inspector에서 할당해주세요.");
+            GameLog.LogError("[LevelUpCardUI] card1이 null입니다! Inspector에서 할당해주세요.");
         }
 
         // Card2 버튼 연결
@@ -177,22 +177,22 @@ public class LevelUpCardUI : MonoBehaviour
             {
                 btn2.onClick.RemoveAllListeners();
                 btn2.onClick.AddListener(OnCard2Click);
-                Debug.Log("[LevelUpCardUI] Card2 버튼 onClick 이벤트 연결 완료");
+                GameLog.Log("[LevelUpCardUI] Card2 버튼 onClick 이벤트 연결 완료");
             }
             else
             {
-                Debug.LogWarning("[LevelUpCardUI] Card2에 Button 컴포넌트가 없습니다!");
+                GameLog.LogWarning("[LevelUpCardUI] Card2에 Button 컴포넌트가 없습니다!");
             }
         }
         else
         {
-            Debug.LogError("[LevelUpCardUI] card2가 null입니다! Inspector에서 할당해주세요.");
+            GameLog.LogError("[LevelUpCardUI] card2가 null입니다! Inspector에서 할당해주세요.");
         }
     }
 
     private async UniTask PreloadCardSprites()
     {
-        Debug.Log("[LevelUpCardUI] Preloading card sprites...");
+        GameLog.Log("[LevelUpCardUI] Preloading card sprites...");
 
         foreach (int characterId in availableCharacterIds)
         {
@@ -201,15 +201,15 @@ public class LevelUpCardUI : MonoBehaviour
                 string spriteKey = AddressableKey.GetCardSpriteKey(characterId);
                 Sprite sprite = await Addressables.LoadAssetAsync<Sprite>(spriteKey).Task;
                 cardSprites[characterId] = sprite;
-                Debug.Log($"[LevelUpCardUI] Loaded card sprite for ID {characterId}");
+                GameLog.Log($"[LevelUpCardUI] Loaded card sprite for ID {characterId}");
             }
             catch (Exception e)
             {
-                Debug.LogError($"[LevelUpCardUI] Failed to load card sprite for ID {characterId}: {e.Message}");
+                GameLog.LogError($"[LevelUpCardUI] Failed to load card sprite for ID {characterId}: {e.Message}");
             }
         }
 
-        Debug.Log($"[LevelUpCardUI] Preloaded {cardSprites.Count}/{availableCharacterIds.Count} card sprites");
+        GameLog.Log($"[LevelUpCardUI] Preloaded {cardSprites.Count}/{availableCharacterIds.Count} card sprites");
     }
 
     /// <summary>
@@ -233,7 +233,7 @@ public class LevelUpCardUI : MonoBehaviour
         }
         else
         {
-            // Debug.LogError("[LevelUpCardUI] cardPanel and canvasGroup are both null!");
+            // GameLog.LogError("[LevelUpCardUI] cardPanel and canvasGroup are both null!");
         }
 
         // 2. Load 2 cards
@@ -274,7 +274,7 @@ public class LevelUpCardUI : MonoBehaviour
 
         if (cardPool == null || cardPool.Count < 2)
         {
-            Debug.LogError("[LevelUpCardUI] 사용 가능한 캐릭터 ID가 2개 미만입니다!");
+            GameLog.LogError("[LevelUpCardUI] 사용 가능한 캐릭터 ID가 2개 미만입니다!");
             return;
         }
 
@@ -298,7 +298,7 @@ public class LevelUpCardUI : MonoBehaviour
         // Update card 2 UI
         UpdateCharacterCardUI(card2, selectedCard2Id);
 
-        Debug.Log($"[LevelUpCardUI] 랜덤 캐릭터 선택: ID {selectedCard1Id}, ID {selectedCard2Id}");
+        GameLog.Log($"[LevelUpCardUI] 랜덤 캐릭터 선택: ID {selectedCard1Id}, ID {selectedCard2Id}");
     }
 
     /// <summary>
@@ -325,7 +325,7 @@ public class LevelUpCardUI : MonoBehaviour
                     cardPool.Add(charId);
                 }
             }
-            Debug.Log($"[LevelUpCardUI] Card pool: {availableCharacterIds.Count} base + {fieldCharacterIds.Count} field = {cardPool.Count} total");
+            GameLog.Log($"[LevelUpCardUI] Card pool: {availableCharacterIds.Count} base + {fieldCharacterIds.Count} field = {cardPool.Count} total");
         }
 
         return cardPool;
@@ -360,7 +360,7 @@ public class LevelUpCardUI : MonoBehaviour
         selectedCard2Type = availableTypes[UnityEngine.Random.Range(0, availableTypes.Length)];
         SetupCard(card2, 1, selectedCard2Type);
 
-        Debug.Log($"[LevelUpCardUI] 랜덤 카드 선택: Card1={selectedCard1Type}, Card2={selectedCard2Type}");
+        GameLog.Log($"[LevelUpCardUI] 랜덤 카드 선택: Card1={selectedCard1Type}, Card2={selectedCard2Type}");
     }
 
     /// <summary>
@@ -384,7 +384,7 @@ public class LevelUpCardUI : MonoBehaviour
                 break;
 
             default:
-                Debug.LogWarning($"[LevelUpCardUI] Unsupported card type: {cardType}");
+                GameLog.LogWarning($"[LevelUpCardUI] Unsupported card type: {cardType}");
                 break;
         }
     }
@@ -408,7 +408,7 @@ public class LevelUpCardUI : MonoBehaviour
         if (validStatTypes.Count == 0)
         {
             validStatTypes.AddRange(availableStatTypes);
-            Debug.Log("[LevelUpCardUI] All stat cards at final level, showing anyway");
+            GameLog.Log("[LevelUpCardUI] All stat cards at final level, showing anyway");
         }
 
         // 랜덤 스텟 타입 선택
@@ -451,7 +451,7 @@ public class LevelUpCardUI : MonoBehaviour
         // GenreType은 스텟 카드에서는 의미 없음 (0 사용)
         charCard.UpdateCharacter(cardSprite, displayName, 0);
 
-        Debug.Log($"[LevelUpCardUI] Stat card UI updated: {statType} Tier {tier}");
+        GameLog.Log($"[LevelUpCardUI] Stat card UI updated: {statType} Tier {tier}");
     }
 
     /// <summary>
@@ -491,7 +491,7 @@ public class LevelUpCardUI : MonoBehaviour
 
         if (cardSprite == null)
         {
-            Debug.LogWarning($"[LevelUpCardUI] 캐릭터 ID {characterId}의 카드 스프라이트가 로드되지 않았습니다!");
+            GameLog.LogWarning($"[LevelUpCardUI] 캐릭터 ID {characterId}의 카드 스프라이트가 로드되지 않았습니다!");
         }
 
         charCard.UpdateCharacter(cardSprite, characterName, genreType);
@@ -545,13 +545,13 @@ public class LevelUpCardUI : MonoBehaviour
             // 50% auto-select on timeout
             if (!isCardSelected)
             {
-                // Debug.Log("[LevelUpCardUI] 20 second timeout!");
+                // GameLog.Log("[LevelUpCardUI] 20 second timeout!");
                 AutoSelectCard();
             }
         }
         catch (OperationCanceledException)
         {
-            // Debug.Log("[LevelUpCardUI] Selection timer cancelled");
+            // GameLog.Log("[LevelUpCardUI] Selection timer cancelled");
         }
 
         finally
@@ -571,12 +571,12 @@ public class LevelUpCardUI : MonoBehaviour
 
         if (random < 0.5f)
         {
-            // Debug.Log("[LevelUpCardUI] Auto-select: Card 1");
+            // GameLog.Log("[LevelUpCardUI] Auto-select: Card 1");
             OnCard1Click();
         }
         else
         {
-            // Debug.Log("[LevelUpCardUI] Auto-select: Card 2");
+            // GameLog.Log("[LevelUpCardUI] Auto-select: Card 2");
             OnCard2Click();
         }
     }
@@ -586,11 +586,11 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     public void OnCard1Click()
     {
-        Debug.Log($"[LevelUpCardUI] OnCard1Click() called! isCardSelected: {isCardSelected}, Card1Type: {selectedCard1Type}");
+        GameLog.Log($"[LevelUpCardUI] OnCard1Click() called! isCardSelected: {isCardSelected}, Card1Type: {selectedCard1Type}");
 
         if (isCardSelected)
         {
-            // Debug.LogWarning("[LevelUpCardUI] Card already selected, ignoring click");
+            // GameLog.LogWarning("[LevelUpCardUI] Card already selected, ignoring click");
             return; // Prevent duplicate clicks
         }
 
@@ -607,7 +607,7 @@ public class LevelUpCardUI : MonoBehaviour
         }
 
 
-        // Debug.Log($"[LevelUpCardUI] Card 1 selected (Type: {selectedCard1Type}, ID: {selectedCard1Id})");
+        // GameLog.Log($"[LevelUpCardUI] Card 1 selected (Type: {selectedCard1Type}, ID: {selectedCard1Id})");
 
         // Apply card effect (cardIndex: 0 = card1)
         ApplyCardEffect(selectedCard1Type, 0);
@@ -618,11 +618,11 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     public void OnCard2Click()
     {
-        Debug.Log($"[LevelUpCardUI] OnCard2Click() called! isCardSelected: {isCardSelected}, Card2Type: {selectedCard2Type}");
+        GameLog.Log($"[LevelUpCardUI] OnCard2Click() called! isCardSelected: {isCardSelected}, Card2Type: {selectedCard2Type}");
 
         if (isCardSelected)
         {
-            // Debug.LogWarning("[LevelUpCardUI] Card already selected, ignoring click");
+            // GameLog.LogWarning("[LevelUpCardUI] Card already selected, ignoring click");
             return; // Prevent duplicate clicks
         }
 
@@ -635,7 +635,7 @@ public class LevelUpCardUI : MonoBehaviour
             timerText.text = "0s";
         }
 
-        // Debug.Log($"[LevelUpCardUI] Card 2 selected (Type: {selectedCard2Type}, ID: {selectedCard2Id})");
+        // GameLog.Log($"[LevelUpCardUI] Card 2 selected (Type: {selectedCard2Type}, ID: {selectedCard2Id})");
 
         // Apply card effect (cardIndex: 1 = card2)
         ApplyCardEffect(selectedCard2Type, 1);
@@ -659,17 +659,17 @@ public class LevelUpCardUI : MonoBehaviour
 
             // case CardType.Buff:
             //     // TODO: Buff application logic
-            //     Debug.Log($"[LevelUpCardUI] Buff card applied (Index: {index})");
+            //     GameLog.Log($"[LevelUpCardUI] Buff card applied (Index: {index})");
             //     break;
 
             // case CardType.Debuff:
             //     // TODO: Debuff application logic
-            //     Debug.Log($"[LevelUpCardUI] Debuff card applied (Index: {index})");
+            //     GameLog.Log($"[LevelUpCardUI] Debuff card applied (Index: {index})");
             //     break;
 
             // case CardType.Skill:
             //     // TODO: Skill addition logic
-            //     Debug.Log($"[LevelUpCardUI] Skill card applied (Index: {index})");
+            //     GameLog.Log($"[LevelUpCardUI] Skill card applied (Index: {index})");
             //     break;
         }
     }
@@ -680,27 +680,27 @@ public class LevelUpCardUI : MonoBehaviour
     /// </summary>
     void ApplyStatCard(int cardIndex)
     {
-        Debug.Log($"[LevelUpCardUI] ApplyStatCard() called with cardIndex: {cardIndex}");
+        GameLog.Log($"[LevelUpCardUI] ApplyStatCard() called with cardIndex: {cardIndex}");
 
         // cardIndex: 0 = card1, 1 = card2
         StatType statType = (cardIndex == 0) ? selectedStatCard1Type : selectedStatCard2Type;
         int tier = (cardIndex == 0) ? selectedStatCard1Tier : selectedStatCard2Tier;
 
-        Debug.Log($"[LevelUpCardUI] StatType: {statType}, Tier: {tier}");
+        GameLog.Log($"[LevelUpCardUI] StatType: {statType}, Tier: {tier}");
 
         // CardLevelTable에서 데이터 조회
         int cardLevelId = GetStatCardIdByTier(statType, tier);
-        Debug.Log($"[LevelUpCardUI] CardLevelId: {cardLevelId}");
+        GameLog.Log($"[LevelUpCardUI] CardLevelId: {cardLevelId}");
 
         // CSVLoader 상태 확인
         if (CSVLoader.Instance == null)
         {
-            Debug.LogError("[LevelUpCardUI] CSVLoader.Instance is null!");
+            GameLog.LogError("[LevelUpCardUI] CSVLoader.Instance is null!");
             return;
         }
         if (!CSVLoader.Instance.IsInit)
         {
-            Debug.LogError("[LevelUpCardUI] CSVLoader is not initialized!");
+            GameLog.LogError("[LevelUpCardUI] CSVLoader is not initialized!");
             return;
         }
 
@@ -708,29 +708,29 @@ public class LevelUpCardUI : MonoBehaviour
 
         if (cardData == null)
         {
-            Debug.LogError($"[LevelUpCardUI] CardLevelData not found for ID: {cardLevelId}. Check if CardLevelTable.csv is loaded correctly.");
+            GameLog.LogError($"[LevelUpCardUI] CardLevelData not found for ID: {cardLevelId}. Check if CardLevelTable.csv is loaded correctly.");
             return;
         }
 
-        Debug.Log($"[LevelUpCardUI] CardData found: Tier={cardData.Tier}, value_change={cardData.value_change}, Is_Final_Level={cardData.Is_Final_Level}");
+        GameLog.Log($"[LevelUpCardUI] CardData found: Tier={cardData.Tier}, value_change={cardData.value_change}, Is_Final_Level={cardData.Is_Final_Level}");
 
         // StageManager를 통해 전역 버프 적용
         var stageManager = GameManager.Instance?.Stage;
         if (stageManager != null)
         {
             stageManager.ApplyGlobalStatBuff(statType, cardData.value_change);
-            Debug.Log($"[LevelUpCardUI] Stat card applied: {statType} Tier {tier} (+{cardData.value_change * 100f}%)");
+            GameLog.Log($"[LevelUpCardUI] Stat card applied: {statType} Tier {tier} (+{cardData.value_change * 100f}%)");
 
             // 티어 업그레이드 (최대 3티어까지)
             if (tier < 3 && cardData.Is_Final_Level == 0)
             {
                 statCardCurrentTiers[statType] = tier + 1;
-                Debug.Log($"[LevelUpCardUI] {statType} upgraded to Tier {tier + 1}");
+                GameLog.Log($"[LevelUpCardUI] {statType} upgraded to Tier {tier + 1}");
             }
         }
         else
         {
-            Debug.LogError("[LevelUpCardUI] StageManager not found!");
+            GameLog.LogError("[LevelUpCardUI] StageManager not found!");
         }
     }
 
@@ -741,7 +741,7 @@ public class LevelUpCardUI : MonoBehaviour
     {
         if (!statCardIdRanges.ContainsKey(statType))
         {
-            Debug.LogError($"[LevelUpCardUI] Unknown StatType: {statType}");
+            GameLog.LogError($"[LevelUpCardUI] Unknown StatType: {statType}");
             return 0;
         }
 
@@ -778,17 +778,17 @@ public class LevelUpCardUI : MonoBehaviour
         // cardIndex: 0 = card1, 1 = card2
         int characterId = (cardIndex == 0) ? selectedCard1Id : selectedCard2Id;
 
-        Debug.Log($"[LevelUpCardUI] ApplyCharacterCard() called with cardIndex: {cardIndex}, CharacterID: {characterId}");
+        GameLog.Log($"[LevelUpCardUI] ApplyCharacterCard() called with cardIndex: {cardIndex}, CharacterID: {characterId}");
 
         if (characterId <= 0)
         {
-            Debug.LogError($"[LevelUpCardUI] 유효하지 않은 캐릭터 ID: {characterId}");
+            GameLog.LogError($"[LevelUpCardUI] 유효하지 않은 캐릭터 ID: {characterId}");
             return;
         }
 
         if (placementManager == null)
         {
-            Debug.LogError("[LevelUpCardUI] CharacterPlacementManager를 찾을 수 없습니다!");
+            GameLog.LogError("[LevelUpCardUI] CharacterPlacementManager를 찾을 수 없습니다!");
             return;
         }
 
@@ -803,7 +803,7 @@ public class LevelUpCardUI : MonoBehaviour
         {
             // 새로운 캐릭터면 소환
             placementManager.SpawnCharacterById(characterId);
-            Debug.Log($"[LevelUpCardUI] 캐릭터 ID {characterId} 배치 완료");
+            GameLog.Log($"[LevelUpCardUI] 캐릭터 ID {characterId} 배치 완료");
         }
     }
 
@@ -822,7 +822,7 @@ public class LevelUpCardUI : MonoBehaviour
         character.ApplyStatBuff(StatType.Damage, upgradeBonus);
         character.ApplyStatBuff(StatType.AttackSpeed, upgradeBonus);
 
-        Debug.Log($"[LevelUpCardUI] 캐릭터 ID {characterId} 성급 업그레이드! (데미지 +10%, 공격속도 +10%)");
+        GameLog.Log($"[LevelUpCardUI] 캐릭터 ID {characterId} 성급 업그레이드! (데미지 +10%, 공격속도 +10%)");
 
         // TODO: 캐릭터별 성급 티어 추적 및 최대 성급 제한 구현
         // TODO: 성급에 따른 외형 변화 구현

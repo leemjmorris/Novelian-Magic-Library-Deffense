@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
@@ -24,12 +24,12 @@ public class PartyPanel : MonoBehaviour
 
     private async UniTaskVoid Start()
     {
-        Debug.Log("[PartyPanel] Start() called - Waiting for CSVLoader...");
+        GameLog.Log("[PartyPanel] Start() called - Waiting for CSVLoader...");
 
         // CSV 로딩 완료될 때까지 대기
         await UniTask.WaitUntil(() => CSVLoader.Instance != null && CSVLoader.Instance.IsInit);
 
-        Debug.Log("[PartyPanel] CSVLoader ready - Getting PartySynergyTable...");
+        GameLog.Log("[PartyPanel] CSVLoader ready - Getting PartySynergyTable...");
 
         InitializeSynergyList();
     }
@@ -43,11 +43,11 @@ public class PartyPanel : MonoBehaviour
 
         if (synergyTable == null)
         {
-            Debug.LogError("[PartyPanel] PartySynergyTable is null!");
+            GameLog.LogError("[PartyPanel] PartySynergyTable is null!");
             return;
         }
 
-        Debug.Log($"[PartyPanel] PartySynergyTable loaded with {synergyTable.Count} entries");
+        GameLog.Log($"[PartyPanel] PartySynergyTable loaded with {synergyTable.Count} entries");
 
         // 유효한 시너지만 필터링 (Party_Name_ID != 0)
         allSynergies = synergyTable.GetAll()
@@ -55,7 +55,7 @@ public class PartyPanel : MonoBehaviour
             .OrderBy(s => s.Party_ID)
             .ToList();
 
-        Debug.Log($"[PartyPanel] Valid synergies count: {allSynergies.Count}");
+        GameLog.Log($"[PartyPanel] Valid synergies count: {allSynergies.Count}");
 
         foreach (var synergyData in allSynergies)
         {
@@ -70,12 +70,12 @@ public class PartyPanel : MonoBehaviour
             }
             else
             {
-                Debug.LogError("[PartyPanel] PartySynergyInfoPanel component not found on prefab!");
+                GameLog.LogError("[PartyPanel] PartySynergyInfoPanel component not found on prefab!");
             }
         }
 
         isInitialized = true;
-        Debug.Log($"[PartyPanel] Created {synergyPanels.Count} synergy panels");
+        GameLog.Log($"[PartyPanel] Created {synergyPanels.Count} synergy panels");
     }
 
     private void OnEnable()
@@ -88,7 +88,7 @@ public class PartyPanel : MonoBehaviour
 
     public void RefreshAllPanels()
     {
-        Debug.Log("[PartyPanel] Refreshing all panels...");
+        GameLog.Log("[PartyPanel] Refreshing all panels...");
         // 추후 캐릭터 레벨 등 갱신 필요시 구현
     }
 
@@ -106,6 +106,6 @@ public class PartyPanel : MonoBehaviour
 
     private void OnDisable()
     {
-        Debug.Log("[PartyPanel] OnDisable called");
+        GameLog.Log("[PartyPanel] OnDisable called");
     }
 }

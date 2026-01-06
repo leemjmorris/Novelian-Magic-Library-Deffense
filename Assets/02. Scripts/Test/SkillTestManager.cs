@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
@@ -105,7 +105,7 @@ public class SkillTestManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[SkillTestManager] CombinationRuleData가 할당되지 않았습니다. Inspector에서 할당하세요.");
+            GameLog.LogWarning("[SkillTestManager] CombinationRuleData가 할당되지 않았습니다. Inspector에서 할당하세요.");
         }
     }
 
@@ -399,7 +399,7 @@ public class SkillTestManager : MonoBehaviour
 
     private void Log(string message)
     {
-        Debug.Log($"[SkillTestManager] {message}");
+        GameLog.Log($"[SkillTestManager] {message}");
 
         if (logText != null)
         {

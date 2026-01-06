@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
@@ -118,7 +118,7 @@ public class CSVLoader : MonoBehaviour
 
         if (!Directory.Exists(skillCsvPath))
         {
-            Debug.LogWarning($"[CSVLoader] Skill CSV 폴더를 찾을 수 없습니다: {skillCsvPath}");
+            GameLog.LogWarning($"[CSVLoader] Skill CSV 폴더를 찾을 수 없습니다: {skillCsvPath}");
             return;
         }
 
@@ -134,11 +134,11 @@ public class CSVLoader : MonoBehaviour
             skillCsvWatcher.Changed += OnSkillCsvChanged;
             skillCsvWatcher.EnableRaisingEvents = true;
 
-            Debug.Log($"[CSVLoader] Hot Reload 활성화됨 - 감시 경로: {skillCsvPath}");
+            GameLog.Log($"[CSVLoader] Hot Reload 활성화됨 - 감시 경로: {skillCsvPath}");
         }
         catch (Exception ex)
         {
-            Debug.LogError($"[CSVLoader] FileSystemWatcher 초기화 실패: {ex.Message}");
+            GameLog.LogError($"[CSVLoader] FileSystemWatcher 초기화 실패: {ex.Message}");
         }
     }
 
@@ -163,16 +163,16 @@ public class CSVLoader : MonoBehaviour
             lastReloadTime = Time.realtimeSinceStartup;
             pendingReload = false;
 
-            Debug.Log($"[CSVLoader] CSV 변경 감지됨 - Hot Reload 실행");
+            GameLog.Log($"[CSVLoader] CSV 변경 감지됨 - Hot Reload 실행");
             ExecuteHotReload().Forget();
         }
     }
 
     private async UniTaskVoid ExecuteHotReload()
     {
-        Debug.Log("[CSVLoader] Hot Reload 실행 중...");
+        GameLog.Log("[CSVLoader] Hot Reload 실행 중...");
         await ReloadSkillTablesAsync();
-        Debug.Log("[CSVLoader] Hot Reload 완료!");
+        GameLog.Log("[CSVLoader] Hot Reload 완료!");
     }
 
     private void OnDestroy()
@@ -200,9 +200,9 @@ public class CSVLoader : MonoBehaviour
 
     private async UniTaskVoid Start()
     {
-        Debug.Log("[CSVLoader] Start() called - Beginning CSV load...");
+        GameLog.Log("[CSVLoader] Start() called - Beginning CSV load...");
         await LoadAll();
-        Debug.Log($"[CSVLoader] Start() completed - IsInit: {IsInit}");
+        GameLog.Log($"[CSVLoader] Start() completed - IsInit: {IsInit}");
     }
 
     /// <summary>
@@ -210,7 +210,7 @@ public class CSVLoader : MonoBehaviour
     /// </summary>
     private async UniTask LoadAll()
     {
-        Debug.Log("[CSVLoader] Loading all CSV data in parallel...");
+        GameLog.Log("[CSVLoader] Loading all CSV data in parallel...");
 
         try
         {
@@ -261,11 +261,11 @@ public class CSVLoader : MonoBehaviour
             );
 
             IsInit = true;
-            Debug.Log("[CSVLoader] All CSV data loaded successfully!");
+            GameLog.Log("[CSVLoader] All CSV data loaded successfully!");
         }
         catch (Exception e)
         {
-            Debug.LogError($"[CSVLoader] Failed to load CSV data: {e.Message}");
+            GameLog.LogError($"[CSVLoader] Failed to load CSV data: {e.Message}");
             IsInit = false;
         }
     }
@@ -301,7 +301,7 @@ public class CSVLoader : MonoBehaviour
     /// </summary>
     private async UniTask<CsvTable<T>> LoadSkillTableAsync<T>(string addressableKey, string fileName, Func<T, int> idSelector) where T : class
     {
-        Debug.Log($"[CSVLoader] Loading skill table: {addressableKey}");
+        GameLog.Log($"[CSVLoader] Loading skill table: {addressableKey}");
 
         try
         {
@@ -313,34 +313,34 @@ public class CSVLoader : MonoBehaviour
             if (File.Exists(filePath))
             {
                 csvText = File.ReadAllText(filePath);
-                Debug.Log($"[CSVLoader] Editor mode: Direct file read from {filePath}");
+                GameLog.Log($"[CSVLoader] Editor mode: Direct file read from {filePath}");
             }
             else
             {
                 // 경고 없이 Addressables로 fallback
-                Debug.Log($"[CSVLoader] File not found at {filePath}, using Addressables");
+                GameLog.Log($"[CSVLoader] File not found at {filePath}, using Addressables");
             }
 #endif
 
             // 빌드 또는 에디터에서 파일을 못 찾은 경우: Addressables 사용
             if (string.IsNullOrEmpty(csvText))
             {
-                Debug.Log($"[CSVLoader] Loading skill table via Addressables: {addressableKey}");
+                GameLog.Log($"[CSVLoader] Loading skill table via Addressables: {addressableKey}");
                 try
                 {
                     var handle = Addressables.LoadAssetAsync<TextAsset>(addressableKey);
                     TextAsset asset = await handle;
                     if (asset == null)
                     {
-                        Debug.LogError($"[CSVLoader] Failed to load skill TextAsset (null): {addressableKey}");
+                        GameLog.LogError($"[CSVLoader] Failed to load skill TextAsset (null): {addressableKey}");
                         return null;
                     }
                     csvText = asset.text;
-                    Debug.Log($"[CSVLoader] Skill Addressables load SUCCESS: {addressableKey} (length: {csvText.Length})");
+                    GameLog.Log($"[CSVLoader] Skill Addressables load SUCCESS: {addressableKey} (length: {csvText.Length})");
                 }
                 catch (System.Exception loadEx)
                 {
-                    Debug.LogError($"[CSVLoader] Skill Addressables load FAILED: {addressableKey} - {loadEx.Message}");
+                    GameLog.LogError($"[CSVLoader] Skill Addressables load FAILED: {addressableKey} - {loadEx.Message}");
                     return null;
                 }
             }
@@ -359,12 +359,12 @@ public class CSVLoader : MonoBehaviour
             var table = new CsvTable<T>(idSelector);
             table.LoadFromText(csvText);
 
-            Debug.Log($"[CSVLoader] Skill table loaded: {addressableKey} ({table.Count} rows)");
+            GameLog.Log($"[CSVLoader] Skill table loaded: {addressableKey} ({table.Count} rows)");
             return table;
         }
         catch (Exception e)
         {
-            Debug.LogError($"[CSVLoader] Error loading skill table {addressableKey}: {e.Message}\n{e.StackTrace}");
+            GameLog.LogError($"[CSVLoader] Error loading skill table {addressableKey}: {e.Message}\n{e.StackTrace}");
             return null;
         }
     }
@@ -382,7 +382,7 @@ public class CSVLoader : MonoBehaviour
 
         if (lines.Count < 4)
         {
-            Debug.LogWarning("[CSVLoader] CSV has less than 4 lines, returning as-is");
+            GameLog.LogWarning("[CSVLoader] CSV has less than 4 lines, returning as-is");
             return csvText;
         }
 
@@ -408,7 +408,7 @@ public class CSVLoader : MonoBehaviour
     /// </summary>
     private async UniTask<CsvTable<T>> LoadTableAsync<T>(string addressableKey, Func<T, int> idSelector) where T : class
     {
-        Debug.Log($"[CSVLoader] Loading table: {addressableKey}");
+        GameLog.Log($"[CSVLoader] Loading table: {addressableKey}");
 
         try
         {
@@ -432,34 +432,34 @@ public class CSVLoader : MonoBehaviour
             if (File.Exists(filePath))
             {
                 csvText = File.ReadAllText(filePath);
-                Debug.Log($"[CSVLoader] Editor mode: Direct file read from {filePath}");
+                GameLog.Log($"[CSVLoader] Editor mode: Direct file read from {filePath}");
             }
             else
             {
                 // 경고 없이 Addressables로 fallback (빌드 환경과 동일하게 동작)
-                Debug.Log($"[CSVLoader] File not found at {filePath}, using Addressables");
+                GameLog.Log($"[CSVLoader] File not found at {filePath}, using Addressables");
             }
 #endif
 
             // 빌드 또는 에디터에서 파일을 못 찾은 경우: Addressables 사용
             if (string.IsNullOrEmpty(csvText))
             {
-                Debug.Log($"[CSVLoader] Loading table via Addressables: {addressableKey}");
+                GameLog.Log($"[CSVLoader] Loading table via Addressables: {addressableKey}");
                 try
                 {
                     var handle = Addressables.LoadAssetAsync<TextAsset>(addressableKey);
                     TextAsset asset = await handle;
                     if (asset == null)
                     {
-                        Debug.LogError($"[CSVLoader] Failed to load TextAsset (null): {addressableKey}");
+                        GameLog.LogError($"[CSVLoader] Failed to load TextAsset (null): {addressableKey}");
                         return null;
                     }
                     csvText = asset.text;
-                    Debug.Log($"[CSVLoader] Addressables load SUCCESS: {addressableKey} (length: {csvText.Length})");
+                    GameLog.Log($"[CSVLoader] Addressables load SUCCESS: {addressableKey} (length: {csvText.Length})");
                 }
                 catch (System.Exception loadEx)
                 {
-                    Debug.LogError($"[CSVLoader] Addressables load FAILED: {addressableKey} - {loadEx.Message}");
+                    GameLog.LogError($"[CSVLoader] Addressables load FAILED: {addressableKey} - {loadEx.Message}");
                     return null;
                 }
             }
@@ -473,12 +473,12 @@ public class CSVLoader : MonoBehaviour
             csvText = System.Text.RegularExpressions.Regex.Replace(csvText, @",,", ",0,");
             table.LoadFromText(csvText);
 
-            Debug.Log($"[CSVLoader] Table loaded: {addressableKey} ({table.Count} rows)");
+            GameLog.Log($"[CSVLoader] Table loaded: {addressableKey} ({table.Count} rows)");
             return table;
         }
         catch (Exception e)
         {
-            Debug.LogError($"[CSVLoader] Error loading table {addressableKey}: {e.Message}");
+            GameLog.LogError($"[CSVLoader] Error loading table {addressableKey}: {e.Message}");
             return null;
         }
     }
@@ -501,14 +501,14 @@ public class CSVLoader : MonoBehaviour
     /// </summary>
     public async UniTask ReloadSkillTablesAsync()
     {
-        Debug.Log("[CSVLoader] Reloading skill tables...");
+        GameLog.Log("[CSVLoader] Reloading skill tables...");
 
         await UniTask.WhenAll(
             RegisterSkillTableAsync<MainSkillData>(AddressableKey.MainSkillTable, "Skill/MainSkillTable.csv", x => x.skill_id),
             RegisterSkillTableAsync<SupportSkillData>(AddressableKey.SupportSkillTable, "Skill/SupportSkillTable.csv", x => x.support_id)
         );
 
-        Debug.Log("[CSVLoader] Skill tables reloaded!");
+        GameLog.Log("[CSVLoader] Skill tables reloaded!");
         OnCSVReloaded?.Invoke();
     }
 
@@ -517,7 +517,7 @@ public class CSVLoader : MonoBehaviour
     /// </summary>
     public async UniTask ReloadAllTablesAsync()
     {
-        Debug.Log("[CSVLoader] Reloading ALL CSV tables...");
+        GameLog.Log("[CSVLoader] Reloading ALL CSV tables...");
 
         try
         {
@@ -559,12 +559,12 @@ public class CSVLoader : MonoBehaviour
                 RegisterSkillTableAsync<PlayerLevelData>(AddressableKey.PlayerLevelTable, "PlayerLevelTable.csv", x => x.Level_ID)
             );
 
-            Debug.Log("[CSVLoader] All CSV tables reloaded successfully!");
+            GameLog.Log("[CSVLoader] All CSV tables reloaded successfully!");
             OnCSVReloaded?.Invoke();
         }
         catch (Exception e)
         {
-            Debug.LogError($"[CSVLoader] Failed to reload tables: {e.Message}");
+            GameLog.LogError($"[CSVLoader] Failed to reload tables: {e.Message}");
         }
     }
 #endif

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
@@ -74,7 +74,7 @@ public class ProfilePictureManager : MonoBehaviour
         // CharacterOwnershipManager에서 보유 캐릭터 동기화
         SyncWithCharacterOwnership();
 
-        Debug.Log($"[ProfilePictureManager] 초기화 완료. 해금된 사진: {unlockedPictures.Count}개, 프레임: {unlockedFrames.Count}개");
+        GameLog.Log($"[ProfilePictureManager] 초기화 완료. 해금된 사진: {unlockedPictures.Count}개, 프레임: {unlockedFrames.Count}개");
     }
 
     /// <summary>
@@ -129,7 +129,7 @@ public class ProfilePictureManager : MonoBehaviour
         if (unlockedPictures.Contains(pictureId)) return;
 
         unlockedPictures.Add(pictureId);
-        Debug.Log($"[ProfilePictureManager] 프로필 사진 해금: {pictureId}");
+        GameLog.Log($"[ProfilePictureManager] 프로필 사진 해금: {pictureId}");
         OnPictureUnlocked?.Invoke(pictureId);
     }
 
@@ -141,7 +141,7 @@ public class ProfilePictureManager : MonoBehaviour
         if (unlockedFrames.Contains(frameId)) return;
 
         unlockedFrames.Add(frameId);
-        Debug.Log($"[ProfilePictureManager] 프레임 해금: {frameId}");
+        GameLog.Log($"[ProfilePictureManager] 프레임 해금: {frameId}");
         OnFrameUnlocked?.Invoke(frameId);
     }
 
@@ -152,12 +152,12 @@ public class ProfilePictureManager : MonoBehaviour
     {
         if (!IsPictureUnlocked(pictureId))
         {
-            Debug.LogWarning($"[ProfilePictureManager] 해금되지 않은 사진: {pictureId}");
+            GameLog.LogWarning($"[ProfilePictureManager] 해금되지 않은 사진: {pictureId}");
             return;
         }
 
         equippedPictureId = pictureId;
-        Debug.Log($"[ProfilePictureManager] 프로필 사진 장착: {pictureId}");
+        GameLog.Log($"[ProfilePictureManager] 프로필 사진 장착: {pictureId}");
         OnPictureEquipped?.Invoke(pictureId);
 
         // Firebase 저장
@@ -171,12 +171,12 @@ public class ProfilePictureManager : MonoBehaviour
     {
         if (!IsFrameUnlocked(frameId))
         {
-            Debug.LogWarning($"[ProfilePictureManager] 해금되지 않은 프레임: {frameId}");
+            GameLog.LogWarning($"[ProfilePictureManager] 해금되지 않은 프레임: {frameId}");
             return;
         }
 
         equippedFrameId = frameId;
-        Debug.Log($"[ProfilePictureManager] 프레임 장착: {frameId}");
+        GameLog.Log($"[ProfilePictureManager] 프레임 장착: {frameId}");
         OnFrameEquipped?.Invoke(frameId);
 
         // Firebase 저장
@@ -189,7 +189,7 @@ public class ProfilePictureManager : MonoBehaviour
     public void UnequipPicture()
     {
         equippedPictureId = -1;
-        Debug.Log("[ProfilePictureManager] 프로필 사진 해제");
+        GameLog.Log("[ProfilePictureManager] 프로필 사진 해제");
         OnPictureEquipped?.Invoke(-1);
         SaveToFirebase();
     }
@@ -200,7 +200,7 @@ public class ProfilePictureManager : MonoBehaviour
     public void UnequipFrame()
     {
         equippedFrameId = -1;
-        Debug.Log("[ProfilePictureManager] 프레임 해제");
+        GameLog.Log("[ProfilePictureManager] 프레임 해제");
         OnFrameEquipped?.Invoke(-1);
         SaveToFirebase();
     }
@@ -251,7 +251,7 @@ public class ProfilePictureManager : MonoBehaviour
 
         if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
         {
-            Debug.LogWarning("[ProfilePictureManager] CSVLoader가 초기화되지 않음");
+            GameLog.LogWarning("[ProfilePictureManager] CSVLoader가 초기화되지 않음");
             return characterIds;
         }
 
@@ -273,14 +273,14 @@ public class ProfilePictureManager : MonoBehaviour
     {
         if (FirebaseSaveManager.Instance == null || FirebaseManager.Instance == null)
         {
-            Debug.LogWarning("[ProfilePictureManager] Firebase 매니저가 초기화되지 않음");
+            GameLog.LogWarning("[ProfilePictureManager] Firebase 매니저가 초기화되지 않음");
             return;
         }
 
         string userId = FirebaseManager.Instance.CurrentUserId;
         if (string.IsNullOrEmpty(userId))
         {
-            Debug.LogWarning("[ProfilePictureManager] 유저 ID가 없음");
+            GameLog.LogWarning("[ProfilePictureManager] 유저 ID가 없음");
             return;
         }
 
@@ -294,7 +294,7 @@ public class ProfilePictureManager : MonoBehaviour
     {
         equippedPictureId = pictureId;
         equippedFrameId = frameId;
-        Debug.Log($"[ProfilePictureManager] Firebase에서 로드: 사진={pictureId}, 프레임={frameId}");
+        GameLog.Log($"[ProfilePictureManager] Firebase에서 로드: 사진={pictureId}, 프레임={frameId}");
     }
 
     #region Debug
@@ -302,10 +302,10 @@ public class ProfilePictureManager : MonoBehaviour
     [ContextMenu("해금된 사진 출력")]
     private void PrintUnlockedPictures()
     {
-        Debug.Log("=== 해금된 프로필 사진 ===");
+        GameLog.Log("=== 해금된 프로필 사진 ===");
         foreach (int pictureId in GetUnlockedPictures())
         {
-            Debug.Log($"Picture ID: {pictureId}");
+            GameLog.Log($"Picture ID: {pictureId}");
         }
     }
 

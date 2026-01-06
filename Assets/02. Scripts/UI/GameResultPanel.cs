@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
@@ -101,7 +101,7 @@ namespace NovelianMagicLibraryDefense.UI
                 victoryReward.text = $"Reward: {reward}";
             }
 
-            Debug.Log($"[GameResultPanel] Victory screen shown: {stageName} - Rank {rank}");
+            GameLog.Log($"[GameResultPanel] Victory screen shown: {stageName} - Rank {rank}");
         }
 
         /// <summary>
@@ -145,7 +145,7 @@ namespace NovelianMagicLibraryDefense.UI
                 defeatRemainingMonsters.text = $"Remaining: {remainingMonsters}";
             }
 
-            Debug.Log($"[GameResultPanel] Defeat screen shown: {stageName} - Survived {FormatTime(survivalTime)}");
+            GameLog.Log($"[GameResultPanel] Defeat screen shown: {stageName} - Survived {FormatTime(survivalTime)}");
         }
 
         /// <summary>
@@ -168,7 +168,7 @@ namespace NovelianMagicLibraryDefense.UI
                 defeatPanel.SetActive(false);
             }
 
-            Debug.Log("[GameResultPanel] Result panel closed");
+            GameLog.Log("[GameResultPanel] Result panel closed");
         }
 
         /// <summary>
@@ -185,21 +185,21 @@ namespace NovelianMagicLibraryDefense.UI
 
         public void OnMainMenuButtonClicked()
         {
-            Debug.Log("[GameResultPanel] Main Menu button clicked");
+            GameLog.Log("[GameResultPanel] Main Menu button clicked");
             // TODO: Implement scene transition to main menu
             Close();
         }
 
         public void OnNextStageButtonClicked()
         {
-            Debug.Log("[GameResultPanel] Next Stage button clicked");
+            GameLog.Log("[GameResultPanel] Next Stage button clicked");
             // TODO: Implement next stage transition
             Close();
         }
 
         public void OnRetryButtonClicked()
         {
-            Debug.Log("[GameResultPanel] Retry button clicked");
+            GameLog.Log("[GameResultPanel] Retry button clicked");
             // TODO: Implement stage retry
             Close();
         }

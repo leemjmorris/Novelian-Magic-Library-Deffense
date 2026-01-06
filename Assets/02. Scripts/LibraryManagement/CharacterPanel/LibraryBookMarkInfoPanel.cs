@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
@@ -124,7 +124,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
 
         if (currentBookmark == null || characterInfoPanel == null)
         {
-            Debug.LogWarning("[LibraryBookMarkInfoPanel] 책갈피 또는 캐릭터 정보가 없습니다.");
+            GameLog.LogWarning("[LibraryBookMarkInfoPanel] 책갈피 또는 캐릭터 정보가 없습니다.");
             return;
         }
 
@@ -163,7 +163,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
                 currentSlot.SetEquipIconActive(true);
             }
 
-            Debug.Log($"[LibraryBookMarkInfoPanel] 책갈피 '{currentBookmark.Name}' 슬롯 {slotIndex}에 장착 완료!");
+            GameLog.Log($"[LibraryBookMarkInfoPanel] 책갈피 '{currentBookmark.Name}' 슬롯 {slotIndex}에 장착 완료!");
 
             // 패널 닫기
             ClosePanel();
@@ -177,7 +177,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
     {
         if (characterInfoPanel == null)
         {
-            Debug.LogWarning("[LibraryBookMarkInfoPanel] 캐릭터 정보가 없습니다.");
+            GameLog.LogWarning("[LibraryBookMarkInfoPanel] 캐릭터 정보가 없습니다.");
             return;
         }
 
@@ -189,7 +189,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
 
         if (bookmarkToUnequip == null)
         {
-            Debug.LogWarning("[LibraryBookMarkInfoPanel] 해당 슬롯에 장착된 책갈피가 없습니다.");
+            GameLog.LogWarning("[LibraryBookMarkInfoPanel] 해당 슬롯에 장착된 책갈피가 없습니다.");
             return;
         }
 
@@ -213,7 +213,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
                 slotToUpdate.SetEquipIconActive(false);
             }
 
-            Debug.Log($"[LibraryBookMarkInfoPanel] 슬롯 {slotIndex}에서 책갈피 '{bookmarkToUnequip.Name}' 해제 완료!");
+            GameLog.Log($"[LibraryBookMarkInfoPanel] 슬롯 {slotIndex}에서 책갈피 '{bookmarkToUnequip.Name}' 해제 완료!");
 
             // 패널 닫기
             ClosePanel();
@@ -237,7 +237,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
 
         if (currentBookmark == null || characterInfoPanel == null)
         {
-            Debug.LogWarning("[LibraryBookMarkInfoPanel] 책갈피 또는 캐릭터 정보가 없습니다.");
+            GameLog.LogWarning("[LibraryBookMarkInfoPanel] 책갈피 또는 캐릭터 정보가 없습니다.");
             return;
         }
 
@@ -309,7 +309,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
                 currentSlot.SetEquipIconActive(true);
             }
 
-            Debug.Log($"[LibraryBookMarkInfoPanel] 책갈피 '{currentBookmark.Name}' 슬롯 {targetSlotIndex}으로 변경 완료!");
+            GameLog.Log($"[LibraryBookMarkInfoPanel] 책갈피 '{currentBookmark.Name}' 슬롯 {targetSlotIndex}으로 변경 완료!");
 
             // 스왑 처리: 타겟 슬롯에 있던 책갈피를 원래 슬롯으로 이동
             if (needsSwap && bookmarkToSwap != null && oldSlotIndex >= 0)
@@ -331,7 +331,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
                         previousSlot.SetEquipIconActive(true);
                     }
 
-                    Debug.Log($"[LibraryBookMarkInfoPanel] 스왑 완료: '{bookmarkToSwap.Name}' → 슬롯 {oldSlotIndex}");
+                    GameLog.Log($"[LibraryBookMarkInfoPanel] 스왑 완료: '{bookmarkToSwap.Name}' → 슬롯 {oldSlotIndex}");
                 }
                 else
                 {
@@ -343,7 +343,7 @@ public class LibraryBookMarkInfoPanel : MonoBehaviour
                         previousSlot.SetEquipIconActive(false);
                     }
 
-                    Debug.LogWarning($"[LibraryBookMarkInfoPanel] 스왑 실패: '{bookmarkToSwap.Name}'");
+                    GameLog.LogWarning($"[LibraryBookMarkInfoPanel] 스왑 실패: '{bookmarkToSwap.Name}'");
                 }
             }
             else

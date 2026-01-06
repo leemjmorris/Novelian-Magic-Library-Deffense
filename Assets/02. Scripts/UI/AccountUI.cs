@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
@@ -267,7 +267,7 @@ namespace NovelianMagicLibraryDefense.UI
                 var currentUser = FirebaseAuth.DefaultInstance.CurrentUser;
                 await currentUser.LinkWithCredentialAsync(credential);
 
-                Debug.Log($"[AccountUI] 계정 연결 성공! Email: {googleUser.Email}");
+                GameLog.Log($"[AccountUI] 계정 연결 성공! Email: {googleUser.Email}");
                 WarningUIManager.Instance?.ShowWarning("Google 계정 연결 완료!");
 
                 // UI 갱신
@@ -276,12 +276,12 @@ namespace NovelianMagicLibraryDefense.UI
             catch (System.AggregateException ae)
             {
                 // 이미 다른 계정에 연결된 경우 등
-                Debug.LogError($"[AccountUI] 계정 연결 실패: {ae.Flatten().InnerException?.Message ?? ae.Message}");
+                GameLog.LogError($"[AccountUI] 계정 연결 실패: {ae.Flatten().InnerException?.Message ?? ae.Message}");
                 WarningUIManager.Instance?.ShowWarning("계정 연결에 실패했습니다.");
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[AccountUI] 계정 연결 실패: {e.Message}");
+                GameLog.LogError($"[AccountUI] 계정 연결 실패: {e.Message}");
                 WarningUIManager.Instance?.ShowWarning("계정 연결에 실패했습니다.");
             }
 #else
@@ -331,7 +331,7 @@ namespace NovelianMagicLibraryDefense.UI
                 FirebaseManager.Instance.SignOut();
             }
 
-            Debug.Log("[AccountUI] 로그아웃 완료, 타이틀 씬으로 이동");
+            GameLog.Log("[AccountUI] 로그아웃 완료, 타이틀 씬으로 이동");
 
             // 타이틀 씬으로 이동
             await LoadSceneWithFade(SceneName.TitleScene);
@@ -359,7 +359,7 @@ namespace NovelianMagicLibraryDefense.UI
             // 확인 팝업 표시
             if (WarningUIManager.Instance == null)
             {
-                Debug.LogWarning("[AccountUI] WarningUIManager not found");
+                GameLog.LogWarning("[AccountUI] WarningUIManager not found");
                 return;
             }
 
@@ -367,7 +367,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (!confirmed)
             {
-                Debug.Log("[AccountUI] 계정 삭제 취소됨");
+                GameLog.Log("[AccountUI] 계정 삭제 취소됨");
                 return;
             }
 
@@ -382,7 +382,7 @@ namespace NovelianMagicLibraryDefense.UI
                 // Firebase 유저 삭제
                 await currentUser.DeleteAsync();
 
-                Debug.Log("[AccountUI] 계정 삭제 완료, 타이틀 씬으로 이동");
+                GameLog.Log("[AccountUI] 계정 삭제 완료, 타이틀 씬으로 이동");
                 WarningUIManager.Instance?.ShowWarning("계정이 삭제되었습니다.");
 
                 // 타이틀 씬으로 이동
@@ -390,7 +390,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[AccountUI] 계정 삭제 실패: {e.Message}");
+                GameLog.LogError($"[AccountUI] 계정 삭제 실패: {e.Message}");
                 WarningUIManager.Instance?.ShowWarning("계정 삭제에 실패했습니다.");
             }
         }

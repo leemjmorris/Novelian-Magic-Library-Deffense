@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Core;
@@ -20,7 +20,7 @@ public class UIClickDebugger : MonoBehaviour
     {
         if (!enableDebug) return;
 
-        Debug.Log("========== [UIClickDebugger] 시작 ==========");
+        GameLog.Log("========== [UIClickDebugger] 시작 ==========");
 
         // 즉시 체크
         CheckAllPotentialIssues();
@@ -46,7 +46,7 @@ public class UIClickDebugger : MonoBehaviour
 
     private void CheckAllPotentialIssues()
     {
-        Debug.Log("---------- [UIClickDebugger] 상태 체크 ----------");
+        GameLog.Log("---------- [UIClickDebugger] 상태 체크 ----------");
 
         // 1. FadeController 상태 체크
         CheckFadeController();
@@ -74,22 +74,22 @@ public class UIClickDebugger : MonoBehaviour
 
             if (panelActive)
             {
-                Debug.LogWarning($"[UIClickDebugger] ⚠️ FadeController.fadePanel이 활성화됨! " +
+                GameLog.LogWarning($"[UIClickDebugger] ⚠️ FadeController.fadePanel이 활성화됨! " +
                     $"alpha={alpha:F2}, raycastTarget={raycastTarget}");
 
                 if (raycastTarget && alpha > 0.01f)
                 {
-                    Debug.LogError("[UIClickDebugger] ❌ FadePanel이 UI 클릭을 차단하고 있습니다!");
+                    GameLog.LogError("[UIClickDebugger] ❌ FadePanel이 UI 클릭을 차단하고 있습니다!");
                 }
             }
             else
             {
-                Debug.Log("[UIClickDebugger] ✅ FadeController.fadePanel 비활성화 상태");
+                GameLog.Log("[UIClickDebugger] ✅ FadeController.fadePanel 비활성화 상태");
             }
         }
         else
         {
-            Debug.Log("[UIClickDebugger] FadeController.Instance가 null");
+            GameLog.Log("[UIClickDebugger] FadeController.Instance가 null");
         }
     }
 
@@ -99,14 +99,14 @@ public class UIClickDebugger : MonoBehaviour
 
         if (eventSystems.Length == 0)
         {
-            Debug.LogError("[UIClickDebugger] ❌ EventSystem이 없습니다! UI 입력 불가");
+            GameLog.LogError("[UIClickDebugger] ❌ EventSystem이 없습니다! UI 입력 불가");
         }
         else if (eventSystems.Length > 1)
         {
-            Debug.LogWarning($"[UIClickDebugger] ⚠️ EventSystem이 {eventSystems.Length}개 존재합니다!");
+            GameLog.LogWarning($"[UIClickDebugger] ⚠️ EventSystem이 {eventSystems.Length}개 존재합니다!");
             foreach (var es in eventSystems)
             {
-                Debug.LogWarning($"  - {es.gameObject.name} (scene: {es.gameObject.scene.name}, enabled: {es.enabled})");
+                GameLog.LogWarning($"  - {es.gameObject.name} (scene: {es.gameObject.scene.name}, enabled: {es.enabled})");
             }
         }
         else
@@ -114,18 +114,18 @@ public class UIClickDebugger : MonoBehaviour
             var es = eventSystems[0];
             if (!es.enabled)
             {
-                Debug.LogError("[UIClickDebugger] ❌ EventSystem이 비활성화되어 있습니다!");
+                GameLog.LogError("[UIClickDebugger] ❌ EventSystem이 비활성화되어 있습니다!");
             }
             else
             {
-                Debug.Log($"[UIClickDebugger] ✅ EventSystem 정상 (name: {es.gameObject.name})");
+                GameLog.Log($"[UIClickDebugger] ✅ EventSystem 정상 (name: {es.gameObject.name})");
             }
         }
 
         // Current Selected 확인
         if (EventSystem.current != null)
         {
-            Debug.Log($"[UIClickDebugger] EventSystem.current: {EventSystem.current.name}");
+            GameLog.Log($"[UIClickDebugger] EventSystem.current: {EventSystem.current.name}");
         }
     }
 
@@ -144,7 +144,7 @@ public class UIClickDebugger : MonoBehaviour
                 // 투명도 확인
                 if (image.color.a < 0.1f || image.sprite == null)
                 {
-                    Debug.LogWarning($"[UIClickDebugger] ⚠️ 투명 RaycastBlocker 활성화: {image.gameObject.name} " +
+                    GameLog.LogWarning($"[UIClickDebugger] ⚠️ 투명 RaycastBlocker 활성화: {image.gameObject.name} " +
                         $"(alpha={image.color.a:F2}, raycastTarget={image.raycastTarget})");
                 }
             }
@@ -163,7 +163,7 @@ public class UIClickDebugger : MonoBehaviour
                     var img = rt.GetComponent<Image>();
                     if (img != null && img.raycastTarget)
                     {
-                        Debug.LogWarning($"[UIClickDebugger] ⚠️ RaycastPanel 활성화: {rt.gameObject.name}");
+                        GameLog.LogWarning($"[UIClickDebugger] ⚠️ RaycastPanel 활성화: {rt.gameObject.name}");
                     }
                 }
             }
@@ -180,11 +180,11 @@ public class UIClickDebugger : MonoBehaviour
             {
                 if (!cg.interactable)
                 {
-                    Debug.LogWarning($"[UIClickDebugger] ⚠️ CanvasGroup interactable=false: {cg.gameObject.name}");
+                    GameLog.LogWarning($"[UIClickDebugger] ⚠️ CanvasGroup interactable=false: {cg.gameObject.name}");
                 }
                 if (!cg.blocksRaycasts)
                 {
-                    Debug.Log($"[UIClickDebugger] CanvasGroup blocksRaycasts=false: {cg.gameObject.name}");
+                    GameLog.Log($"[UIClickDebugger] CanvasGroup blocksRaycasts=false: {cg.gameObject.name}");
                 }
             }
         }
@@ -194,7 +194,7 @@ public class UIClickDebugger : MonoBehaviour
     {
         if (EventSystem.current == null)
         {
-            Debug.LogError("[UIClickDebugger] ❌ 클릭 시 EventSystem.current가 null!");
+            GameLog.LogError("[UIClickDebugger] ❌ 클릭 시 EventSystem.current가 null!");
             return;
         }
 
@@ -208,15 +208,15 @@ public class UIClickDebugger : MonoBehaviour
 
         if (results.Count == 0)
         {
-            Debug.Log("[UIClickDebugger] 클릭 위치에 UI 없음");
+            GameLog.Log("[UIClickDebugger] 클릭 위치에 UI 없음");
         }
         else
         {
-            Debug.Log($"[UIClickDebugger] 클릭 위치의 UI ({results.Count}개):");
+            GameLog.Log($"[UIClickDebugger] 클릭 위치의 UI ({results.Count}개):");
             for (int i = 0; i < Mathf.Min(results.Count, 5); i++)
             {
                 var result = results[i];
-                Debug.Log($"  [{i}] {result.gameObject.name} (depth={result.depth}, sortingOrder={result.sortingOrder})");
+                GameLog.Log($"  [{i}] {result.gameObject.name} (depth={result.depth}, sortingOrder={result.sortingOrder})");
             }
 
             // 최상위 요소가 blocker인지 확인
@@ -224,7 +224,7 @@ public class UIClickDebugger : MonoBehaviour
             string topName = topResult.gameObject.name.ToLower();
             if (topName.Contains("fade") || topName.Contains("blocker") || topName.Contains("raycast"))
             {
-                Debug.LogError($"[UIClickDebugger] ❌ 클릭이 {topResult.gameObject.name}에 의해 차단됨!");
+                GameLog.LogError($"[UIClickDebugger] ❌ 클릭이 {topResult.gameObject.name}에 의해 차단됨!");
             }
         }
     }

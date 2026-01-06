@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
@@ -237,7 +237,7 @@ public class ProfilePicturePanel : MonoBehaviour
             }
         }
 
-        Debug.Log($"[ProfilePicturePanel] 사진 슬롯 {pictureSlots.Count}개 생성");
+        GameLog.Log($"[ProfilePicturePanel] 사진 슬롯 {pictureSlots.Count}개 생성");
     }
 
     /// <summary>
@@ -270,7 +270,7 @@ public class ProfilePicturePanel : MonoBehaviour
             }
         }
 
-        Debug.Log($"[ProfilePicturePanel] 프레임 슬롯 {frameSlots.Count}개 생성");
+        GameLog.Log($"[ProfilePicturePanel] 프레임 슬롯 {frameSlots.Count}개 생성");
     }
 
     /// <summary>
@@ -301,7 +301,7 @@ public class ProfilePicturePanel : MonoBehaviour
         }
 
         UpdateActionButtons();
-        Debug.Log($"[ProfilePicturePanel] 슬롯 선택: ID={slot.ItemId}");
+        GameLog.Log($"[ProfilePicturePanel] 슬롯 선택: ID={slot.ItemId}");
     }
 
     /// <summary>

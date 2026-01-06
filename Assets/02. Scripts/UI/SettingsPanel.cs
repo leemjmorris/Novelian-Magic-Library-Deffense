@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using NovelianMagicLibraryDefense.Managers;
@@ -38,7 +38,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnMasterVolumeChanged(float value)
         {
-            Debug.Log($"[SettingsPanel] OnMasterVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            GameLog.Log($"[SettingsPanel] OnMasterVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
             if (isInitializingSliders) return;
             if (AudioManager.Instance != null)
             {
@@ -52,7 +52,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnBGMVolumeChanged(float value)
         {
-            Debug.Log($"[SettingsPanel] OnBGMVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            GameLog.Log($"[SettingsPanel] OnBGMVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
             if (isInitializingSliders) return;
             if (AudioManager.Instance != null)
             {
@@ -66,7 +66,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnSFXVolumeChanged(float value)
         {
-            Debug.Log($"[SettingsPanel] OnSFXVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            GameLog.Log($"[SettingsPanel] OnSFXVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
             if (isInitializingSliders) return;
             if (AudioManager.Instance != null)
             {
@@ -80,7 +80,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnVoiceVolumeChanged(float value)
         {
-            Debug.Log($"[SettingsPanel] OnVoiceVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            GameLog.Log($"[SettingsPanel] OnVoiceVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
             if (isInitializingSliders) return;
             if (AudioManager.Instance != null)
             {
@@ -94,7 +94,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnSkillVolumeChanged(float value)
         {
-            Debug.Log($"[SettingsPanel] OnSkillVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
+            GameLog.Log($"[SettingsPanel] OnSkillVolumeChanged called: value={value}, isInitializing={isInitializingSliders}");
             if (isInitializingSliders) return;
             if (AudioManager.Instance != null)
             {
@@ -245,7 +245,7 @@ namespace NovelianMagicLibraryDefense.UI
             // 매니저가 없으면 직접 씬 로드 (fallback)
             if (LoadingUIManager.Instance == null || FadeController.Instance == null)
             {
-                Debug.LogWarning("LoadingUIManager or FadeController not available, loading scene directly");
+                GameLog.LogWarning("LoadingUIManager or FadeController not available, loading scene directly");
                 await SceneManager.LoadSceneAsync(sceneName);
                 return;
             }

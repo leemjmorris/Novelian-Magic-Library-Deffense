@@ -1,4 +1,4 @@
-// LMJ: SkillEffectDatabase 초기화 제거됨 (스킬 시스템 리팩토링)
+﻿// LMJ: SkillEffectDatabase 초기화 제거됨 (스킬 시스템 리팩토링)
 using System;
 using Cysharp.Threading.Tasks;
 using Firebase.Data;
@@ -117,7 +117,7 @@ public class BootScene : MonoBehaviour
 
         if (timeManager == null)
         {
-            Debug.LogError("✗ TimeManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ TimeManager reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -131,7 +131,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ TimeManager failed to initialize!");
+            GameLog.LogError("✗ TimeManager failed to initialize!");
         }
     }
 
@@ -141,7 +141,7 @@ public class BootScene : MonoBehaviour
 
         if (partySynergyManager == null)
         {
-            Debug.LogError("✗ PartySynergyManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ PartySynergyManager reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -155,7 +155,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ PartySynergyManager failed to initialize!");
+            GameLog.LogError("✗ PartySynergyManager failed to initialize!");
         }
     }
 
@@ -165,7 +165,7 @@ public class BootScene : MonoBehaviour
 
         if (warningUIManager == null)
         {
-            Debug.LogError("✗ WarningUIManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ WarningUIManager reference is NULL! Assign it in Inspector.");
             return;
         }
         // JML: Wait for Awake to complete
@@ -178,7 +178,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ WarningUIManager failed to initialize!");
+            GameLog.LogError("✗ WarningUIManager failed to initialize!");
         }
     }
 
@@ -188,7 +188,7 @@ public class BootScene : MonoBehaviour
 
         if (rewardToastManager == null)
         {
-            Debug.LogError("✗ RewardToastManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ RewardToastManager reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -202,7 +202,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ RewardToastManager failed to initialize!");
+            GameLog.LogError("✗ RewardToastManager failed to initialize!");
         }
     }
 
@@ -212,7 +212,7 @@ public class BootScene : MonoBehaviour
 
         if (characterOwnershipManager == null)
         {
-            Debug.LogError("✗ CharacterOwnershipManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ CharacterOwnershipManager reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -226,7 +226,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ CharacterOwnershipManager failed to initialize!");
+            GameLog.LogError("✗ CharacterOwnershipManager failed to initialize!");
         }
     }
 
@@ -249,7 +249,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ FadeController failed to initialize!");
+            GameLog.LogError("✗ FadeController failed to initialize!");
         }
     }
 
@@ -259,7 +259,7 @@ public class BootScene : MonoBehaviour
 
         if (stageProgressManager == null)
         {
-            Debug.LogError("✗ StageProgressManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ StageProgressManager reference is NULL! Assign it in Inspector.");
             return;
         }
         // JML: Wait for Awake to complete
@@ -271,7 +271,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ StageProgressManager failed to initialize!");
+            GameLog.LogError("✗ StageProgressManager failed to initialize!");
         }
     }
 
@@ -281,7 +281,7 @@ public class BootScene : MonoBehaviour
 
         if (characterEnhancementManager == null)
         {
-            Debug.LogError("✗ CharacterEnhancementManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ CharacterEnhancementManager reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -295,7 +295,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ CharacterEnhancementManager failed to initialize!");
+            GameLog.LogError("✗ CharacterEnhancementManager failed to initialize!");
         }
     }
 
@@ -305,7 +305,7 @@ public class BootScene : MonoBehaviour
 
         if (deckManager == null)
         {
-            Debug.LogError("✗ DeckManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ DeckManager reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -319,7 +319,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ DeckManager failed to initialize!");
+            GameLog.LogError("✗ DeckManager failed to initialize!");
         }
     }
 
@@ -333,7 +333,7 @@ public class BootScene : MonoBehaviour
 
         if (csvLoader == null)
         {
-            Debug.LogError("✗ CSVLoader reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ CSVLoader reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -353,7 +353,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError($"✗ CSVLoader timeout after {timeoutSeconds}s! CSV data may not be loaded.");
+            GameLog.LogError($"✗ CSVLoader timeout after {timeoutSeconds}s! CSV data may not be loaded.");
         }
     }
 
@@ -368,7 +368,7 @@ public class BootScene : MonoBehaviour
 
         if (currencyManager == null)
         {
-            Debug.LogError("✗ CurrencyManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ CurrencyManager reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -382,7 +382,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ CurrencyManager failed to initialize!");
+            GameLog.LogError("✗ CurrencyManager failed to initialize!");
         }
     }
     private UniTask InitializeBookMarkManager()
@@ -391,7 +391,7 @@ public class BootScene : MonoBehaviour
 
         if (bookMarkManager == null)
         {
-            Debug.LogError("✗ BookMarkManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ BookMarkManager reference is NULL! Assign it in Inspector.");
             return UniTask.CompletedTask;
         }
 
@@ -407,7 +407,7 @@ public class BootScene : MonoBehaviour
             }
             else
             {
-                Debug.LogError("✗ BookMarkManager failed to initialize!");
+                GameLog.LogError("✗ BookMarkManager failed to initialize!");
             }
         });
     }
@@ -432,7 +432,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ LoadingUIManager failed to initialize!");
+            GameLog.LogError("✗ LoadingUIManager failed to initialize!");
         }
     }
 
@@ -446,7 +446,7 @@ public class BootScene : MonoBehaviour
 
         if (ingredientManager == null)
         {
-            Debug.LogError("✗ IngredientManager reference is NULL! Assign it in Inspector.");
+            GameLog.LogError("✗ IngredientManager reference is NULL! Assign it in Inspector.");
             return;
         }
 
@@ -460,7 +460,7 @@ public class BootScene : MonoBehaviour
         }
         else
         {
-            Debug.LogError("✗ IngredientManager failed to initialize!");
+            GameLog.LogError("✗ IngredientManager failed to initialize!");
         }
     }
 
@@ -479,7 +479,7 @@ public class BootScene : MonoBehaviour
 
         if (FadeController.Instance == null || LoadingUIManager.Instance == null)
         {
-            Debug.LogWarning("FadeController or LoadingUIManager not available, loading scene directly");
+            GameLog.LogWarning("FadeController or LoadingUIManager not available, loading scene directly");
             await SceneManager.LoadSceneAsync(nextSceneName);
             return;
         }
@@ -755,7 +755,7 @@ public class BootScene : MonoBehaviour
     {
         if (showDebugLogs)
         {
-            Debug.Log($"[BootScene] {message}");
+            GameLog.Log($"[BootScene] {message}");
         }
     }
 }

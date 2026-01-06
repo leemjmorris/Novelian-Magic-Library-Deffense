@@ -1,4 +1,4 @@
-//LMJ : Character partial class - Visual Parts Management (Issue #356)
+﻿//LMJ : Character partial class - Visual Parts Management (Issue #356)
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -30,7 +30,7 @@ namespace Novelian.Combat
                 return;
             }
 
-            Debug.Log($"[Character] Applying visual config for character {csvCharacterId}");
+            GameLog.Log($"[Character] Applying visual config for character {csvCharacterId}");
 
             // 파츠 슬롯 캐싱
             CachePartSlots();
@@ -43,7 +43,7 @@ namespace Novelian.Combat
             ApplyWeaponPart(visualConfig);
             ApplyAccessoryPart(visualConfig);
 
-            Debug.Log($"[Character] Visual config applied successfully");
+            GameLog.Log($"[Character] Visual config applied successfully");
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace Novelian.Combat
         {
             if (characterObj == null)
             {
-                Debug.LogWarning("[Character] characterObj is null, cannot cache part slots");
+                GameLog.LogWarning("[Character] characterObj is null, cannot cache part slots");
                 return;
             }
 
@@ -85,7 +85,7 @@ namespace Novelian.Combat
                           : cachedTransforms.ContainsKey("WeaponSlot_L") ? cachedTransforms["WeaponSlot_L"]
                           : null;
 
-            Debug.Log($"[Character] Cached {cachedTransforms.Count} part slots");
+            GameLog.Log($"[Character] Cached {cachedTransforms.Count} part slots");
         }
 
         /// <summary>
@@ -117,7 +117,7 @@ namespace Novelian.Combat
 
             // Body는 보통 기본 메쉬이므로 Material만 교체하거나 전체 교체
             // 구현: Resources 또는 Addressables에서 로드
-            Debug.Log($"[Character] Body part: {config.BodyPrefabPath}");
+            GameLog.Log($"[Character] Body part: {config.BodyPrefabPath}");
         }
 
         private void ApplyHeadPart(CharacterVisualConfigData config)
@@ -159,14 +159,14 @@ namespace Novelian.Combat
             if (!string.IsNullOrEmpty(config.WeaponRightPrefabPath) && weaponRightSlot != null)
             {
                 InstantiatePartAtSlot(config.WeaponRightPrefabPath, weaponRightSlot);
-                Debug.Log($"[Character] Right weapon: {config.WeaponRightPrefabPath}");
+                GameLog.Log($"[Character] Right weapon: {config.WeaponRightPrefabPath}");
             }
 
             // 왼손 무기
             if (!string.IsNullOrEmpty(config.WeaponLeftPrefabPath) && weaponLeftSlot != null)
             {
                 InstantiatePartAtSlot(config.WeaponLeftPrefabPath, weaponLeftSlot);
-                Debug.Log($"[Character] Left weapon: {config.WeaponLeftPrefabPath}");
+                GameLog.Log($"[Character] Left weapon: {config.WeaponLeftPrefabPath}");
             }
         }
 
@@ -206,7 +206,7 @@ namespace Novelian.Combat
             }
             else
             {
-                Debug.LogWarning($"[Character] Part prefab not found: {prefabPath}");
+                GameLog.LogWarning($"[Character] Part prefab not found: {prefabPath}");
             }
         }
 

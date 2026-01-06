@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,7 +33,7 @@ public class CharacterCard : MonoBehaviour
         // Validate manager reference
         if (manager == null)
         {
-            Debug.LogError("[CharacterCard] CardSelectionManager가 할당되지 않았습니다! Inspector에서 할당해주세요.");
+            GameLog.LogError("[CharacterCard] CardSelectionManager가 할당되지 않았습니다! Inspector에서 할당해주세요.");
         }
 
         // Auto-find characterImage if not assigned
@@ -63,28 +63,28 @@ public class CharacterCard : MonoBehaviour
 
     void OnClick()
     {
-        // Debug.Log($"[CharacterCard] OnClick - cardIndex: {cardIndex}, manager null? {manager == null}");
+        // GameLog.Log($"[CharacterCard] OnClick - cardIndex: {cardIndex}, manager null? {manager == null}");
 
         if (manager == null)
         {
-            Debug.LogError("[CharacterCard] CardSelectionManager가 null입니다!");
+            GameLog.LogError("[CharacterCard] CardSelectionManager가 null입니다!");
             return;
         }
 
         // Call appropriate method based on cardIndex
         if (cardIndex == 0)
         {
-            // Debug.Log("[CharacterCard] Calling OnCard1Selected()");
+            // GameLog.Log("[CharacterCard] Calling OnCard1Selected()");
             manager.OnCard1Selected();
         }
         else if (cardIndex == 1)
         {
-            // Debug.Log("[CharacterCard] Calling OnCard2Selected()");
+            // GameLog.Log("[CharacterCard] Calling OnCard2Selected()");
             manager.OnCard2Selected();
         }
         else
         {
-            // Debug.LogWarning($"[CharacterCard] Invalid cardIndex: {cardIndex}. Falling back to OnCard1Selected()");
+            // GameLog.LogWarning($"[CharacterCard] Invalid cardIndex: {cardIndex}. Falling back to OnCard1Selected()");
             manager.OnCard1Selected();
         }
     }

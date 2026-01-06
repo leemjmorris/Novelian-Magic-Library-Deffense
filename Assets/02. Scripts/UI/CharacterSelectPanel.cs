@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.UI
@@ -33,7 +33,7 @@ namespace NovelianMagicLibraryDefense.UI
             placementManager = FindFirstObjectByType<CharacterPlacementManager>();
             if (placementManager == null)
             {
-                Debug.LogError("[CharacterSelectPanel] CharacterPlacementManager not found in scene!");
+                GameLog.LogError("[CharacterSelectPanel] CharacterPlacementManager not found in scene!");
             }
 
             InitializePanel();
@@ -50,7 +50,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
             else
             {
-                Debug.LogError("[CharacterSelectPanel] Panel GameObject not assigned!");
+                GameLog.LogError("[CharacterSelectPanel] Panel GameObject not assigned!");
             }
         }
 
@@ -72,7 +72,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (characterIds == null || characterIds.Length != 2)
             {
-                Debug.LogError("[CharacterSelectPanel] Must provide exactly 2 character IDs!");
+                GameLog.LogError("[CharacterSelectPanel] Must provide exactly 2 character IDs!");
                 return;
             }
 
@@ -89,7 +89,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (cardContainer == null || characterCardPrefab == null)
             {
-                Debug.LogError("[CharacterSelectPanel] Card container or prefab not assigned!");
+                GameLog.LogError("[CharacterSelectPanel] Card container or prefab not assigned!");
                 return;
             }
 
@@ -109,14 +109,14 @@ namespace NovelianMagicLibraryDefense.UI
                 }
                 else
                 {
-                    Debug.LogWarning($"[CharacterSelectPanel] Card prefab missing Button component!");
+                    GameLog.LogWarning($"[CharacterSelectPanel] Card prefab missing Button component!");
                 }
 
                 // TODO: Set card visual data (sprite, name, etc.) based on characterId
                 // Example: cardObj.GetComponent<CharacterCard>()?.SetData(characterId);
 
                 cardInstances[i] = cardObj;
-                Debug.Log($"[CharacterSelectPanel] Created card for character ID {characterIds[i]}");
+                GameLog.Log($"[CharacterSelectPanel] Created card for character ID {characterIds[i]}");
             }
         }
 
@@ -125,7 +125,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void OnCardClicked(int characterId)
         {
-            Debug.Log($"[CharacterSelectPanel] Card clicked: Character ID {characterId}");
+            GameLog.Log($"[CharacterSelectPanel] Card clicked: Character ID {characterId}");
 
             // Spawn character via CharacterPlacementManager
             if (placementManager != null)
@@ -134,7 +134,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
             else
             {
-                Debug.LogError("[CharacterSelectPanel] Cannot spawn character - CharacterPlacementManager is null!");
+                GameLog.LogError("[CharacterSelectPanel] Cannot spawn character - CharacterPlacementManager is null!");
             }
 
             // Fire event

@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -69,7 +69,7 @@ namespace NovelianMagicLibraryDefense.Demo
             SetupButtons();
             UpdateAllUI();
 
-            Debug.Log("[DemoController] Initialized");
+            GameLog.Log("[DemoController] Initialized");
         }
 
         private void SetupButtons()

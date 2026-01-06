@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.UI;
@@ -64,7 +64,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void InitializeManagers()
         {
-            Debug.Log("[GameManager] InitializeManagers called");
+            GameLog.Log("[GameManager] InitializeManagers called");
 
             // 몬스터끼리 물리 충돌 비활성화 (Layer 7 = Monster)
             int monsterLayer = LayerMask.NameToLayer("Monster");
@@ -93,12 +93,12 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (stageManager != null)
             {
-                Debug.Log("[GameManager] Initializing StageManager...");
+                GameLog.Log("[GameManager] Initializing StageManager...");
                 stageManager.Initialize();
             }
             else
             {
-                Debug.LogError("[GameManager] stageManager is NULL! Inspector에서 StageManager 할당 필요!");
+                GameLog.LogError("[GameManager] stageManager is NULL! Inspector에서 StageManager 할당 필요!");
             }
 
             if (stageStateManager != null)

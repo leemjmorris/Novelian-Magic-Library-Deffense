@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Novelian.Combat;
 using Unity.Cinemachine;
@@ -96,9 +96,9 @@ namespace NovelianMagicLibraryDefense.Demo
             // Wait for CSVLoader to be ready (needed for character skills)
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.Log("[DemoPlacementManager] Waiting for CSVLoader...");
+                GameLog.Log("[DemoPlacementManager] Waiting for CSVLoader...");
                 await UniTask.WaitUntil(() => CSVLoader.Instance != null && CSVLoader.Instance.IsInit);
-                Debug.Log("[DemoPlacementManager] CSVLoader ready!");
+                GameLog.Log("[DemoPlacementManager] CSVLoader ready!");
             }
 
             // Auto-find virtual camera if not assigned
@@ -117,7 +117,7 @@ namespace NovelianMagicLibraryDefense.Demo
             ApplyCameraView();
 
             IsReady = true;
-            Debug.Log($"[DemoPlacementManager] Initialized in {currentMode} mode");
+            GameLog.Log($"[DemoPlacementManager] Initialized in {currentMode} mode");
         }
 
         #region Grid Management
@@ -132,7 +132,7 @@ namespace NovelianMagicLibraryDefense.Demo
 
             if (gridSlotPrefab == null)
             {
-                Debug.LogError("[DemoPlacementManager] GridSlot Prefab is not assigned!");
+                GameLog.LogError("[DemoPlacementManager] GridSlot Prefab is not assigned!");
                 return;
             }
 
@@ -188,7 +188,7 @@ namespace NovelianMagicLibraryDefense.Demo
                 }
             }
 
-            Debug.Log($"[DemoPlacementManager] Created {gridSlots.Count} grid slots in {currentMode} mode");
+            GameLog.Log($"[DemoPlacementManager] Created {gridSlots.Count} grid slots in {currentMode} mode");
         }
 
         private void CreateGridSlot(Vector3 position, int index, int rowIndex)
@@ -231,14 +231,14 @@ namespace NovelianMagicLibraryDefense.Demo
         {
             if (characterPrefab == null)
             {
-                Debug.LogError("[DemoPlacementManager] Character prefab not assigned!");
+                GameLog.LogError("[DemoPlacementManager] Character prefab not assigned!");
                 return false;
             }
 
             GridSlot targetSlot = GetRandomEmptySlot();
             if (targetSlot == null)
             {
-                Debug.LogWarning("[DemoPlacementManager] No empty slots available!");
+                GameLog.LogWarning("[DemoPlacementManager] No empty slots available!");
                 return false;
             }
 
@@ -258,17 +258,17 @@ namespace NovelianMagicLibraryDefense.Demo
             if (character != null)
             {
                 character.Initialize(defaultCharacterId);
-                Debug.Log($"[DemoPlacementManager] Character initialized with ID: {defaultCharacterId}");
+                GameLog.Log($"[DemoPlacementManager] Character initialized with ID: {defaultCharacterId}");
             }
             else
             {
-                Debug.LogWarning("[DemoPlacementManager] Character component not found on prefab!");
+                GameLog.LogWarning("[DemoPlacementManager] Character component not found on prefab!");
             }
 
             targetSlot.PlaceCharacter(characterObj);
             spawnedCharacters.Add(characterObj);
 
-            Debug.Log($"[DemoPlacementManager] Spawned character at slot {targetSlot.GetSlotIndex()}");
+            GameLog.Log($"[DemoPlacementManager] Spawned character at slot {targetSlot.GetSlotIndex()}");
             return true;
         }
 
@@ -340,7 +340,7 @@ namespace NovelianMagicLibraryDefense.Demo
                 }
             }
 
-            Debug.Log("[DemoPlacementManager] All characters cleared");
+            GameLog.Log("[DemoPlacementManager] All characters cleared");
         }
 
         #endregion
@@ -362,7 +362,7 @@ namespace NovelianMagicLibraryDefense.Demo
         {
             if (currentMode == mode) return;
 
-            Debug.Log($"[DemoPlacementManager] Switching mode: {currentMode} -> {mode}");
+            GameLog.Log($"[DemoPlacementManager] Switching mode: {currentMode} -> {mode}");
 
             currentMode = mode;
 
@@ -372,7 +372,7 @@ namespace NovelianMagicLibraryDefense.Demo
             // Update protection object position
             UpdateProtectionPosition();
 
-            Debug.Log($"[DemoPlacementManager] Mode switched to {currentMode}");
+            GameLog.Log($"[DemoPlacementManager] Mode switched to {currentMode}");
         }
 
         private void UpdateProtectionPosition()
@@ -382,7 +382,7 @@ namespace NovelianMagicLibraryDefense.Demo
             Vector3 newPos = currentMode == DemoPlacementMode.Top ? topModeProtectionPos : centerModeProtectionPos;
             protectionObj.position = newPos;
 
-            Debug.Log($"[DemoPlacementManager] ProtectionObj moved to {newPos}");
+            GameLog.Log($"[DemoPlacementManager] ProtectionObj moved to {newPos}");
         }
 
         /// <summary>
@@ -392,7 +392,7 @@ namespace NovelianMagicLibraryDefense.Demo
         {
             isTopDownView = !isTopDownView;
             ApplyCameraView();
-            Debug.Log($"[DemoPlacementManager] Camera view toggled to: {(isTopDownView ? "TopDown" : "Normal")}");
+            GameLog.Log($"[DemoPlacementManager] Camera view toggled to: {(isTopDownView ? "TopDown" : "Normal")}");
         }
 
         private void ApplyCameraView()
@@ -418,7 +418,7 @@ namespace NovelianMagicLibraryDefense.Demo
             virtualCamera.transform.position = newPos;
             virtualCamera.transform.rotation = Quaternion.Euler(newRot);
 
-            Debug.Log($"[DemoPlacementManager] Virtual Camera moved to {newPos}, rotation {newRot}");
+            GameLog.Log($"[DemoPlacementManager] Virtual Camera moved to {newPos}, rotation {newRot}");
         }
 
         #endregion

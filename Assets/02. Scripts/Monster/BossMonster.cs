@@ -128,7 +128,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
 
         if (levelData == null)
         {
-            Debug.LogWarning("[BossMonster] MonsterLevelData is null, using default stats");
+            GameLog.LogWarning("[BossMonster] MonsterLevelData is null, using default stats");
             return;
         }
 
@@ -171,7 +171,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         // 디버그: 이동 상태 확인
         if (Time.frameCount % 120 == 0)
         {
-            Debug.Log($"[BossMonster] 이동 중: moveSpeed={moveSpeed}, monsterMove={monsterMove != null}, targetWallCollider={targetWallCollider != null}, rb={rb != null}");
+            GameLog.Log($"[BossMonster] 이동 중: moveSpeed={moveSpeed}, monsterMove={monsterMove != null}, targetWallCollider={targetWallCollider != null}, rb={rb != null}");
         }
 
         if (monsterMove != null)
@@ -180,7 +180,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         }
         else
         {
-            Debug.LogError("[BossMonster] monsterMove가 null입니다!");
+            GameLog.LogError("[BossMonster] monsterMove가 null입니다!");
         }
     }
 
@@ -192,7 +192,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         // 맵 밖으로 떨어진 경우 despawn
         if (transform.position.y < fallOffThreshold)
         {
-            Debug.LogWarning($"[BossMonster] Fell off map at {transform.position}, despawning");
+            GameLog.LogWarning($"[BossMonster] Fell off map at {transform.position}, despawning");
             Die();
             return;
         }
@@ -700,7 +700,7 @@ public class BossMonster : BaseEntity, ITargetable, IMovable
         }
         else
         {
-            Debug.LogError("[BossMonster] monsterEvents가 null이라 이벤트 발생 불가!");
+            GameLog.LogError("[BossMonster] monsterEvents가 null이라 이벤트 발생 불가!");
         }
 
         // Issue #476: BossDungeon에서 스폰된 경우 풀이 아닌 Destroy 사용

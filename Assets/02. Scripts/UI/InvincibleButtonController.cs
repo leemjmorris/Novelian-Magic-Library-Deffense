@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
@@ -54,7 +54,7 @@ public class InvincibleButtonController : MonoBehaviour
 
         if (wall == null)
         {
-            Debug.LogWarning("[InvincibleButtonController] Wall을 찾을 수 없습니다! 맵이 로드되었는지 확인하세요.");
+            GameLog.LogWarning("[InvincibleButtonController] Wall을 찾을 수 없습니다! 맵이 로드되었는지 확인하세요.");
             return;
         }
 

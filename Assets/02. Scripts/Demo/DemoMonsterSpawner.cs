@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
@@ -58,16 +58,16 @@ namespace NovelianMagicLibraryDefense.Demo
             // Wait for CSVLoader to be ready
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.Log("[DemoMonsterSpawner] Waiting for CSVLoader...");
+                GameLog.Log("[DemoMonsterSpawner] Waiting for CSVLoader...");
                 await UniTask.WaitUntil(() => CSVLoader.Instance != null && CSVLoader.Instance.IsInit);
-                Debug.Log("[DemoMonsterSpawner] CSVLoader ready!");
+                GameLog.Log("[DemoMonsterSpawner] CSVLoader ready!");
             }
 
             // Initialize Monster's Wall cache for targeting
             InitializeWallCache();
 
             IsReady = true;
-            Debug.Log("[DemoMonsterSpawner] Initialized");
+            GameLog.Log("[DemoMonsterSpawner] Initialized");
         }
 
         /// <summary>
@@ -97,16 +97,16 @@ namespace NovelianMagicLibraryDefense.Demo
                     var transforms = new List<Transform> { targetObj };
                     var colliders = new List<Collider> { wallCollider };
                     Monster.InitializeWallCache(walls, transforms, colliders);
-                    Debug.Log("[DemoMonsterSpawner] Wall cache initialized");
+                    GameLog.Log("[DemoMonsterSpawner] Wall cache initialized");
                 }
                 else
                 {
-                    Debug.LogWarning("[DemoMonsterSpawner] Target missing Collider or Wall component!");
+                    GameLog.LogWarning("[DemoMonsterSpawner] Target missing Collider or Wall component!");
                 }
             }
             else
             {
-                Debug.LogWarning("[DemoMonsterSpawner] Target (Wall) not found!");
+                GameLog.LogWarning("[DemoMonsterSpawner] Target (Wall) not found!");
             }
         }
 
@@ -120,7 +120,7 @@ namespace NovelianMagicLibraryDefense.Demo
         {
             if (monsterPrefab == null)
             {
-                Debug.LogError("[DemoMonsterSpawner] Monster prefab not assigned!");
+                GameLog.LogError("[DemoMonsterSpawner] Monster prefab not assigned!");
                 return null;
             }
 
@@ -137,7 +137,7 @@ namespace NovelianMagicLibraryDefense.Demo
             {
                 // Call OnSpawn to initialize health and other properties (normally done by ObjectPool)
                 monster.OnSpawn();
-                Debug.Log($"[DemoMonsterSpawner] Monster OnSpawn called (health initialized)");
+                GameLog.Log($"[DemoMonsterSpawner] Monster OnSpawn called (health initialized)");
 
                 // Set destination if target exists
                 if (targetObj != null)
@@ -147,7 +147,7 @@ namespace NovelianMagicLibraryDefense.Demo
             }
 
             spawnedMonsters.Add(monsterObj);
-            Debug.Log($"[DemoMonsterSpawner] Spawned monster from {(fromTop ? "top" : "bottom")} at {spawnPos}");
+            GameLog.Log($"[DemoMonsterSpawner] Spawned monster from {(fromTop ? "top" : "bottom")} at {spawnPos}");
 
             return monsterObj;
         }
@@ -225,7 +225,7 @@ namespace NovelianMagicLibraryDefense.Demo
             }
             spawnedMonsters.Clear();
 
-            Debug.Log("[DemoMonsterSpawner] All monsters cleared");
+            GameLog.Log("[DemoMonsterSpawner] All monsters cleared");
         }
 
         public int GetSpawnedMonsterCount()
@@ -242,7 +242,7 @@ namespace NovelianMagicLibraryDefense.Demo
         {
             // Spawn areas are already configured in inspector
             // This method can be extended if dynamic adjustment is needed
-            Debug.Log($"[DemoMonsterSpawner] Spawn areas updated for {mode} mode");
+            GameLog.Log($"[DemoMonsterSpawner] Spawn areas updated for {mode} mode");
         }
 
         /// <summary>
@@ -252,7 +252,7 @@ namespace NovelianMagicLibraryDefense.Demo
         {
             if (monsterPrefab == null)
             {
-                Debug.LogError("[DemoMonsterSpawner] Monster prefab not assigned!");
+                GameLog.LogError("[DemoMonsterSpawner] Monster prefab not assigned!");
                 return;
             }
 
@@ -266,7 +266,7 @@ namespace NovelianMagicLibraryDefense.Demo
                 SpawnMonsterAtPosition(pos);
             }
 
-            Debug.Log($"[DemoMonsterSpawner] Spawned {count} monsters in {formation} formation");
+            GameLog.Log($"[DemoMonsterSpawner] Spawned {count} monsters in {formation} formation");
         }
 
         private List<Vector3> GetFormationPositions(MonsterFormation formation, int count, Vector3 center)

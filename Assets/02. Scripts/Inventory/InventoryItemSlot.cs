@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.AddressableAssets;
@@ -115,7 +115,7 @@ public class InventoryItemSlot : MonoBehaviour, IPointerDownHandler, IPointerUpH
                         }
                         catch (System.Exception e)
                         {
-                            Debug.LogWarning($"[InventoryItemSlot] 아이콘 로드 실패: {iconKey}\n{e.Message}");
+                            GameLog.LogWarning($"[InventoryItemSlot] 아이콘 로드 실패: {iconKey}\n{e.Message}");
                             if (defaultIconSprite != null)
                             {
                                 itemIconImage.sprite = defaultIconSprite;
@@ -225,7 +225,7 @@ public class InventoryItemSlot : MonoBehaviour, IPointerDownHandler, IPointerUpH
     {
         if (itemInfo != null)
         {
-            Debug.Log($"[InventoryItemSlot] 아이템 길게 누름: {itemInfo.ItemName}");
+            GameLog.Log($"[InventoryItemSlot] 아이템 길게 누름: {itemInfo.ItemName}");
             OnItemLongPressed?.Invoke(itemInfo);
         }
     }

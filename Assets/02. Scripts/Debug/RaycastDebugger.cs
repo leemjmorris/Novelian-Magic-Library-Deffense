@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using System.Collections.Generic;
@@ -25,19 +25,19 @@ public class RaycastDebugger : MonoBehaviour
             List<RaycastResult> results = new List<RaycastResult>();
             EventSystem.current.RaycastAll(pointerData, results);
 
-            Debug.Log($"=== 클릭 위치: {mousePosition} ===");
-            Debug.Log($"Raycast 결과 개수: {results.Count}");
+            GameLog.Log($"=== 클릭 위치: {mousePosition} ===");
+            GameLog.Log($"Raycast 결과 개수: {results.Count}");
 
             for (int i = 0; i < results.Count; i++)
             {
                 var result = results[i];
                 string path = GetGameObjectPath(result.gameObject);
-                Debug.Log($"[{i}] {result.gameObject.name} (depth: {result.depth}) - Path: {path}");
+                GameLog.Log($"[{i}] {result.gameObject.name} (depth: {result.depth}) - Path: {path}");
             }
 
             if (results.Count == 0)
             {
-                Debug.LogWarning("Raycast 결과 없음 - UI 요소가 감지되지 않았습니다.");
+                GameLog.LogWarning("Raycast 결과 없음 - UI 요소가 감지되지 않았습니다.");
             }
         }
     }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Firebase.Database;
@@ -64,7 +64,7 @@ public class ServerTimeManager : MonoBehaviour
     /// <returns>동기화 성공 여부</returns>
     public async UniTask<bool> InitializeAsync()
     {
-        Debug.Log($"{LOG_PREFIX} 서버 시간 동기화 시작...");
+        GameLog.Log($"{LOG_PREFIX} 서버 시간 동기화 시작...");
 
         try
         {
@@ -81,19 +81,19 @@ public class ServerTimeManager : MonoBehaviour
             {
                 isSynced = true;
                 lastSyncTime = DateTime.UtcNow;
-                Debug.Log($"{LOG_PREFIX} 서버 시간 동기화 성공! 오프셋: {serverTimeOffsetMs}ms");
-                Debug.Log($"{LOG_PREFIX} 현재 서버 시간: {GetServerDateTime():yyyy-MM-dd HH:mm:ss} (UTC)");
+                GameLog.Log($"{LOG_PREFIX} 서버 시간 동기화 성공! 오프셋: {serverTimeOffsetMs}ms");
+                GameLog.Log($"{LOG_PREFIX} 현재 서버 시간: {GetServerDateTime():yyyy-MM-dd HH:mm:ss} (UTC)");
                 return true;
             }
             else // 타임아웃
             {
-                Debug.LogError($"{LOG_PREFIX} 서버 시간 동기화 타임아웃 ({SYNC_TIMEOUT_SECONDS}초)");
+                GameLog.LogError($"{LOG_PREFIX} 서버 시간 동기화 타임아웃 ({SYNC_TIMEOUT_SECONDS}초)");
                 return false;
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 서버 시간 동기화 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 서버 시간 동기화 실패: {e.Message}");
             return false;
         }
     }
@@ -113,7 +113,7 @@ public class ServerTimeManager : MonoBehaviour
         {
             // 오프셋을 가져오지 못한 경우 0으로 설정 (클라이언트 시간 사용)
             serverTimeOffsetMs = 0;
-            Debug.LogWarning($"{LOG_PREFIX} 서버 오프셋을 가져오지 못함. 클라이언트 시간 사용.");
+            GameLog.LogWarning($"{LOG_PREFIX} 서버 오프셋을 가져오지 못함. 클라이언트 시간 사용.");
         }
     }
 
@@ -124,7 +124,7 @@ public class ServerTimeManager : MonoBehaviour
     {
         if (!isSynced)
         {
-            Debug.LogWarning($"{LOG_PREFIX} 서버 시간이 동기화되지 않았습니다!");
+            GameLog.LogWarning($"{LOG_PREFIX} 서버 시간이 동기화되지 않았습니다!");
             return 0;
         }
 
@@ -167,7 +167,7 @@ public class ServerTimeManager : MonoBehaviour
         // 시간이 역행한 경우 (시간 조작 의심) 0 반환
         if (elapsedMs < 0)
         {
-            Debug.LogWarning($"{LOG_PREFIX} 시간 역행 감지! from: {fromTimeMs}, current: {currentTimeMs}");
+            GameLog.LogWarning($"{LOG_PREFIX} 시간 역행 감지! from: {fromTimeMs}, current: {currentTimeMs}");
             return 0;
         }
 
@@ -186,7 +186,7 @@ public class ServerTimeManager : MonoBehaviour
         // 최대 24시간 제한
         if (elapsedMs > MAX_OFFLINE_MS)
         {
-            Debug.Log($"{LOG_PREFIX} 오프라인 시간 24시간 초과 ({elapsedMs / 3600000f:F1}시간). 24시간으로 제한.");
+            GameLog.Log($"{LOG_PREFIX} 오프라인 시간 24시간 초과 ({elapsedMs / 3600000f:F1}시간). 24시간으로 제한.");
             return MAX_OFFLINE_MS;
         }
 
@@ -247,7 +247,7 @@ public class ServerTimeManager : MonoBehaviour
         // 저장된 시간이 현재보다 미래면 무효 (시간 조작 의심)
         if (savedTimeMs > currentTimeMs)
         {
-            Debug.LogWarning($"{LOG_PREFIX} 시간 조작 감지! 저장된 시간({savedTimeMs})이 현재({currentTimeMs})보다 미래입니다.");
+            GameLog.LogWarning($"{LOG_PREFIX} 시간 조작 감지! 저장된 시간({savedTimeMs})이 현재({currentTimeMs})보다 미래입니다.");
             return false;
         }
 
@@ -263,12 +263,12 @@ public class ServerTimeManager : MonoBehaviour
     {
         if (!debugMode)
         {
-            Debug.LogWarning($"{LOG_PREFIX} 디버그 모드가 아닙니다.");
+            GameLog.LogWarning($"{LOG_PREFIX} 디버그 모드가 아닙니다.");
             return;
         }
 
         debugTimeOffsetMs = offsetMs;
-        Debug.Log($"{LOG_PREFIX} 디버그 시간 오프셋 설정: {offsetMs}ms ({offsetMs / 3600000f:F1}시간)");
+        GameLog.Log($"{LOG_PREFIX} 디버그 시간 오프셋 설정: {offsetMs}ms ({offsetMs / 3600000f:F1}시간)");
     }
 
     /// <summary>
@@ -285,7 +285,7 @@ public class ServerTimeManager : MonoBehaviour
     public void DebugResetTimeOffset()
     {
         debugTimeOffsetMs = 0;
-        Debug.Log($"{LOG_PREFIX} 디버그 시간 오프셋 초기화");
+        GameLog.Log($"{LOG_PREFIX} 디버그 시간 오프셋 초기화");
     }
 
     [ContextMenu("현재 서버 시간 출력")]
@@ -293,12 +293,12 @@ public class ServerTimeManager : MonoBehaviour
     {
         if (isSynced)
         {
-            Debug.Log($"{LOG_PREFIX} 현재 서버 시간: {GetServerDateTime():yyyy-MM-dd HH:mm:ss} (UTC)");
-            Debug.Log($"{LOG_PREFIX} 서버 시간 (ms): {GetServerTimeMs()}");
+            GameLog.Log($"{LOG_PREFIX} 현재 서버 시간: {GetServerDateTime():yyyy-MM-dd HH:mm:ss} (UTC)");
+            GameLog.Log($"{LOG_PREFIX} 서버 시간 (ms): {GetServerTimeMs()}");
         }
         else
         {
-            Debug.Log($"{LOG_PREFIX} 서버 시간이 동기화되지 않았습니다.");
+            GameLog.Log($"{LOG_PREFIX} 서버 시간이 동기화되지 않았습니다.");
         }
     }
 

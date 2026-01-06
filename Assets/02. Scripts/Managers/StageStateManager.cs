@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Events;
 using NovelianMagicLibraryDefense.Managers;
@@ -78,7 +78,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 wall = wallObj.GetComponent<Wall>();
                 // WallEvents는 ScriptableObject이므로 Wall 컴포넌트에서 가져옴
                 wallEvents = wall?.GetWallEvents();
-                Debug.Log($"[StageStateManager] Found Wall: {wallObj.name}");
+                GameLog.Log($"[StageStateManager] Found Wall: {wallObj.name}");
             }
             // 맵 로드 전에는 Wall이 없을 수 있음 - 정상 케이스이므로 경고 제거
             // RefreshWallReferences()가 맵 로드 후 호출됨
@@ -90,7 +90,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 wall2 = wall2Obj.GetComponent<Wall>();
                 // WallEvents는 ScriptableObject이므로 Wall 컴포넌트에서 가져옴
                 wallEvents2 = wall2?.GetWallEvents();
-                Debug.Log($"[StageStateManager] Found Wall2: {wall2Obj.name}");
+                GameLog.Log($"[StageStateManager] Found Wall2: {wall2Obj.name}");
             }
         }
 
@@ -122,7 +122,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 wallEvents2.AddWallDestroyedListener(HandleWallDestroyed);
             }
 
-            Debug.Log("[StageStateManager] Wall references refreshed");
+            GameLog.Log("[StageStateManager] Wall references refreshed");
         }
 
         protected override void OnReset()
@@ -214,7 +214,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (newState == StageState.Cleared)
             {
-                Debug.Log("[StageStateManager] Stage Cleared!");
+                GameLog.Log("[StageStateManager] Stage Cleared!");
 
                 // JML: 모든 캐릭터 승리 애니메이션 재생
                 PlayAllCharactersVictoryAnimation();
@@ -238,12 +238,12 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
                 else
                 {
-                    Debug.LogError("[StageStateManager] StageClearPanel is null! Inspector에서 할당해주세요.");
+                    GameLog.LogError("[StageStateManager] StageClearPanel is null! Inspector에서 할당해주세요.");
                 }
             }
             else if (newState == StageState.Failed)
             {
-                Debug.Log("[StageStateManager] Stage Failed!");
+                GameLog.Log("[StageStateManager] Stage Failed!");
 
                 // JML: 모든 캐릭터 사망 애니메이션 재생
                 PlayAllCharactersDieAnimation();
@@ -258,7 +258,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
                 else
                 {
-                    Debug.LogError("[StageStateManager] StageFailedPanel is null! Inspector에서 할당해주세요.");
+                    GameLog.LogError("[StageStateManager] StageFailedPanel is null! Inspector에서 할당해주세요.");
                 }
             }
         }
@@ -298,7 +298,7 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 characters[i].PlayVictoryAnimation();
             }
-            Debug.Log($"[StageStateManager] {count}명의 캐릭터 승리 애니메이션 재생");
+            GameLog.Log($"[StageStateManager] {count}명의 캐릭터 승리 애니메이션 재생");
         }
 
         /// <summary>
@@ -312,7 +312,7 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 characters[i].PlayDieAnimation();
             }
-            Debug.Log($"[StageStateManager] {count}명의 캐릭터 사망 애니메이션 재생");
+            GameLog.Log($"[StageStateManager] {count}명의 캐릭터 사망 애니메이션 재생");
         }
 
         #endregion

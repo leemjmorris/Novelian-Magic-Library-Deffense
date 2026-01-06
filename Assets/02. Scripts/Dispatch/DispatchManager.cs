@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -41,8 +41,8 @@ namespace Dispatch
             {
                 var testProvider = new TestTimeProvider(testTimeScale);
                 timeProvider = testProvider;
-                Debug.Log($"<color=yellow>[DispatchManager] 테스트 모드 활성화 - 시간 배율: x{testTimeScale}</color>");
-                Debug.Log($"<color=yellow>[DispatchManager] 4시간 파견 → 약 {14400f / testTimeScale:F1}초로 테스트</color>");
+                GameLog.Log($"<color=yellow>[DispatchManager] 테스트 모드 활성화 - 시간 배율: x{testTimeScale}</color>");
+                GameLog.Log($"<color=yellow>[DispatchManager] 4시간 파견 → 약 {14400f / testTimeScale:F1}초로 테스트</color>");
                 return;
             }
 
@@ -50,26 +50,26 @@ namespace Dispatch
             if (useServerTime)
             {
                 timeProvider = new ServerTimeProvider();
-                Debug.Log("<color=cyan>[DispatchManager] 서버 시간 모드 (Firebase 기준, 시간 조작 방지)</color>");
+                GameLog.Log("<color=cyan>[DispatchManager] 서버 시간 모드 (Firebase 기준, 시간 조작 방지)</color>");
             }
             else
             {
                 // Fallback: 기존 로컬 시간 방식
                 timeProvider = new RealTimeProvider();
-                Debug.Log("<color=yellow>[DispatchManager] 로컬 시간 모드 (Fallback)</color>");
+                GameLog.Log("<color=yellow>[DispatchManager] 로컬 시간 모드 (Fallback)</color>");
             }
 #else
             // 릴리즈 빌드: 항상 서버 시간 사용 (보안)
             if (useServerTime)
             {
                 timeProvider = new ServerTimeProvider();
-                Debug.Log("[DispatchManager] 서버 시간 모드 (빌드)");
+                GameLog.Log("[DispatchManager] 서버 시간 모드 (빌드)");
             }
             else
             {
                 // Fallback: 로컬 시간 (서버 시간 비활성화 시)
                 timeProvider = new RealTimeProvider();
-                Debug.Log("[DispatchManager] 로컬 시간 모드 (빌드 Fallback)");
+                GameLog.Log("[DispatchManager] 로컬 시간 모드 (빌드 Fallback)");
             }
 #endif
         }
@@ -82,14 +82,14 @@ namespace Dispatch
             // CSV 로더 체크
             if (!CSVLoader.Instance.IsInit)
             {
-                Debug.LogError("[DispatchManager] CSVLoader가 초기화되지 않았습니다!");
+                GameLog.LogError("[DispatchManager] CSVLoader가 초기화되지 않았습니다!");
                 return;
             }
 
             // 이미 해당 슬롯에 파견이 있는지 확인
             if (activeDispatches.ContainsKey(locationId))
             {
-                Debug.LogWarning($"[DispatchManager] 이미 {locationName}에 파견이 진행 중입니다.");
+                GameLog.LogWarning($"[DispatchManager] 이미 {locationName}에 파견이 진행 중입니다.");
                 return;
             }
 
@@ -113,7 +113,7 @@ namespace Dispatch
             // CSV에서 보상 배율 가져오기
             float rewardMultiplier = GetRewardMultiplier(locationId, hours);
 
-            Debug.Log($"<color=cyan>[DispatchManager] 파견 시작!</color>\n" +
+            GameLog.Log($"<color=cyan>[DispatchManager] 파견 시작!</color>\n" +
                       $"장소: {locationName}\n" +
                       $"타입: {(type == DispatchType.Combat ? "전투형" : "채집형")}\n" +
                       $"시간: {hours}시간 → {reducedHours:F1}시간 (북마크 감소 적용, 배율: x{rewardMultiplier})\n" +
@@ -123,7 +123,7 @@ namespace Dispatch
             if (useTestMode)
             {
                 float realSeconds = (reducedHours * 3600f) / testTimeScale;
-                Debug.Log($"<color=yellow>[테스트] 실제 대기 시간: 약 {realSeconds:F1}초 (원본 {hours}시간 → {reducedHours:F1}시간)</color>");
+                GameLog.Log($"<color=yellow>[테스트] 실제 대기 시간: 약 {realSeconds:F1}초 (원본 {hours}시간 → {reducedHours:F1}시간)</color>");
             }
         }
 
@@ -149,8 +149,8 @@ namespace Dispatch
 
                     float rewardMultiplier = GetRewardMultiplier(dispatch.locationId, dispatch.durationHours);
 
-                    Debug.Log($"<color=green>[파견 완료!] {dispatch.durationHours}시간 파견 완료!</color>");
-                    Debug.Log($"장소: {dispatch.locationName}\n" +
+                    GameLog.Log($"<color=green>[파견 완료!] {dispatch.durationHours}시간 파견 완료!</color>");
+                    GameLog.Log($"장소: {dispatch.locationName}\n" +
                               $"타입: {(dispatch.dispatchType == DispatchType.Combat ? "전투형" : "채집형")}\n" +
                               $"소요 시간: {dispatch.durationHours}시간\n" +
                               $"보상 배율: x{rewardMultiplier}\n" +
@@ -175,7 +175,7 @@ namespace Dispatch
 
             if (timeTable == null || rewardTable == null)
             {
-                Debug.LogWarning("[DispatchManager] CSV 테이블을 찾을 수 없습니다. 기본 배율 1.0 반환");
+                GameLog.LogWarning("[DispatchManager] CSV 테이블을 찾을 수 없습니다. 기본 배율 1.0 반환");
                 return 1.0f;
             }
 
@@ -183,7 +183,7 @@ namespace Dispatch
             var timeData = timeTable.FindAll(x => x.Required_Hours == hours).FirstOrDefault();
             if (timeData == null)
             {
-                Debug.LogWarning($"[DispatchManager] {hours}시간에 해당하는 시간 데이터를 찾을 수 없습니다.");
+                GameLog.LogWarning($"[DispatchManager] {hours}시간에 해당하는 시간 데이터를 찾을 수 없습니다.");
                 return 1.0f;
             }
 
@@ -198,7 +198,7 @@ namespace Dispatch
                 return reward.Reward_Multiplier;
             }
 
-            Debug.LogWarning($"[DispatchManager] 장소ID {locationId}, 시간 {hours}시간에 대한 보상 데이터를 찾을 수 없습니다.");
+            GameLog.LogWarning($"[DispatchManager] 장소ID {locationId}, 시간 {hours}시간에 대한 보상 데이터를 찾을 수 없습니다.");
             return 1.0f;
         }
 

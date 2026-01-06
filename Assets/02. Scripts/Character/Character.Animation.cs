@@ -1,4 +1,4 @@
-//LMJ : Character partial class - Animation Control
+﻿//LMJ : Character partial class - Animation Control
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -145,7 +145,7 @@ namespace Novelian.Combat
                 characterAnimator.SetTrigger("Win");
             }
 
-            Debug.Log($"[Character] Playing victory animation");
+            GameLog.Log($"[Character] Playing victory animation");
         }
 
         /// <summary>
@@ -165,7 +165,7 @@ namespace Novelian.Combat
                 characterAnimator.SetTrigger("Death");
             }
 
-            Debug.Log($"[Character] Playing die animation");
+            GameLog.Log($"[Character] Playing die animation");
         }
 
         #endregion

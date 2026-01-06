@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
@@ -47,7 +47,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnInitialize()
         {
-            // Debug.Log("[WaveManager] Initializing pools and warm up");
+            // GameLog.Log("[WaveManager] Initializing pools and warm up");
 
             // LMJ: Subscribe to EventChannels
             if (monsterEvents != null)
@@ -111,11 +111,11 @@ namespace NovelianMagicLibraryDefense.Managers
                 var transforms = new List<Transform> { wallTarget };
                 var colliders = new List<Collider> { wallCollider };
                 Monster.InitializeWallCache(walls, transforms, colliders);
-                Debug.LogWarning("[WaveManager] Wall references not set in Inspector, using FindWithTag fallback");
+                GameLog.LogWarning("[WaveManager] Wall references not set in Inspector, using FindWithTag fallback");
             }
             else
             {
-                Debug.LogError("[WaveManager] Wall not found! Please assign Wall references in Inspector.");
+                GameLog.LogError("[WaveManager] Wall not found! Please assign Wall references in Inspector.");
             }
         }
 
@@ -137,7 +137,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnReset()
         {
-            // Debug.Log("[WaveManager] Resetting wave data");
+            // GameLog.Log("[WaveManager] Resetting wave data");
             isPoolReady = false;
             enemyCount = 0;
             bossCount = 0;
@@ -149,7 +149,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnDispose()
         {
-            // Debug.Log("[WaveManager] Disposing and unsubscribing events");
+            // GameLog.Log("[WaveManager] Disposing and unsubscribing events");
 
             // LMJ: Unsubscribe from EventChannels
             if (monsterEvents != null)
@@ -192,7 +192,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // JML: 필요한 몬스터 풀 프리로드
             await PreloadMonsterPoolsAsync(waveDataList);
 
-            Debug.Log($"[WaveManager] Initialized with {waveDataList.Count} waves, total monsters: {enemyCount}");
+            GameLog.Log($"[WaveManager] Initialized with {waveDataList.Count} waves, total monsters: {enemyCount}");
         }
 
         /// <summary>
@@ -212,7 +212,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 uiManager.UpdateMonsterCount(enemyCount);
             }
 
-            Debug.Log($"[WaveManager] Initialized with {waveDataList.Count} waves, total monsters: {enemyCount}");
+            GameLog.Log($"[WaveManager] Initialized with {waveDataList.Count} waves, total monsters: {enemyCount}");
         }
 
         /// <summary>
@@ -252,7 +252,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
             }
 
-            Debug.Log($"[WaveManager] Preloading {keyToWarmUpCount.Count} unique monster prefabs...");
+            GameLog.Log($"[WaveManager] Preloading {keyToWarmUpCount.Count} unique monster prefabs...");
 
             // JML: 고유 Addressable_Key 기준으로 풀 생성 및 웜업
             foreach (var kvp in keyToWarmUpCount)
@@ -266,17 +266,17 @@ namespace NovelianMagicLibraryDefense.Managers
                     if (success)
                     {
                         await poolManager.WarmUpByKeyAsync<Monster>(addressableKey, warmUpCount);
-                        Debug.Log($"[WaveManager] Pool '{addressableKey}' warm-up: {warmUpCount}");
+                        GameLog.Log($"[WaveManager] Pool '{addressableKey}' warm-up: {warmUpCount}");
                     }
                     else
                     {
-                        Debug.LogError($"[WaveManager] Failed to create pool for: {addressableKey}");
+                        GameLog.LogError($"[WaveManager] Failed to create pool for: {addressableKey}");
                     }
                 }
             }
 
             isPoolReady = true;
-            Debug.Log($"[WaveManager] Monster pools preloaded and warmed up: {keyToWarmUpCount.Count} prefabs, {monsterKeyCache.Count} monster types");
+            GameLog.Log($"[WaveManager] Monster pools preloaded and warmed up: {keyToWarmUpCount.Count} prefabs, {monsterKeyCache.Count} monster types");
         }
 
         /// <summary>
@@ -294,7 +294,7 @@ namespace NovelianMagicLibraryDefense.Managers
             MonsterData monsterData = CSVLoader.Instance.GetTable<MonsterData>().GetId(monsterId);
             if (monsterData == null)
             {
-                Debug.LogError($"[WaveManager] MonsterData not found for ID: {monsterId}");
+                GameLog.LogError($"[WaveManager] MonsterData not found for ID: {monsterId}");
                 return null;
             }
 
@@ -302,7 +302,7 @@ namespace NovelianMagicLibraryDefense.Managers
             PathData pathData = CSVLoader.Instance.GetTable<PathData>().GetId(monsterData.Path_ID);
             if (pathData == null)
             {
-                Debug.LogError($"[WaveManager] PathData not found for ID: {monsterData.Path_ID}");
+                GameLog.LogError($"[WaveManager] PathData not found for ID: {monsterData.Path_ID}");
                 return null;
             }
 
@@ -317,7 +317,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // CSV 웨이브 데이터 필수
             if (waveDataList.Count == 0)
             {
-                Debug.LogError("[WaveManager] No wave data! Call InitializeWithWaveDataAsync first.");
+                GameLog.LogError("[WaveManager] No wave data! Call InitializeWithWaveDataAsync first.");
                 return;
             }
 
@@ -351,7 +351,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (enemyCount == 0 && bossCount == 0)
             {
-                // Debug.Log("[WaveManager] All monsters defeated!");
+                // GameLog.Log("[WaveManager] All monsters defeated!");
                 WaveClear();
 
                 // LMJ: Use EventChannel instead of static event
@@ -366,7 +366,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             bossCount--;
 
-            // Debug.Log("[WaveManager] Boss defeated!");
+            // GameLog.Log("[WaveManager] Boss defeated!");
 
             // LMJ: Use EventChannel instead of static event
             if (stageEvents != null)
@@ -398,14 +398,14 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 if (remainingWait > 0)
                 {
-                    Debug.Log($"[WaveManager] Waiting {remainingWait:F1}s for Wave {waveData.Wave_ID} (Spawn_Time: {waveData.Spawn_Time}s)");
+                    GameLog.Log($"[WaveManager] Waiting {remainingWait:F1}s for Wave {waveData.Wave_ID} (Spawn_Time: {waveData.Spawn_Time}s)");
                     await UniTask.Delay((int)(remainingWait * 1000), cancellationToken: cancellationToken);
                 }
 
                 if (cancellationToken.IsCancellationRequested || !isPoolReady)
                     break;
 
-                Debug.Log($"[WaveManager] Starting Wave {waveData.Wave_ID}: {waveData.Monster_Count} monsters, interval {waveData.Spawn_Interval}s");
+                GameLog.Log($"[WaveManager] Starting Wave {waveData.Wave_ID}: {waveData.Monster_Count} monsters, interval {waveData.Spawn_Interval}s");
 
                 // 해당 웨이브의 몬스터들 스폰 (blocking - 웨이브 끝날 때까지 기다림)
                 await SpawnWaveMonsters(waveData, cancellationToken);
@@ -430,14 +430,14 @@ namespace NovelianMagicLibraryDefense.Managers
             MonsterLevelData levelData = CSVLoader.Instance.GetTable<MonsterLevelData>().GetId(waveData.Mon_Level_ID);
             if (levelData == null)
             {
-                Debug.LogWarning($"[WaveManager] MonsterLevelData not found for ID: {waveData.Mon_Level_ID}");
+                GameLog.LogWarning($"[WaveManager] MonsterLevelData not found for ID: {waveData.Mon_Level_ID}");
             }
 
             // JML: Addressable Key 조회 (캐시 또는 CSV 조회)
             string addressableKey = GetMonsterAddressableKey(waveData.Monster_ID);
             if (string.IsNullOrEmpty(addressableKey))
             {
-                Debug.LogError($"[WaveManager] Cannot spawn wave {waveData.Wave_ID}: addressable key not found for Monster_ID {waveData.Monster_ID}");
+                GameLog.LogError($"[WaveManager] Cannot spawn wave {waveData.Wave_ID}: addressable key not found for Monster_ID {waveData.Monster_ID}");
                 return;
             }
 
@@ -516,7 +516,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
             }
 
-            Debug.Log($"[WaveManager] Wave {waveData.Wave_ID} completed: spawned {spawnedCount}/{targetCount} monsters (dual spawner: {bossSpawner != null})");
+            GameLog.Log($"[WaveManager] Wave {waveData.Wave_ID} completed: spawned {spawnedCount}/{targetCount} monsters (dual spawner: {bossSpawner != null})");
         }
 
         private void SpawnBoss()
@@ -573,7 +573,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (spawner != null)
             {
                 monsterSpawner = spawner;
-                Debug.Log($"[WaveManager] MonsterSpawner set to: {spawner.name}");
+                GameLog.Log($"[WaveManager] MonsterSpawner set to: {spawner.name}");
             }
         }
 
@@ -585,7 +585,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (spawner != null)
             {
                 bossSpawner = spawner;
-                Debug.Log($"[WaveManager] BossSpawner set to: {spawner.name}");
+                GameLog.Log($"[WaveManager] BossSpawner set to: {spawner.name}");
             }
         }
 
@@ -598,7 +598,7 @@ namespace NovelianMagicLibraryDefense.Managers
             wallTarget = wall;
             wallComponent = wallComp;
             wallCollider = wallColl;
-            Debug.Log($"[WaveManager] WallTarget set to: {wall?.name ?? "null"}");
+            GameLog.Log($"[WaveManager] WallTarget set to: {wall?.name ?? "null"}");
         }
 
         /// <summary>
@@ -624,7 +624,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void ForceCompleteAllWaves()
         {
-            Debug.Log($"[WaveManager] ForceCompleteAllWaves - 남은 enemyCount: {enemyCount}, bossCount: {bossCount}");
+            GameLog.Log($"[WaveManager] ForceCompleteAllWaves - 남은 enemyCount: {enemyCount}, bossCount: {bossCount}");
 
             // 1. 스폰 루프 중단
             spawnCts?.Cancel();
@@ -650,7 +650,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 stageEvents.RaiseAllMonstersDefeated();
             }
 
-            Debug.Log("[WaveManager] ForceCompleteAllWaves - 모든 웨이브 강제 완료");
+            GameLog.Log("[WaveManager] ForceCompleteAllWaves - 모든 웨이브 강제 완료");
         }
 
         #endregion

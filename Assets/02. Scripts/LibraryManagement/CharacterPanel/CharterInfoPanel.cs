@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -109,7 +109,7 @@ public class CharacterInfoPanel : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[CharacterInfoPanel] Failed to load character sprite: {spriteKey}");
+                GameLog.LogWarning($"[CharacterInfoPanel] Failed to load character sprite: {spriteKey}");
             }
         };
     }
@@ -131,7 +131,7 @@ public class CharacterInfoPanel : MonoBehaviour
     public void OnBookmarkSlotClicked(int slotIndex)
     {
         selectedSlotIndex = slotIndex;
-        Debug.Log($"Slot {slotIndex} selected");
+        GameLog.Log($"Slot {slotIndex} selected");
         ShowBookmarkEquipPanel();
     }
 
@@ -209,7 +209,7 @@ public class CharacterInfoPanel : MonoBehaviour
                 bookmarkSlot5Text.text = bookmarkName;
                 break;
             default:
-                Debug.LogError("Invalid slot index");
+                GameLog.LogError("Invalid slot index");
                 break;
         }
     }
@@ -228,7 +228,7 @@ public class CharacterInfoPanel : MonoBehaviour
 
     public void ShowPanel()
     {
-        Debug.Log($"[CharacterInfoPanel] ShowPanel called - panel: {(panel != null ? panel.name : "NULL")}, raycastPanel: {(raycastPanel != null ? raycastPanel.name : "NULL")}");
+        GameLog.Log($"[CharacterInfoPanel] ShowPanel called - panel: {(panel != null ? panel.name : "NULL")}, raycastPanel: {(raycastPanel != null ? raycastPanel.name : "NULL")}");
         raycastPanel?.SetActive(true);
         panel.SetActive(true);
     }

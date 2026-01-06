@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
@@ -53,11 +53,11 @@ public class PlayerSlot : MonoBehaviour
 
             if (characterImage != null)
             {
-                Debug.Log($"슬롯 {slotIndex}: Character Image 자동 연결됨 - {characterImage.gameObject.name}");
+                GameLog.Log($"슬롯 {slotIndex}: Character Image 자동 연결됨 - {characterImage.gameObject.name}");
             }
             else
             {
-                Debug.LogError($"슬롯 {slotIndex}: Character Image 컴포넌트를 찾을 수 없습니다!");
+                GameLog.LogError($"슬롯 {slotIndex}: Character Image 컴포넌트를 찾을 수 없습니다!");
             }
         }
 
@@ -84,7 +84,7 @@ public class PlayerSlot : MonoBehaviour
     {
         if (characterSprite == null)
         {
-            Debug.LogWarning("캐릭터 스프라이트가 null입니다!");
+            GameLog.LogWarning("캐릭터 스프라이트가 null입니다!");
             return;
         }
 
@@ -115,10 +115,10 @@ public class PlayerSlot : MonoBehaviour
             RectTransform rect = characterImage.GetComponent<RectTransform>();
             if (rect != null)
             {
-                Debug.Log($"슬롯 {slotIndex} Image 크기: {rect.rect.width}x{rect.rect.height}");
+                GameLog.Log($"슬롯 {slotIndex} Image 크기: {rect.rect.width}x{rect.rect.height}");
             }
 
-            Debug.Log($"슬롯 {slotIndex}에 장르 {genreType} 캐릭터 배치됨 - Image active: {characterImage.gameObject.activeSelf}, enabled: {characterImage.enabled}");
+            GameLog.Log($"슬롯 {slotIndex}에 장르 {genreType} 캐릭터 배치됨 - Image active: {characterImage.gameObject.activeSelf}, enabled: {characterImage.enabled}");
         }
 
         // PlayerSlot GameObject 자체는 항상 활성화 상태 유지

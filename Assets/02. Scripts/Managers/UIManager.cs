@@ -1,4 +1,4 @@
-using NovelianMagicLibraryDefense.Core;
+﻿using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.UI;
 using UnityEngine;
 
@@ -84,14 +84,14 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void OpenCardSelectForGameStart()
         {
-            Debug.Log($"[UIManager] OpenCardSelectForGameStart called. cardSelectPanel: {(cardSelectPanel != null ? "OK" : "NULL")}");
+            GameLog.Log($"[UIManager] OpenCardSelectForGameStart called. cardSelectPanel: {(cardSelectPanel != null ? "OK" : "NULL")}");
             if (cardSelectPanel != null)
             {
                 cardSelectPanel.OpenForGameStart();
             }
             else
             {
-                Debug.LogError("[UIManager] cardSelectPanel is NULL! Inspector에서 CardSelectPanel 할당 필요!");
+                GameLog.LogError("[UIManager] cardSelectPanel is NULL! Inspector에서 CardSelectPanel 할당 필요!");
             }
         }
 

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// JML: Bookmark Crafting Utility Class (static)
@@ -20,7 +20,7 @@ public static class BookMarkCraft
         var recipeData = CSVLoader.Instance.GetData<BookmarkCraftData>(recipeID);
         if (recipeData == null)
         {
-            Debug.LogError($"[BookMarkCraft] 존재하지 않는 레시피 ID: {recipeID}");
+            GameLog.LogError($"[BookMarkCraft] 존재하지 않는 레시피 ID: {recipeID}");
             return new BookMarkCraftResult(false, null, "레시피를 찾을 수 없습니다.");
         }
 
@@ -28,7 +28,7 @@ public static class BookMarkCraft
         // 재료 확인
         if (!CheckMaterials(recipeData))
         {
-            Debug.LogWarning($"[BookMarkCraft] 재료 부족: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
+            GameLog.LogWarning($"[BookMarkCraft] 재료 부족: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
             return new BookMarkCraftResult(false, null, "재료가 부족합니다.");
         }
 
@@ -36,7 +36,7 @@ public static class BookMarkCraft
         // 골드 확인
         if (!CheckCurrency(recipeData))
         {
-            Debug.LogWarning($"[BookMarkCraft] 골드 부족: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
+            GameLog.LogWarning($"[BookMarkCraft] 골드 부족: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
             return new BookMarkCraftResult(false, null, "골드가 부족합니다.");
         }
 
@@ -44,7 +44,7 @@ public static class BookMarkCraft
         // 재료 소모
         if (!ConsumeMaterials(recipeData))
         {
-            Debug.LogError($"[BookMarkCraft] 재료 소모 실패: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
+            GameLog.LogError($"[BookMarkCraft] 재료 소모 실패: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
             return new BookMarkCraftResult(false, null, "재료 소모 중 오류가 발생했습니다.");
         }
 
@@ -52,7 +52,7 @@ public static class BookMarkCraft
         // 골드 소모
         if (!ConsumeCurrency(recipeData))
         {
-            Debug.LogError($"[BookMarkCraft] 골드 소모 실패: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
+            GameLog.LogError($"[BookMarkCraft] 골드 소모 실패: {CSVLoader.Instance.GetData<StringTable>(recipeData.Recipe_Name_ID)?.Text ?? "Unknown"}");
             return new BookMarkCraftResult(false, null, "골드 소모 중 오류가 발생했습니다.");
         }
 
@@ -67,7 +67,7 @@ public static class BookMarkCraft
 
         if (craftedBookmark == null)
         {
-            Debug.LogError($"[BookMarkCraft] 책갈피 생성 실패: Result_ID {resultID}");
+            GameLog.LogError($"[BookMarkCraft] 책갈피 생성 실패: Result_ID {resultID}");
             return new BookMarkCraftResult(false, null, "책갈피 생성 중 오류가 발생했습니다.");
         }
 
@@ -76,7 +76,7 @@ public static class BookMarkCraft
         BookMarkManager.Instance.AddBookmark(craftedBookmark);
 
         string message = successType == CraftSuccessType.GreatSuccess ? "대성공!" : "성공!";
-        Debug.Log($"[BookMarkCraft] 제작 {message}: {craftedBookmark}");
+        GameLog.Log($"[BookMarkCraft] 제작 {message}: {craftedBookmark}");
 
         return new BookMarkCraftResult(true, craftedBookmark, message, successType);
     }
@@ -92,7 +92,7 @@ public static class BookMarkCraft
         var ingredientMgr = IngredientManager.Instance;
         if (ingredientMgr == null)
         {
-            Debug.LogError("[BookMarkCraft] IngredientManager가 없습니다!");
+            GameLog.LogError("[BookMarkCraft] IngredientManager가 없습니다!");
             return false;
         }
 
@@ -132,7 +132,7 @@ public static class BookMarkCraft
         var currencyMgr = CurrencyManager.Instance;
         if (currencyMgr == null)
         {
-            Debug.LogError("[BookMarkCraft] CurrencyManager가 없습니다!");
+            GameLog.LogError("[BookMarkCraft] CurrencyManager가 없습니다!");
             return false;
         }
 
@@ -241,7 +241,7 @@ public static class BookMarkCraft
         }
         else
         {
-            Debug.LogError($"[BookMarkCraft] 유효하지 않은 BookmarkType: {bookmarkType}");
+            GameLog.LogError($"[BookMarkCraft] 유효하지 않은 BookmarkType: {bookmarkType}");
             return null;
         }
     }
@@ -257,7 +257,7 @@ public static class BookMarkCraft
         var allBookmarks = CSVLoader.Instance.GetTable<BookmarkData>().GetAll();
         if (allBookmarks == null || allBookmarks.Count == 0)
         {
-            Debug.LogError("[BookMarkCraft] BookmarkData 테이블을 찾을 수 없음");
+            GameLog.LogError("[BookMarkCraft] BookmarkData 테이블을 찾을 수 없음");
             return null;
         }
 
@@ -274,19 +274,19 @@ public static class BookMarkCraft
 
         if (matchingBookmarkIDs.Count == 0)
         {
-            Debug.LogError($"[BookMarkCraft] Grade_ID {gradeID}에 해당하는 스탯 책갈피가 없습니다!");
+            GameLog.LogError($"[BookMarkCraft] Grade_ID {gradeID}에 해당하는 스탯 책갈피가 없습니다!");
             return null;
         }
 
         // JML: Random selection
         int selectedBookmarkID = matchingBookmarkIDs[Random.Range(0, matchingBookmarkIDs.Count)];
-        Debug.Log($"[BookMarkCraft] 스탯 책갈피 랜덤 선택: {selectedBookmarkID} (등급 {gradeID}, 총 {matchingBookmarkIDs.Count}개 중)");
+        GameLog.Log($"[BookMarkCraft] 스탯 책갈피 랜덤 선택: {selectedBookmarkID} (등급 {gradeID}, 총 {matchingBookmarkIDs.Count}개 중)");
 
         // JML: Get selected BookmarkData
         var bookmarkData = CSVLoader.Instance.GetData<BookmarkData>(selectedBookmarkID);
         if (bookmarkData == null)
         {
-            Debug.LogError($"[BookMarkCraft] Bookmark_ID {selectedBookmarkID}에 해당하는 BookmarkData를 찾을 수 없음");
+            GameLog.LogError($"[BookMarkCraft] Bookmark_ID {selectedBookmarkID}에 해당하는 BookmarkData를 찾을 수 없음");
             return null;
         }
 
@@ -294,13 +294,13 @@ public static class BookMarkCraft
         var optionData = CSVLoader.Instance.GetData<BookmarkOptionData>(bookmarkData.Option_ID);
         if (optionData == null)
         {
-            Debug.LogError($"[BookMarkCraft] BookmarkOptionData를 찾을 수 없음: {bookmarkData.Option_ID}");
+            GameLog.LogError($"[BookMarkCraft] BookmarkOptionData를 찾을 수 없음: {bookmarkData.Option_ID}");
             return null;
         }
 
         // JML: Create Stat Bookmark
         string statBookmarkName = CSVLoader.Instance.GetData<StringTable>(bookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
-        Debug.Log($"[BookMarkCraft] 스탯 북마크 생성: {statBookmarkName}");
+        GameLog.Log($"[BookMarkCraft] 스탯 북마크 생성: {statBookmarkName}");
 
         return new BookMark(
             bookmarkDataID: bookmarkData.Bookmark_ID,
@@ -322,14 +322,14 @@ public static class BookMarkCraft
         var skillListTable = CSVLoader.Instance.GetTable<BookmarkSkillListData>();
         if (skillListTable == null)
         {
-            Debug.LogError("[BookMarkCraft] BookmarkSkillListData 테이블을 찾을 수 없음");
+            GameLog.LogError("[BookMarkCraft] BookmarkSkillListData 테이블을 찾을 수 없음");
             return null;
         }
 
         var allSkillList = skillListTable.GetAll();
         if (allSkillList == null || allSkillList.Count == 0)
         {
-            Debug.LogError("[BookMarkCraft] BookmarkSkillListData가 비어있음");
+            GameLog.LogError("[BookMarkCraft] BookmarkSkillListData가 비어있음");
             return null;
         }
 
@@ -351,25 +351,25 @@ public static class BookMarkCraft
 
         if (matchingBookmarkIDs.Count == 0)
         {
-            Debug.LogError($"[BookMarkCraft] Grade_ID {gradeID}에 해당하는 스킬 책갈피가 없습니다!");
+            GameLog.LogError($"[BookMarkCraft] Grade_ID {gradeID}에 해당하는 스킬 책갈피가 없습니다!");
             return null;
         }
 
         // JML: Random selection
         int selectedBookmarkID = matchingBookmarkIDs[Random.Range(0, matchingBookmarkIDs.Count)];
-        Debug.Log($"[BookMarkCraft] 스킬 책갈피 랜덤 선택: {selectedBookmarkID} (등급 {gradeID}, 총 {matchingBookmarkIDs.Count}개 중)");
+        GameLog.Log($"[BookMarkCraft] 스킬 책갈피 랜덤 선택: {selectedBookmarkID} (등급 {gradeID}, 총 {matchingBookmarkIDs.Count}개 중)");
 
         // JML: Get BookmarkData
         var selectedBookmarkData = CSVLoader.Instance.GetData<BookmarkData>(selectedBookmarkID);
         if (selectedBookmarkData == null)
         {
-            Debug.LogError($"[BookMarkCraft] Bookmark_ID {selectedBookmarkID}에 해당하는 BookmarkData를 찾을 수 없음");
+            GameLog.LogError($"[BookMarkCraft] Bookmark_ID {selectedBookmarkID}에 해당하는 BookmarkData를 찾을 수 없음");
             return null;
         }
 
         // JML: Create Skill Bookmark
         string bookmarkName = CSVLoader.Instance.GetData<StringTable>(selectedBookmarkData.Bookmark_Name_ID)?.Text ?? "Unknown";
-        Debug.Log($"[BookMarkCraft] 스킬 북마크 생성: {bookmarkName}, Skill_ID: {selectedBookmarkData.Skill_ID}");
+        GameLog.Log($"[BookMarkCraft] 스킬 북마크 생성: {bookmarkName}, Skill_ID: {selectedBookmarkData.Skill_ID}");
 
         var skillBookmark = new BookMark(
             bookmarkDataID: selectedBookmarkData.Bookmark_ID,

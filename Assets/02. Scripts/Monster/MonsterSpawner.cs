@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Spawners
 {
@@ -51,7 +51,7 @@ namespace NovelianMagicLibraryDefense.Spawners
             }
 
             // Raycast 실패 시 스폰 영역 중심 Y 사용 + 오프셋
-            Debug.LogWarning($"[MonsterSpawner] 지면을 찾을 수 없음: ({randomX}, {randomZ})");
+            GameLog.LogWarning($"[MonsterSpawner] 지면을 찾을 수 없음: ({randomX}, {randomZ})");
             return new Vector3(randomX, center.y + spawnHeightOffset, randomZ);
         }
 

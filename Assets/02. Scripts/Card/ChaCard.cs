@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using Novelian.Combat;
 using TMPro;
 using UnityEngine;
@@ -83,7 +83,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         }
         else
         {
-            Debug.Log($"[ChaCard] Awake: 이미 초기화됨, SetEmpty 스킵 (charId={characterId})");
+            GameLog.Log($"[ChaCard] Awake: 이미 초기화됨, SetEmpty 스킵 (charId={characterId})");
         }
     }
 
@@ -120,7 +120,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         {
             originalAnchoredPosition = rectTransform.anchoredPosition;
             hasOriginalPosition = true;
-            Debug.Log($"[ChaCard] Original position saved: {originalAnchoredPosition}");
+            GameLog.Log($"[ChaCard] Original position saved: {originalAnchoredPosition}");
         }
     }
 
@@ -133,23 +133,23 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
     /// <param name="character">연결할 Character 인스턴스 (스탯 표시용)</param>
     public async UniTask Initialize(int charId, int tier = 1, Character character = null)
     {
-        Debug.Log($"[ChaCard] Initialize 시작: charId={charId}, gameObject={gameObject.name}, " +
+        GameLog.Log($"[ChaCard] Initialize 시작: charId={charId}, gameObject={gameObject.name}, " +
                   $"characterNameText={characterNameText != null}, iconImage={iconImage != null}");
 
         characterId = charId;
         starTier = Mathf.Clamp(tier, 1, 3);
         isEmpty = false;
         linkedCharacter = character;
-        Debug.Log($"[ChaCard] isEmpty=false 설정됨: gameObject={gameObject.name}, charId={charId}");
+        GameLog.Log($"[ChaCard] isEmpty=false 설정됨: gameObject={gameObject.name}, charId={charId}");
 
         // 1. CSV에서 캐릭터 데이터 로드
         bool csvReady = CSVLoader.Instance != null && CSVLoader.Instance.IsInit;
-        Debug.Log($"[ChaCard] CSV 상태: Instance={CSVLoader.Instance != null}, IsInit={CSVLoader.Instance?.IsInit}");
+        GameLog.Log($"[ChaCard] CSV 상태: Instance={CSVLoader.Instance != null}, IsInit={CSVLoader.Instance?.IsInit}");
 
         if (csvReady)
         {
             var characterData = CSVLoader.Instance.GetData<CharacterData>(charId);
-            Debug.Log($"[ChaCard] CharacterData: {(characterData != null ? $"Name_ID={characterData.Character_Name_ID}" : "NULL")}");
+            GameLog.Log($"[ChaCard] CharacterData: {(characterData != null ? $"Name_ID={characterData.Character_Name_ID}" : "NULL")}");
 
             if (characterData != null)
             {
@@ -158,11 +158,11 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
                 if (characterNameText != null)
                 {
                     characterNameText.text = stringData?.Text ?? $"Character_{charId}";
-                    Debug.Log($"[ChaCard] 이름 설정됨: {characterNameText.text}");
+                    GameLog.Log($"[ChaCard] 이름 설정됨: {characterNameText.text}");
                 }
                 else
                 {
-                    Debug.LogError($"[ChaCard] characterNameText가 NULL입니다! charId={charId}");
+                    GameLog.LogError($"[ChaCard] characterNameText가 NULL입니다! charId={charId}");
                 }
 
                 // 아이콘 로드
@@ -180,34 +180,34 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
                         }
                     }
 
-                    Debug.Log($"[ChaCard] 아이콘 로드 시작: {addressableKey}");
+                    GameLog.Log($"[ChaCard] 아이콘 로드 시작: {addressableKey}");
 
                     try
                     {
                         var sprite = await Addressables.LoadAssetAsync<Sprite>(addressableKey).ToUniTask();
                         iconImage.sprite = sprite;
                         iconImage.color = Color.white;
-                        Debug.Log($"[ChaCard] 아이콘 로드 완료: {addressableKey}");
+                        GameLog.Log($"[ChaCard] 아이콘 로드 완료: {addressableKey}");
                     }
                     catch (System.Exception e)
                     {
-                        Debug.LogWarning($"[ChaCard] Failed to load icon for character {charId}: {e.Message}");
+                        GameLog.LogWarning($"[ChaCard] Failed to load icon for character {charId}: {e.Message}");
                     }
                 }
                 else
                 {
-                    Debug.LogError($"[ChaCard] iconImage가 NULL입니다! charId={charId}");
+                    GameLog.LogError($"[ChaCard] iconImage가 NULL입니다! charId={charId}");
                 }
             }
             else
             {
-                Debug.LogWarning($"[ChaCard] CharacterData not found for ID: {charId}");
+                GameLog.LogWarning($"[ChaCard] CharacterData not found for ID: {charId}");
                 SetFallbackData(charId);
             }
         }
         else
         {
-            Debug.LogWarning($"[ChaCard] CSV 로드 안됨! Fallback 사용. charId={charId}");
+            GameLog.LogWarning($"[ChaCard] CSV 로드 안됨! Fallback 사용. charId={charId}");
             SetFallbackData(charId);
         }
 
@@ -223,7 +223,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
             backgroundImage.color = activeBackgroundColor;
         }
 
-        Debug.Log($"[ChaCard] Initialized: Character {charId}, {starTier}성");
+        GameLog.Log($"[ChaCard] Initialized: Character {charId}, {starTier}성");
     }
 
     /// <summary>
@@ -234,7 +234,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         starTier = Mathf.Clamp(newTier, 1, 3);
 
         UpdateStarDisplay();
-        Debug.Log($"[ChaCard] Star tier updated: Character {characterId} → {starTier}성");
+        GameLog.Log($"[ChaCard] Star tier updated: Character {characterId} → {starTier}성");
     }
 
     /// <summary>
@@ -243,7 +243,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
     public void SetEmpty()
     {
         // Issue #476: 디버그 - SetEmpty 호출 추적
-        Debug.Log($"[ChaCard] SetEmpty 호출됨: gameObject={gameObject.name}, instanceId={GetInstanceID()}, 이전 charId={characterId}", this);
+        GameLog.Log($"[ChaCard] SetEmpty 호출됨: gameObject={gameObject.name}, instanceId={GetInstanceID()}, 이전 charId={characterId}", this);
         characterId = -1;
         starTier = 1;
         isEmpty = true;
@@ -335,7 +335,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
                 threeStarEffect.Stop(true);
                 threeStarEffect.Clear();
                 threeStarEffect.Play();
-                Debug.Log($"[ChaCard] 3-Star effect started for character {characterId}");
+                GameLog.Log($"[ChaCard] 3-Star effect started for character {characterId}");
             }
         }
         else
@@ -344,7 +344,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
             if (threeStarEffect.isPlaying)
             {
                 threeStarEffect.Stop(true);
-                Debug.Log($"[ChaCard] 3-Star effect stopped for character {characterId}");
+                GameLog.Log($"[ChaCard] 3-Star effect stopped for character {characterId}");
             }
         }
     }
@@ -424,7 +424,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         {
             originalAnchoredPosition = rectTransform.anchoredPosition;
             hasOriginalPosition = true;
-            Debug.Log($"[ChaCard] Original position saved on animation start: {originalAnchoredPosition}");
+            GameLog.Log($"[ChaCard] Original position saved on animation start: {originalAnchoredPosition}");
         }
 
         isSelectable = true;
@@ -615,7 +615,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         // 1. 팝업 모드인 경우 - 클릭하면 팝업 닫기
         if (isPopupMode)
         {
-            Debug.Log($"[ChaCard] Popup clicked, closing...");
+            GameLog.Log($"[ChaCard] Popup clicked, closing...");
             onPopupClicked?.Invoke();
             return;
         }
@@ -623,7 +623,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
         // 빈 슬롯은 무시
         if (isEmpty)
         {
-            Debug.Log($"[ChaCard] Click ignored: slot is empty");
+            GameLog.Log($"[ChaCard] Click ignored: slot is empty");
             return;
         }
 
@@ -635,20 +635,20 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
 
         if (gridManager == null)
         {
-            Debug.LogWarning("[ChaCard] GridManager not found!");
+            GameLog.LogWarning("[ChaCard] GridManager not found!");
             return;
         }
 
         // 2. 선택 가능 상태 (서포트 스킬 장착 모드) - 스킬 장착 처리
         if (isSelectable)
         {
-            Debug.Log($"[ChaCard] Clicked for skill equip! CharacterId={characterId}");
+            GameLog.Log($"[ChaCard] Clicked for skill equip! CharacterId={characterId}");
             gridManager.OnCharacterCardClicked(characterId);
             return;
         }
 
         // 3. 일반 상태 - 상세 팝업 열기
-        Debug.Log($"[ChaCard] Clicked for detail popup! CharacterId={characterId}");
+        GameLog.Log($"[ChaCard] Clicked for detail popup! CharacterId={characterId}");
         gridManager.ShowCardDetailPopup(this);
     }
 
@@ -672,7 +672,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
             gridManager = null;
         }
 
-        Debug.Log($"[ChaCard] Popup mode set: {isPopup}");
+        GameLog.Log($"[ChaCard] Popup mode set: {isPopup}");
     }
 
     /// <summary>
@@ -711,7 +711,7 @@ public class ChaCard : MonoBehaviour, IPointerClickHandler
             backgroundImage.color = activeBackgroundColor;
         }
 
-        Debug.Log($"[ChaCard] Data copied from source: CharacterId={characterId}");
+        GameLog.Log($"[ChaCard] Data copied from source: CharacterId={characterId}");
     }
 
     #endregion

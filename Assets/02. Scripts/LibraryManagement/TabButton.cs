@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
@@ -35,7 +35,7 @@ public class TabButton : MonoBehaviour
         {
             PlayerPrefs.SetInt(PREF_KEY_OPEN_TEAM_SETUP, value ? 1 : 0);
             PlayerPrefs.Save();
-            Debug.Log($"[TabButton] ShouldOpenTeamSetup 설정됨: {value}");
+            GameLog.Log($"[TabButton] ShouldOpenTeamSetup 설정됨: {value}");
         }
     }
 
@@ -44,7 +44,7 @@ public class TabButton : MonoBehaviour
         // CBL: 파견에서 바로 덱 설정 탭으로 이동하는 경우
         // Awake에서 플래그 확인 후 인스턴스 변수에 저장 (Start에서 사용)
         shouldOpenTeamSetupOnStart = ShouldOpenTeamSetup;
-        Debug.Log($"[TabButton] Awake - ShouldOpenTeamSetup 플래그 확인: {shouldOpenTeamSetupOnStart}, InstanceID: {GetInstanceID()}");
+        GameLog.Log($"[TabButton] Awake - ShouldOpenTeamSetup 플래그 확인: {shouldOpenTeamSetupOnStart}, InstanceID: {GetInstanceID()}");
 
         if (shouldOpenTeamSetupOnStart)
         {
@@ -55,7 +55,7 @@ public class TabButton : MonoBehaviour
             if (characterPanel != null) characterPanel.SetActive(false);
             if (partyPanel != null) partyPanel.SetActive(false);
             if (teamSetupPanel != null) teamSetupPanel.SetActive(true);
-            Debug.Log("[TabButton] Awake - 덱 설정 패널 즉시 활성화");
+            GameLog.Log("[TabButton] Awake - 덱 설정 패널 즉시 활성화");
         }
     }
 
@@ -93,7 +93,7 @@ public class TabButton : MonoBehaviour
     /// </summary>
     private async UniTaskVoid ForceOpenTeamSetupDelayed(CancellationToken token)
     {
-        Debug.Log("[TabButton] ForceOpenTeamSetupDelayed - 시작");
+        GameLog.Log("[TabButton] ForceOpenTeamSetupDelayed - 시작");
 
         try
         {
@@ -105,7 +105,7 @@ public class TabButton : MonoBehaviour
                     !FadeController.Instance.fadePanel.activeSelf ||
                     (FadeController.Instance.fadeImage != null && FadeController.Instance.fadeImage.color.a < 0.1f),
                     cancellationToken: token);
-                Debug.Log("[TabButton] ForceOpenTeamSetupDelayed - 페이드 완료 감지");
+                GameLog.Log("[TabButton] ForceOpenTeamSetupDelayed - 페이드 완료 감지");
             }
 
             // 페이드 완료 후 추가 대기
@@ -127,7 +127,7 @@ public class TabButton : MonoBehaviour
 
                 if (i == 0 || i == 9)
                 {
-                    Debug.Log($"[TabButton] ForceOpenTeamSetupDelayed - 프레임 {i + 1}/10 패널 강제 설정");
+                    GameLog.Log($"[TabButton] ForceOpenTeamSetupDelayed - 프레임 {i + 1}/10 패널 강제 설정");
                 }
 
                 await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate, token);
@@ -136,11 +136,11 @@ public class TabButton : MonoBehaviour
             shouldOpenTeamSetupOnStart = false;
             // 플래그 초기화는 ForceOpenTeamSetupDelayed가 성공적으로 완료된 후에만 수행
             ShouldOpenTeamSetup = false;
-            Debug.Log("[TabButton] ForceOpenTeamSetupDelayed - 완료, 플래그 초기화됨");
+            GameLog.Log("[TabButton] ForceOpenTeamSetupDelayed - 완료, 플래그 초기화됨");
         }
         catch (System.OperationCanceledException)
         {
-            Debug.Log("[TabButton] ForceOpenTeamSetupDelayed - 취소됨 (플래그 유지)");
+            GameLog.Log("[TabButton] ForceOpenTeamSetupDelayed - 취소됨 (플래그 유지)");
         }
     }
 
@@ -154,7 +154,7 @@ public class TabButton : MonoBehaviour
             // 씬 로드 후 안정화 대기
             await UniTask.Delay(1000, cancellationToken: token);
 
-            Debug.Log("========== [UIClickDebug] LibraryManagementScene 상태 체크 ==========");
+            GameLog.Log("========== [UIClickDebug] LibraryManagementScene 상태 체크 ==========");
 
             // 1. FadeController 체크
             if (FadeController.Instance != null && FadeController.Instance.fadePanel != null)
@@ -165,11 +165,11 @@ public class TabButton : MonoBehaviour
 
                 if (panelActive && raycastTarget)
                 {
-                    Debug.LogError($"[UIClickDebug] ❌ FadePanel이 UI 클릭을 차단 중! panelActive={panelActive}, alpha={alpha:F2}, raycastTarget={raycastTarget}");
+                    GameLog.LogError($"[UIClickDebug] ❌ FadePanel이 UI 클릭을 차단 중! panelActive={panelActive}, alpha={alpha:F2}, raycastTarget={raycastTarget}");
                 }
                 else
                 {
-                    Debug.Log($"[UIClickDebug] ✅ FadePanel 정상 (active={panelActive}, alpha={alpha:F2})");
+                    GameLog.Log($"[UIClickDebug] ✅ FadePanel 정상 (active={panelActive}, alpha={alpha:F2})");
                 }
             }
 
@@ -177,19 +177,19 @@ public class TabButton : MonoBehaviour
             var eventSystems = FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
             if (eventSystems.Length == 0)
             {
-                Debug.LogError("[UIClickDebug] ❌ EventSystem이 없습니다!");
+                GameLog.LogError("[UIClickDebug] ❌ EventSystem이 없습니다!");
             }
             else if (eventSystems.Length > 1)
             {
-                Debug.LogWarning($"[UIClickDebug] ⚠️ EventSystem이 {eventSystems.Length}개 존재! (중복 문제 가능)");
+                GameLog.LogWarning($"[UIClickDebug] ⚠️ EventSystem이 {eventSystems.Length}개 존재! (중복 문제 가능)");
                 foreach (var es in eventSystems)
                 {
-                    Debug.LogWarning($"  - {es.gameObject.name} (scene: {es.gameObject.scene.name})");
+                    GameLog.LogWarning($"  - {es.gameObject.name} (scene: {es.gameObject.scene.name})");
                 }
             }
             else
             {
-                Debug.Log($"[UIClickDebug] ✅ EventSystem 정상 ({eventSystems[0].gameObject.name})");
+                GameLog.Log($"[UIClickDebug] ✅ EventSystem 정상 ({eventSystems[0].gameObject.name})");
             }
 
             // 3. RaycastBlocker 체크
@@ -200,7 +200,7 @@ public class TabButton : MonoBehaviour
                 if ((name.Contains("raycast") || name.Contains("blocker")) &&
                     img.gameObject.activeInHierarchy && img.raycastTarget)
                 {
-                    Debug.LogWarning($"[UIClickDebug] ⚠️ RaycastBlocker 활성화: {img.gameObject.name}");
+                    GameLog.LogWarning($"[UIClickDebug] ⚠️ RaycastBlocker 활성화: {img.gameObject.name}");
                 }
             }
 
@@ -210,11 +210,11 @@ public class TabButton : MonoBehaviour
             {
                 if (cg.gameObject.activeInHierarchy && !cg.interactable)
                 {
-                    Debug.LogWarning($"[UIClickDebug] ⚠️ CanvasGroup interactable=false: {cg.gameObject.name}");
+                    GameLog.LogWarning($"[UIClickDebug] ⚠️ CanvasGroup interactable=false: {cg.gameObject.name}");
                 }
             }
 
-            Debug.Log("========== [UIClickDebug] 체크 완료 ==========");
+            GameLog.Log("========== [UIClickDebug] 체크 완료 ==========");
         }
         catch (System.OperationCanceledException)
         {
@@ -238,7 +238,7 @@ public class TabButton : MonoBehaviour
 
     private void OnCharacterTabClicked()
     {
-        Debug.Log("Character Tab Clicked");
+        GameLog.Log("Character Tab Clicked");
         
         characterTabButton.interactable = false;
         partyTabButton.interactable = true;
@@ -252,7 +252,7 @@ public class TabButton : MonoBehaviour
     
     private void OnPartyTabClicked()
     {
-        Debug.Log("Party Tab Clicked");
+        GameLog.Log("Party Tab Clicked");
 
         characterTabButton.interactable = true;
         partyTabButton.interactable = false;
@@ -265,7 +265,7 @@ public class TabButton : MonoBehaviour
     
     private void OnTeamSetupTabClicked()
     {
-        Debug.Log("Team Setup Tab Clicked");
+        GameLog.Log("Team Setup Tab Clicked");
 
         characterTabButton.interactable = true;
         partyTabButton.interactable = true;

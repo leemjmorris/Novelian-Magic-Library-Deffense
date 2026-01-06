@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -46,11 +46,11 @@ public class LibraryCharacterSlot : MonoBehaviour
     {
         if (infoPanel == null)
         {
-            Debug.LogError($"[LibraryCharacterSlot] infoPanel is null! Cannot open character info for ID: {characterID}");
+            GameLog.LogError($"[LibraryCharacterSlot] infoPanel is null! Cannot open character info for ID: {characterID}");
             return;
         }
 
-        Debug.Log($"Character Info Clicked for ID: {characterID}");
+        GameLog.Log($"Character Info Clicked for ID: {characterID}");
         infoPanel.InitInfo(characterID, currentLevel, this);
         infoPanel.ShowPanel();
     }
@@ -230,7 +230,7 @@ public class LibraryCharacterSlot : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"Failed to load character sprite: {spriteKey}");
+                GameLog.LogWarning($"Failed to load character sprite: {spriteKey}");
             }
         };
     }
@@ -250,7 +250,7 @@ public class LibraryCharacterSlot : MonoBehaviour
         CharacterData data = CSVLoader.Instance.GetData<CharacterData>(characterID);
         if (data == null)
         {
-            Debug.LogError($"CharacterData not found for ID: {characterID}");
+            GameLog.LogError($"CharacterData not found for ID: {characterID}");
             return;
         }
 

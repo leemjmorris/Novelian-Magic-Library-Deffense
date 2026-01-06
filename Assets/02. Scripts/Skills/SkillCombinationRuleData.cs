@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -198,7 +198,7 @@ namespace Novelian.Combat
 
             if (!File.Exists(path))
             {
-                Debug.LogWarning($"[SkillCombinationRuleData] CSV 파일을 찾을 수 없습니다: {path}");
+                GameLog.LogWarning($"[SkillCombinationRuleData] CSV 파일을 찾을 수 없습니다: {path}");
                 return false;
             }
 
@@ -207,7 +207,7 @@ namespace Novelian.Combat
                 string[] lines = File.ReadAllLines(path);
                 if (lines.Length < 2)
                 {
-                    Debug.LogWarning("[SkillCombinationRuleData] CSV 파일이 비어있습니다.");
+                    GameLog.LogWarning("[SkillCombinationRuleData] CSV 파일이 비어있습니다.");
                     return false;
                 }
 
@@ -247,12 +247,12 @@ namespace Novelian.Combat
                 }
 
                 ruleCache = null;
-                Debug.Log($"[SkillCombinationRuleData] CSV 로드 완료: {rules.Count}개 행, {supportTypes.Length}개 서포트 타입");
+                GameLog.Log($"[SkillCombinationRuleData] CSV 로드 완료: {rules.Count}개 행, {supportTypes.Length}개 서포트 타입");
                 return true;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[SkillCombinationRuleData] CSV 로드 실패: {e.Message}");
+                GameLog.LogError($"[SkillCombinationRuleData] CSV 로드 실패: {e.Message}");
                 return false;
             }
         }
@@ -297,12 +297,12 @@ namespace Novelian.Combat
                 }
 
                 File.WriteAllText(path, sb.ToString(), Encoding.UTF8);
-                Debug.Log($"[SkillCombinationRuleData] CSV 저장 완료: {path}");
+                GameLog.Log($"[SkillCombinationRuleData] CSV 저장 완료: {path}");
                 return true;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[SkillCombinationRuleData] CSV 저장 실패: {e.Message}");
+                GameLog.LogError($"[SkillCombinationRuleData] CSV 저장 실패: {e.Message}");
                 return false;
             }
         }

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Managers;
 using NovelianMagicLibraryDefense.Audio;
@@ -66,7 +66,7 @@ namespace NovelianMagicLibraryDefense.Lobby
                 capsule.height = 2f;
                 capsule.center = new Vector3(0f, 1f, 0f);
                 myCollider = capsule;
-                Debug.Log($"<color=cyan>[LobbyCompanion]</color> CapsuleCollider 추가: CharacterID {charId}");
+                GameLog.Log($"<color=cyan>[LobbyCompanion]</color> CapsuleCollider 추가: CharacterID {charId}");
             }
 
             // Animator가 없으면 자동으로 찾기
@@ -94,7 +94,7 @@ namespace NovelianMagicLibraryDefense.Lobby
             // 랜덤 워크 시작
             StartRandomWalkLoop().Forget();
 
-            Debug.Log($"<color=cyan>[LobbyCompanion]</color> 초기화 완료: CharacterID {characterId}");
+            GameLog.Log($"<color=cyan>[LobbyCompanion]</color> 초기화 완료: CharacterID {characterId}");
         }
 
         /// <summary>
@@ -233,7 +233,7 @@ namespace NovelianMagicLibraryDefense.Lobby
             // 쿨타임 체크
             if (Time.time - lastVoiceTime < voiceCooldown)
             {
-                Debug.Log($"<color=yellow>[LobbyCompanion]</color> 음성 쿨타임 중... 남은 시간: {voiceCooldown - (Time.time - lastVoiceTime):F1}초");
+                GameLog.Log($"<color=yellow>[LobbyCompanion]</color> 음성 쿨타임 중... 남은 시간: {voiceCooldown - (Time.time - lastVoiceTime):F1}초");
                 return;
             }
 
@@ -248,7 +248,7 @@ namespace NovelianMagicLibraryDefense.Lobby
         {
             if (AudioManager.Instance == null)
             {
-                Debug.LogWarning("[LobbyCompanion] AudioManager not available");
+                GameLog.LogWarning("[LobbyCompanion] AudioManager not available");
                 return;
             }
 
@@ -256,11 +256,11 @@ namespace NovelianMagicLibraryDefense.Lobby
 
             if (string.IsNullOrEmpty(voiceKey))
             {
-                Debug.LogWarning($"[LobbyCompanion] 음성 키를 찾을 수 없습니다. CharacterID: {characterId}");
+                GameLog.LogWarning($"[LobbyCompanion] 음성 키를 찾을 수 없습니다. CharacterID: {characterId}");
                 return;
             }
 
-            Debug.Log($"<color=cyan>[LobbyCompanion]</color> 음성 재생: {voiceKey}");
+            GameLog.Log($"<color=cyan>[LobbyCompanion]</color> 음성 재생: {voiceKey}");
             AudioManager.Instance.PlayVoice(voiceKey);
         }
 

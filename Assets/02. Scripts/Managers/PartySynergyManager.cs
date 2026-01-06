@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 using Novelian.Combat;
@@ -53,28 +53,28 @@ public class PartySynergyManager : MonoBehaviour
     {
         if (DeckManager.Instance == null)
         {
-            Debug.LogWarning("[PartySynergyManager] DeckManager.Instance is null");
+            GameLog.LogWarning("[PartySynergyManager] DeckManager.Instance is null");
             return null;
         }
 
         var deckCharacterIds = DeckManager.Instance.GetValidCharacters();
         if (deckCharacterIds.Count < 4)
         {
-            Debug.Log($"[PartySynergyManager] 덱에 캐릭터가 {deckCharacterIds.Count}명뿐입니다. 시너지 활성화에는 4명 필요.");
+            GameLog.Log($"[PartySynergyManager] 덱에 캐릭터가 {deckCharacterIds.Count}명뿐입니다. 시너지 활성화에는 4명 필요.");
             return null;
         }
 
         // 시너지 테이블 로드
         if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
         {
-            Debug.LogWarning("[PartySynergyManager] CSVLoader가 초기화되지 않았습니다.");
+            GameLog.LogWarning("[PartySynergyManager] CSVLoader가 초기화되지 않았습니다.");
             return null;
         }
 
         var synergyTable = CSVLoader.Instance.GetTable<PartySynergyData>();
         if (synergyTable == null)
         {
-            Debug.LogWarning("[PartySynergyManager] PartySynergyTable이 null입니다.");
+            GameLog.LogWarning("[PartySynergyManager] PartySynergyTable이 null입니다.");
             return null;
         }
 
@@ -93,13 +93,13 @@ public class PartySynergyManager : MonoBehaviour
 
             if (isActive)
             {
-                Debug.Log($"[PartySynergyManager] 시너지 활성화됨! Party_ID: {synergy.Party_ID}");
+                GameLog.Log($"[PartySynergyManager] 시너지 활성화됨! Party_ID: {synergy.Party_ID}");
                 activeSynergy = synergy;
                 return synergy;
             }
         }
 
-        Debug.Log("[PartySynergyManager] 활성화된 시너지 없음");
+        GameLog.Log("[PartySynergyManager] 활성화된 시너지 없음");
         activeSynergy = null;
         return null;
     }
@@ -137,7 +137,7 @@ public class PartySynergyManager : MonoBehaviour
             return genre;
         }
 
-        Debug.LogWarning($"[PartySynergyManager] 알 수 없는 Effect_ID: {effectId}");
+        GameLog.LogWarning($"[PartySynergyManager] 알 수 없는 Effect_ID: {effectId}");
         return null;
     }
 
@@ -148,7 +148,7 @@ public class PartySynergyManager : MonoBehaviour
     {
         if (isSynergyApplied)
         {
-            Debug.Log("[PartySynergyManager] 이미 시너지가 적용되어 있습니다.");
+            GameLog.Log("[PartySynergyManager] 이미 시너지가 적용되어 있습니다.");
             return;
         }
 
@@ -156,7 +156,7 @@ public class PartySynergyManager : MonoBehaviour
         var synergy = GetActiveSynergy();
         if (synergy == null)
         {
-            Debug.Log("[PartySynergyManager] 적용할 시너지가 없습니다.");
+            GameLog.Log("[PartySynergyManager] 적용할 시너지가 없습니다.");
             return;
         }
 
@@ -165,14 +165,14 @@ public class PartySynergyManager : MonoBehaviour
 
         if (!genre.HasValue)
         {
-            Debug.LogWarning($"[PartySynergyManager] Effect_ID {effectId}에 대한 장르를 찾을 수 없습니다.");
+            GameLog.LogWarning($"[PartySynergyManager] Effect_ID {effectId}에 대한 장르를 찾을 수 없습니다.");
             return;
         }
 
         // 값 변환: CSV의 5 → 0.05 (5%)
         float buffValue = effectValue / 100f;
 
-        Debug.Log($"[PartySynergyManager] 시너지 적용 시작: {genre.Value} 장르 +{effectValue}% ({characters.Count}명)");
+        GameLog.Log($"[PartySynergyManager] 시너지 적용 시작: {genre.Value} 장르 +{effectValue}% ({characters.Count}명)");
 
         foreach (var character in characters)
         {
@@ -183,7 +183,7 @@ public class PartySynergyManager : MonoBehaviour
         }
 
         isSynergyApplied = true;
-        Debug.Log($"[PartySynergyManager] 시너지 적용 완료! {genre.Value} 장르 데미지 +{effectValue}%");
+        GameLog.Log($"[PartySynergyManager] 시너지 적용 완료! {genre.Value} 장르 데미지 +{effectValue}%");
     }
 
     /// <summary>
@@ -202,7 +202,7 @@ public class PartySynergyManager : MonoBehaviour
         float buffValue = effectValue / 100f;
         character.ApplyGenreSynergyBuff(genre.Value, buffValue);
 
-        Debug.Log($"[PartySynergyManager] 새 캐릭터에 시너지 적용: {genre.Value} +{effectValue}%");
+        GameLog.Log($"[PartySynergyManager] 새 캐릭터에 시너지 적용: {genre.Value} +{effectValue}%");
     }
 
     /// <summary>
@@ -212,7 +212,7 @@ public class PartySynergyManager : MonoBehaviour
     {
         activeSynergy = null;
         isSynergyApplied = false;
-        Debug.Log("[PartySynergyManager] 시너지 상태 초기화");
+        GameLog.Log("[PartySynergyManager] 시너지 상태 초기화");
     }
 
     /// <summary>
@@ -230,7 +230,7 @@ public class PartySynergyManager : MonoBehaviour
     {
         int clampedLevel = Mathf.Clamp(level, 1, 5);
         synergyLevels[partyId] = clampedLevel;
-        Debug.Log($"[PartySynergyManager] 시너지 레벨 설정: PartyID={partyId}, Level={clampedLevel}");
+        GameLog.Log($"[PartySynergyManager] 시너지 레벨 설정: PartyID={partyId}, Level={clampedLevel}");
 
         // Firebase 저장 (완료 대기)
         await SaveToFirebaseAsync(partyId, clampedLevel);
@@ -274,7 +274,7 @@ public class PartySynergyManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"[PartySynergyManager] Firebase에서 시너지 레벨 로드 완료: {synergyLevels.Count}개");
+        GameLog.Log($"[PartySynergyManager] Firebase에서 시너지 레벨 로드 완료: {synergyLevels.Count}개");
     }
 
     /// <summary>
@@ -284,13 +284,13 @@ public class PartySynergyManager : MonoBehaviour
     {
         if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
         {
-            Debug.LogWarning("[PartySynergy] FirebaseSaveManager not ready, skipping save");
+            GameLog.LogWarning("[PartySynergy] FirebaseSaveManager not ready, skipping save");
             return;
         }
 
         if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
         {
-            Debug.LogWarning("[PartySynergy] No user logged in, skipping save");
+            GameLog.LogWarning("[PartySynergy] No user logged in, skipping save");
             return;
         }
 
@@ -300,6 +300,6 @@ public class PartySynergyManager : MonoBehaviour
             level
         );
 
-        Debug.Log($"<color=#3EB489>[PartySynergy]</color> Firebase 저장 완료: PartyID={partyId}, Level={level}");
+        GameLog.Log($"<color=#3EB489>[PartySynergy]</color> Firebase 저장 완료: PartyID={partyId}, Level={level}");
     }
 }

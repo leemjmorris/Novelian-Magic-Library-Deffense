@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using System.Threading;
@@ -89,7 +89,7 @@ namespace Dispatch
             // 애니메이션 진행 중이면 취소
             cancellationTokenSource?.Cancel();
 
-            Debug.Log($"{LogTag} 선택 해제됨 (다른 파견 선택)");
+            GameLog.Log($"{LogTag} 선택 해제됨 (다른 파견 선택)");
         }
 
         private void Start()
@@ -110,35 +110,35 @@ namespace Dispatch
             if (selectImageM != null)
             {
                 selectImageM.gameObject.SetActive(false);
-                Debug.Log($"{LogTag} SelectImage-M 초기 비활성화");
+                GameLog.Log($"{LogTag} SelectImage-M 초기 비활성화");
             }
 
             // 선택하기 버튼 비활성화
             if (selectButton != null)
             {
                 selectButton.interactable = false;
-                Debug.Log($"{LogTag} 선택하기 버튼 초기 비활성화");
+                GameLog.Log($"{LogTag} 선택하기 버튼 초기 비활성화");
             }
 
             // dispatchPanel 비활성화 (초기 상태)
             if (dispatchPanel != null)
             {
                 dispatchPanel.SetActive(false);
-                Debug.Log($"{LogTag} {dispatchType} 패널 초기 비활성화");
+                GameLog.Log($"{LogTag} {dispatchType} 패널 초기 비활성화");
             }
 
             // Map 활성화 (초기 상태)
             if (mapObject != null)
             {
                 mapObject.SetActive(true);
-                Debug.Log($"{LogTag} Map 초기 활성화");
+                GameLog.Log($"{LogTag} Map 초기 활성화");
             }
 
             // Red Dot은 초기 비활성화 (파견 상태 확인 후 활성화 여부 결정)
             if (redDotImage != null)
             {
                 redDotImage.SetActive(false);
-                Debug.Log($"{LogTag} Red Dot 초기 비활성화");
+                GameLog.Log($"{LogTag} Red Dot 초기 비활성화");
             }
         }
 
@@ -168,7 +168,7 @@ namespace Dispatch
                 redDotImage.SetActive(isCompleted);
                 if (isCompleted)
                 {
-                    Debug.Log($"{LogTag} ✅ 파견 완료 - Map에 Red Dot 표시");
+                    GameLog.Log($"{LogTag} ✅ 파견 완료 - Map에 Red Dot 표시");
                 }
             }
         }
@@ -208,7 +208,7 @@ namespace Dispatch
 
         private async UniTaskVoid OnExclamationButtonClickedAsync()
         {
-            Debug.Log($"{LogTag} OnExclamationButtonClickedAsync 호출됨");
+            GameLog.Log($"{LogTag} OnExclamationButtonClickedAsync 호출됨");
 
             // JML: 다른 파견 선택 해제 (스위칭)
             OnDispatchSelected?.Invoke(this);
@@ -220,13 +220,13 @@ namespace Dispatch
 
             if (selectImageM == null)
             {
-                Debug.LogError($"{LogTag} SelectImage-M이 할당되지 않았습니다!");
+                GameLog.LogError($"{LogTag} SelectImage-M이 할당되지 않았습니다!");
                 return;
             }
 
             // SelectImage-M 활성화 (애니메이션 시작 전)
             selectImageM.gameObject.SetActive(true);
-            Debug.Log($"{LogTag} SelectImage-M 활성화됨");
+            GameLog.Log($"{LogTag} SelectImage-M 활성화됨");
 
             // 선택하기 버튼 즉시 활성화 (애니메이션 기다리지 않음)
             EnableSelectButton();
@@ -281,7 +281,7 @@ namespace Dispatch
             if (selectButton != null)
             {
                 selectButton.interactable = true;
-                Debug.Log($"{LogTag} ✅ 선택하기 버튼 활성화됨");
+                GameLog.Log($"{LogTag} ✅ 선택하기 버튼 활성화됨");
             }
         }
 
@@ -290,7 +290,7 @@ namespace Dispatch
         /// </summary>
         public void OnSelectButtonClicked()
         {
-            Debug.Log($"{LogTag} 선택하기 버튼 클릭");
+            GameLog.Log($"{LogTag} 선택하기 버튼 클릭");
 
             // Map 오브젝트 비활성화
             if (mapObject != null)
@@ -302,7 +302,7 @@ namespace Dispatch
             if (dispatchPanel != null)
             {
                 dispatchPanel.SetActive(true);
-                Debug.Log($"{LogTag} ✅ {dispatchType} 패널 활성화");
+                GameLog.Log($"{LogTag} ✅ {dispatchType} 패널 활성화");
             }
 
             // 파견 중 상태로 설정
@@ -323,7 +323,7 @@ namespace Dispatch
             else
             {
                 // 파견 중이 아닐 때 = 아무 동작 없음 (DispatchPanel 등에서 처리)
-                Debug.Log($"{LogTag} 파견 중이 아닙니다. (다른 컨트롤러에서 처리)");
+                GameLog.Log($"{LogTag} 파견 중이 아닙니다. (다른 컨트롤러에서 처리)");
             }
         }
 
@@ -333,7 +333,7 @@ namespace Dispatch
         /// </summary>
         public void OnDispatchCompleted()
         {
-            Debug.Log($"{LogTag} 파견 완료 - Map에 Red Dot 활성화");
+            GameLog.Log($"{LogTag} 파견 완료 - Map에 Red Dot 활성화");
             // Red Dot 활성화
             if (redDotImage != null)
             {
@@ -347,7 +347,7 @@ namespace Dispatch
         /// </summary>
         public void OnRewardClaimed()
         {
-            Debug.Log($"{LogTag} 보상 획득 - Red Dot 비활성화");
+            GameLog.Log($"{LogTag} 보상 획득 - Red Dot 비활성화");
             if (redDotImage != null)
             {
                 redDotImage.SetActive(false);
@@ -360,7 +360,7 @@ namespace Dispatch
         /// </summary>
         private void OnRewardReceived()
         {
-            Debug.Log($"{LogTag} 보상 받기 - Red Dot 비활성화");
+            GameLog.Log($"{LogTag} 보상 받기 - Red Dot 비활성화");
 
             // 파견 상태를 false로 변경
             isDispatching = false;
@@ -374,7 +374,7 @@ namespace Dispatch
                 redDotImage.SetActive(false);
             }
 
-            Debug.Log($"{LogTag} ✅ 보상 받기 완료");
+            GameLog.Log($"{LogTag} ✅ 보상 받기 완료");
         }
 
         /// <summary>
@@ -397,7 +397,7 @@ namespace Dispatch
             // UI 초기 상태로 복원
             InitializeUI();
 
-            Debug.Log($"{LogTag} 초기 상태로 리셋됨");
+            GameLog.Log($"{LogTag} 초기 상태로 리셋됨");
         }
 
         private void OnDestroy()

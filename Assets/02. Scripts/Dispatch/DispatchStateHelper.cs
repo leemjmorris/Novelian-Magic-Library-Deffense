@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Firebase.Data;
 
 namespace Dispatch
@@ -64,14 +64,14 @@ namespace Dispatch
                 // ServerTimeManager가 초기화되지 않은 경우 false 반환 (보안)
                 if (ServerTimeManager.Instance == null || !ServerTimeManager.Instance.IsSynced)
                 {
-                    Debug.LogWarning("[DispatchStateHelper] ServerTimeManager가 초기화되지 않음 - 파견 완료 확인 불가");
+                    GameLog.LogWarning("[DispatchStateHelper] ServerTimeManager가 초기화되지 않음 - 파견 완료 확인 불가");
                     return false;
                 }
 
                 // 시간 유효성 검증 (미래 시간이면 시간 조작 의심)
                 if (!ServerTimeManager.Instance.IsValidSavedTime(state.startTimeMs))
                 {
-                    Debug.LogWarning("[DispatchStateHelper] 저장된 시간이 유효하지 않음 - 시간 조작 의심");
+                    GameLog.LogWarning("[DispatchStateHelper] 저장된 시간이 유효하지 않음 - 시간 조작 의심");
                     return false;
                 }
 
@@ -86,7 +86,7 @@ namespace Dispatch
                 return false;
 
             // 레거시: 로컬 시간으로 비교 (보안 취약)
-            Debug.LogWarning("[DispatchStateHelper] 레거시 형식 사용 중 - 마이그레이션 필요");
+            GameLog.LogWarning("[DispatchStateHelper] 레거시 형식 사용 중 - 마이그레이션 필요");
             return System.DateTime.Now >= endTime;
         }
 

@@ -1,4 +1,4 @@
-// 훈련소 매니저 (Issue #458)
+﻿// 훈련소 매니저 (Issue #458)
 // 훈련소 전체 로직 제어
 namespace Novelian.Training
 {
@@ -104,7 +104,7 @@ namespace Novelian.Training
                 dpsCalculator = GetComponent<DPSCalculator>();
                 if (dpsCalculator == null)
                 {
-                    Debug.LogWarning("[TrainingManager] DPSCalculator가 없습니다. Inspector에서 연결하거나 같은 오브젝트에 추가하세요.");
+                    GameLog.LogWarning("[TrainingManager] DPSCalculator가 없습니다. Inspector에서 연결하거나 같은 오브젝트에 추가하세요.");
                 }
             }
 
@@ -148,12 +148,12 @@ namespace Novelian.Training
         /// </summary>
         private async UniTask PreloadCharacterPrefabs()
         {
-            Debug.Log("[TrainingManager] 캐릭터 프리팹 로드 시작...");
+            GameLog.Log("[TrainingManager] 캐릭터 프리팹 로드 시작...");
 
             var characterTable = CSVLoader.Instance?.GetTable<CharacterData>();
             if (characterTable == null || characterTable.Count == 0)
             {
-                Debug.LogError("[TrainingManager] CharacterTable 로드 실패");
+                GameLog.LogError("[TrainingManager] CharacterTable 로드 실패");
                 return;
             }
 
@@ -169,7 +169,7 @@ namespace Novelian.Training
                 var pathData = CSVLoader.Instance?.GetData<PathData>(characterData.Path_ID);
                 if (pathData == null)
                 {
-                    Debug.LogWarning($"[TrainingManager] PathData를 찾을 수 없음: Path_ID={characterData.Path_ID}");
+                    GameLog.LogWarning($"[TrainingManager] PathData를 찾을 수 없음: Path_ID={characterData.Path_ID}");
                     failedCount++;
                     continue;
                 }
@@ -192,11 +192,11 @@ namespace Novelian.Training
                 {
                     loadedCharacterPrefabs[prefabKey] = prefab;
                     loadedCount++;
-                    Debug.Log($"[TrainingManager] 프리팹 로드 완료 (AssetDatabase): {prefabKey}");
+                    GameLog.Log($"[TrainingManager] 프리팹 로드 완료 (AssetDatabase): {prefabKey}");
                 }
                 else
                 {
-                    Debug.LogError($"[TrainingManager] 프리팹 로드 실패 (AssetDatabase) '{prefabKey}'");
+                    GameLog.LogError($"[TrainingManager] 프리팹 로드 실패 (AssetDatabase) '{prefabKey}'");
                     failedCount++;
                 }
 #else
@@ -206,17 +206,17 @@ namespace Novelian.Training
                     prefab = await Addressables.LoadAssetAsync<GameObject>(prefabKey).Task;
                     loadedCharacterPrefabs[prefabKey] = prefab;
                     loadedCount++;
-                    Debug.Log($"[TrainingManager] 프리팹 로드 완료 (Addressables): {prefabKey}");
+                    GameLog.Log($"[TrainingManager] 프리팹 로드 완료 (Addressables): {prefabKey}");
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"[TrainingManager] 프리팹 로드 실패 (Addressables) '{prefabKey}': {e.Message}");
+                    GameLog.LogError($"[TrainingManager] 프리팹 로드 실패 (Addressables) '{prefabKey}': {e.Message}");
                     failedCount++;
                 }
 #endif
             }
 
-            Debug.Log($"[TrainingManager] 캐릭터 프리팹 로드 완료. 성공: {loadedCount}, 실패: {failedCount}");
+            GameLog.Log($"[TrainingManager] 캐릭터 프리팹 로드 완료. 성공: {loadedCount}, 실패: {failedCount}");
             await UniTask.CompletedTask;
         }
 
@@ -270,7 +270,7 @@ namespace Novelian.Training
                     prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                     if (prefab != null)
                     {
-                        Debug.Log($"[TrainingManager] 프리팹 발견: {path}");
+                        GameLog.Log($"[TrainingManager] 프리팹 발견: {path}");
                         return prefab;
                     }
                 }
@@ -288,7 +288,7 @@ namespace Novelian.Training
             var characterTable = CSVLoader.Instance?.GetTable<CharacterData>();
             if (characterTable == null)
             {
-                Debug.LogError("[TrainingManager] CharacterTable 로드 실패");
+                GameLog.LogError("[TrainingManager] CharacterTable 로드 실패");
                 return;
             }
 
@@ -300,7 +300,7 @@ namespace Novelian.Training
                 characterDataList.Add(allCharacters[i]);
             }
 
-            Debug.Log($"[TrainingManager] 캐릭터 데이터 {characterDataList.Count}개 캐시 완료");
+            GameLog.Log($"[TrainingManager] 캐릭터 데이터 {characterDataList.Count}개 캐시 완료");
 
             // 첫 번째 캐릭터를 기본 선택
             if (characterDataList.Count > 0)
@@ -318,14 +318,14 @@ namespace Novelian.Training
             var characterData = CSVLoader.Instance?.GetData<CharacterData>(characterId);
             if (characterData == null)
             {
-                Debug.LogError($"[TrainingManager] CharacterData를 찾을 수 없음: {characterId}");
+                GameLog.LogError($"[TrainingManager] CharacterData를 찾을 수 없음: {characterId}");
                 return null;
             }
 
             var pathData = CSVLoader.Instance?.GetData<PathData>(characterData.Path_ID);
             if (pathData == null)
             {
-                Debug.LogError($"[TrainingManager] PathData를 찾을 수 없음: Path_ID={characterData.Path_ID}");
+                GameLog.LogError($"[TrainingManager] PathData를 찾을 수 없음: Path_ID={characterData.Path_ID}");
                 return null;
             }
 
@@ -342,7 +342,7 @@ namespace Novelian.Training
         public void SetCharacter(int characterId)
         {
             selectedCharacterId = characterId;
-            Debug.Log($"[TrainingManager] 캐릭터 설정: {characterId}");
+            GameLog.Log($"[TrainingManager] 캐릭터 설정: {characterId}");
         }
 
         /// <summary>
@@ -351,7 +351,7 @@ namespace Novelian.Training
         public void SetGrade(int grade)
         {
             selectedGrade = Mathf.Clamp(grade, 1, 3);
-            Debug.Log($"[TrainingManager] 등급 설정: {selectedGrade}성");
+            GameLog.Log($"[TrainingManager] 등급 설정: {selectedGrade}성");
         }
 
         /// <summary>
@@ -360,7 +360,7 @@ namespace Novelian.Training
         public void SetEnhancement(int level)
         {
             selectedEnhancement = Mathf.Clamp(level, 0, 10);
-            Debug.Log($"[TrainingManager] 강화 단계 설정: {selectedEnhancement}");
+            GameLog.Log($"[TrainingManager] 강화 단계 설정: {selectedEnhancement}");
         }
 
         /// <summary>
@@ -369,7 +369,7 @@ namespace Novelian.Training
         public void SetMainSkillBookmark(int skillId)
         {
             selectedMainSkillBookmarkId = skillId;
-            Debug.Log($"[TrainingManager] 메인 스킬 책갈피 설정: {skillId}");
+            GameLog.Log($"[TrainingManager] 메인 스킬 책갈피 설정: {skillId}");
         }
 
         /// <summary>
@@ -378,7 +378,7 @@ namespace Novelian.Training
         public void SetSupportSkill(int supportSkillId)
         {
             selectedSupportSkillId = supportSkillId;
-            Debug.Log($"[TrainingManager] 보조 스킬 설정: {supportSkillId}");
+            GameLog.Log($"[TrainingManager] 보조 스킬 설정: {supportSkillId}");
         }
 
         /// <summary>
@@ -389,11 +389,11 @@ namespace Novelian.Training
         {
             if (slotIndex < 0 || slotIndex >= 4)
             {
-                Debug.LogWarning($"[TrainingManager] 잘못된 슬롯 인덱스: {slotIndex}");
+                GameLog.LogWarning($"[TrainingManager] 잘못된 슬롯 인덱스: {slotIndex}");
                 return;
             }
             selectedStatBookmarkIds[slotIndex] = optionId;
-            Debug.Log($"[TrainingManager] 스탯 책갈피 {slotIndex + 1} 설정: {optionId}");
+            GameLog.Log($"[TrainingManager] 스탯 책갈피 {slotIndex + 1} 설정: {optionId}");
         }
 
         /// <summary>
@@ -402,7 +402,7 @@ namespace Novelian.Training
         public void SetUseMyDeck(bool use)
         {
             useMyDeck = use;
-            Debug.Log($"[TrainingManager] 내 덱 사용 모드: {(use ? "ON" : "OFF")}");
+            GameLog.Log($"[TrainingManager] 내 덱 사용 모드: {(use ? "ON" : "OFF")}");
         }
 
         /// <summary>
@@ -411,7 +411,7 @@ namespace Novelian.Training
         public void SetDummyCount(int count)
         {
             dummyCount = Mathf.Clamp(count, 1, 10);
-            Debug.Log($"[TrainingManager] 허수아비 수량 설정: {dummyCount}");
+            GameLog.Log($"[TrainingManager] 허수아비 수량 설정: {dummyCount}");
 
             // 실행 중이면 허수아비 재스폰
             if (isRunning)
@@ -447,7 +447,7 @@ namespace Novelian.Training
         {
             if (isRunning) return;
 
-            Debug.Log($"[TrainingManager] 훈련 시작 (내 덱 사용: {useMyDeck})");
+            GameLog.Log($"[TrainingManager] 훈련 시작 (내 덱 사용: {useMyDeck})");
             isRunning = true;
 
             if (useMyDeck)
@@ -481,7 +481,7 @@ namespace Novelian.Training
         {
             if (!isRunning) return;
 
-            Debug.Log("[TrainingManager] 훈련 정지");
+            GameLog.Log("[TrainingManager] 훈련 정지");
             isRunning = false;
 
             // 단일 캐릭터 비활성화
@@ -518,7 +518,7 @@ namespace Novelian.Training
         /// </summary>
         public void ResetTraining()
         {
-            Debug.Log("[TrainingManager] 훈련 리셋");
+            GameLog.Log("[TrainingManager] 훈련 리셋");
 
             // DPS 측정 리셋
             if (dpsCalculator != null)
@@ -553,7 +553,7 @@ namespace Novelian.Training
 
             if (selectedCharacterId <= 0)
             {
-                Debug.LogWarning("[TrainingManager] 캐릭터가 선택되지 않음");
+                GameLog.LogWarning("[TrainingManager] 캐릭터가 선택되지 않음");
                 return;
             }
 
@@ -561,14 +561,14 @@ namespace Novelian.Training
             string prefabKey = GetCharacterPrefabKey(selectedCharacterId);
             if (string.IsNullOrEmpty(prefabKey))
             {
-                Debug.LogError($"[TrainingManager] 프리팹 키를 찾을 수 없음: characterId={selectedCharacterId}");
+                GameLog.LogError($"[TrainingManager] 프리팹 키를 찾을 수 없음: characterId={selectedCharacterId}");
                 return;
             }
 
             // 캐시된 프리팹 조회
             if (!loadedCharacterPrefabs.TryGetValue(prefabKey, out GameObject prefab) || prefab == null)
             {
-                Debug.LogError($"[TrainingManager] 캐릭터 프리팹이 로드되지 않음: {prefabKey}");
+                GameLog.LogError($"[TrainingManager] 캐릭터 프리팹이 로드되지 않음: {prefabKey}");
                 return;
             }
 
@@ -582,7 +582,7 @@ namespace Novelian.Training
 
             if (currentCharacter == null)
             {
-                Debug.LogError($"[TrainingManager] 프리팹에 Character 컴포넌트가 없음");
+                GameLog.LogError($"[TrainingManager] 프리팹에 Character 컴포넌트가 없음");
                 Destroy(charObj);
                 return;
             }
@@ -630,7 +630,7 @@ namespace Novelian.Training
             currentCharacter.SetAutoAttackEnabled(true);
 
             var characterData = CSVLoader.Instance?.GetData<CharacterData>(selectedCharacterId);
-            Debug.Log($"[TrainingManager] 캐릭터 스폰 완료: ID={selectedCharacterId}, 성급={selectedGrade}, 강화={selectedEnhancement}");
+            GameLog.Log($"[TrainingManager] 캐릭터 스폰 완료: ID={selectedCharacterId}, 성급={selectedGrade}, 강화={selectedEnhancement}");
 
             // CSVLoader 비동기 대기용 (형식 맞추기)
             await UniTask.CompletedTask;
@@ -649,7 +649,7 @@ namespace Novelian.Training
                     break;
                 }
             }
-            Debug.Log($"[TrainingManager] 성급 적용: {targetGrade}성");
+            GameLog.Log($"[TrainingManager] 성급 적용: {targetGrade}성");
         }
 
         /// <summary>
@@ -666,7 +666,7 @@ namespace Novelian.Training
 
             // 데미지 버프로 적용
             character.ApplyStatBuff(StatType.Damage, totalBonus);
-            Debug.Log($"[TrainingManager] 강화 {enhancementLevel}단계 적용: +{totalBonus * 100f}%");
+            GameLog.Log($"[TrainingManager] 강화 {enhancementLevel}단계 적용: +{totalBonus * 100f}%");
         }
 
         /// <summary>
@@ -678,13 +678,13 @@ namespace Novelian.Training
             var mainSkillData = CSVLoader.Instance?.GetData<MainSkillData>(skillId);
             if (mainSkillData == null)
             {
-                Debug.LogWarning($"[TrainingManager] MainSkillData를 찾을 수 없음: {skillId}");
+                GameLog.LogWarning($"[TrainingManager] MainSkillData를 찾을 수 없음: {skillId}");
                 return;
             }
 
             // 액티브 스킬로 설정
             character.SetSkillIds(character.GetBasicAttackSkillId(), skillId, character.GetSupportSkillId());
-            Debug.Log($"[TrainingManager] 메인 스킬 책갈피 적용: {mainSkillData.skill_name}");
+            GameLog.Log($"[TrainingManager] 메인 스킬 책갈피 적용: {mainSkillData.skill_name}");
         }
 
         /// <summary>
@@ -695,7 +695,7 @@ namespace Novelian.Training
             var optionData = CSVLoader.Instance?.GetData<BookmarkOptionData>(optionId);
             if (optionData == null)
             {
-                Debug.LogWarning($"[TrainingManager] BookmarkOptionData를 찾을 수 없음: {optionId}");
+                GameLog.LogWarning($"[TrainingManager] BookmarkOptionData를 찾을 수 없음: {optionId}");
                 return;
             }
 
@@ -724,7 +724,7 @@ namespace Novelian.Training
                     character.ApplyStatBuff(StatType.Damage, value);
                     break;
                 default:
-                    Debug.Log($"[TrainingManager] 스탯 책갈피 적용: OptionType={optionData.Option_Type}, Value={value}");
+                    GameLog.Log($"[TrainingManager] 스탯 책갈피 적용: OptionType={optionData.Option_Type}, Value={value}");
                     break;
             }
         }
@@ -745,18 +745,18 @@ namespace Novelian.Training
             // DeckManager에서 현재 덱 정보 가져오기
             if (DeckManager.Instance == null)
             {
-                Debug.LogError("[TrainingManager] DeckManager가 없습니다");
+                GameLog.LogError("[TrainingManager] DeckManager가 없습니다");
                 return;
             }
 
             var deckCharacterIds = DeckManager.Instance.GetValidCharacters();
             if (deckCharacterIds == null || deckCharacterIds.Count == 0)
             {
-                Debug.LogWarning("[TrainingManager] 덱에 캐릭터가 없습니다");
+                GameLog.LogWarning("[TrainingManager] 덱에 캐릭터가 없습니다");
                 return;
             }
 
-            Debug.Log($"[TrainingManager] 내 덱 캐릭터 {deckCharacterIds.Count}명 스폰 시작");
+            GameLog.Log($"[TrainingManager] 내 덱 캐릭터 {deckCharacterIds.Count}명 스폰 시작");
 
             int spawnIndex = 0;
             foreach (var characterId in deckCharacterIds)
@@ -770,7 +770,7 @@ namespace Novelian.Training
                 // 캐시된 프리팹 조회
                 if (!loadedCharacterPrefabs.TryGetValue(prefabKey, out GameObject prefab) || prefab == null)
                 {
-                    Debug.LogWarning($"[TrainingManager] 프리팹 없음: {prefabKey}");
+                    GameLog.LogWarning($"[TrainingManager] 프리팹 없음: {prefabKey}");
                     continue;
                 }
 
@@ -810,7 +810,7 @@ namespace Novelian.Training
                 spawnIndex++;
             }
 
-            Debug.Log($"[TrainingManager] 내 덱 캐릭터 {deckCharacters.Count}명 스폰 완료");
+            GameLog.Log($"[TrainingManager] 내 덱 캐릭터 {deckCharacters.Count}명 스폰 완료");
             await UniTask.CompletedTask;
         }
 
@@ -859,7 +859,7 @@ namespace Novelian.Training
 
             if (dummyPrefab == null)
             {
-                Debug.LogWarning("[TrainingManager] 허수아비 프리팹이 설정되지 않음");
+                GameLog.LogWarning("[TrainingManager] 허수아비 프리팹이 설정되지 않음");
                 return;
             }
 
@@ -886,10 +886,10 @@ namespace Novelian.Training
                     dummy = dummyObj.AddComponent<DummyTarget>();
                 }
                 activeDummies.Add(dummy);
-                Debug.Log($"[TrainingManager] 허수아비 {i + 1} 스폰: position={spawnPos}, layer={dummyObj.layer}");
+                GameLog.Log($"[TrainingManager] 허수아비 {i + 1} 스폰: position={spawnPos}, layer={dummyObj.layer}");
             }
 
-            Debug.Log($"[TrainingManager] 허수아비 {dummyCount}마리 스폰 완료");
+            GameLog.Log($"[TrainingManager] 허수아비 {dummyCount}마리 스폰 완료");
         }
 
         /// <summary>

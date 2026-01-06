@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
@@ -59,11 +59,11 @@ namespace Dispatch
                 if (thisPanelDispatchPreset >= 0)
                 {
                     localSelectedPresetIndex = thisPanelDispatchPreset;
-                    Debug.Log($"[DispatchPresetSelector] 파견 중 - 프리셋 {thisPanelDispatchPreset + 1}번으로 로컬 선택 유지");
+                    GameLog.Log($"[DispatchPresetSelector] 파견 중 - 프리셋 {thisPanelDispatchPreset + 1}번으로 로컬 선택 유지");
                 }
                 else
                 {
-                    Debug.LogWarning($"[DispatchPresetSelector] 파견 중이지만 프리셋 인덱스를 찾을 수 없음");
+                    GameLog.LogWarning($"[DispatchPresetSelector] 파견 중이지만 프리셋 인덱스를 찾을 수 없음");
                 }
             }
             else
@@ -76,7 +76,7 @@ namespace Dispatch
                 if (otherDispatchPreset >= 0)
                 {
                     localSelectedPresetIndex = FindFirstAvailablePreset(otherDispatchPreset);
-                    Debug.Log($"[DispatchPresetSelector] 패널 진입 - 프리셋 {otherDispatchPreset + 1}은 다른 파견에서 사용 중, 로컬 선택을 {localSelectedPresetIndex + 1}로 초기화");
+                    GameLog.Log($"[DispatchPresetSelector] 패널 진입 - 프리셋 {otherDispatchPreset + 1}은 다른 파견에서 사용 중, 로컬 선택을 {localSelectedPresetIndex + 1}로 초기화");
                 }
                 else
                 {
@@ -91,7 +91,7 @@ namespace Dispatch
 
             // 프리셋 마크 UI 갱신 (항상 호출)
             RefreshPresetMarks();
-            Debug.Log($"[DispatchPresetSelector] 패널 진입 - 프리셋 UI 갱신 완료 (로컬 선택: {localSelectedPresetIndex + 1})");
+            GameLog.Log($"[DispatchPresetSelector] 패널 진입 - 프리셋 UI 갱신 완료 (로컬 선택: {localSelectedPresetIndex + 1})");
         }
 
         /// <summary>
@@ -118,7 +118,7 @@ namespace Dispatch
             // 로컬 선택 초기화 (패널 나갈 때)
             localSelectedPresetIndex = 0;
             isDirty = false;
-            Debug.Log("[DispatchPresetSelector] 패널 퇴장 - 로컬 선택 초기화");
+            GameLog.Log("[DispatchPresetSelector] 패널 퇴장 - 로컬 선택 초기화");
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace Dispatch
 
             // 현재 프리셋에 맞게 UI 업데이트
             RefreshPresetMarks();
-            Debug.Log($"[DispatchPresetSelector] 프리셋 마크 초기화 완료. 현재 프리셋: {GetCurrentPresetIndex() + 1}");
+            GameLog.Log($"[DispatchPresetSelector] 프리셋 마크 초기화 완료. 현재 프리셋: {GetCurrentPresetIndex() + 1}");
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace Dispatch
                     {
                         WarningUIManager.Instance.ShowWarning("파견 진행 중입니다.");
                     }
-                    Debug.Log($"[DispatchPresetSelector] 파견 중 - {thisPanelDispatchPreset + 1}번 슬롯만 선택 가능");
+                    GameLog.Log($"[DispatchPresetSelector] 파견 중 - {thisPanelDispatchPreset + 1}번 슬롯만 선택 가능");
                     return;
                 }
 
@@ -172,7 +172,7 @@ namespace Dispatch
             // 이미 선택된 프리셋이면 무시
             if (presetIndex == localSelectedPresetIndex)
             {
-                Debug.Log($"[DispatchPresetSelector] 이미 프리셋 {presetIndex + 1}이 선택되어 있습니다.");
+                GameLog.Log($"[DispatchPresetSelector] 이미 프리셋 {presetIndex + 1}이 선택되어 있습니다.");
                 return;
             }
 
@@ -187,7 +187,7 @@ namespace Dispatch
             // 외부 리스너에게 알림 (덱 캐릭터 갱신 등)
             OnPresetSelected?.Invoke(presetIndex);
 
-            Debug.Log($"[DispatchPresetSelector] 로컬 프리셋 선택 {previousPreset + 1} → {presetIndex + 1} (저장 안함)");
+            GameLog.Log($"[DispatchPresetSelector] 로컬 프리셋 선택 {previousPreset + 1} → {presetIndex + 1} (저장 안함)");
         }
 
         /// <summary>
@@ -197,7 +197,7 @@ namespace Dispatch
         {
             isLocked = true;
             lockedPresetIndex = GetCurrentPresetIndex();
-            Debug.Log($"[DispatchPresetSelector] 프리셋 변경 잠금 (프리셋 {lockedPresetIndex + 1})");
+            GameLog.Log($"[DispatchPresetSelector] 프리셋 변경 잠금 (프리셋 {lockedPresetIndex + 1})");
         }
 
         /// <summary>
@@ -207,7 +207,7 @@ namespace Dispatch
         {
             isLocked = false;
             lockedPresetIndex = -1;
-            Debug.Log("[DispatchPresetSelector] 프리셋 변경 잠금 해제");
+            GameLog.Log("[DispatchPresetSelector] 프리셋 변경 잠금 해제");
         }
 
         /// <summary>
@@ -231,7 +231,7 @@ namespace Dispatch
             // 외부 리스너에게 알림 (덱 캐릭터 갱신 등)
             OnPresetSelected?.Invoke(newPresetIndex);
 
-            Debug.Log($"[DispatchPresetSelector] 프리셋 변경 이벤트 수신: {newPresetIndex + 1}");
+            GameLog.Log($"[DispatchPresetSelector] 프리셋 변경 이벤트 수신: {newPresetIndex + 1}");
         }
 
         /// <summary>
@@ -379,7 +379,7 @@ namespace Dispatch
             {
                 // 로컬 선택을 DeckManager에 적용
                 DeckManager.Instance.SwitchPreset(localSelectedPresetIndex);
-                Debug.Log($"[DispatchPresetSelector] 프리셋 선택 적용: {localSelectedPresetIndex + 1}");
+                GameLog.Log($"[DispatchPresetSelector] 프리셋 선택 적용: {localSelectedPresetIndex + 1}");
             }
 
             // 더티 플래그 초기화

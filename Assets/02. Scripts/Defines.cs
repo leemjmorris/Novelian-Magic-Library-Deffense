@@ -1,4 +1,4 @@
-public static class Tag
+﻿public static class Tag
 {
     public static readonly string Player = "Player";
     public static readonly string Monster = "Monster";
@@ -108,7 +108,7 @@ public static class AddressableKey
     [System.Obsolete("Use CharacterPlacementManager.GetCharacterPrefabKey() instead. Individual character prefabs are now loaded via PathTable.")]
     public static string GetCharacterKey(int characterId)
     {
-        UnityEngine.Debug.LogWarning($"[AddressableKey] GetCharacterKey({characterId}) is deprecated. Use PathTable lookup with 'Prefab_' prefix instead.");
+        GameLog.LogWarning($"[AddressableKey] GetCharacterKey({characterId}) is deprecated. Use PathTable lookup with 'Prefab_' prefix instead.");
         return "Character";  // 구 버전 호환성을 위해 유지 (사용하지 말 것)
     }
 
@@ -120,21 +120,21 @@ public static class AddressableKey
     {
         if (CSVLoader.Instance == null)
         {
-            UnityEngine.Debug.LogError("[AddressableKey] CSVLoader.Instance is null");
+            GameLog.LogError("[AddressableKey] CSVLoader.Instance is null");
             return null;
         }
 
         var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
         if (characterData == null)
         {
-            UnityEngine.Debug.LogError($"[AddressableKey] CharacterData not found for ID: {characterId}");
+            GameLog.LogError($"[AddressableKey] CharacterData not found for ID: {characterId}");
             return null;
         }
 
         var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
         if (pathData == null)
         {
-            UnityEngine.Debug.LogError($"[AddressableKey] PathData not found for Path_ID: {characterData.Path_ID}");
+            GameLog.LogError($"[AddressableKey] PathData not found for Path_ID: {characterData.Path_ID}");
             return null;
         }
 
@@ -189,21 +189,21 @@ public static class AddressableKey
     {
         if (CSVLoader.Instance == null)
         {
-            UnityEngine.Debug.LogError("[AddressableKey] CSVLoader.Instance is null");
+            GameLog.LogError("[AddressableKey] CSVLoader.Instance is null");
             return null;
         }
 
         var monsterData = CSVLoader.Instance.GetData<MonsterData>(monsterId);
         if (monsterData == null)
         {
-            UnityEngine.Debug.LogError($"[AddressableKey] MonsterData not found for ID: {monsterId}");
+            GameLog.LogError($"[AddressableKey] MonsterData not found for ID: {monsterId}");
             return null;
         }
 
         var pathData = CSVLoader.Instance.GetData<PathData>(monsterData.Path_ID);
         if (pathData == null)
         {
-            UnityEngine.Debug.LogError($"[AddressableKey] PathData not found for Path_ID: {monsterData.Path_ID}");
+            GameLog.LogError($"[AddressableKey] PathData not found for Path_ID: {monsterData.Path_ID}");
             return null;
         }
 

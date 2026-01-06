@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Coffee.UIExtensions;
 using AssetKits.ParticleImage;
 using AssetKits.ParticleImage.Enumerations;
@@ -43,7 +43,7 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 InitializeParticleImage(backgroundEffectParticleImage);
             }
-            Debug.Log($"[CardParticleManager] Initialized - Type: {backgroundEffectType}");
+            GameLog.Log($"[CardParticleManager] Initialized - Type: {backgroundEffectType}");
         }
 
         private void InitializeUIParticle(UIParticle uiParticle, ref ParticleSystem[] particleSystems)
@@ -91,7 +91,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 ResetAndPlayParticleImage(backgroundEffectParticleImage);
             }
 
-            Debug.Log($"[CardParticleManager] Background effect started - Type: {backgroundEffectType}");
+            GameLog.Log($"[CardParticleManager] Background effect started - Type: {backgroundEffectType}");
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 backgroundEffectParticleImage.Stop(true);
             }
 
-            Debug.Log("[CardParticleManager] Background effect stopped");
+            GameLog.Log("[CardParticleManager] Background effect stopped");
         }
 
         private void ResetAndPlayUIParticle(UIParticle uiParticle, ParticleSystem[] particleSystems)

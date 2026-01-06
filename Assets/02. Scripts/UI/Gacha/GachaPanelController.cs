@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
@@ -108,7 +108,7 @@ public class GachaPanelController : MonoBehaviour
     {
         if (videoPlayer == null || videoRawImage == null)
         {
-            Debug.LogWarning("[GachaPanelController] VideoPlayer 또는 VideoRawImage가 설정되지 않았습니다!");
+            GameLog.LogWarning("[GachaPanelController] VideoPlayer 또는 VideoRawImage가 설정되지 않았습니다!");
             return;
         }
 
@@ -123,7 +123,7 @@ public class GachaPanelController : MonoBehaviour
             videoRenderTexture = new RenderTexture(width, height, 0);
             videoRenderTexture.Create();
 
-            Debug.Log($"[GachaPanelController] 동영상 해상도: {width}x{height}");
+            GameLog.Log($"[GachaPanelController] 동영상 해상도: {width}x{height}");
         }
         else
         {
@@ -142,7 +142,7 @@ public class GachaPanelController : MonoBehaviour
         // 초기에는 비디오 UI 숨김
         videoRawImage.gameObject.SetActive(false);
 
-        Debug.Log("[GachaPanelController] VideoPlayer 초기화 완료");
+        GameLog.Log("[GachaPanelController] VideoPlayer 초기화 완료");
     }
 
     private void OnEnable()
@@ -299,7 +299,7 @@ public class GachaPanelController : MonoBehaviour
     {
         if (CurrencyManager.Instance == null)
         {
-            Debug.LogError("[GachaPanelController] CurrencyManager가 없습니다!");
+            GameLog.LogError("[GachaPanelController] CurrencyManager가 없습니다!");
             return false;
         }
 
@@ -310,7 +310,7 @@ public class GachaPanelController : MonoBehaviour
         if (CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.APPLICATION_ID, appCost))
         {
             CurrencyManager.Instance.SpendCurrency(CurrencyManager.APPLICATION_ID, appCost);
-            Debug.Log($"[Gacha] 지원서 {appCost}개 소비");
+            GameLog.Log($"[Gacha] 지원서 {appCost}개 소비");
             return true;
         }
 
@@ -318,14 +318,14 @@ public class GachaPanelController : MonoBehaviour
         if (CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.GOLD_ID, goldCost))
         {
             CurrencyManager.Instance.SpendCurrency(CurrencyManager.GOLD_ID, goldCost);
-            Debug.Log($"[Gacha] 골드 {goldCost} 소비");
+            GameLog.Log($"[Gacha] 골드 {goldCost} 소비");
             return true;
         }
 
         // 둘 다 부족
         if (WarningUIManager.Instance != null)
             WarningUIManager.Instance.ShowWarning("재화가 부족합니다");
-        Debug.LogWarning("[Gacha] 재화 부족!");
+        GameLog.LogWarning("[Gacha] 재화 부족!");
         return false;
     }
 
@@ -345,7 +345,7 @@ public class GachaPanelController : MonoBehaviour
         {
             // 신규 캐릭터 → 해금
             CharacterOwnershipManager.Instance.UnlockCharacter(characterId);
-            Debug.Log($"[Gacha] 신규 캐릭터 획득: {characterId}");
+            GameLog.Log($"[Gacha] 신규 캐릭터 획득: {characterId}");
             return new GachaResult(characterId, true, 0);
         }
         else
@@ -354,7 +354,7 @@ public class GachaPanelController : MonoBehaviour
             int characterIndex = System.Array.IndexOf(CHARACTER_POOL, characterId);
             int essenceId = ESSENCE_ID_BASE + characterIndex;  // 30001 + index
             IngredientManager.Instance.AddIngredient(essenceId, 1);
-            Debug.Log($"[Gacha] 중복 캐릭터! 정수 지급: {essenceId}");
+            GameLog.Log($"[Gacha] 중복 캐릭터! 정수 지급: {essenceId}");
             return new GachaResult(characterId, false, essenceId);
         }
     }
@@ -395,7 +395,7 @@ public class GachaPanelController : MonoBehaviour
     {
         if (singleSummonPanel == null || singleSlot == null)
         {
-            Debug.LogError("[GachaPanelController] singleSummonPanel 또는 singleSlot이 설정되지 않았습니다!");
+            GameLog.LogError("[GachaPanelController] singleSummonPanel 또는 singleSlot이 설정되지 않았습니다!");
             return;
         }
 
@@ -415,7 +415,7 @@ public class GachaPanelController : MonoBehaviour
         // 연출 완료 - 닫기 버튼 표시
         ShowResultCloseButton();
 
-        Debug.Log($"[Gacha] 1회 뽑기 결과: {result.GetCharacterName()} (신규: {result.IsNew})");
+        GameLog.Log($"[Gacha] 1회 뽑기 결과: {result.GetCharacterName()} (신규: {result.IsNew})");
     }
 
     /// <summary>
@@ -425,7 +425,7 @@ public class GachaPanelController : MonoBehaviour
     {
         if (tenSummonPanel == null || tenSlots == null || tenSlots.Length < 10)
         {
-            Debug.LogError("[GachaPanelController] tenSummonPanel 또는 tenSlots이 올바르게 설정되지 않았습니다!");
+            GameLog.LogError("[GachaPanelController] tenSummonPanel 또는 tenSlots이 올바르게 설정되지 않았습니다!");
             return;
         }
 
@@ -466,7 +466,7 @@ public class GachaPanelController : MonoBehaviour
             if (result.IsNew) newCount++;
             else dupeCount++;
         }
-        Debug.Log($"[Gacha] 10회 뽑기 결과: 신규 {newCount}명, 중복 {dupeCount}명");
+        GameLog.Log($"[Gacha] 10회 뽑기 결과: 신규 {newCount}명, 중복 {dupeCount}명");
     }
 
     #endregion
@@ -574,7 +574,7 @@ public class GachaPanelController : MonoBehaviour
         else
         {
             // 비디오가 설정되지 않은 경우 잠시 대기 후 진행
-            Debug.LogWarning("[GachaPanelController] 비디오가 설정되지 않아 기본 대기로 진행합니다.");
+            GameLog.LogWarning("[GachaPanelController] 비디오가 설정되지 않아 기본 대기로 진행합니다.");
             await UniTask.Delay(500);
         }
 

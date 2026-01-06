@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using NovelianMagicLibraryDefense.Managers;
@@ -49,7 +49,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
             else
             {
-                Debug.LogError("[LevelUpCardPanel] Panel GameObject not assigned!");
+                GameLog.LogError("[LevelUpCardPanel] Panel GameObject not assigned!");
             }
         }
 
@@ -78,7 +78,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (cardIds == null || cardIds.Length != 3)
             {
-                Debug.LogError("[LevelUpCardPanel] Must provide exactly 3 card IDs!");
+                GameLog.LogError("[LevelUpCardPanel] Must provide exactly 3 card IDs!");
                 return;
             }
 
@@ -127,7 +127,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (cardContainer == null || cardPrefab == null)
             {
-                Debug.LogError("[LevelUpCardPanel] Card container or prefab not assigned!");
+                GameLog.LogError("[LevelUpCardPanel] Card container or prefab not assigned!");
                 return;
             }
 
@@ -147,14 +147,14 @@ namespace NovelianMagicLibraryDefense.UI
                 }
                 else
                 {
-                    Debug.LogWarning($"[LevelUpCardPanel] Card prefab missing Button component!");
+                    GameLog.LogWarning($"[LevelUpCardPanel] Card prefab missing Button component!");
                 }
 
                 // TODO: Set card visual data (sprite, description, etc.) based on cardId
                 // Example: cardObj.GetComponent<LevelUpCard>()?.SetData(cardId);
 
                 cardInstances[i] = cardObj;
-                Debug.Log($"[LevelUpCardPanel] Created card for upgrade ID {cardIds[i]}");
+                GameLog.Log($"[LevelUpCardPanel] Created card for upgrade ID {cardIds[i]}");
             }
         }
 
@@ -163,7 +163,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private void OnCardClicked(int cardId)
         {
-            Debug.Log($"[LevelUpCardPanel] Card clicked: Upgrade ID {cardId}");
+            GameLog.Log($"[LevelUpCardPanel] Card clicked: Upgrade ID {cardId}");
 
             // TODO: Apply upgrade logic here
             // Example: UpgradeManager.ApplyUpgrade(cardId);

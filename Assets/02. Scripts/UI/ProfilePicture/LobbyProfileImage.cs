@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -140,7 +140,7 @@ public class LobbyProfileImage : MonoBehaviour
             if (profileImage != null && defaultProfileSprite != null)
             {
                 profileImage.sprite = defaultProfileSprite;
-                Debug.Log("[LobbyProfileImage] 프로필 이미지를 기본 이미지로 복원");
+                GameLog.Log("[LobbyProfileImage] 프로필 이미지를 기본 이미지로 복원");
             }
             return;
         }
@@ -164,7 +164,7 @@ public class LobbyProfileImage : MonoBehaviour
             if (frameImage != null && defaultFrameSprite != null)
             {
                 frameImage.sprite = defaultFrameSprite;
-                Debug.Log("[LobbyProfileImage] 프레임 이미지를 기본 이미지로 복원");
+                GameLog.Log("[LobbyProfileImage] 프레임 이미지를 기본 이미지로 복원");
             }
 
             // RectTransform 기본 크기로 복원
@@ -186,7 +186,7 @@ public class LobbyProfileImage : MonoBehaviour
         if (profilePanelRect != null)
         {
             profilePanelRect.sizeDelta = frameEquippedPanelSize;
-            Debug.Log($"[LobbyProfileImage] ProfilePanel 크기 변경: {frameEquippedPanelSize}");
+            GameLog.Log($"[LobbyProfileImage] ProfilePanel 크기 변경: {frameEquippedPanelSize}");
         }
 
         if (profileMaskRect != null)
@@ -195,7 +195,7 @@ public class LobbyProfileImage : MonoBehaviour
             var maskPos = profileMaskRect.anchoredPosition;
             maskPos.y = frameEquippedMaskPosY;
             profileMaskRect.anchoredPosition = maskPos;
-            Debug.Log($"[LobbyProfileImage] ProfileMask 크기 변경: {frameEquippedMaskSize}, PosY: {frameEquippedMaskPosY}");
+            GameLog.Log($"[LobbyProfileImage] ProfileMask 크기 변경: {frameEquippedMaskSize}, PosY: {frameEquippedMaskPosY}");
         }
 
         if (profileMaskImageRect != null)
@@ -204,7 +204,7 @@ public class LobbyProfileImage : MonoBehaviour
             var maskImgPos = profileMaskImageRect.anchoredPosition;
             maskImgPos.y = frameEquippedMaskImagePosY;
             profileMaskImageRect.anchoredPosition = maskImgPos;
-            Debug.Log($"[LobbyProfileImage] ProfileMaskImage 크기 변경: {frameEquippedMaskImageSize}, PosY: {frameEquippedMaskImagePosY}");
+            GameLog.Log($"[LobbyProfileImage] ProfileMaskImage 크기 변경: {frameEquippedMaskImageSize}, PosY: {frameEquippedMaskImagePosY}");
         }
 
         if (profileImageRect != null)
@@ -213,7 +213,7 @@ public class LobbyProfileImage : MonoBehaviour
             var imgPos = profileImageRect.anchoredPosition;
             imgPos.y = frameEquippedImagePosY;
             profileImageRect.anchoredPosition = imgPos;
-            Debug.Log($"[LobbyProfileImage] ProfileImage 크기 변경: {frameEquippedImageSize}, PosY: {frameEquippedImagePosY}");
+            GameLog.Log($"[LobbyProfileImage] ProfileImage 크기 변경: {frameEquippedImageSize}, PosY: {frameEquippedImagePosY}");
         }
     }
 
@@ -225,7 +225,7 @@ public class LobbyProfileImage : MonoBehaviour
         if (profilePanelRect != null)
         {
             profilePanelRect.sizeDelta = defaultPanelSize;
-            Debug.Log($"[LobbyProfileImage] ProfilePanel 크기 복원: {defaultPanelSize}");
+            GameLog.Log($"[LobbyProfileImage] ProfilePanel 크기 복원: {defaultPanelSize}");
         }
 
         if (profileMaskRect != null)
@@ -234,7 +234,7 @@ public class LobbyProfileImage : MonoBehaviour
             var maskPos = profileMaskRect.anchoredPosition;
             maskPos.y = defaultMaskPosY;
             profileMaskRect.anchoredPosition = maskPos;
-            Debug.Log($"[LobbyProfileImage] ProfileMask 크기 복원: {defaultMaskSize}, PosY: {defaultMaskPosY}");
+            GameLog.Log($"[LobbyProfileImage] ProfileMask 크기 복원: {defaultMaskSize}, PosY: {defaultMaskPosY}");
         }
 
         if (profileMaskImageRect != null)
@@ -243,7 +243,7 @@ public class LobbyProfileImage : MonoBehaviour
             var maskImgPos = profileMaskImageRect.anchoredPosition;
             maskImgPos.y = defaultMaskImagePosY;
             profileMaskImageRect.anchoredPosition = maskImgPos;
-            Debug.Log($"[LobbyProfileImage] ProfileMaskImage 크기 복원: {defaultMaskImageSize}, PosY: {defaultMaskImagePosY}");
+            GameLog.Log($"[LobbyProfileImage] ProfileMaskImage 크기 복원: {defaultMaskImageSize}, PosY: {defaultMaskImagePosY}");
         }
 
         if (profileImageRect != null)
@@ -252,7 +252,7 @@ public class LobbyProfileImage : MonoBehaviour
             var imgPos = profileImageRect.anchoredPosition;
             imgPos.y = defaultImagePosY;
             profileImageRect.anchoredPosition = imgPos;
-            Debug.Log($"[LobbyProfileImage] ProfileImage 크기 복원: {defaultImageSize}, PosY: {defaultImagePosY}");
+            GameLog.Log($"[LobbyProfileImage] ProfileImage 크기 복원: {defaultImageSize}, PosY: {defaultImagePosY}");
         }
     }
 
@@ -268,11 +268,11 @@ public class LobbyProfileImage : MonoBehaviour
             if (handle.Status == AsyncOperationStatus.Succeeded && frameImage != null)
             {
                 frameImage.sprite = handle.Result;
-                Debug.Log($"[LobbyProfileImage] 프레임 이미지 변경: {spriteKey}");
+                GameLog.Log($"[LobbyProfileImage] 프레임 이미지 변경: {spriteKey}");
             }
             else
             {
-                Debug.LogWarning($"[LobbyProfileImage] 프레임 이미지 로드 실패: {spriteKey}");
+                GameLog.LogWarning($"[LobbyProfileImage] 프레임 이미지 로드 실패: {spriteKey}");
             }
         };
     }
@@ -302,11 +302,11 @@ public class LobbyProfileImage : MonoBehaviour
             if (handle.Status == AsyncOperationStatus.Succeeded && profileImage != null)
             {
                 profileImage.sprite = handle.Result;
-                Debug.Log($"[LobbyProfileImage] 프로필 이미지 변경: {spriteKey}");
+                GameLog.Log($"[LobbyProfileImage] 프로필 이미지 변경: {spriteKey}");
             }
             else
             {
-                Debug.LogWarning($"[LobbyProfileImage] 프로필 이미지 로드 실패: {spriteKey}");
+                GameLog.LogWarning($"[LobbyProfileImage] 프로필 이미지 로드 실패: {spriteKey}");
             }
         };
     }

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Managers
@@ -54,7 +54,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             else
             {
-                Debug.LogWarning("[TimeManager] Cannot pop time scale - only one value remaining");
+                GameLog.LogWarning("[TimeManager] Cannot pop time scale - only one value remaining");
             }
         }
 

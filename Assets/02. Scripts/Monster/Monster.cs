@@ -91,7 +91,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
 
         if (levelData == null)
         {
-            Debug.LogWarning("[Monster] MonsterLevelData is null, using default stats");
+            GameLog.LogWarning("[Monster] MonsterLevelData is null, using default stats");
             return;
         }
 
@@ -223,7 +223,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // 맵 밖으로 떨어진 경우 despawn
         if (transform.position.y < fallOffThreshold)
         {
-            Debug.LogWarning($"[Monster] Fell off map at {transform.position}, despawning");
+            GameLog.LogWarning($"[Monster] Fell off map at {transform.position}, despawning");
             Die();
             return;
         }
@@ -369,7 +369,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         dizzyTimer = duration;
         monsterAnimator.SetBool(ANIM_DIZZY, true);
 
-        Debug.Log($"[CC] {gameObject.name} 기절(Stun) 적용! 지속시간: {duration:F1}초");
+        GameLog.Log($"[CC] {gameObject.name} 기절(Stun) 적용! 지속시간: {duration:F1}초");
 
         // 스턴 VFX 스폰
         SpawnStunVFX(duration);
@@ -440,7 +440,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         isSlowed = true;
         slowMultiplier = 1f - (slowPercent / 100f); // 50% slow = 0.5 multiplier
 
-        Debug.Log($"[CC] {gameObject.name} 둔화(Slow) 적용! {slowPercent * 100:F0}% 감속, 지속시간: {duration:F1}초");
+        GameLog.Log($"[CC] {gameObject.name} 둔화(Slow) 적용! {slowPercent * 100:F0}% 감속, 지속시간: {duration:F1}초");
 
         // Start slow duration
         SlowDurationAsync(duration, slowCts.Token).Forget();
@@ -659,7 +659,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // 지속시간 후 자동 파괴
         Destroy(currentDOTVFX, duration);
 
-        Debug.Log($"[DOT] {gameObject.name} DOT VFX 스폰: {prefab.name}, 지속시간: {duration:F1}초");
+        GameLog.Log($"[DOT] {gameObject.name} DOT VFX 스폰: {prefab.name}, 지속시간: {duration:F1}초");
     }
 
     /// <summary>
@@ -1209,7 +1209,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         }
         else
         {
-            Debug.LogWarning($"[Monster] Die() - monsterEvents is NULL! 경험치 이벤트 발생 불가! Monster: {gameObject.name}");
+            GameLog.LogWarning($"[Monster] Die() - monsterEvents is NULL! 경험치 이벤트 발생 불가! Monster: {gameObject.name}");
         }
 
         // 4. 즉시 Dissolve 시작
@@ -1248,7 +1248,7 @@ public class Monster : BaseEntity, ITargetable, IMovable
         // DissolveSettings가 없으면 그냥 대기 후 종료
         if (dissolveSettings == null)
         {
-            Debug.LogWarning($"[Monster] {gameObject.name}: DissolveSettings가 설정되지 않아 Dissolve 효과를 재생할 수 없습니다.");
+            GameLog.LogWarning($"[Monster] {gameObject.name}: DissolveSettings가 설정되지 않아 Dissolve 효과를 재생할 수 없습니다.");
             await UniTask.Delay((int)(dissolveDuration * 1000));
             return;
         }

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -137,13 +137,13 @@ public class GachaResultSlot : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[GachaResultSlot] 아이콘 로드 실패: {iconKey}");
+                GameLog.LogWarning($"[GachaResultSlot] 아이콘 로드 실패: {iconKey}");
                 characterIcon.color = new Color(1f, 1f, 1f, 0.5f);
             }
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"[GachaResultSlot] 아이콘 로드 예외: {e.Message}");
+            GameLog.LogWarning($"[GachaResultSlot] 아이콘 로드 예외: {e.Message}");
             characterIcon.color = new Color(1f, 1f, 1f, 0.5f);
         }
     }
@@ -170,13 +170,13 @@ public class GachaResultSlot : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[GachaResultSlot] 정수 아이콘 로드 실패: {iconKey}");
+                GameLog.LogWarning($"[GachaResultSlot] 정수 아이콘 로드 실패: {iconKey}");
                 characterIcon.color = new Color(1f, 1f, 1f, 0.5f);
             }
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"[GachaResultSlot] 정수 아이콘 로드 예외: {e.Message}");
+            GameLog.LogWarning($"[GachaResultSlot] 정수 아이콘 로드 예외: {e.Message}");
             characterIcon.color = new Color(1f, 1f, 1f, 0.5f);
         }
     }

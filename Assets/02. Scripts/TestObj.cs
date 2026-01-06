@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine.InputSystem;
 
@@ -22,7 +22,7 @@ public class TestObj : MonoBehaviour
         InputManager.OnDragUpdate += OnDragUpdateTest;
         InputManager.OnDrop += OnDropTest;
 
-        Debug.Log("[TestObj] InputManager 이벤트 구독 완료 - 마우스 클릭 및 드래그 테스트 준비됨");
+        GameLog.Log("[TestObj] InputManager 이벤트 구독 완료 - 마우스 클릭 및 드래그 테스트 준비됨");
     }
 
     private void OnDisable()
@@ -41,22 +41,22 @@ public class TestObj : MonoBehaviour
     // 테스트용 이벤트 핸들러
     private void OnShortPressTest(Vector2 position)
     {
-        Debug.Log($"<color=green>[TEST] Short Press 감지! 위치: {position}</color>");
+        GameLog.Log($"<color=green>[TEST] Short Press 감지! 위치: {position}</color>");
     }
 
     private void OnLongPressTest(Vector2 position)
     {
-        Debug.Log($"<color=yellow>[TEST] Long Press 시작! 위치: {position} (2초 유지 완료)</color>");
+        GameLog.Log($"<color=yellow>[TEST] Long Press 시작! 위치: {position} (2초 유지 완료)</color>");
     }
 
     private void OnDragUpdateTest(Vector2 position)
     {
-        Debug.Log($"<color=cyan>[TEST] Drag 중... 위치: {position}</color>");
+        GameLog.Log($"<color=cyan>[TEST] Drag 중... 위치: {position}</color>");
     }
 
     private void OnDropTest(Vector2 position)
     {
-        Debug.Log($"<color=magenta>[TEST] Drop 완료! 위치: {position}</color>");
+        GameLog.Log($"<color=magenta>[TEST] Drop 완료! 위치: {position}</color>");
     }
 
     private void Update()

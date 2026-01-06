@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Novelian.Combat;
 using UnityEngine;
@@ -31,7 +31,7 @@ public class CharacterCardGridManager : MonoBehaviour
         // Issue #476: Inspector에서 연결 필수 (Find 메서드 사용 금지)
         if (placementManager == null)
         {
-            Debug.LogError("[CharacterCardGridManager] PlacementManager가 Inspector에서 연결되지 않았습니다!");
+            GameLog.LogError("[CharacterCardGridManager] PlacementManager가 Inspector에서 연결되지 않았습니다!");
         }
     }
 
@@ -63,19 +63,19 @@ public class CharacterCardGridManager : MonoBehaviour
     {
         if (slotIndex < 0 || slotIndex >= cardSlots.Length)
         {
-            Debug.LogWarning($"[CharacterCardGridManager] Invalid slot index: {slotIndex}");
+            GameLog.LogWarning($"[CharacterCardGridManager] Invalid slot index: {slotIndex}");
             return;
         }
 
         var card = cardSlots[slotIndex];
         if (card == null)
         {
-            Debug.LogWarning($"[CharacterCardGridManager] Card slot {slotIndex} is null");
+            GameLog.LogWarning($"[CharacterCardGridManager] Card slot {slotIndex} is null");
             return;
         }
 
         // Issue #476: 디버그 - 초기화할 카드 객체 정보
-        Debug.Log($"[CharacterCardGridManager] OnCharacterSpawned: slotIndex={slotIndex}, card={card.gameObject.name}, instanceId={card.GetInstanceID()}");
+        GameLog.Log($"[CharacterCardGridManager] OnCharacterSpawned: slotIndex={slotIndex}, card={card.gameObject.name}, instanceId={card.GetInstanceID()}");
 
         // 슬롯 매핑 저장
         slotToCharacterId[slotIndex] = characterId;
@@ -83,7 +83,7 @@ public class CharacterCardGridManager : MonoBehaviour
         // ChaCard 초기화 (Character 인스턴스 포함)
         await card.Initialize(characterId, starTier, character);
 
-        Debug.Log($"[CharacterCardGridManager] Slot {slotIndex} updated: Character {characterId}, {starTier}성, card.IsEmpty={card.IsEmpty}");
+        GameLog.Log($"[CharacterCardGridManager] Slot {slotIndex} updated: Character {characterId}, {starTier}성, card.IsEmpty={card.IsEmpty}");
     }
 
     /// <summary>
@@ -102,13 +102,13 @@ public class CharacterCardGridManager : MonoBehaviour
                 if (slotIndex >= 0 && slotIndex < cardSlots.Length && cardSlots[slotIndex] != null)
                 {
                     cardSlots[slotIndex].UpdateStarTier(newStarTier);
-                    Debug.Log($"[CharacterCardGridManager] Character {characterId} upgraded to {newStarTier}성 at slot {slotIndex}");
+                    GameLog.Log($"[CharacterCardGridManager] Character {characterId} upgraded to {newStarTier}성 at slot {slotIndex}");
                 }
                 return;
             }
         }
 
-        Debug.LogWarning($"[CharacterCardGridManager] Character {characterId} not found in any slot");
+        GameLog.LogWarning($"[CharacterCardGridManager] Character {characterId} not found in any slot");
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ public class CharacterCardGridManager : MonoBehaviour
         }
 
         slotToCharacterId.Remove(slotIndex);
-        Debug.Log($"[CharacterCardGridManager] Slot {slotIndex} cleared");
+        GameLog.Log($"[CharacterCardGridManager] Slot {slotIndex} cleared");
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public class CharacterCardGridManager : MonoBehaviour
         }
 
         slotToCharacterId.Clear();
-        Debug.Log("[CharacterCardGridManager] All slots cleared");
+        GameLog.Log("[CharacterCardGridManager] All slots cleared");
     }
 
     /// <summary>
@@ -153,7 +153,7 @@ public class CharacterCardGridManager : MonoBehaviour
     {
         if (placementManager == null)
         {
-            Debug.LogWarning("[CharacterCardGridManager] PlacementManager is null, cannot sync");
+            GameLog.LogWarning("[CharacterCardGridManager] PlacementManager is null, cannot sync");
             return;
         }
 
@@ -164,7 +164,7 @@ public class CharacterCardGridManager : MonoBehaviour
         var characters = placementManager.GetAllCharacters();
         if (characters == null || characters.Count == 0)
         {
-            Debug.Log("[CharacterCardGridManager] No characters to sync");
+            GameLog.Log("[CharacterCardGridManager] No characters to sync");
             return;
         }
 
@@ -180,7 +180,7 @@ public class CharacterCardGridManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"[CharacterCardGridManager] Synced {characters.Count} characters");
+        GameLog.Log($"[CharacterCardGridManager] Synced {characters.Count} characters");
     }
 
     /// <summary>
@@ -264,7 +264,7 @@ public class CharacterCardGridManager : MonoBehaviour
                 cardSlots[i].RefreshStats();
             }
         }
-        Debug.Log("[CharacterCardGridManager] All card stats refreshed");
+        GameLog.Log("[CharacterCardGridManager] All card stats refreshed");
     }
 
     #region Support Skill Selection (Issue #437)
@@ -287,7 +287,7 @@ public class CharacterCardGridManager : MonoBehaviour
         var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
         if (supportData == null)
         {
-            Debug.LogWarning($"[CharacterCardGridManager] SupportSkillData not found for ID: {supportId}");
+            GameLog.LogWarning($"[CharacterCardGridManager] SupportSkillData not found for ID: {supportId}");
             ResetCharacterAnimations();
             return;
         }
@@ -295,11 +295,11 @@ public class CharacterCardGridManager : MonoBehaviour
         int compatibleCount = 0;
 
         // Issue #476: 디버그 - 각 슬롯 상태 출력
-        Debug.Log($"[CharacterCardGridManager] ShowCompatibleCharacters 시작: cardSlots.Length={cardSlots.Length}");
+        GameLog.Log($"[CharacterCardGridManager] ShowCompatibleCharacters 시작: cardSlots.Length={cardSlots.Length}");
         for (int i = 0; i < cardSlots.Length; i++)
         {
             var card = cardSlots[i];
-            Debug.Log($"[CharacterCardGridManager] Slot[{i}]: card={card != null}, name={card?.gameObject.name}, instanceId={card?.GetInstanceID()}, IsEmpty={card?.IsEmpty}, CharacterId={card?.CharacterId}");
+            GameLog.Log($"[CharacterCardGridManager] Slot[{i}]: card={card != null}, name={card?.gameObject.name}, instanceId={card?.GetInstanceID()}, IsEmpty={card?.IsEmpty}, CharacterId={card?.CharacterId}");
             if (card == null || card.IsEmpty) continue;
 
             // 해당 슬롯의 캐릭터 가져오기
@@ -337,7 +337,7 @@ public class CharacterCardGridManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"[CharacterCardGridManager] ShowCompatibleCharacters: SupportID={supportId}, 호환={compatibleCount}명");
+        GameLog.Log($"[CharacterCardGridManager] ShowCompatibleCharacters: SupportID={supportId}, 호환={compatibleCount}명");
     }
 
     /// <summary>
@@ -355,7 +355,7 @@ public class CharacterCardGridManager : MonoBehaviour
             }
         }
 
-        Debug.Log("[CharacterCardGridManager] Character animations reset");
+        GameLog.Log("[CharacterCardGridManager] Character animations reset");
     }
 
     /// <summary>
@@ -366,13 +366,13 @@ public class CharacterCardGridManager : MonoBehaviour
     {
         if (linkedCardSelectPanel == null)
         {
-            Debug.Log("[CharacterCardGridManager] No linked CardSelectPanel");
+            GameLog.Log("[CharacterCardGridManager] No linked CardSelectPanel");
             return;
         }
 
         if (!linkedCardSelectPanel.HasSelectedSupportSkill())
         {
-            Debug.Log("[CharacterCardGridManager] No support skill selected");
+            GameLog.Log("[CharacterCardGridManager] No support skill selected");
             return;
         }
 
@@ -393,13 +393,13 @@ public class CharacterCardGridManager : MonoBehaviour
     {
         if (sourceCard == null || sourceCard.IsEmpty)
         {
-            Debug.LogWarning("[CharacterCardGridManager] Cannot show popup for empty card");
+            GameLog.LogWarning("[CharacterCardGridManager] Cannot show popup for empty card");
             return;
         }
 
         if (characterInfoCard == null)
         {
-            Debug.LogError("[CharacterCardGridManager] characterInfoCard is not assigned!");
+            GameLog.LogError("[CharacterCardGridManager] characterInfoCard is not assigned!");
             return;
         }
 
@@ -425,7 +425,7 @@ public class CharacterCardGridManager : MonoBehaviour
         // UI 최상위로 이동 (다른 UI 위에 표시)
         characterInfoCard.transform.SetAsLastSibling();
 
-        Debug.Log($"[CharacterCardGridManager] Popup opened for CharacterId={sourceCard.CharacterId}");
+        GameLog.Log($"[CharacterCardGridManager] Popup opened for CharacterId={sourceCard.CharacterId}");
     }
 
     /// <summary>
@@ -438,7 +438,7 @@ public class CharacterCardGridManager : MonoBehaviour
         {
             characterInfoCard.SetPopupMode(false);
             characterInfoCard.gameObject.SetActive(false);
-            Debug.Log("[CharacterCardGridManager] Popup closed");
+            GameLog.Log("[CharacterCardGridManager] Popup closed");
         }
 
         // 딤 배경 비활성화

@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
@@ -124,7 +124,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
     {
         if (data == null)
         {
-            Debug.LogError("[PartySynergyEnhancementPanel] PartySynergyData is null!");
+            GameLog.LogError("[PartySynergyEnhancementPanel] PartySynergyData is null!");
             return;
         }
 
@@ -148,7 +148,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
         // 업그레이드 버튼 정보 업데이트
         UpdateUpgradeButton(data, currentSynergyLevel);
 
-        Debug.Log($"[PartySynergyEnhancementPanel] Initialized - PartyID: {data.Party_ID}, PartySize: {data.Party_Size}");
+        GameLog.Log($"[PartySynergyEnhancementPanel] Initialized - PartyID: {data.Party_ID}, PartySize: {data.Party_Size}");
     }
 
     private void InitializeCharacterSlots(PartySynergyData data)
@@ -310,7 +310,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
             panel.SetActive(true);
         }
 
-        Debug.Log($"[PartySynergyEnhancementPanel] ShowPanel - gameObject.active: {gameObject.activeSelf}, panel: {(panel != null ? panel.activeSelf.ToString() : "null")}");
+        GameLog.Log($"[PartySynergyEnhancementPanel] ShowPanel - gameObject.active: {gameObject.activeSelf}, panel: {(panel != null ? panel.activeSelf.ToString() : "null")}");
     }
 
     /// <summary>
@@ -330,7 +330,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
             gameObject.SetActive(false);
         }
 
-        Debug.Log($"[PartySynergyEnhancementPanel] HidePanel - gameObject.active: {gameObject.activeSelf}");
+        GameLog.Log($"[PartySynergyEnhancementPanel] HidePanel - gameObject.active: {gameObject.activeSelf}");
     }
 
     /// <summary>
@@ -338,7 +338,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
     /// </summary>
     private void OnCloseButtonClicked()
     {
-        Debug.Log("[PartySynergyEnhancementPanel] Close button clicked");
+        GameLog.Log("[PartySynergyEnhancementPanel] Close button clicked");
         HidePanel();
     }
 
@@ -368,13 +368,13 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
         // Issue 1: 연속 클릭 방지
         if (isUpgrading)
         {
-            Debug.Log("[PartySynergyEnhancementPanel] Upgrade already in progress");
+            GameLog.Log("[PartySynergyEnhancementPanel] Upgrade already in progress");
             return;
         }
 
         if (currentSynergyData == null || currentEnhancementData == null)
         {
-            Debug.LogWarning("[PartySynergyEnhancementPanel] No enhancement data available");
+            GameLog.LogWarning("[PartySynergyEnhancementPanel] No enhancement data available");
             return;
         }
 
@@ -392,7 +392,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
 
         if (!materialSuccess)
         {
-            Debug.LogWarning("[PartySynergyEnhancementPanel] Failed to consume materials");
+            GameLog.LogWarning("[PartySynergyEnhancementPanel] Failed to consume materials");
             isUpgrading = false;
             RefreshUI(); // 버튼 상태 복원
             return;
@@ -409,7 +409,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
             {
                 IngredientManager.Instance.AddIngredient(materialId, materialCount);
             }
-            Debug.LogWarning("[PartySynergyEnhancementPanel] Failed to consume gold");
+            GameLog.LogWarning("[PartySynergyEnhancementPanel] Failed to consume gold");
             isUpgrading = false;
             RefreshUI(); // 버튼 상태 복원
             return;
@@ -423,7 +423,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
             await PartySynergyManager.Instance.SetSynergyLevelAsync(currentSynergyData.Party_ID, newLevel);
         }
 
-        Debug.Log($"[PartySynergyEnhancementPanel] Upgrade successful! Level: {currentLevel} -> {newLevel}");
+        GameLog.Log($"[PartySynergyEnhancementPanel] Upgrade successful! Level: {currentLevel} -> {newLevel}");
 
         // UI 갱신 후 플래그 해제
         RefreshUI();
@@ -483,7 +483,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
         currentEnhancementData = CSVLoader.Instance?.GetData<PartySynergyEnhancementData>(nextUpgradeId);
         if (currentEnhancementData == null)
         {
-            Debug.LogWarning($"[PartySynergyEnhancementPanel] Enhancement data not found for ID: {nextUpgradeId}");
+            GameLog.LogWarning($"[PartySynergyEnhancementPanel] Enhancement data not found for ID: {nextUpgradeId}");
             return;
         }
 
@@ -582,7 +582,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"[PartySynergyEnhancementPanel] Failed to load material icon: {iconPath}\n{e.Message}");
+            GameLog.LogWarning($"[PartySynergyEnhancementPanel] Failed to load material icon: {iconPath}\n{e.Message}");
             materialIcon.enabled = false;
         }
     }
@@ -648,7 +648,7 @@ public class PartySynergyEnhancementPanel : MonoBehaviour
         // 모든 조건 충족 시 버튼 활성화
         upgradeButton.interactable = meetsLevelRequirement && hasMaterial && hasGold;
 
-        Debug.Log($"[PartySynergyEnhancementPanel] Upgrade button: Level={meetsLevelRequirement}, Material={hasMaterial}, Gold={hasGold}");
+        GameLog.Log($"[PartySynergyEnhancementPanel] Upgrade button: Level={meetsLevelRequirement}, Material={hasMaterial}, Gold={hasGold}");
     }
 
     #endregion

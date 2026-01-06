@@ -1,4 +1,4 @@
-//LMJ : Static utility class for Character visual effects (Beam, Layer, Collider management)
+﻿//LMJ : Static utility class for Character visual effects (Beam, Layer, Collider management)
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -42,7 +42,7 @@ namespace Novelian.Combat
             }
             else
             {
-                Debug.LogWarning($"[CharacterEffectUtils] Layer not found: {layerName}");
+                GameLog.LogWarning($"[CharacterEffectUtils] Layer not found: {layerName}");
             }
         }
 
@@ -148,7 +148,7 @@ namespace Novelian.Combat
                 if (beamCollidesField != null && beamCollidesField.FieldType == typeof(bool))
                 {
                     beamCollidesField.SetValue(component, false);
-                    Debug.Log($"[CharacterEffectUtils] Disabled beamCollides on {component.GetType().Name}");
+                    GameLog.Log($"[CharacterEffectUtils] Disabled beamCollides on {component.GetType().Name}");
                 }
 
                 // collisionEnabled 필드 비활성화 (다른 빔 에셋)

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Managers;
@@ -89,7 +89,7 @@ namespace NovelianMagicLibraryDefense.Lobby
         /// </summary>
         private void OnPresetChanged(int newPresetIndex)
         {
-            Debug.Log($"<color=cyan>[LobbyCompanionManager]</color> 프리셋 변경 감지: {newPresetIndex + 1}번 프리셋");
+            GameLog.Log($"<color=cyan>[LobbyCompanionManager]</color> 프리셋 변경 감지: {newPresetIndex + 1}번 프리셋");
             RefreshCompanions();
         }
 
@@ -109,13 +109,13 @@ namespace NovelianMagicLibraryDefense.Lobby
         {
             if (DeckManager.Instance == null)
             {
-                Debug.LogError("[LobbyCompanionManager] DeckManager.Instance가 null입니다!");
+                GameLog.LogError("[LobbyCompanionManager] DeckManager.Instance가 null입니다!");
                 return;
             }
 
             if (!isPreloadComplete)
             {
-                Debug.LogError("[LobbyCompanionManager] 캐릭터 프리팹 프리로드가 완료되지 않았습니다!");
+                GameLog.LogError("[LobbyCompanionManager] 캐릭터 프리팹 프리로드가 완료되지 않았습니다!");
                 return;
             }
 
@@ -123,11 +123,11 @@ namespace NovelianMagicLibraryDefense.Lobby
             List<int> deck = DeckManager.Instance.GetDeck();
             if (deck == null || deck.Count == 0)
             {
-                Debug.LogWarning("[LobbyCompanionManager] 덱이 비어있습니다.");
+                GameLog.LogWarning("[LobbyCompanionManager] 덱이 비어있습니다.");
                 return;
             }
 
-            Debug.Log($"<color=cyan>[LobbyCompanionManager]</color> 동반자 스폰 시작: {deck.Count}명");
+            GameLog.Log($"<color=cyan>[LobbyCompanionManager]</color> 동반자 스폰 시작: {deck.Count}명");
 
             // 각 캐릭터 스폰
             for (int i = 0; i < deck.Count; i++)
@@ -138,7 +138,7 @@ namespace NovelianMagicLibraryDefense.Lobby
                 SpawnCompanion(characterId);
             }
 
-            Debug.Log($"<color=cyan>[LobbyCompanionManager]</color> 동반자 스폰 완료: {spawnedCompanions.Count}명");
+            GameLog.Log($"<color=cyan>[LobbyCompanionManager]</color> 동반자 스폰 완료: {spawnedCompanions.Count}명");
         }
 
         /// <summary>
@@ -150,7 +150,7 @@ namespace NovelianMagicLibraryDefense.Lobby
             string prefabKey = GetCharacterPrefabKey(characterId);
             if (string.IsNullOrEmpty(prefabKey) || !loadedCharacterPrefabs.ContainsKey(prefabKey))
             {
-                Debug.LogError($"[LobbyCompanionManager] 캐릭터 프리팹을 찾을 수 없습니다: CharacterID {characterId}, PrefabKey {prefabKey}");
+                GameLog.LogError($"[LobbyCompanionManager] 캐릭터 프리팹을 찾을 수 없습니다: CharacterID {characterId}, PrefabKey {prefabKey}");
                 return;
             }
 
@@ -176,7 +176,7 @@ namespace NovelianMagicLibraryDefense.Lobby
 
             spawnedCompanions.Add(companion);
 
-            Debug.Log($"<color=cyan>[LobbyCompanionManager]</color> 동반자 스폰: CharacterID {characterId} at {spawnPosition}");
+            GameLog.Log($"<color=cyan>[LobbyCompanionManager]</color> 동반자 스폰: CharacterID {characterId} at {spawnPosition}");
         }
 
         /// <summary>
@@ -209,11 +209,11 @@ namespace NovelianMagicLibraryDefense.Lobby
                 minZ = bounds.min.z + characterRadius;
                 maxZ = bounds.max.z - characterRadius;
 
-                Debug.Log($"<color=cyan>[LobbyCompanionManager]</color> 이동 영역 설정: X({minX:F2} ~ {maxX:F2}), Z({minZ:F2} ~ {maxZ:F2}) [마진: {characterRadius}]");
+                GameLog.Log($"<color=cyan>[LobbyCompanionManager]</color> 이동 영역 설정: X({minX:F2} ~ {maxX:F2}), Z({minZ:F2} ~ {maxZ:F2}) [마진: {characterRadius}]");
             }
             else
             {
-                Debug.LogWarning("[LobbyCompanionManager] MovementArea BoxCollider가 할당되지 않았습니다! 기본값 사용.");
+                GameLog.LogWarning("[LobbyCompanionManager] MovementArea BoxCollider가 할당되지 않았습니다! 기본값 사용.");
                 minX = -5f;
                 maxX = 5f;
                 minZ = -5f;
@@ -240,7 +240,7 @@ namespace NovelianMagicLibraryDefense.Lobby
             if (character != null)
             {
                 character.enabled = false;
-                Debug.Log("[LobbyCompanionManager] Character 컴포넌트 비활성화");
+                GameLog.Log("[LobbyCompanionManager] Character 컴포넌트 비활성화");
             }
 
             // 추가로 비활성화할 컴포넌트가 있다면 여기에 추가
@@ -255,7 +255,7 @@ namespace NovelianMagicLibraryDefense.Lobby
         /// </summary>
         private async UniTask PreloadCharacterPrefabs()
         {
-            Debug.Log("[LobbyCompanionManager] 캐릭터 프리팹 프리로딩 시작...");
+            GameLog.Log("[LobbyCompanionManager] 캐릭터 프리팹 프리로딩 시작...");
 
             // CSVLoader 초기화 대기
             while (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
@@ -267,7 +267,7 @@ namespace NovelianMagicLibraryDefense.Lobby
             var characterTable = CSVLoader.Instance.GetTable<CharacterData>();
             if (characterTable == null || characterTable.Count == 0)
             {
-                Debug.LogError("[LobbyCompanionManager] CharacterTable 데이터를 찾을 수 없습니다!");
+                GameLog.LogError("[LobbyCompanionManager] CharacterTable 데이터를 찾을 수 없습니다!");
                 isPreloadComplete = true;
                 return;
             }
@@ -282,7 +282,7 @@ namespace NovelianMagicLibraryDefense.Lobby
                 var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
                 if (pathData == null)
                 {
-                    Debug.LogWarning($"[LobbyCompanionManager] PathData를 찾을 수 없습니다. Path_ID: {characterData.Path_ID}");
+                    GameLog.LogWarning($"[LobbyCompanionManager] PathData를 찾을 수 없습니다. Path_ID: {characterData.Path_ID}");
                     failedCount++;
                     continue;
                 }
@@ -301,16 +301,16 @@ namespace NovelianMagicLibraryDefense.Lobby
                     GameObject prefab = await Addressables.LoadAssetAsync<GameObject>(prefabKey).Task;
                     loadedCharacterPrefabs[prefabKey] = prefab;
                     loadedCount++;
-                    Debug.Log($"[LobbyCompanionManager] 로드 완료: {prefabKey} (Character_ID: {characterData.Character_ID})");
+                    GameLog.Log($"[LobbyCompanionManager] 로드 완료: {prefabKey} (Character_ID: {characterData.Character_ID})");
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"[LobbyCompanionManager] 프리팹 로드 실패: '{prefabKey}' - {e.Message}");
+                    GameLog.LogError($"[LobbyCompanionManager] 프리팹 로드 실패: '{prefabKey}' - {e.Message}");
                     failedCount++;
                 }
             }
 
-            Debug.Log($"[LobbyCompanionManager] 캐릭터 프리팹 프리로드 완료. 성공: {loadedCount}, 실패: {failedCount}");
+            GameLog.Log($"[LobbyCompanionManager] 캐릭터 프리팹 프리로드 완료. 성공: {loadedCount}, 실패: {failedCount}");
             isPreloadComplete = true;
         }
 
@@ -322,7 +322,7 @@ namespace NovelianMagicLibraryDefense.Lobby
         {
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.LogWarning("[LobbyCompanionManager] CSVLoader가 초기화되지 않았습니다.");
+                GameLog.LogWarning("[LobbyCompanionManager] CSVLoader가 초기화되지 않았습니다.");
                 return null;
             }
 
@@ -330,7 +330,7 @@ namespace NovelianMagicLibraryDefense.Lobby
             var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
             if (characterData == null)
             {
-                Debug.LogWarning($"[LobbyCompanionManager] CharacterData를 찾을 수 없습니다. Character_ID: {characterId}");
+                GameLog.LogWarning($"[LobbyCompanionManager] CharacterData를 찾을 수 없습니다. Character_ID: {characterId}");
                 return null;
             }
 
@@ -338,7 +338,7 @@ namespace NovelianMagicLibraryDefense.Lobby
             var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
             if (pathData == null)
             {
-                Debug.LogWarning($"[LobbyCompanionManager] PathData를 찾을 수 없습니다. Path_ID: {characterData.Path_ID}");
+                GameLog.LogWarning($"[LobbyCompanionManager] PathData를 찾을 수 없습니다. Path_ID: {characterData.Path_ID}");
                 return null;
             }
 
@@ -359,7 +359,7 @@ namespace NovelianMagicLibraryDefense.Lobby
             }
             spawnedCompanions.Clear();
 
-            Debug.Log("<color=cyan>[LobbyCompanionManager]</color> 모든 동반자 제거 완료");
+            GameLog.Log("<color=cyan>[LobbyCompanionManager]</color> 모든 동반자 제거 완료");
         }
 
         private void OnDestroy()

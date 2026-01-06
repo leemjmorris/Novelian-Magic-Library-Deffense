@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -15,12 +15,12 @@ public class PartySlot : MonoBehaviour
 
     public void Init(int charId)
     {
-        Debug.Log($"[PartySlot] Init() called with charId: {charId}");
+        GameLog.Log($"[PartySlot] Init() called with charId: {charId}");
         characterId = charId;
 
         if (characterId <= 0)
         {
-            Debug.LogWarning($"[PartySlot] Invalid characterId: {charId}, clearing slot");
+            GameLog.LogWarning($"[PartySlot] Invalid characterId: {charId}, clearing slot");
             ClearSlot();
             return;
         }
@@ -28,7 +28,7 @@ public class PartySlot : MonoBehaviour
         var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
         if (characterData == null)
         {
-            Debug.LogWarning($"[PartySlot] CharacterData not found for ID: {characterId}");
+            GameLog.LogWarning($"[PartySlot] CharacterData not found for ID: {characterId}");
             ClearSlot();
             return;
         }
@@ -41,7 +41,7 @@ public class PartySlot : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning($"[PartySlot] nameText is null for character ID: {characterId}. Check prefab references!");
+            GameLog.LogWarning($"[PartySlot] nameText is null for character ID: {characterId}. Check prefab references!");
         }
 
         // 캐릭터 레벨
@@ -53,11 +53,11 @@ public class PartySlot : MonoBehaviour
                 enhanceLevel = CharacterEnhancementManager.Instance.GetEnhancementLevel(characterId);
             }
             levelText.text = $"Lv.{enhanceLevel}";
-            Debug.Log($"[PartySlot] Set level text to 'Lv.{enhanceLevel}' for character ID: {characterId}");
+            GameLog.Log($"[PartySlot] Set level text to 'Lv.{enhanceLevel}' for character ID: {characterId}");
         }
         else
         {
-            Debug.LogWarning($"[PartySlot] levelText is null for character ID: {characterId}. Check prefab references!");
+            GameLog.LogWarning($"[PartySlot] levelText is null for character ID: {characterId}. Check prefab references!");
         }
 
         // 캐릭터 아이콘
@@ -71,7 +71,7 @@ public class PartySlot : MonoBehaviour
     {
         if (characterIcon == null)
         {
-            Debug.LogWarning($"[PartySlot] characterIcon is null. Check prefab references!");
+            GameLog.LogWarning($"[PartySlot] characterIcon is null. Check prefab references!");
             return;
         }
 
@@ -99,7 +99,7 @@ public class PartySlot : MonoBehaviour
     {
         if (genreIcon == null)
         {
-            Debug.LogWarning($"[PartySlot] genreIcon is null. Check prefab references!");
+            GameLog.LogWarning($"[PartySlot] genreIcon is null. Check prefab references!");
             return;
         }
 

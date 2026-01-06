@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -112,7 +112,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (panel == null)
             {
                 panel = this.gameObject;
-                Debug.Log("[CardSelectPanel] panel 자동 설정됨 (this.gameObject)");
+                GameLog.Log("[CardSelectPanel] panel 자동 설정됨 (this.gameObject)");
             }
 
             // JML: 카드 슬롯 초기 비활성화 (씬 진입 시 카드 초기화가 보이는 문제 방지)
@@ -122,7 +122,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (cardParticleManager == null)
             {
                 cardParticleManager = GetComponentInChildren<CardParticleManager>(true);
-                Debug.Log($"[CardSelectPanel] CardParticleManager 검색 결과: {(cardParticleManager != null ? "찾음" : "못찾음")}");
+                GameLog.Log($"[CardSelectPanel] CardParticleManager 검색 결과: {(cardParticleManager != null ? "찾음" : "못찾음")}");
             }
 
             // JML: Inspector 참조가 없으면 Tag로 fallback 시도
@@ -137,11 +137,11 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (placementManager == null)
             {
-                Debug.LogWarning("[CardSelectPanel] CharacterPlacementManager not found! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
+                GameLog.LogWarning("[CardSelectPanel] CharacterPlacementManager not found! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
             }
             else
             {
-                Debug.Log("[CardSelectPanel] Waiting for CharacterPlacementManager to preload characters...");
+                GameLog.Log("[CardSelectPanel] Waiting for CharacterPlacementManager to preload characters...");
                 int maxWaitFrames = 300;
                 int frameCount = 0;
 
@@ -153,15 +153,15 @@ namespace NovelianMagicLibraryDefense.UI
 
                 if (placementManager.IsPreloadComplete())
                 {
-                    Debug.Log("[CardSelectPanel] CharacterPlacementManager preload complete!");
+                    GameLog.Log("[CardSelectPanel] CharacterPlacementManager preload complete!");
                 }
                 else
                 {
-                    Debug.LogWarning("[CardSelectPanel] CharacterPlacementManager preload timeout after 5 seconds!");
+                    GameLog.LogWarning("[CardSelectPanel] CharacterPlacementManager preload timeout after 5 seconds!");
                 }
             }
 
-            Debug.Log("[CardSelectPanel] Awake completed, ready to use");
+            GameLog.Log("[CardSelectPanel] Awake completed, ready to use");
             isAwakeComplete = true;
         }
 
@@ -173,7 +173,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (manager != null)
             {
                 placementManager = manager;
-                Debug.Log("[CardSelectPanel] PlacementManager가 외부에서 설정됨");
+                GameLog.Log("[CardSelectPanel] PlacementManager가 외부에서 설정됨");
             }
         }
 
@@ -185,7 +185,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (manager != null)
             {
                 characterCardGridManager = manager;
-                Debug.Log($"[CardSelectPanel] CharacterCardGridManager가 외부에서 설정됨: instanceId={manager.GetInstanceID()}");
+                GameLog.Log($"[CardSelectPanel] CharacterCardGridManager가 외부에서 설정됨: instanceId={manager.GetInstanceID()}");
             }
         }
 
@@ -216,7 +216,7 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 // cardGrid와 모든 상위 부모 활성화
                 EnsureHierarchyActive(cardGrid.transform);
-                Debug.Log($"[CardSelectPanel] CardGrid 활성화됨: {cardGrid.name}, activeInHierarchy={cardGrid.activeInHierarchy}");
+                GameLog.Log($"[CardSelectPanel] CardGrid 활성화됨: {cardGrid.name}, activeInHierarchy={cardGrid.activeInHierarchy}");
             }
             else
             {
@@ -227,7 +227,7 @@ namespace NovelianMagicLibraryDefense.UI
                     if (parent != null)
                     {
                         EnsureHierarchyActive(parent);
-                        Debug.Log($"[CardSelectPanel] CardGrid(부모) 활성화됨: {parent.name}, activeInHierarchy={parent.gameObject.activeInHierarchy}");
+                        GameLog.Log($"[CardSelectPanel] CardGrid(부모) 활성화됨: {parent.name}, activeInHierarchy={parent.gameObject.activeInHierarchy}");
                     }
                 }
             }
@@ -256,7 +256,7 @@ namespace NovelianMagicLibraryDefense.UI
                 if (!hierarchy[i].gameObject.activeSelf)
                 {
                     hierarchy[i].gameObject.SetActive(true);
-                    Debug.Log($"[CardSelectPanel] 부모 활성화: {hierarchy[i].name}");
+                    GameLog.Log($"[CardSelectPanel] 부모 활성화: {hierarchy[i].name}");
                 }
             }
         }
@@ -276,7 +276,7 @@ namespace NovelianMagicLibraryDefense.UI
                     cardSlots[i].gameObject.SetActive(true);
                 }
             }
-            Debug.Log($"[CardSelectPanel] 모든 카드 슬롯 즉시 활성화: {cardSlots.Length}개");
+            GameLog.Log($"[CardSelectPanel] 모든 카드 슬롯 즉시 활성화: {cardSlots.Length}개");
         }
 
         /// <summary>
@@ -315,7 +315,7 @@ namespace NovelianMagicLibraryDefense.UI
             ActivateCardGrid();
 
             // Issue #559: 패널 열릴 때 배경 파티클 재생
-            Debug.Log($"[CardSelectPanel] OpenForGameStart - cardParticleManager: {(cardParticleManager != null ? "있음" : "없음")}");
+            GameLog.Log($"[CardSelectPanel] OpenForGameStart - cardParticleManager: {(cardParticleManager != null ? "있음" : "없음")}");
             cardParticleManager?.PlayBackgroundEffect();
 
             // 데이터 로딩 대기 후 카드 표시
@@ -355,13 +355,13 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OpenForBossDungeon()
         {
-            Debug.Log("[CardSelectPanel] OpenForBossDungeon 호출됨");
+            GameLog.Log("[CardSelectPanel] OpenForBossDungeon 호출됨");
 
             // Issue #564: panel 참조가 없으면 자동으로 설정
             if (panel == null)
             {
                 panel = this.gameObject;
-                Debug.Log("[CardSelectPanel] panel 자동 설정됨 (this.gameObject)");
+                GameLog.Log("[CardSelectPanel] panel 자동 설정됨 (this.gameObject)");
             }
 
             // Issue #564: cardSlots 배열이 비어있으면 런타임에 찾기
@@ -385,7 +385,7 @@ namespace NovelianMagicLibraryDefense.UI
             // Issue #559: 패널 열릴 때 배경 파티클 재생
             cardParticleManager?.PlayBackgroundEffect();
 
-            Debug.Log("[CardSelectPanel] 패널 활성화됨, 카드 로딩 시작...");
+            GameLog.Log("[CardSelectPanel] 패널 활성화됨, 카드 로딩 시작...");
 
             // Issue #564 Fix: TimeScale=0에서도 즉시 실행되도록 동기 호출 + 내부에서 EarlyUpdate 사용
             // UniTaskVoid.Forget()은 TimeScale=0에서 스케줄링 지연 가능
@@ -408,7 +408,7 @@ namespace NovelianMagicLibraryDefense.UI
                     if (cardSlots[i] == null)
                     {
                         needsRefresh = true;
-                        Debug.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 null입니다!");
+                        GameLog.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 null입니다!");
                         break;
                     }
                 }
@@ -423,7 +423,7 @@ namespace NovelianMagicLibraryDefense.UI
                     if (cardSlots[i] != null && cardSlots[i].transform.parent != cardGrid.transform)
                     {
                         needsRefresh = true;
-                        Debug.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 현재 cardGrid의 자식이 아님! (씬 전환 감지)");
+                        GameLog.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 현재 cardGrid의 자식이 아님! (씬 전환 감지)");
                         break;
                     }
                 }
@@ -431,11 +431,11 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (!needsRefresh)
             {
-                Debug.Log($"[CardSelectPanel] cardSlots 유효함: {cardSlots.Length}개");
+                GameLog.Log($"[CardSelectPanel] cardSlots 유효함: {cardSlots.Length}개");
                 return;
             }
 
-            Debug.LogWarning("[CardSelectPanel] cardSlots 배열이 유효하지 않음! 런타임에 찾기 시도...");
+            GameLog.LogWarning("[CardSelectPanel] cardSlots 배열이 유효하지 않음! 런타임에 찾기 시도...");
 
             // cardGrid가 null이면 먼저 찾기
             if (cardGrid == null)
@@ -445,7 +445,7 @@ namespace NovelianMagicLibraryDefense.UI
                 if (gridTransform != null)
                 {
                     cardGrid = gridTransform.gameObject;
-                    Debug.Log($"[CardSelectPanel] CardGrid 자식에서 발견: {cardGrid.name}");
+                    GameLog.Log($"[CardSelectPanel] CardGrid 자식에서 발견: {cardGrid.name}");
                 }
             }
 
@@ -456,7 +456,7 @@ namespace NovelianMagicLibraryDefense.UI
                 if (foundCards != null && foundCards.Length > 0)
                 {
                     cardSlots = foundCards;
-                    Debug.Log($"[CardSelectPanel] cardGrid에서 {cardSlots.Length}개 카드 슬롯 발견!");
+                    GameLog.Log($"[CardSelectPanel] cardGrid에서 {cardSlots.Length}개 카드 슬롯 발견!");
                     return;
                 }
             }
@@ -466,7 +466,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (selfCards != null && selfCards.Length > 0)
             {
                 cardSlots = selfCards;
-                Debug.Log($"[CardSelectPanel] 자식에서 {cardSlots.Length}개 카드 슬롯 발견!");
+                GameLog.Log($"[CardSelectPanel] 자식에서 {cardSlots.Length}개 카드 슬롯 발견!");
                 return;
             }
 
@@ -486,12 +486,12 @@ namespace NovelianMagicLibraryDefense.UI
                 if (filtered.Count > 0)
                 {
                     cardSlots = filtered.ToArray();
-                    Debug.Log($"[CardSelectPanel] 씬에서 {cardSlots.Length}개 카드 슬롯 발견!");
+                    GameLog.Log($"[CardSelectPanel] 씬에서 {cardSlots.Length}개 카드 슬롯 발견!");
                     return;
                 }
             }
 
-            Debug.LogError("[CardSelectPanel] cardSlots를 찾을 수 없습니다! Inspector에서 확인하세요.");
+            GameLog.LogError("[CardSelectPanel] cardSlots를 찾을 수 없습니다! Inspector에서 확인하세요.");
         }
 
         /// <summary>
@@ -502,12 +502,12 @@ namespace NovelianMagicLibraryDefense.UI
         {
             try
             {
-                Debug.Log("[CardSelectPanel] StartBossDungeonCardDisplay 시작 (async void)");
+                GameLog.Log("[CardSelectPanel] StartBossDungeonCardDisplay 시작 (async void)");
                 await WaitForDataAndShowBossDungeonCardsInternal();
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[CardSelectPanel] StartBossDungeonCardDisplay 예외: {e.Message}\n{e.StackTrace}");
+                GameLog.LogError($"[CardSelectPanel] StartBossDungeonCardDisplay 예외: {e.Message}\n{e.StackTrace}");
                 // Fallback: 패널 닫기
                 Close();
             }
@@ -521,13 +521,13 @@ namespace NovelianMagicLibraryDefense.UI
         {
             try
             {
-                Debug.Log("[CardSelectPanel] WaitForDataAndShowBossDungeonCards 시작");
+                GameLog.Log("[CardSelectPanel] WaitForDataAndShowBossDungeonCards 시작");
                 SetCardSlotsInteractable(false);
 
                 // CSV 로딩 대기 (TimeScale=0에서도 동작하도록 EarlyUpdate 사용)
                 if (CSVLoader.Instance != null && !CSVLoader.Instance.IsInit)
                 {
-                    Debug.Log("[CardSelectPanel] CSV 로딩 대기 중...");
+                    GameLog.Log("[CardSelectPanel] CSV 로딩 대기 중...");
                     int maxWaitFrames = 600;
                     int frameCount = 0;
                     while (!CSVLoader.Instance.IsInit && frameCount < maxWaitFrames)
@@ -535,13 +535,13 @@ namespace NovelianMagicLibraryDefense.UI
                         await UniTask.Yield(PlayerLoopTiming.EarlyUpdate);
                         frameCount++;
                     }
-                    Debug.Log($"[CardSelectPanel] CSV 로딩 완료 (frames: {frameCount})");
+                    GameLog.Log($"[CardSelectPanel] CSV 로딩 완료 (frames: {frameCount})");
                 }
 
                 // 캐릭터 프리팹 프리로드 대기 (TimeScale=0에서도 동작하도록 EarlyUpdate 사용)
                 if (placementManager != null && !placementManager.IsPreloadComplete())
                 {
-                    Debug.Log("[CardSelectPanel] 캐릭터 프리로드 대기 중...");
+                    GameLog.Log("[CardSelectPanel] 캐릭터 프리로드 대기 중...");
                     int maxWaitFrames = 300;
                     int frameCount = 0;
                     while (!placementManager.IsPreloadComplete() && frameCount < maxWaitFrames)
@@ -549,26 +549,26 @@ namespace NovelianMagicLibraryDefense.UI
                         await UniTask.Yield(PlayerLoopTiming.EarlyUpdate);
                         frameCount++;
                     }
-                    Debug.Log($"[CardSelectPanel] 캐릭터 프리로드 완료 (frames: {frameCount})");
+                    GameLog.Log($"[CardSelectPanel] 캐릭터 프리로드 완료 (frames: {frameCount})");
                 }
                 else if (placementManager == null)
                 {
-                    Debug.LogWarning("[CardSelectPanel] placementManager가 null - 스탯 카드만 표시됩니다");
+                    GameLog.LogWarning("[CardSelectPanel] placementManager가 null - 스탯 카드만 표시됩니다");
                 }
 
                 // 도전던전 카드 생성: 캐릭터 3장 + 스탯 1장 (또는 캐릭터 2장 + 스탯 2장)
-                Debug.Log("[CardSelectPanel] GetBossDungeonCards 호출...");
+                GameLog.Log("[CardSelectPanel] GetBossDungeonCards 호출...");
                 CardData[] cards = GetBossDungeonCards();
-                Debug.Log($"[CardSelectPanel] 카드 {cards?.Length ?? 0}장 생성됨, CreateCards 호출...");
+                GameLog.Log($"[CardSelectPanel] 카드 {cards?.Length ?? 0}장 생성됨, CreateCards 호출...");
                 await CreateCards(cards);
 
                 SetCardSlotsInteractable(true);
-                Debug.Log("[CardSelectPanel] 카드 생성 완료, 타이머 시작");
+                GameLog.Log("[CardSelectPanel] 카드 생성 완료, 타이머 시작");
                 StartSelectionTimer().Forget();
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[CardSelectPanel] WaitForDataAndShowBossDungeonCards 예외 발생: {e.Message}\n{e.StackTrace}");
+                GameLog.LogError($"[CardSelectPanel] WaitForDataAndShowBossDungeonCards 예외 발생: {e.Message}\n{e.StackTrace}");
                 // 예외 발생 시에도 최소한 스탯 카드라도 표시
                 try
                 {
@@ -576,11 +576,11 @@ namespace NovelianMagicLibraryDefense.UI
                     await CreateCards(fallbackCards);
                     SetCardSlotsInteractable(true);
                     StartSelectionTimer().Forget();
-                    Debug.Log("[CardSelectPanel] Fallback: 스탯 카드 4장으로 대체");
+                    GameLog.Log("[CardSelectPanel] Fallback: 스탯 카드 4장으로 대체");
                 }
                 catch (System.Exception fallbackEx)
                 {
-                    Debug.LogError($"[CardSelectPanel] Fallback도 실패: {fallbackEx.Message}");
+                    GameLog.LogError($"[CardSelectPanel] Fallback도 실패: {fallbackEx.Message}");
                     Close(); // 최후의 수단: 패널 닫기
                 }
             }
@@ -614,7 +614,7 @@ namespace NovelianMagicLibraryDefense.UI
                 cards[charCardCount + i] = statCards[i];
             }
 
-            Debug.Log($"[CardSelectPanel] 도전던전 카드: 캐릭터 {charCardCount}장 + 스탯 {statCardCount}장");
+            GameLog.Log($"[CardSelectPanel] 도전던전 카드: 캐릭터 {charCardCount}장 + 스탯 {statCardCount}장");
             return cards;
         }
 
@@ -627,12 +627,12 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (placementManager == null)
             {
-                Debug.LogWarning("[CardSelectPanel] placementManager가 null입니다! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
+                GameLog.LogWarning("[CardSelectPanel] placementManager가 null입니다! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
                 return validPool;
             }
 
             var fieldCharacters = placementManager.GetAllCharacters() ?? new List<Novelian.Combat.Character>();
-            Debug.Log($"[CardSelectPanel] 필드 캐릭터 수: {fieldCharacters.Count}개");
+            GameLog.Log($"[CardSelectPanel] 필드 캐릭터 수: {fieldCharacters.Count}개");
 
             foreach (var character in fieldCharacters)
             {
@@ -640,11 +640,11 @@ namespace NovelianMagicLibraryDefense.UI
                 if (!character.IsFinalStarTier())
                 {
                     validPool.Add(character.GetCharacterId());
-                    Debug.Log($"[CardSelectPanel] 업그레이드 가능: {character.GetCharacterId()}");
+                    GameLog.Log($"[CardSelectPanel] 업그레이드 가능: {character.GetCharacterId()}");
                 }
             }
 
-            Debug.Log($"[CardSelectPanel] 업그레이드 가능 캐릭터: {validPool.Count}개");
+            GameLog.Log($"[CardSelectPanel] 업그레이드 가능 캐릭터: {validPool.Count}개");
             return validPool;
         }
 
@@ -671,7 +671,7 @@ namespace NovelianMagicLibraryDefense.UI
 
                 if (!CSVLoader.Instance.IsInit)
                 {
-                    Debug.LogWarning("[CardSelectPanel] CSV 로딩 타임아웃!");
+                    GameLog.LogWarning("[CardSelectPanel] CSV 로딩 타임아웃!");
                 }
             }
 
@@ -689,7 +689,7 @@ namespace NovelianMagicLibraryDefense.UI
 
                 if (!placementManager.IsPreloadComplete())
                 {
-                    Debug.LogWarning("[CardSelectPanel] 캐릭터 프리로드 타임아웃!");
+                    GameLog.LogWarning("[CardSelectPanel] 캐릭터 프리로드 타임아웃!");
                 }
             }
 
@@ -699,7 +699,7 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 int deckCount = DeckManager.Instance?.GetDeckCount() ?? 4;
                 cards = GetCharacterCards(deckCount);
-                Debug.Log($"[CardSelectPanel] Opened for game start - {deckCount} character cards");
+                GameLog.Log($"[CardSelectPanel] Opened for game start - {deckCount} character cards");
             }
             else
             {
@@ -711,12 +711,12 @@ namespace NovelianMagicLibraryDefense.UI
                 if (levelData != null && levelData.Card_Type == 2)
                 {
                     cards = GetCharacterCardsForLevelUp();
-                    Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=2 → 캐릭터 카드 {cards.Length}장");
+                    GameLog.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=2 → 캐릭터 카드 {cards.Length}장");
                 }
                 else
                 {
                     cards = GetRandomStatCards(4);
-                    Debug.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=1 → 스킬/스탯 카드 4장");
+                    GameLog.Log($"[CardSelectPanel] Level {currentPlayerLevel}: Card_Type=1 → 스킬/스탯 카드 4장");
                 }
             }
 
@@ -768,7 +768,7 @@ namespace NovelianMagicLibraryDefense.UI
                 {
                     cards[i] = new CardData(CardType.Character, validCharacterPool[i]);
                 }
-                Debug.Log($"[CardSelectPanel] 유효 캐릭터 충분 → 캐릭터 카드 {deckCount}장");
+                GameLog.Log($"[CardSelectPanel] 유효 캐릭터 충분 → 캐릭터 카드 {deckCount}장");
             }
             else if (validCharacterPool.Count > 0)
             {
@@ -790,7 +790,7 @@ namespace NovelianMagicLibraryDefense.UI
                     cards[charCount + i] = statCards[i];
                 }
 
-                Debug.Log($"[CardSelectPanel] 유효 캐릭터 {charCount}개 → 캐릭터 {charCount}장 + 스탯 {statCount}장");
+                GameLog.Log($"[CardSelectPanel] 유효 캐릭터 {charCount}개 → 캐릭터 {charCount}장 + 스탯 {statCount}장");
             }
             else
             {
@@ -800,7 +800,7 @@ namespace NovelianMagicLibraryDefense.UI
                 {
                     cards[i] = statCards[i];
                 }
-                Debug.Log($"[CardSelectPanel] 모든 캐릭터 최종 성급 → 스탯 카드 {deckCount}장");
+                GameLog.Log($"[CardSelectPanel] 모든 캐릭터 최종 성급 → 스탯 카드 {deckCount}장");
             }
 
             return cards;
@@ -819,7 +819,7 @@ namespace NovelianMagicLibraryDefense.UI
             var deck = DeckManager.Instance?.GetValidCharacters();
             if (deck == null || deck.Count == 0)
             {
-                Debug.LogWarning("[CardSelectPanel] DeckManager가 없거나 덱이 비어있습니다!");
+                GameLog.LogWarning("[CardSelectPanel] DeckManager가 없거나 덱이 비어있습니다!");
                 return validPool;
             }
 
@@ -857,7 +857,7 @@ namespace NovelianMagicLibraryDefense.UI
                 }
             }
 
-            Debug.Log($"[CardSelectPanel] 유효한 캐릭터 풀: {validPool.Count}개 [{string.Join(", ", validPool)}]");
+            GameLog.Log($"[CardSelectPanel] 유효한 캐릭터 풀: {validPool.Count}개 [{string.Join(", ", validPool)}]");
             return validPool;
         }
 
@@ -871,7 +871,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (cardData == null)
             {
-                Debug.LogWarning($"[CardSelectPanel] CardData not found for ID: {cardId}");
+                GameLog.LogWarning($"[CardSelectPanel] CardData not found for ID: {cardId}");
                 return GetRandomStatCard();
             }
 
@@ -916,7 +916,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (deck == null || deck.Count == 0)
             {
-                Debug.LogWarning("[CardSelectPanel] DeckManager가 없거나 덱이 비어있습니다!");
+                GameLog.LogWarning("[CardSelectPanel] DeckManager가 없거나 덱이 비어있습니다!");
                 return new CardData[0];
             }
 
@@ -941,7 +941,7 @@ namespace NovelianMagicLibraryDefense.UI
             var cardTable = CSVLoader.Instance?.GetTable<global::CardData>()?.GetAll();
             if (cardTable == null || cardTable.Count == 0)
             {
-                Debug.LogWarning("[CardSelectPanel] CardTable이 비어있습니다. 기본 스탯 카드 사용");
+                GameLog.LogWarning("[CardSelectPanel] CardTable이 비어있습니다. 기본 스탯 카드 사용");
                 return GetFallbackStatCards(count);
             }
 
@@ -963,7 +963,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (statCardPool.Count == 0)
             {
-                Debug.LogWarning("[CardSelectPanel] Card_Type=1 카드가 없습니다. 기본 스탯 카드 사용");
+                GameLog.LogWarning("[CardSelectPanel] Card_Type=1 카드가 없습니다. 기본 스탯 카드 사용");
                 return GetFallbackStatCards(count);
             }
 
@@ -985,7 +985,7 @@ namespace NovelianMagicLibraryDefense.UI
                     statCardPool.Remove(selectedCard);
                     selectedCardIds.Add(selectedCard.Card_ID);
 
-                    Debug.Log($"[CardSelectPanel] 카드 선택: {selectedCard.Card_ID} (확률: {selectedCard.Probability})");
+                    GameLog.Log($"[CardSelectPanel] 카드 선택: {selectedCard.Card_ID} (확률: {selectedCard.Probability})");
                 }
             }
 
@@ -1135,7 +1135,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         private async UniTask SetupCardSlots(CardData[] cards)
         {
-            Debug.Log($"[CardSelectPanel] SetupCardSlots 시작: {cards?.Length ?? 0}장");
+            GameLog.Log($"[CardSelectPanel] SetupCardSlots 시작: {cards?.Length ?? 0}장");
             var cardTableIds = new int[cards?.Length ?? 0];
 
             // Issue #564 Fix: 씬 전환 후 cardSlots가 꼬일 수 있으므로 강제로 현재 cardGrid에서 다시 찾기
@@ -1162,7 +1162,7 @@ namespace NovelianMagicLibraryDefense.UI
                 {
                     if (cardSlots[i] == null)
                     {
-                        Debug.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 null입니다!");
+                        GameLog.LogWarning($"[CardSelectPanel] cardSlots[{i}]가 null입니다!");
                         continue;
                     }
 
@@ -1192,7 +1192,7 @@ namespace NovelianMagicLibraryDefense.UI
                     }
                     else
                     {
-                        Debug.LogWarning($"[CardSelectPanel] CardTableId가 0 - 수동 설정: cards[{i}]");
+                        GameLog.LogWarning($"[CardSelectPanel] CardTableId가 0 - 수동 설정: cards[{i}]");
                         SetupCardSlotManually(cardSlots[i], cards[i]);
                         EnsureHierarchyActive(cardSlots[i].transform);
                     }
@@ -1301,17 +1301,17 @@ namespace NovelianMagicLibraryDefense.UI
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[CardSelectPanel] SetupCardSlots 예외 발생: {e.Message}\n{e.StackTrace}");
+                GameLog.LogError($"[CardSelectPanel] SetupCardSlots 예외 발생: {e.Message}\n{e.StackTrace}");
 
                 // 예외 발생 시에도 카드 슬롯 활성화 시도 (fallback)
                 try
                 {
                     ActivateCardSlotsWithEvents(cards, cardTableIds);
-                    Debug.Log("[CardSelectPanel] SetupCardSlots Fallback: 카드 슬롯 강제 활성화");
+                    GameLog.Log("[CardSelectPanel] SetupCardSlots Fallback: 카드 슬롯 강제 활성화");
                 }
                 catch (System.Exception fallbackEx)
                 {
-                    Debug.LogError($"[CardSelectPanel] SetupCardSlots Fallback 실패: {fallbackEx.Message}");
+                    GameLog.LogError($"[CardSelectPanel] SetupCardSlots Fallback 실패: {fallbackEx.Message}");
                 }
             }
             finally
@@ -1343,7 +1343,7 @@ namespace NovelianMagicLibraryDefense.UI
 
                 cardSlots[i].gameObject.SetActive(true);
 
-                Debug.Log($"[CardSelectPanel] CardSlot[{i}] 설정: CardTableID={cardTableIds[i]}, Type={cards[i].Type}, ID={cards[i].Id}");
+                GameLog.Log($"[CardSelectPanel] CardSlot[{i}] 설정: CardTableID={cardTableIds[i]}, Type={cards[i].Type}, ID={cards[i].Id}");
             }
         }
 
@@ -1411,11 +1411,11 @@ namespace NovelianMagicLibraryDefense.UI
             // 호환 캐릭터 표시 (CharacterCardGrid 애니메이션)
             if (characterCardGridManager != null)
             {
-                Debug.Log($"[CardSelectPanel] ShowCompatibleCharacters 호출 전: characterCardGridManager.instanceId={characterCardGridManager.GetInstanceID()}");
+                GameLog.Log($"[CardSelectPanel] ShowCompatibleCharacters 호출 전: characterCardGridManager.instanceId={characterCardGridManager.GetInstanceID()}");
                 characterCardGridManager.ShowCompatibleCharacters(supportId, this);
             }
 
-            Debug.Log($"[CardSelectPanel] 서포트 스킬 선택: CardID={cardId}, SupportID={supportId}");
+            GameLog.Log($"[CardSelectPanel] 서포트 스킬 선택: CardID={cardId}, SupportID={supportId}");
         }
 
         /// <summary>
@@ -1445,7 +1445,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (selectedSupportCardId < 0)
             {
-                Debug.LogWarning("[CardSelectPanel] 선택된 서포트 스킬이 없습니다.");
+                GameLog.LogWarning("[CardSelectPanel] 선택된 서포트 스킬이 없습니다.");
                 return;
             }
 
@@ -1455,7 +1455,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (targetCharacter == null)
             {
-                Debug.LogError($"[CardSelectPanel] 캐릭터 {characterId}를 찾을 수 없습니다.");
+                GameLog.LogError($"[CardSelectPanel] 캐릭터 {characterId}를 찾을 수 없습니다.");
                 return;
             }
 
@@ -1472,7 +1472,7 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 if (!SkillExecutor.Instance.IsValidCombination(mainSkillData, supportSkillData))
                 {
-                    Debug.LogWarning($"[CardSelectPanel] 조합 불가: {mainSkillData.behavior_type} + {supportSkillData.support_type}");
+                    GameLog.LogWarning($"[CardSelectPanel] 조합 불가: {mainSkillData.behavior_type} + {supportSkillData.support_type}");
                     WarningUIManager.Instance?.ShowWarning("이 조합은 사용할 수 없습니다");
                     return;
                 }
@@ -1491,7 +1491,7 @@ namespace NovelianMagicLibraryDefense.UI
                     WarningUIManager.Instance?.ShowWarning("스킬이 교체되었습니다");
                 }
 
-                Debug.Log($"[CardSelectPanel] 서포트 스킬 '{skillName}' → 캐릭터 {characterId}에 장착 완료!");
+                GameLog.Log($"[CardSelectPanel] 서포트 스킬 '{skillName}' → 캐릭터 {characterId}에 장착 완료!");
 
                 // 선택 초기화
                 StopTimer();
@@ -1508,7 +1508,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
             else
             {
-                Debug.LogWarning($"[CardSelectPanel] 서포트 스킬 장착 실패! (SupportID: {supportId}, CharacterID: {characterId})");
+                GameLog.LogWarning($"[CardSelectPanel] 서포트 스킬 장착 실패! (SupportID: {supportId}, CharacterID: {characterId})");
             }
         }
 
@@ -1634,7 +1634,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (cardContainer == null)
             {
-                Debug.LogError("[CardSelectPanel] Card container not assigned!");
+                GameLog.LogError("[CardSelectPanel] Card container not assigned!");
                 return;
             }
 
@@ -1645,7 +1645,7 @@ namespace NovelianMagicLibraryDefense.UI
                 GameObject prefab = GetCardPrefab(cards[i]);
                 if (prefab == null)
                 {
-                    Debug.LogError($"[CardSelectPanel] Prefab not found for {cards[i].Type} (ID: {cards[i].Id})");
+                    GameLog.LogError($"[CardSelectPanel] Prefab not found for {cards[i].Type} (ID: {cards[i].Id})");
                     continue;
                 }
 
@@ -1666,7 +1666,7 @@ namespace NovelianMagicLibraryDefense.UI
                 }
 
                 cardInstances[i] = cardObj;
-                Debug.Log($"[CardSelectPanel] Created {cards[i].Type} card: {GetCardName(cards[i])} (ID: {cards[i].Id})");
+                GameLog.Log($"[CardSelectPanel] Created {cards[i].Type} card: {GetCardName(cards[i])} (ID: {cards[i].Id})");
             }
         }
 
@@ -1728,7 +1728,7 @@ namespace NovelianMagicLibraryDefense.UI
             string cardName = cardData.Type == CardType.Character
                 ? GetCharacterNameFromCSV(cardData.Id)
                 : $"Ability_{cardData.Id}";
-            Debug.Log($"[CardSelectPanel] 카드 선택: {cardName} (Type: {cardData.Type}, ID: {cardData.Id})");
+            GameLog.Log($"[CardSelectPanel] 카드 선택: {cardName} (Type: {cardData.Type}, ID: {cardData.Id})");
 
             if (cardData.Type == CardType.Character)
             {
@@ -1758,7 +1758,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (placementManager == null)
             {
-                Debug.LogError("[CardSelectPanel] CharacterPlacementManager is null! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
+                GameLog.LogError("[CardSelectPanel] CharacterPlacementManager is null! Inspector에서 할당하거나 SetPlacementManager()로 설정해주세요.");
                 return;
             }
 
@@ -1771,7 +1771,7 @@ namespace NovelianMagicLibraryDefense.UI
                 bool upgraded = existingCharacter.UpgradeStarTier();
                 if (upgraded)
                 {
-                    Debug.Log($"[CardSelectPanel] 캐릭터 ID {characterId} 성급 업그레이드 완료!");
+                    GameLog.Log($"[CardSelectPanel] 캐릭터 ID {characterId} 성급 업그레이드 완료!");
 
                     // CharacterCardGridManager에 업그레이드 알림
                     if (characterCardGridManager != null)
@@ -1787,7 +1787,7 @@ namespace NovelianMagicLibraryDefense.UI
 
                 if (spawned)
                 {
-                    Debug.Log($"[CardSelectPanel] 캐릭터 ID {characterId} 소환 완료!");
+                    GameLog.Log($"[CardSelectPanel] 캐릭터 ID {characterId} 소환 완료!");
 
                     // CharacterCardGridManager에 소환 알림 (Issue #424)
                     // UI 슬롯은 왼쪽→오른쪽 순차 배치 (CharacterCardGridManager 기준)
@@ -1819,7 +1819,7 @@ namespace NovelianMagicLibraryDefense.UI
             var stageManager = GameManager.Instance?.Stage;
             if (stageManager == null)
             {
-                Debug.LogError("[CardSelectPanel] StageManager를 찾을 수 없습니다!");
+                GameLog.LogError("[CardSelectPanel] StageManager를 찾을 수 없습니다!");
                 return;
             }
 
@@ -1845,7 +1845,7 @@ namespace NovelianMagicLibraryDefense.UI
             float buffValue = GetValueChangeFromCSV(cardLevelId);
 
             stageManager.ApplyGlobalStatBuff(statType, buffValue);
-            Debug.Log($"[CardSelectPanel] 스탯 버프 적용: {statType} +{buffValue * 100f}% (CardLevelID: {cardLevelId})");
+            GameLog.Log($"[CardSelectPanel] 스탯 버프 적용: {statType} +{buffValue * 100f}% (CardLevelID: {cardLevelId})");
         }
 
         /// <summary>
@@ -1870,19 +1870,19 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 case 5: // 적의 공격속도 감소
                     stageManager.ApplyGlobalMonsterDebuff(DeBuffType.ATK_Speed_Down, buffValue);
-                    Debug.Log($"[CardSelectPanel] 적 공격속도 감소: -{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 적 공격속도 감소: -{buffValue * 100f}%");
                     break;
                 case 6: // 적의 공격력 감소
                     stageManager.ApplyGlobalMonsterDebuff(DeBuffType.ATK_Damage_Down, buffValue);
-                    Debug.Log($"[CardSelectPanel] 적 공격력 감소: -{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 적 공격력 감소: -{buffValue * 100f}%");
                     break;
                 case 7: // 결계 내구도 증가
                     stageManager.ApplyWallShield(buffValue);
-                    Debug.Log($"[CardSelectPanel] 결계 Shield 추가: +{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 결계 Shield 추가: +{buffValue * 100f}%");
                     break;
                 case 8: // 결계 회복
                     stageManager.ApplyWallHeal(buffValue);
-                    Debug.Log($"[CardSelectPanel] 결계 회복: +{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 결계 회복: +{buffValue * 100f}%");
                     break;
             }
         }
@@ -1895,7 +1895,7 @@ namespace NovelianMagicLibraryDefense.UI
             var stageManager = GameManager.Instance?.Stage;
             if (stageManager == null)
             {
-                Debug.LogError("[CardSelectPanel] StageManager를 찾을 수 없습니다!");
+                GameLog.LogError("[CardSelectPanel] StageManager를 찾을 수 없습니다!");
                 return;
             }
 
@@ -1903,7 +1903,7 @@ namespace NovelianMagicLibraryDefense.UI
             var cardData = CSVLoader.Instance?.GetData<global::CardData>(cardId);
             if (cardData == null)
             {
-                Debug.LogWarning($"[CardSelectPanel] CardData not found for ID: {cardId}");
+                GameLog.LogWarning($"[CardSelectPanel] CardData not found for ID: {cardId}");
                 return;
             }
 
@@ -1923,48 +1923,48 @@ namespace NovelianMagicLibraryDefense.UI
                 // Character Stat Buffs (081001-081004)
                 case 081001: // 공격력 증가
                     stageManager.ApplyGlobalStatBuff(StatType.Damage, buffValue);
-                    Debug.Log($"[CardSelectPanel] 공격력 증가: +{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 공격력 증가: +{buffValue * 100f}%");
                     break;
 
                 case 081002: // 치명타 피해 증가
                     stageManager.ApplyGlobalStatBuff(StatType.CritMultiplier, buffValue);
-                    Debug.Log($"[CardSelectPanel] 치명타 피해 증가: +{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 치명타 피해 증가: +{buffValue * 100f}%");
                     break;
 
                 case 081003: // 공격 속도 증가
                     stageManager.ApplyGlobalStatBuff(StatType.AttackSpeed, buffValue);
-                    Debug.Log($"[CardSelectPanel] 공격 속도 증가: +{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 공격 속도 증가: +{buffValue * 100f}%");
                     break;
 
                 case 081004: // 치명타 확률 증가
                     stageManager.ApplyGlobalStatBuff(StatType.CritChance, buffValue);
-                    Debug.Log($"[CardSelectPanel] 치명타 확률 증가: +{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 치명타 확률 증가: +{buffValue * 100f}%");
                     break;
 
                 // Monster Debuffs (081005-081006)
                 case 081005: // 적의 공격속도 감소
                     stageManager.ApplyGlobalMonsterDebuff(DeBuffType.ATK_Speed_Down, buffValue);
-                    Debug.Log($"[CardSelectPanel] 적 공격속도 감소: -{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 적 공격속도 감소: -{buffValue * 100f}%");
                     break;
 
                 case 081006: // 적의 공격력 감소
                     stageManager.ApplyGlobalMonsterDebuff(DeBuffType.ATK_Damage_Down, buffValue);
-                    Debug.Log($"[CardSelectPanel] 적 공격력 감소: -{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 적 공격력 감소: -{buffValue * 100f}%");
                     break;
 
                 // Wall Effects (081007-081008)
                 case 081007: // 결계 내구도 증가 (Shield)
                     stageManager.ApplyWallShield(buffValue);
-                    Debug.Log($"[CardSelectPanel] 결계 Shield 추가: +{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 결계 Shield 추가: +{buffValue * 100f}%");
                     break;
 
                 case 081008: // 결계 회복 (Heal)
                     stageManager.ApplyWallHeal(buffValue);
-                    Debug.Log($"[CardSelectPanel] 결계 회복: +{buffValue * 100f}%");
+                    GameLog.Log($"[CardSelectPanel] 결계 회복: +{buffValue * 100f}%");
                     break;
 
                 default:
-                    Debug.LogWarning($"[CardSelectPanel] Unknown card ID: {cardId}");
+                    GameLog.LogWarning($"[CardSelectPanel] Unknown card ID: {cardId}");
                     break;
             }
         }
@@ -1980,13 +1980,13 @@ namespace NovelianMagicLibraryDefense.UI
             // 081029 → 40001, 081030 → 40002, ...
             int supportId = (cardId - 081029) + 40001;
 
-            Debug.Log($"[CardSelectPanel] 서포트 스킬 카드: CardID={cardId} → SupportID={supportId}");
+            GameLog.Log($"[CardSelectPanel] 서포트 스킬 카드: CardID={cardId} → SupportID={supportId}");
 
             // 서포트 스킬 데이터 조회
             var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
             if (supportData == null)
             {
-                Debug.LogWarning($"[CardSelectPanel] SupportSkillData not found for ID: {supportId}");
+                GameLog.LogWarning($"[CardSelectPanel] SupportSkillData not found for ID: {supportId}");
                 return;
             }
 
@@ -2008,7 +2008,7 @@ namespace NovelianMagicLibraryDefense.UI
                 if (SkillExecutor.Instance != null && SkillExecutor.Instance.IsValidCombination(mainSkillData, supportData))
                 {
                     targetCharacter = character;
-                    Debug.Log($"[CardSelectPanel] 호환 캐릭터 발견: {character.GetCharacterId()}, 스킬타입: {mainSkillData.GetSkillType()}");
+                    GameLog.Log($"[CardSelectPanel] 호환 캐릭터 발견: {character.GetCharacterId()}, 스킬타입: {mainSkillData.GetSkillType()}");
                     break;
                 }
             }
@@ -2016,7 +2016,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (targetCharacter == null)
             {
                 // 호환 캐릭터 없음 → 카드 버리고 게임 진행
-                Debug.Log("[CardSelectPanel] 호환되는 캐릭터 없음. 서포트 스킬 카드 버림.");
+                GameLog.Log("[CardSelectPanel] 호환되는 캐릭터 없음. 서포트 스킬 카드 버림.");
                 return;
             }
 
@@ -2025,11 +2025,11 @@ namespace NovelianMagicLibraryDefense.UI
             if (success)
             {
                 string skillName = supportData?.support_name ?? $"Support_{supportId}";
-                Debug.Log($"[CardSelectPanel] 서포트 스킬 '{skillName}' 장착 완료! (캐릭터 ID: {targetCharacter.GetCharacterId()})");
+                GameLog.Log($"[CardSelectPanel] 서포트 스킬 '{skillName}' 장착 완료! (캐릭터 ID: {targetCharacter.GetCharacterId()})");
             }
             else
             {
-                Debug.LogWarning($"[CardSelectPanel] 서포트 스킬 장착 실패! (SupportID: {supportId})");
+                GameLog.LogWarning($"[CardSelectPanel] 서포트 스킬 장착 실패! (SupportID: {supportId})");
             }
         }
 
@@ -2079,7 +2079,7 @@ namespace NovelianMagicLibraryDefense.UI
             var supportData = CSVLoader.Instance?.GetData<SupportSkillData>(supportId);
             if (supportData == null)
             {
-                Debug.LogWarning($"[CardSelectPanel] SupportSkillData not found for Support_ID: {supportId}");
+                GameLog.LogWarning($"[CardSelectPanel] SupportSkillData not found for Support_ID: {supportId}");
                 return true;  // 데이터 없으면 통과 (fallback)
             }
 
@@ -2087,7 +2087,7 @@ namespace NovelianMagicLibraryDefense.UI
             var fieldCharacters = placementManager?.GetAllCharacters();
             if (fieldCharacters == null || fieldCharacters.Count == 0)
             {
-                Debug.Log($"[CardSelectPanel] 필드에 캐릭터 없음 → 서포트 카드 {cardId} 필터링");
+                GameLog.Log($"[CardSelectPanel] 필드에 캐릭터 없음 → 서포트 카드 {cardId} 필터링");
                 return false;  // 필드에 캐릭터 없으면 서포트 카드 표시 안 함
             }
 
@@ -2108,7 +2108,7 @@ namespace NovelianMagicLibraryDefense.UI
                 }
             }
 
-            Debug.Log($"[CardSelectPanel] 서포트 카드 {cardId} (Support_ID: {supportId}) 필터링됨 (호환 캐릭터 없음)");
+            GameLog.Log($"[CardSelectPanel] 서포트 카드 {cardId} (Support_ID: {supportId}) 필터링됨 (호환 캐릭터 없음)");
             return false;  // 호환 가능한 캐릭터 없음
         }
 
@@ -2141,18 +2141,18 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.LogWarning("[CardSelectPanel] CSVLoader not ready, using default 0.1");
+                GameLog.LogWarning("[CardSelectPanel] CSVLoader not ready, using default 0.1");
                 return 0.1f;
             }
 
             var cardLevelData = CSVLoader.Instance.GetData<CardLevelData>(cardLevelId);
             if (cardLevelData == null)
             {
-                Debug.LogWarning($"[CardSelectPanel] CardLevelData not found for ID: {cardLevelId}, using default 0.1");
+                GameLog.LogWarning($"[CardSelectPanel] CardLevelData not found for ID: {cardLevelId}, using default 0.1");
                 return 0.1f;
             }
 
-            Debug.Log($"[CardSelectPanel] CSV value_change: {cardLevelData.value_change} (ID: {cardLevelId}, Tier: {cardLevelData.Tier})");
+            GameLog.Log($"[CardSelectPanel] CSV value_change: {cardLevelData.value_change} (ID: {cardLevelId}, Tier: {cardLevelData.Tier})");
             return cardLevelData.value_change;
         }
 
@@ -2291,13 +2291,13 @@ namespace NovelianMagicLibraryDefense.UI
 
                 if (!isCardSelected)
                 {
-                    Debug.Log("[CardSelectPanel] 20초 타임아웃! 랜덤 카드 선택");
+                    GameLog.Log("[CardSelectPanel] 20초 타임아웃! 랜덤 카드 선택");
                     AutoSelectCard();
                 }
             }
             catch (OperationCanceledException)
             {
-                Debug.Log("[CardSelectPanel] 타이머 취소됨 (카드 선택됨)");
+                GameLog.Log("[CardSelectPanel] 타이머 취소됨 (카드 선택됨)");
             }
             finally
             {
@@ -2331,7 +2331,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (useCardSlotSystem && activeCardData != null && activeCardData.Length > 0)
             {
                 int randomIndex = UnityEngine.Random.Range(0, activeCardData.Length);
-                Debug.Log($"[CardSelectPanel] 랜덤 선택: 카드 슬롯 {randomIndex + 1}");
+                GameLog.Log($"[CardSelectPanel] 랜덤 선택: 카드 슬롯 {randomIndex + 1}");
                 OnCardSlotClicked(randomIndex);
                 return;
             }
@@ -2339,7 +2339,7 @@ namespace NovelianMagicLibraryDefense.UI
             // Legacy: cardInstances 사용
             if (cardInstances == null || cardInstances.Length == 0)
             {
-                Debug.LogWarning("[CardSelectPanel] 선택할 카드가 없습니다!");
+                GameLog.LogWarning("[CardSelectPanel] 선택할 카드가 없습니다!");
                 Close();
                 return;
             }
@@ -2348,12 +2348,12 @@ namespace NovelianMagicLibraryDefense.UI
             var cardButton = cardInstances[legacyRandomIndex]?.GetComponent<UnityEngine.UI.Button>();
             if (cardButton != null)
             {
-                Debug.Log($"[CardSelectPanel] 랜덤 선택: 카드 {legacyRandomIndex + 1}");
+                GameLog.Log($"[CardSelectPanel] 랜덤 선택: 카드 {legacyRandomIndex + 1}");
                 cardButton.onClick.Invoke();
             }
             else
             {
-                Debug.LogWarning("[CardSelectPanel] 랜덤 선택된 카드에 버튼이 없습니다!");
+                GameLog.LogWarning("[CardSelectPanel] 랜덤 선택된 카드에 버튼이 없습니다!");
                 Close();
             }
         }

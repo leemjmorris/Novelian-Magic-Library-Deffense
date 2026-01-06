@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -126,22 +126,22 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 stageSettings.stageDuration = duration;
             }
-            // Debug.Log($"[StageManager] Stage duration set to {duration} seconds");
+            // GameLog.Log($"[StageManager] Stage duration set to {duration} seconds");
         }
 
         protected override void OnInitialize()
         {
-            Debug.Log("[StageManager] OnInitialize called");
+            GameLog.Log("[StageManager] OnInitialize called");
 
             // LMJ: Subscribe to monster death event for exp via EventChannel
             if (monsterEvents != null)
             {
                 monsterEvents.AddMonsterDiedListener(AddExp);
-                Debug.Log($"[StageManager] monsterEvents 구독 완료 (AddExp) - InstanceID: {monsterEvents.GetInstanceID()}");
+                GameLog.Log($"[StageManager] monsterEvents 구독 완료 (AddExp) - InstanceID: {monsterEvents.GetInstanceID()}");
             }
             else
             {
-                Debug.LogError("[StageManager] monsterEvents가 NULL! 인스펙터에서 MonsterEvents 할당 필요!");
+                GameLog.LogError("[StageManager] monsterEvents가 NULL! 인스펙터에서 MonsterEvents 할당 필요!");
             }
 
             // JML: CSVLoader 초기화 대기 후 스테이지 초기화 (Issue #420)
@@ -154,7 +154,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private async UniTaskVoid WaitForCSVAndInitialize()
         {
-            Debug.Log("[StageManager] Waiting for CSVLoader to initialize...");
+            GameLog.Log("[StageManager] Waiting for CSVLoader to initialize...");
 
             // CSVLoader 초기화 대기 (최대 10초)
             float timeout = 10f;
@@ -167,11 +167,11 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.LogError("[StageManager] CSVLoader initialization timeout! Please start from BootScene.");
+                GameLog.LogError("[StageManager] CSVLoader initialization timeout! Please start from BootScene.");
                 return;
             }
 
-            Debug.Log($"[StageManager] CSVLoader ready! (waited {elapsed:F2}s)");
+            GameLog.Log($"[StageManager] CSVLoader ready! (waited {elapsed:F2}s)");
 
             // JML: CSV 데이터 기반 스테이지 초기화
             InitializeFromCSV();
@@ -188,27 +188,27 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void InitializeFromCSV()
         {
-            Debug.Log("[StageManager] InitializeFromCSV called!");
+            GameLog.Log("[StageManager] InitializeFromCSV called!");
 
             // Issue #476: BossDungeon 모드면 StageManager 초기화 스킵
             // BossDungeonManager가 별도로 처리함
             if (SelectedBossDungeon.HasSelection)
             {
-                Debug.Log("[StageManager] BossDungeon mode detected - skipping StageManager initialization");
+                GameLog.Log("[StageManager] BossDungeon mode detected - skipping StageManager initialization");
                 return;
             }
 
             // CSVLoader 초기화 확인
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.LogError("[StageManager] CSVLoader is not initialized! Please start from BootScene.");
+                GameLog.LogError("[StageManager] CSVLoader is not initialized! Please start from BootScene.");
                 return;
             }
 
-            Debug.Log($"[StageManager] SelectedStage.HasSelection: {SelectedStage.HasSelection}");
+            GameLog.Log($"[StageManager] SelectedStage.HasSelection: {SelectedStage.HasSelection}");
             if (!SelectedStage.HasSelection)
             {
-                Debug.LogWarning("[StageManager] No stage selected, using default stage (10101)");
+                GameLog.LogWarning("[StageManager] No stage selected, using default stage (10101)");
                 StageName = "Stage 1-1";
 
                 // JML: 기본 스테이지 데이터 로드 (스테이지 선택 없이 GameScene 직접 실행 시)
@@ -219,7 +219,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
                 else
                 {
-                    Debug.LogError("[StageManager] Default stage (010101) not found in CSV!");
+                    GameLog.LogError("[StageManager] Default stage (010101) not found in CSV!");
                     return;
                 }
             }
@@ -230,7 +230,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             // 1. Time Limit 설정
             SetStageDuration(stageData.Time_Limit);
-            Debug.Log($"[StageManager] Time Limit set to {stageData.Time_Limit} seconds");
+            GameLog.Log($"[StageManager] Time Limit set to {stageData.Time_Limit} seconds");
 
             // 2. 정적 맵 초기화 (Wall HP, Wave 등)
             InitializeStaticMap(stageData);
@@ -242,7 +242,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void InitializeStaticMap(StageData stageData)
         {
-            Debug.Log("[StageManager] InitializeStaticMap called!");
+            GameLog.Log("[StageManager] InitializeStaticMap called!");
 
             // 1. Wall HP 설정 (StageTable.csv의 Barrier_HP 사용)
             ApplyWallHP(stageData.Barrier_HP);
@@ -263,10 +263,10 @@ namespace NovelianMagicLibraryDefense.Managers
             InitializeWavesAfterMapLoad(stageData);
 
             // 6. 카드 선택 표시 (무조건 호출)
-            Debug.Log("[StageManager] About to call ShowStartCardSelection...");
+            GameLog.Log("[StageManager] About to call ShowStartCardSelection...");
             ShowStartCardSelection().Forget();
 
-            Debug.Log("[StageManager] InitializeStaticMap completed!");
+            GameLog.Log("[StageManager] InitializeStaticMap completed!");
         }
 
         /// <summary>
@@ -277,11 +277,11 @@ namespace NovelianMagicLibraryDefense.Managers
             if (wallComponent != null)
             {
                 wallComponent.SetMaxHealth(barrierHP);
-                Debug.Log($"[StageManager] Wall HP set to {barrierHP}");
+                GameLog.Log($"[StageManager] Wall HP set to {barrierHP}");
             }
             else
             {
-                Debug.LogError("[StageManager] wallComponent is null! Inspector에서 할당해주세요.");
+                GameLog.LogError("[StageManager] wallComponent is null! Inspector에서 할당해주세요.");
             }
         }
 
@@ -298,12 +298,12 @@ namespace NovelianMagicLibraryDefense.Managers
             if (spawner1 != null)
             {
                 waveManager.SetMonsterSpawner(spawner1);
-                Debug.Log("[StageManager] MonsterSpawner 1 set to WaveManager");
+                GameLog.Log("[StageManager] MonsterSpawner 1 set to WaveManager");
             }
             if (spawner2 != null)
             {
                 waveManager.SetBossSpawner(spawner2);
-                Debug.Log("[StageManager] MonsterSpawner 2 (Boss) set to WaveManager");
+                GameLog.Log("[StageManager] MonsterSpawner 2 (Boss) set to WaveManager");
             }
 
             // WaveManager에 Wall 타겟 설정 (몬스터 목적지 설정에 필요)
@@ -311,7 +311,7 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 var wallColl = protectionObj.GetComponent<Collider>();
                 waveManager.SetWallTarget(protectionObj, wallComponent, wallColl);
-                Debug.Log("[StageManager] WallTarget set to WaveManager");
+                GameLog.Log("[StageManager] WallTarget set to WaveManager");
             }
         }
 
@@ -325,11 +325,11 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 waveManager.InitializeWithWaveData(waveDataList);
                 waveManager.WaveLoop().Forget();
-                Debug.Log($"[StageManager] Initialized with {waveDataList.Count} waves from CSV");
+                GameLog.Log($"[StageManager] Initialized with {waveDataList.Count} waves from CSV");
             }
             else
             {
-                Debug.LogError("[StageManager] No wave data found! Check Wave IDs in StageTable.csv");
+                GameLog.LogError("[StageManager] No wave data found! Check Wave IDs in StageTable.csv");
             }
         }
 
@@ -351,7 +351,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
 
             Monster.InitializeWallCache(walls, wallTransforms, wallColliders);
-            Debug.Log($"[StageManager] Monster Wall cache initialized with {walls.Count} wall(s)");
+            GameLog.Log($"[StageManager] Monster Wall cache initialized with {walls.Count} wall(s)");
         }
 
         /// <summary>
@@ -377,12 +377,12 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (waveData != null)
                 {
                     waveDataList.Add(waveData);
-                    Debug.Log($"[StageManager] Added Wave {waveId}: Monster_ID={waveData.Monster_ID}, " +
+                    GameLog.Log($"[StageManager] Added Wave {waveId}: Monster_ID={waveData.Monster_ID}, " +
                               $"Count={waveData.Monster_Count}, Spawn_Time={waveData.Spawn_Time}s");
                 }
                 else
                 {
-                    Debug.LogWarning($"[StageManager] Wave data not found for ID: {waveId}");
+                    GameLog.LogWarning($"[StageManager] Wave data not found for ID: {waveId}");
                 }
             }
 
@@ -396,7 +396,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private async UniTaskVoid ShowStartCardSelection()
         {
-            Debug.Log("[StageManager] ShowStartCardSelection called!");
+            GameLog.Log("[StageManager] ShowStartCardSelection called!");
 
             // UIManager가 준비될 때까지 대기 (최대 5초)
             float timeout = 5f;
@@ -407,13 +407,13 @@ namespace NovelianMagicLibraryDefense.Managers
                 elapsed += Time.unscaledDeltaTime;
             }
 
-            Debug.Log($"[StageManager] GameManager.Instance: {(GameManager.Instance != null ? "OK" : "NULL")}");
-            Debug.Log($"[StageManager] GameManager.Instance.UI: {(GameManager.Instance?.UI != null ? "OK" : "NULL")}");
+            GameLog.Log($"[StageManager] GameManager.Instance: {(GameManager.Instance != null ? "OK" : "NULL")}");
+            GameLog.Log($"[StageManager] GameManager.Instance.UI: {(GameManager.Instance?.UI != null ? "OK" : "NULL")}");
 
             var ui = GameManager.Instance?.UI;
             if (ui == null)
             {
-                Debug.LogError("[StageManager] UIManager is null after waiting! Cannot show start card selection.");
+                GameLog.LogError("[StageManager] UIManager is null after waiting! Cannot show start card selection.");
                 return;
             }
 
@@ -427,14 +427,14 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (!ui.IsCardSelectPanelReady())
             {
-                Debug.LogWarning("[StageManager] CardSelectPanel Awake 타임아웃! 강제 진행...");
+                GameLog.LogWarning("[StageManager] CardSelectPanel Awake 타임아웃! 강제 진행...");
             }
             else
             {
-                Debug.Log("[StageManager] CardSelectPanel Awake 완료 확인!");
+                GameLog.Log("[StageManager] CardSelectPanel Awake 완료 확인!");
             }
 
-            Debug.Log("[StageManager] Calling OpenCardSelectForGameStart...");
+            GameLog.Log("[StageManager] Calling OpenCardSelectForGameStart...");
             ui.OpenCardSelectForGameStart(); // Opens deck count character cards (3-4)
 
             // Wait until card panel is closed
@@ -443,19 +443,19 @@ namespace NovelianMagicLibraryDefense.Managers
                 await UniTask.Yield();
             }
 
-            Debug.Log("[StageManager] Start card selection completed");
+            GameLog.Log("[StageManager] Start card selection completed");
 
             // JML: 카드 선택 완료 후 파티 시너지 버프 적용
             if (characterPlacementManager != null)
             {
                 characterPlacementManager.ApplySynergyToAllCharacters();
-                Debug.Log("[StageManager] 파티 시너지 버프 적용 완료");
+                GameLog.Log("[StageManager] 파티 시너지 버프 적용 완료");
             }
         }
 
         protected override void OnReset()
         {
-            // Debug.Log("[StageManager] Resetting stage");
+            // GameLog.Log("[StageManager] Resetting stage");
 
             // LMJ: Cancel and dispose timer
             timerCts?.Cancel();
@@ -487,7 +487,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnDispose()
         {
-            // Debug.Log("[StageManager] Disposing stage");
+            // GameLog.Log("[StageManager] Disposing stage");
 
             // LMJ: Cancel timer
             timerCts?.Cancel();
@@ -537,13 +537,13 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             catch (OperationCanceledException)
             {
-                // Debug.Log("[StageManager] Timer cancelled");
+                // GameLog.Log("[StageManager] Timer cancelled");
             }
         }
 
         public void HandleTimeUp()
         {
-            // Debug.Log("[StageManager] Time's Up! Stage Failed");
+            // GameLog.Log("[StageManager] Time's Up! Stage Failed");
             waveManager.WaveClear();
 
             // LMJ: Use EventChannel instead of static event
@@ -558,12 +558,12 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void AddExp(Monster monster)
         {
-            Debug.Log($"[StageManager] AddExp called! Monster: {monster?.name}, Exp: {monster?.Exp}");
+            GameLog.Log($"[StageManager] AddExp called! Monster: {monster?.name}, Exp: {monster?.Exp}");
 
             // 최대 레벨이면 경험치 획득 무시
             if (IsMaxLevel())
             {
-                Debug.Log("[StageManager] AddExp - 최대 레벨 도달, 경험치 무시");
+                GameLog.Log("[StageManager] AddExp - 최대 레벨 도달, 경험치 무시");
                 return;
             }
 
@@ -575,16 +575,16 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (expMultiplier > 1.0f)
             {
-                Debug.Log($"[StageManager] Exp +{expToAdd} (base {monster.Exp} x{expMultiplier:F2}) -> {currentExp}/{maxExp}");
+                GameLog.Log($"[StageManager] Exp +{expToAdd} (base {monster.Exp} x{expMultiplier:F2}) -> {currentExp}/{maxExp}");
             }
             else
             {
-                Debug.Log($"[StageManager] Exp +{expToAdd} -> {currentExp}/{maxExp}");
+                GameLog.Log($"[StageManager] Exp +{expToAdd} -> {currentExp}/{maxExp}");
             }
             GameManager.Instance?.UI?.UpdateExperience(currentExp, maxExp);
             if (currentExp >= maxExp)
             {
-                // Debug.Log($"[StageManager] Level up triggered! currentExp={currentExp}, maxExp={maxExp}"); // LCB: Debug level up trigger
+                // GameLog.Log($"[StageManager] Level up triggered! currentExp={currentExp}, maxExp={maxExp}"); // LCB: Debug level up trigger
                 LevelUp().Forget();
             }
         }
@@ -598,7 +598,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // Issue #570: 씬 전환 중이면 레벨업 무시
             if (IsExitingStage)
             {
-                Debug.Log("[StageManager] LevelUp skipped - exiting stage");
+                GameLog.Log("[StageManager] LevelUp skipped - exiting stage");
                 return;
             }
 
@@ -619,7 +619,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 ui?.UpdateExperience(currentExp, maxExp);
 
                 // LMJ: Open card selection for level up (Card_Type 1: 4 stat cards, Card_Type 2: deck count character cards)
-                Debug.Log($"[StageManager] Level up to {level}! (Next: {maxExp} exp)");
+                GameLog.Log($"[StageManager] Level up to {level}! (Next: {maxExp} exp)");
 
                 if (ui != null)
                 {
@@ -633,7 +633,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
                 else
                 {
-                    Debug.LogError("[StageManager] UIManager is null!");
+                    GameLog.LogError("[StageManager] UIManager is null!");
                 }
             }
             // Issue #602: CardSelectPanel이 Close 시 TimeManager.PopTimeScale()을 호출하므로
@@ -686,7 +686,7 @@ namespace NovelianMagicLibraryDefense.Managers
         public void AddExpMultiplier(float percentage)
         {
             expMultiplier += percentage;
-            Debug.Log($"[StageManager] Exp multiplier changed: {expMultiplier:F2} (+{percentage:F2})");
+            GameLog.Log($"[StageManager] Exp multiplier changed: {expMultiplier:F2} (+{percentage:F2})");
         }
 
         /// <summary>
@@ -697,7 +697,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             expMultiplier -= percentage;
             if (expMultiplier < 1.0f) expMultiplier = 1.0f; // 최소값 보장
-            Debug.Log($"[StageManager] Exp multiplier changed: {expMultiplier:F2} (-{percentage:F2})");
+            GameLog.Log($"[StageManager] Exp multiplier changed: {expMultiplier:F2} (-{percentage:F2})");
         }
 
         /// <summary>
@@ -750,7 +750,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (wallComponent != null)
                 {
                     wallComponent.HealByPercent(value);
-                    Debug.Log($"[StageManager] Wall 체력 회복: +{value * 100f}%");
+                    GameLog.Log($"[StageManager] Wall 체력 회복: +{value * 100f}%");
                 }
                 return;
             }
@@ -765,7 +765,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 globalStatBuffs[statType] = value;
             }
 
-            Debug.Log($"[StageManager] Global Stat Buff Applied: {statType} +{value * 100f}% (Total: {globalStatBuffs[statType] * 100f}%)");
+            GameLog.Log($"[StageManager] Global Stat Buff Applied: {statType} +{value * 100f}% (Total: {globalStatBuffs[statType] * 100f}%)");
 
             // 2. 현재 필드의 모든 캐릭터에 버프 적용
             ApplyBuffToAllCharacters(statType, value);
@@ -799,14 +799,14 @@ namespace NovelianMagicLibraryDefense.Managers
             // JML: Inspector에서 설정한 CharacterPlacementManager 참조 사용
             if (characterPlacementManager == null)
             {
-                Debug.LogWarning("[StageManager] CharacterPlacementManager 참조가 없습니다! Inspector에서 설정해주세요.");
+                GameLog.LogWarning("[StageManager] CharacterPlacementManager 참조가 없습니다! Inspector에서 설정해주세요.");
                 return;
             }
 
             var characters = characterPlacementManager.GetAllCharacters();
             if (characters == null || characters.Count == 0)
             {
-                Debug.Log("[StageManager] No characters in field to apply buff.");
+                GameLog.Log("[StageManager] No characters in field to apply buff.");
                 return;
             }
 
@@ -818,7 +818,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
             }
 
-            Debug.Log($"[StageManager] Buff applied to {characters.Count} characters");
+            GameLog.Log($"[StageManager] Buff applied to {characters.Count} characters");
 
             // UI 갱신 - 캐릭터 카드 스탯 정보 업데이트
             if (characterCardGridManager != null)
@@ -849,7 +849,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 globalMonsterDebuffs[debuffType] = value;
             }
 
-            Debug.Log($"[StageManager] Global Monster Debuff Applied: {debuffType} -{value * 100f}% (Total: {globalMonsterDebuffs[debuffType] * 100f}%)");
+            GameLog.Log($"[StageManager] Global Monster Debuff Applied: {debuffType} -{value * 100f}% (Total: {globalMonsterDebuffs[debuffType] * 100f}%)");
 
             // 2. 현재 필드의 모든 몬스터에 디버프 적용
             ApplyDebuffToAllMonsters(debuffType, value);
@@ -875,7 +875,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
             }
 
-            Debug.Log($"[StageManager] Debuff {debuffType} applied to {appliedCount} monsters");
+            GameLog.Log($"[StageManager] Debuff {debuffType} applied to {appliedCount} monsters");
         }
 
         /// <summary>
@@ -905,11 +905,11 @@ namespace NovelianMagicLibraryDefense.Managers
             if (wallComponent != null)
             {
                 wallComponent.AddShieldByPercent(value);
-                Debug.Log($"[StageManager] Wall Shield 추가: +{value * 100f}%");
+                GameLog.Log($"[StageManager] Wall Shield 추가: +{value * 100f}%");
             }
             else
             {
-                Debug.LogError("[StageManager] wallComponent is null! Cannot apply shield.");
+                GameLog.LogError("[StageManager] wallComponent is null! Cannot apply shield.");
             }
         }
 
@@ -922,11 +922,11 @@ namespace NovelianMagicLibraryDefense.Managers
             if (wallComponent != null)
             {
                 wallComponent.HealByPercent(value);
-                Debug.Log($"[StageManager] Wall 체력 회복: +{value * 100f}%");
+                GameLog.Log($"[StageManager] Wall 체력 회복: +{value * 100f}%");
             }
             else
             {
-                Debug.LogError("[StageManager] wallComponent is null! Cannot heal.");
+                GameLog.LogError("[StageManager] wallComponent is null! Cannot heal.");
             }
         }
 

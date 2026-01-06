@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using TMPro;
@@ -34,7 +34,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (container == null || prefab == null)
             {
-                Debug.LogWarning("[RewardIconHelper] Container or Prefab is null");
+                GameLog.LogWarning("[RewardIconHelper] Container or Prefab is null");
                 return;
             }
 
@@ -46,14 +46,14 @@ namespace NovelianMagicLibraryDefense.UI
             var rewardGroupTable = CSVLoader.Instance?.GetTable<RewardGroupData>();
             if (rewardGroupTable == null)
             {
-                Debug.LogWarning("[RewardIconHelper] RewardGroupTable not loaded");
+                GameLog.LogWarning("[RewardIconHelper] RewardGroupTable not loaded");
                 return;
             }
 
             RewardGroupData rewardGroup = rewardGroupTable.GetId(rewardGroupId);
             if (rewardGroup == null)
             {
-                Debug.LogWarning($"[RewardIconHelper] RewardGroup not found: {rewardGroupId}");
+                GameLog.LogWarning($"[RewardIconHelper] RewardGroup not found: {rewardGroupId}");
                 return;
             }
 
@@ -70,7 +70,7 @@ namespace NovelianMagicLibraryDefense.UI
             var rewardTable = CSVLoader.Instance?.GetTable<RewardData>();
             if (rewardTable == null)
             {
-                Debug.LogWarning("[RewardIconHelper] RewardTable not loaded");
+                GameLog.LogWarning("[RewardIconHelper] RewardTable not loaded");
                 return;
             }
 
@@ -104,7 +104,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (container == null || prefab == null || rewards == null)
             {
-                Debug.LogWarning("[RewardIconHelper] Container, Prefab or Rewards is null");
+                GameLog.LogWarning("[RewardIconHelper] Container, Prefab or Rewards is null");
                 return;
             }
 
@@ -137,7 +137,7 @@ namespace NovelianMagicLibraryDefense.UI
             string iconKey = GetIconKey(reward.Item_ID);
             if (string.IsNullOrEmpty(iconKey))
             {
-                Debug.LogWarning($"[RewardIconHelper] IconKey not found for Item_ID: {reward.Item_ID}");
+                GameLog.LogWarning($"[RewardIconHelper] IconKey not found for Item_ID: {reward.Item_ID}");
                 return;
             }
 
@@ -174,7 +174,7 @@ namespace NovelianMagicLibraryDefense.UI
             }
             else
             {
-                Debug.LogWarning("[RewardIconHelper] Image component not found");
+                GameLog.LogWarning("[RewardIconHelper] Image component not found");
             }
         }
 
@@ -393,19 +393,19 @@ namespace NovelianMagicLibraryDefense.UI
                     }
                     else
                     {
-                        Debug.LogWarning($"[RewardIconHelper] Icon load failed (null): {iconKey}");
+                        GameLog.LogWarning($"[RewardIconHelper] Icon load failed (null): {iconKey}");
                     }
                 }
                 else
                 {
-                    Debug.LogWarning($"[RewardIconHelper] Addressable key not found: {iconKey}");
+                    GameLog.LogWarning($"[RewardIconHelper] Addressable key not found: {iconKey}");
                 }
 
                 Addressables.Release(locationsHandle);
             }
             catch (System.Exception e)
             {
-                Debug.LogWarning($"[RewardIconHelper] Icon load failed: {iconKey}\n{e.Message}");
+                GameLog.LogWarning($"[RewardIconHelper] Icon load failed: {iconKey}\n{e.Message}");
             }
         }
     }

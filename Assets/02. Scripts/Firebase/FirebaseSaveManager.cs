@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Firebase.Database;
 using Firebase.Data;
@@ -44,13 +44,13 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         if (isInitialized)
         {
-            Debug.Log($"{LOG_PREFIX} 이미 초기화됨");
+            GameLog.Log($"{LOG_PREFIX} 이미 초기화됨");
             return;
         }
 
         databaseRef = FirebaseDatabase.DefaultInstance.RootReference;
         isInitialized = true;
-        Debug.Log($"{LOG_PREFIX} 초기화 완료");
+        GameLog.Log($"{LOG_PREFIX} 초기화 완료");
     }
 
     #region 전체 데이터 로드/저장
@@ -62,7 +62,7 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         if (!isInitialized)
         {
-            Debug.LogError($"{LOG_PREFIX} 초기화되지 않음");
+            GameLog.LogError($"{LOG_PREFIX} 초기화되지 않음");
             return null;
         }
 
@@ -73,21 +73,21 @@ public class FirebaseSaveManager : MonoBehaviour
             if (snapshot.Exists)
             {
                 cachedUserData = ParseUserData(snapshot);
-                Debug.Log($"{LOG_PREFIX} 유저 데이터 로드 완료");
+                GameLog.Log($"{LOG_PREFIX} 유저 데이터 로드 완료");
             }
             else
             {
                 // 신규 유저 - 기본값 생성
                 cachedUserData = UserData.CreateDefault();
                 await SaveAllAsync(userId);
-                Debug.Log($"{LOG_PREFIX} 신규 유저 데이터 생성 완료");
+                GameLog.Log($"{LOG_PREFIX} 신규 유저 데이터 생성 완료");
             }
 
             return cachedUserData;
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 데이터 로드 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 데이터 로드 실패: {e.Message}");
             return null;
         }
     }
@@ -99,7 +99,7 @@ public class FirebaseSaveManager : MonoBehaviour
     {
         if (!isInitialized || cachedUserData == null)
         {
-            Debug.LogError($"{LOG_PREFIX} 초기화되지 않았거나 데이터 없음");
+            GameLog.LogError($"{LOG_PREFIX} 초기화되지 않았거나 데이터 없음");
             return false;
         }
 
@@ -112,12 +112,12 @@ public class FirebaseSaveManager : MonoBehaviour
             var updates = ConvertToFirebaseFormat(cachedUserData);
             await databaseRef.Child(USERS_PATH).Child(userId).SetValueAsync(updates);
 
-            Debug.Log($"{LOG_PREFIX} 전체 데이터 저장 완료");
+            GameLog.Log($"{LOG_PREFIX} 전체 데이터 저장 완료");
             return true;
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 전체 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 전체 저장 실패: {e.Message}");
             return false;
         }
     }
@@ -150,13 +150,13 @@ public class FirebaseSaveManager : MonoBehaviour
                 { "apRecoveryTime", currencies.apRecoveryTime } // 레거시 호환
             };
 
-            Debug.Log($"<color=#FF6B6B>[FirebaseSaveManager]</color> 저장 시도 - dungeonPassLastSyncTimeMs: {currencies.dungeonPassLastSyncTimeMs}");
+            GameLog.Log($"<color=#FF6B6B>[FirebaseSaveManager]</color> 저장 시도 - dungeonPassLastSyncTimeMs: {currencies.dungeonPassLastSyncTimeMs}");
             await databaseRef.Child(USERS_PATH).Child(userId).Child("currencies").UpdateChildrenAsync(data);
-            Debug.Log($"{LOG_PREFIX} 재화 저장 완료 - dungeonPassLastSyncTimeMs 저장됨: {currencies.dungeonPassLastSyncTimeMs}");
+            GameLog.Log($"{LOG_PREFIX} 재화 저장 완료 - dungeonPassLastSyncTimeMs 저장됨: {currencies.dungeonPassLastSyncTimeMs}");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 재화 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 재화 저장 실패: {e.Message}");
         }
     }
 
@@ -203,11 +203,11 @@ public class FirebaseSaveManager : MonoBehaviour
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("progression").SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 진행도 저장 완료");
+            GameLog.Log($"{LOG_PREFIX} 진행도 저장 완료");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 진행도 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 진행도 저장 실패: {e.Message}");
         }
     }
 
@@ -228,11 +228,11 @@ public class FirebaseSaveManager : MonoBehaviour
             }
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("characters").Child("owned").SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 보유 캐릭터 저장 완료");
+            GameLog.Log($"{LOG_PREFIX} 보유 캐릭터 저장 완료");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 보유 캐릭터 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 보유 캐릭터 저장 실패: {e.Message}");
         }
     }
 
@@ -251,11 +251,11 @@ public class FirebaseSaveManager : MonoBehaviour
                 .Child("characters").Child("enhancements").Child(characterId.ToString())
                 .SetValueAsync(level);
 
-            Debug.Log($"{LOG_PREFIX} 캐릭터 강화 저장 완료 (ID: {characterId}, Lv: {level})");
+            GameLog.Log($"{LOG_PREFIX} 캐릭터 강화 저장 완료 (ID: {characterId}, Lv: {level})");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 캐릭터 강화 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 캐릭터 강화 저장 실패: {e.Message}");
         }
     }
 
@@ -281,11 +281,11 @@ public class FirebaseSaveManager : MonoBehaviour
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("deck").SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 덱 프리셋 저장 완료 (현재 프리셋: {deckData.currentPreset + 1})");
+            GameLog.Log($"{LOG_PREFIX} 덱 프리셋 저장 완료 (현재 프리셋: {deckData.currentPreset + 1})");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 덱 프리셋 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 덱 프리셋 저장 실패: {e.Message}");
         }
     }
 
@@ -330,7 +330,7 @@ public class FirebaseSaveManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 덱 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 덱 저장 실패: {e.Message}");
         }
     }
 
@@ -353,11 +353,11 @@ public class FirebaseSaveManager : MonoBehaviour
             }
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("ingredients").SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 재료 저장 완료");
+            GameLog.Log($"{LOG_PREFIX} 재료 저장 완료");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 재료 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 재료 저장 실패: {e.Message}");
         }
     }
 
@@ -376,11 +376,11 @@ public class FirebaseSaveManager : MonoBehaviour
                 .Child("ingredients").Child(ingredientId.ToString())
                 .SetValueAsync(count);
 
-            Debug.Log($"{LOG_PREFIX} 재료 저장 완료 (ID: {ingredientId}, 수량: {count})");
+            GameLog.Log($"{LOG_PREFIX} 재료 저장 완료 (ID: {ingredientId}, 수량: {count})");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 재료 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 재료 저장 실패: {e.Message}");
         }
     }
 
@@ -397,11 +397,11 @@ public class FirebaseSaveManager : MonoBehaviour
             var data = ConvertBookmarksToFirebaseFormat(bookmarks);
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("bookmarks").SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 책갈피 저장 완료");
+            GameLog.Log($"{LOG_PREFIX} 책갈피 저장 완료");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 책갈피 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 책갈피 저장 실패: {e.Message}");
         }
     }
 
@@ -432,11 +432,11 @@ public class FirebaseSaveManager : MonoBehaviour
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("dispatch").Child(dispatchType).SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 파견({dispatchType}) 저장 완료");
+            GameLog.Log($"{LOG_PREFIX} 파견({dispatchType}) 저장 완료");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 파견 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 파견 저장 실패: {e.Message}");
         }
     }
 
@@ -451,11 +451,11 @@ public class FirebaseSaveManager : MonoBehaviour
         {
             cachedUserData.nickname = nickname;
             await databaseRef.Child(USERS_PATH).Child(userId).Child("nickname").SetValueAsync(nickname);
-            Debug.Log($"{LOG_PREFIX} 닉네임 저장 완료: {nickname}");
+            GameLog.Log($"{LOG_PREFIX} 닉네임 저장 완료: {nickname}");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 닉네임 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 닉네임 저장 실패: {e.Message}");
         }
     }
 
@@ -479,11 +479,11 @@ public class FirebaseSaveManager : MonoBehaviour
                 .Child("partySynergies").Child("levels").Child(partyId.ToString())
                 .SetValueAsync(level);
 
-            Debug.Log($"{LOG_PREFIX} 파티 시너지 저장 완료 (PartyID: {partyId}, Lv: {level})");
+            GameLog.Log($"{LOG_PREFIX} 파티 시너지 저장 완료 (PartyID: {partyId}, Lv: {level})");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 파티 시너지 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 파티 시너지 저장 실패: {e.Message}");
         }
     }
 
@@ -512,11 +512,11 @@ public class FirebaseSaveManager : MonoBehaviour
             };
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("profile").SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 프로필 저장 완료 (사진: {pictureId}, 프레임: {frameId})");
+            GameLog.Log($"{LOG_PREFIX} 프로필 저장 완료 (사진: {pictureId}, 프레임: {frameId})");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 프로필 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 프로필 저장 실패: {e.Message}");
         }
     }
 
@@ -537,11 +537,11 @@ public class FirebaseSaveManager : MonoBehaviour
             cachedUserData.profile.equippedTitleIndex = titleIndex;
 
             await databaseRef.Child(USERS_PATH).Child(userId).Child("profile").Child("equippedTitleIndex").SetValueAsync(titleIndex);
-            Debug.Log($"{LOG_PREFIX} 칭호 저장 완료 (인덱스: {titleIndex})");
+            GameLog.Log($"{LOG_PREFIX} 칭호 저장 완료 (인덱스: {titleIndex})");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 칭호 저장 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 칭호 저장 실패: {e.Message}");
         }
     }
 
@@ -690,7 +690,7 @@ public class FirebaseSaveManager : MonoBehaviour
             data.currencies.ap = GetIntValue(currenciesSnap.Child("ap"));
             data.currencies.apLastSyncTimeMs = GetLongValue(currenciesSnap.Child("apLastSyncTimeMs"));
             data.currencies.dungeonPassLastSyncTimeMs = GetLongValue(currenciesSnap.Child("dungeonPassLastSyncTimeMs")); // Issue #646
-            Debug.Log($"<color=#FF6B6B>[FirebaseSaveManager]</color> ParseUserData - dungeonPassLastSyncTimeMs 로드: {data.currencies.dungeonPassLastSyncTimeMs}");
+            GameLog.Log($"<color=#FF6B6B>[FirebaseSaveManager]</color> ParseUserData - dungeonPassLastSyncTimeMs 로드: {data.currencies.dungeonPassLastSyncTimeMs}");
             if (currenciesSnap.Child("apRecoveryTime").Exists)
                 data.currencies.apRecoveryTime = currenciesSnap.Child("apRecoveryTime").Value?.ToString() ?? "";
         }
@@ -926,11 +926,11 @@ public class FirebaseSaveManager : MonoBehaviour
             };
 
             await databaseRef.Child(LEADERBOARD_PATH).Child(oderId).SetValueAsync(data);
-            Debug.Log($"{LOG_PREFIX} 리더보드 업데이트 완료: {totalKilledMonsters}");
+            GameLog.Log($"{LOG_PREFIX} 리더보드 업데이트 완료: {totalKilledMonsters}");
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 리더보드 업데이트 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 리더보드 업데이트 실패: {e.Message}");
         }
     }
 
@@ -952,13 +952,13 @@ public class FirebaseSaveManager : MonoBehaviour
             int higherCount = (int)snapshot.ChildrenCount;
             int rank = higherCount + 1;
 
-            Debug.Log($"{LOG_PREFIX} 랭킹 조회: 내 킬={myKillCount}, 나보다 높은 유저={higherCount}명, 내 순위=#{rank}");
+            GameLog.Log($"{LOG_PREFIX} 랭킹 조회: 내 킬={myKillCount}, 나보다 높은 유저={higherCount}명, 내 순위=#{rank}");
 
             return rank;
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 랭킹 조회 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 랭킹 조회 실패: {e.Message}");
             return 1;
         }
     }
@@ -977,11 +977,11 @@ public class FirebaseSaveManager : MonoBehaviour
                 cachedUserData.lastUpdated = DateTime.UtcNow.ToString("o");
                 var updates = ConvertToFirebaseFormat(cachedUserData);
                 databaseRef.Child(USERS_PATH).Child(FirebaseManager.Instance.CurrentUserId).SetValueAsync(updates);
-                Debug.Log($"{LOG_PREFIX} 게임 종료 - 데이터 저장 요청");
+                GameLog.Log($"{LOG_PREFIX} 게임 종료 - 데이터 저장 요청");
             }
             catch (Exception e)
             {
-                Debug.LogError($"{LOG_PREFIX} 종료 시 저장 실패: {e.Message}");
+                GameLog.LogError($"{LOG_PREFIX} 종료 시 저장 실패: {e.Message}");
             }
         }
     }
@@ -992,7 +992,7 @@ public class FirebaseSaveManager : MonoBehaviour
         {
             // 앱이 백그라운드로 갈 때 저장
             SaveAllAsync(FirebaseManager.Instance.CurrentUserId).Forget();
-            Debug.Log($"{LOG_PREFIX} 앱 일시정지 - 데이터 저장");
+            GameLog.Log($"{LOG_PREFIX} 앱 일시정지 - 데이터 저장");
         }
     }
 

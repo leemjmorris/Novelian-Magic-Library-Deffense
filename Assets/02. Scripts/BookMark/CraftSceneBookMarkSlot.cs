@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.UI;
@@ -44,7 +44,7 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
         {
             bool isEquipped = bookMark != null && bookMark.IsEquipped;
             equipIcon.SetActive(isEquipped);
-            Debug.Log($"[CraftSceneBookMarkSlot] Init - 책갈피: {bookMark?.Name}, IsEquipped: {bookMark?.IsEquipped}, equipIcon 활성화: {isEquipped}");
+            GameLog.Log($"[CraftSceneBookMarkSlot] Init - 책갈피: {bookMark?.Name}, IsEquipped: {bookMark?.IsEquipped}, equipIcon 활성화: {isEquipped}");
         }
 
         // JML: 데이터 저장
@@ -90,7 +90,7 @@ public class CraftSceneBookMarkSlot : MonoBehaviour
 
     public void OnClickSlot()
     {
-        Debug.Log("[CraftSceneBookMarkSlot] Slot clicked!");
+        GameLog.Log("[CraftSceneBookMarkSlot] Slot clicked!");
 
         if (bookMarkData == null)
         {

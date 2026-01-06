@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
@@ -30,18 +30,18 @@ namespace NovelianMagicLibraryDefense.Managers
 
         protected override void OnInitialize()
         {
-            // Debug.Log("[ObjectPoolManager] Initialized");
+            // GameLog.Log("[ObjectPoolManager] Initialized");
         }
 
         protected override void OnReset()
         {
-            // Debug.Log("[ObjectPoolManager] Resetting all pools");
+            // GameLog.Log("[ObjectPoolManager] Resetting all pools");
             ClearAll();
         }
 
         protected override void OnDispose()
         {
-            // Debug.Log("[ObjectPoolManager] Disposing all pools");
+            // GameLog.Log("[ObjectPoolManager] Disposing all pools");
             ClearAll();
         }
 
@@ -55,19 +55,19 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (pools.ContainsKey(type))
             {
-                Debug.LogWarning($"[ObjectPoolManager] Pool for type '{type.Name}' already exists.");
+                GameLog.LogWarning($"[ObjectPoolManager] Pool for type '{type.Name}' already exists.");
                 return true;
             }
 
             if (prefab == null)
             {
-                Debug.LogError($"[ObjectPoolManager] Prefab is null for type '{type.Name}'.");
+                GameLog.LogError($"[ObjectPoolManager] Prefab is null for type '{type.Name}'.");
                 return false;
             }
 
             if (prefab.GetComponent<T>() == null)
             {
-                Debug.LogError($"[ObjectPoolManager] Prefab does not have component of type {type.Name}");
+                GameLog.LogError($"[ObjectPoolManager] Prefab does not have component of type {type.Name}");
                 return false;
             }
 
@@ -85,7 +85,7 @@ namespace NovelianMagicLibraryDefense.Managers
             );
 
             pools[type] = pool;
-            // Debug.Log($"[ObjectPoolManager] Pool created for {type.Name} (capacity: {defaultCapacity}, max: {maxSize})");
+            // GameLog.Log($"[ObjectPoolManager] Pool created for {type.Name} (capacity: {defaultCapacity}, max: {maxSize})");
             return true;
         }
 
@@ -99,7 +99,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (pools.ContainsKey(type))
             {
-                Debug.LogWarning($"[ObjectPoolManager] Pool for type '{type.Name}' already exists.");
+                GameLog.LogWarning($"[ObjectPoolManager] Pool for type '{type.Name}' already exists.");
                 return true;
             }
 
@@ -110,7 +110,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 if (handle.Status != AsyncOperationStatus.Succeeded)
                 {
-                    Debug.LogError($"[ObjectPoolManager] Failed to load addressable asset with key '{addressableKey}'.");
+                    GameLog.LogError($"[ObjectPoolManager] Failed to load addressable asset with key '{addressableKey}'.");
                     return false;
                 }
 
@@ -118,7 +118,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 if (prefab.GetComponent<T>() == null)
                 {
-                    Debug.LogError($"[ObjectPoolManager] Prefab does not have component of type {type.Name}");
+                    GameLog.LogError($"[ObjectPoolManager] Prefab does not have component of type {type.Name}");
                     Addressables.Release(handle);
                     return false;
                 }
@@ -138,12 +138,12 @@ namespace NovelianMagicLibraryDefense.Managers
                 );
 
                 pools[type] = pool;
-                // Debug.Log($"[ObjectPoolManager] Pool created for {type.Name} (capacity: {defaultCapacity}, max: {maxSize})");
+                // GameLog.Log($"[ObjectPoolManager] Pool created for {type.Name} (capacity: {defaultCapacity}, max: {maxSize})");
                 return true;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[ObjectPoolManager] Failed to create pool for type '{type.Name}': {e.Message}");
+                GameLog.LogError($"[ObjectPoolManager] Failed to create pool for type '{type.Name}': {e.Message}");
                 return false;
             }
         }
@@ -206,7 +206,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (!pools.ContainsKey(type))
             {
-                Debug.LogError($"[ObjectPoolManager] Pool for type '{type.Name}' does not exist. Call CreatePoolAsync first.");
+                GameLog.LogError($"[ObjectPoolManager] Pool for type '{type.Name}' does not exist. Call CreatePoolAsync first.");
                 return null;
             }
 
@@ -255,7 +255,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (!pools.ContainsKey(type))
             {
-                Debug.LogError($"[ObjectPoolManager] Pool for type '{type.Name}' does not exist.");
+                GameLog.LogError($"[ObjectPoolManager] Pool for type '{type.Name}' does not exist.");
                 return;
             }
 
@@ -279,7 +279,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (!activeObjects.ContainsKey(type))
             {
-                Debug.LogWarning($"[ObjectPoolManager] No active objects tracked for type '{type.Name}'.");
+                GameLog.LogWarning($"[ObjectPoolManager] No active objects tracked for type '{type.Name}'.");
                 return;
             }
 
@@ -314,7 +314,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (!pools.ContainsKey(type))
             {
-                Debug.LogWarning($"[ObjectPoolManager] Pool for type '{type.Name}' does not exist.");
+                GameLog.LogWarning($"[ObjectPoolManager] Pool for type '{type.Name}' does not exist.");
                 return;
             }
 
@@ -334,7 +334,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 pool.Release(obj);
             }
 
-            // Debug.Log($"[ObjectPoolManager] Warmed up {count} objects of type {type.Name}");
+            // GameLog.Log($"[ObjectPoolManager] Warmed up {count} objects of type {type.Name}");
         }
 
         /// <summary>
@@ -358,7 +358,7 @@ namespace NovelianMagicLibraryDefense.Managers
                     handles.Remove(type);
                 }
 
-                Debug.Log($"[ObjectPoolManager] Pool cleared for {type.Name}");
+                GameLog.Log($"[ObjectPoolManager] Pool cleared for {type.Name}");
             }
         }
 
@@ -389,7 +389,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 catch (System.Exception e)
                 {
                     // LMJ: Ignore errors during disposal (objects may already be destroyed)
-                    Debug.LogWarning($"[ObjectPoolManager] Error disposing pool: {e.Message}");
+                    GameLog.LogWarning($"[ObjectPoolManager] Error disposing pool: {e.Message}");
                 }
             }
 
@@ -407,7 +407,7 @@ namespace NovelianMagicLibraryDefense.Managers
             handles.Clear();
             activeObjects.Clear();
 
-            Debug.Log("[ObjectPoolManager] All pools cleared");
+            GameLog.Log("[ObjectPoolManager] All pools cleared");
         }
 
         /// <summary>
@@ -429,19 +429,19 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (keyBasedPools.ContainsKey(key))
             {
-                Debug.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' already exists.");
+                GameLog.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' already exists.");
                 return true;
             }
 
             if (prefab == null)
             {
-                Debug.LogError($"[ObjectPoolManager] Prefab is null for key '{key}'.");
+                GameLog.LogError($"[ObjectPoolManager] Prefab is null for key '{key}'.");
                 return false;
             }
 
             if (prefab.GetComponent<T>() == null)
             {
-                Debug.LogError($"[ObjectPoolManager] Prefab '{key}' does not have component of type {typeof(T).Name}");
+                GameLog.LogError($"[ObjectPoolManager] Prefab '{key}' does not have component of type {typeof(T).Name}");
                 return false;
             }
 
@@ -459,7 +459,7 @@ namespace NovelianMagicLibraryDefense.Managers
             );
 
             keyBasedPools[key] = pool;
-            Debug.Log($"[ObjectPoolManager] Key-based pool created (prefab): {key}");
+            GameLog.Log($"[ObjectPoolManager] Key-based pool created (prefab): {key}");
             return true;
         }
 
@@ -471,7 +471,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (keyBasedPools.ContainsKey(key))
             {
-                Debug.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' already exists.");
+                GameLog.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' already exists.");
                 return true;
             }
 
@@ -482,7 +482,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 if (handle.Status != AsyncOperationStatus.Succeeded)
                 {
-                    Debug.LogError($"[ObjectPoolManager] Failed to load addressable asset with key '{key}'.");
+                    GameLog.LogError($"[ObjectPoolManager] Failed to load addressable asset with key '{key}'.");
                     return false;
                 }
 
@@ -490,7 +490,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 if (prefab.GetComponent<T>() == null)
                 {
-                    Debug.LogError($"[ObjectPoolManager] Prefab '{key}' does not have component of type {typeof(T).Name}");
+                    GameLog.LogError($"[ObjectPoolManager] Prefab '{key}' does not have component of type {typeof(T).Name}");
                     Addressables.Release(handle);
                     return false;
                 }
@@ -510,12 +510,12 @@ namespace NovelianMagicLibraryDefense.Managers
                 );
 
                 keyBasedPools[key] = pool;
-                Debug.Log($"[ObjectPoolManager] Key-based pool created: {key}");
+                GameLog.Log($"[ObjectPoolManager] Key-based pool created: {key}");
                 return true;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[ObjectPoolManager] Failed to create key-based pool '{key}': {e.Message}");
+                GameLog.LogError($"[ObjectPoolManager] Failed to create key-based pool '{key}': {e.Message}");
                 return false;
             }
         }
@@ -567,7 +567,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (!keyBasedPools.ContainsKey(key))
             {
-                Debug.LogError($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
+                GameLog.LogError($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
                 return null;
             }
 
@@ -581,7 +581,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // JML: 풀에서 가져온 게 아니라 새로 생성된 경우 (CountInactive가 0이었던 경우)
             if (countBeforeGet == 0)
             {
-                Debug.LogWarning($"[ObjectPoolManager] 웜업 초과! '{key}' 새 인스턴스 생성됨. Active: {pool.CountActive}, Inactive: {pool.CountInactive}");
+                GameLog.LogWarning($"[ObjectPoolManager] 웜업 초과! '{key}' 새 인스턴스 생성됨. Active: {pool.CountActive}, Inactive: {pool.CountInactive}");
             }
 
             component.transform.position = position;
@@ -604,7 +604,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (component == null || component.gameObject == null)
             {
-                Debug.LogWarning($"[ObjectPoolManager] DespawnByKey '{key}' - component or gameObject is null");
+                GameLog.LogWarning($"[ObjectPoolManager] DespawnByKey '{key}' - component or gameObject is null");
                 return;
             }
 
@@ -617,20 +617,20 @@ namespace NovelianMagicLibraryDefense.Managers
 
             if (!keyBasedPools.ContainsKey(key))
             {
-                Debug.LogError($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
+                GameLog.LogError($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
                 return;
             }
 
             if (!keyBasedActiveObjects.ContainsKey(key))
             {
-                Debug.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - activeObjects key 없음! 풀로 반환 불가");
+                GameLog.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - activeObjects key 없음! 풀로 반환 불가");
                 component.gameObject.SetActive(false);
                 return;
             }
 
             if (!keyBasedActiveObjects[key].Contains(component))
             {
-                Debug.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - component가 activeObjects에 없음! Count: {keyBasedActiveObjects[key].Count}");
+                GameLog.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - component가 activeObjects에 없음! Count: {keyBasedActiveObjects[key].Count}");
                 component.gameObject.SetActive(false);
                 return;
             }
@@ -638,7 +638,7 @@ namespace NovelianMagicLibraryDefense.Managers
             ObjectPool<T> pool = keyBasedPools[key] as ObjectPool<T>;
             if (pool == null)
             {
-                Debug.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - pool cast 실패!");
+                GameLog.LogError($"[ObjectPoolManager] DespawnByKey '{key}' - pool cast 실패!");
                 return;
             }
 
@@ -661,7 +661,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (!keyBasedPools.ContainsKey(key))
             {
-                Debug.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
+                GameLog.LogWarning($"[ObjectPoolManager] Key-based pool '{key}' does not exist.");
                 return;
             }
 
@@ -685,7 +685,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 pool.Release(obj);
             }
 
-            Debug.Log($"[ObjectPoolManager] Async warmed up {count} objects for key: {key}");
+            GameLog.Log($"[ObjectPoolManager] Async warmed up {count} objects for key: {key}");
         }
 
         /// <summary>
@@ -712,7 +712,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"[ObjectPoolManager] Error disposing key-based pool: {e.Message}");
+                    GameLog.LogWarning($"[ObjectPoolManager] Error disposing key-based pool: {e.Message}");
                 }
             }
 
@@ -729,7 +729,7 @@ namespace NovelianMagicLibraryDefense.Managers
             keyBasedHandles.Clear();
             keyBasedActiveObjects.Clear();
 
-            Debug.Log("[ObjectPoolManager] All key-based pools cleared");
+            GameLog.Log("[ObjectPoolManager] All key-based pools cleared");
         }
 
         #endregion

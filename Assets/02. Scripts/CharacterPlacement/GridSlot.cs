@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 //JML: World coordinate-based 3D grid slot
 //     Represents a position where characters can be placed
@@ -57,7 +57,7 @@ public class GridSlot : MonoBehaviour
         // Move character to slot position
         character.transform.position = transform.position;
 
-        Debug.Log($"[GridSlot {slotIndex}] Character placed");
+        GameLog.Log($"[GridSlot {slotIndex}] Character placed");
     }
 
     //JML: Remove character
@@ -66,7 +66,7 @@ public class GridSlot : MonoBehaviour
         currentCharacter = null;
         isOccupied = false;
 
-        Debug.Log($"[GridSlot {slotIndex}] Character removed");
+        GameLog.Log($"[GridSlot {slotIndex}] Character removed");
     }
 
     //JML: Check if slot is empty

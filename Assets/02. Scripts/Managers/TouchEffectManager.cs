@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Coffee.UIExtensions;
 
 namespace NovelianMagicLibraryDefense.Managers
@@ -73,7 +73,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // Awake에서 이벤트 구독 (OnEnable/OnDisable 대신)
             SubscribeToInputEvents();
 
-            Debug.Log("[TouchEffectManager] Initialized successfully");
+            GameLog.Log("[TouchEffectManager] Initialized successfully");
         }
 
         private void SubscribeToInputEvents()
@@ -166,7 +166,7 @@ namespace NovelianMagicLibraryDefense.Managers
         public void SetEffectEnabled(bool enabled)
         {
             effectEnabled = enabled;
-            Debug.Log($"[TouchEffectManager] Effect enabled: {enabled}");
+            GameLog.Log($"[TouchEffectManager] Effect enabled: {enabled}");
         }
 
         /// <summary>
@@ -183,7 +183,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             UnsubscribeFromInputEvents();
             instance = null;
-            Debug.Log("[TouchEffectManager] Destroyed");
+            GameLog.Log("[TouchEffectManager] Destroyed");
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -41,7 +41,7 @@ public class CsvTable<T> where T : class
     {
         if (dataMap == null)
         {
-            UnityEngine.Debug.LogError($"[CsvTable] Dictionary not initialized.");
+            GameLog.LogError($"[CsvTable] Dictionary not initialized.");
             return null;
         }
 
@@ -50,7 +50,7 @@ public class CsvTable<T> where T : class
             return data;
         }
 
-        UnityEngine.Debug.LogError($"[CsvTable<{typeof(T).Name}>] Data with ID {id} not found.");
+        GameLog.LogError($"[CsvTable<{typeof(T).Name}>] Data with ID {id} not found.");
         return null;
     }
 

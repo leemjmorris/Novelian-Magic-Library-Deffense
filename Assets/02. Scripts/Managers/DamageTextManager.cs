@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Cysharp.Threading.Tasks;
 
 namespace NovelianMagicLibraryDefense.Managers
@@ -50,11 +50,11 @@ namespace NovelianMagicLibraryDefense.Managers
                     poolMaxSize
                 );
                 isPoolInitialized = true;
-                Debug.Log("[DamageTextManager] Damage text pool initialized");
+                GameLog.Log("[DamageTextManager] Damage text pool initialized");
             }
             catch (System.Exception e)
             {
-                Debug.LogWarning($"[DamageTextManager] Failed to initialize pool: {e.Message}");
+                GameLog.LogWarning($"[DamageTextManager] Failed to initialize pool: {e.Message}");
                 isPoolInitialized = false;
             }
         }

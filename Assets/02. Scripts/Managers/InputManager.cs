@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -79,7 +79,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void Initialize()
         {
-            Debug.Log("[InputManager] Initializing Input System");
+            GameLog.Log("[InputManager] Initializing Input System");
 
             // Input Actions 생성
             inputActions = new InputActions();
@@ -92,20 +92,20 @@ namespace NovelianMagicLibraryDefense.Managers
                 UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
                 SetupTouchInput();
                 inputActions.Touch.Enable();
-                Debug.Log("[InputManager] Touch input enabled (Unity Editor - Simulation Mode with EnhancedTouch)");
+                GameLog.Log("[InputManager] Touch input enabled (Unity Editor - Simulation Mode with EnhancedTouch)");
             }
             else
             {
                 SetupMouseInput();
                 inputActions.Mouse.Enable();
-                Debug.Log("[InputManager] Mouse input enabled (Unity Editor)");
+                GameLog.Log("[InputManager] Mouse input enabled (Unity Editor)");
             }
 #else
             // Android 빌드: 터치 입력 설정
             UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.Enable();
             SetupTouchInput();
             inputActions.Touch.Enable();
-            Debug.Log("[InputManager] Touch input enabled (Android)");
+            GameLog.Log("[InputManager] Touch input enabled (Android)");
 #endif
         }
 
@@ -114,10 +114,10 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void SetupMouseInput()
         {
-            Debug.Log("[InputManager] SetupMouseInput() - 마우스 이벤트 등록 중...");
+            GameLog.Log("[InputManager] SetupMouseInput() - 마우스 이벤트 등록 중...");
             inputActions.Mouse.Click.started += OnPointerDown;
             inputActions.Mouse.Click.canceled += OnPointerUp;
-            Debug.Log("[InputManager] SetupMouseInput() - 마우스 이벤트 등록 완료!");
+            GameLog.Log("[InputManager] SetupMouseInput() - 마우스 이벤트 등록 완료!");
         }
 
         /// <summary>
@@ -125,10 +125,10 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void SetupTouchInput()
         {
-            Debug.Log("[InputManager] SetupTouchInput() - 터치 이벤트 등록 중...");
+            GameLog.Log("[InputManager] SetupTouchInput() - 터치 이벤트 등록 중...");
             inputActions.Touch.TouchPress.started += OnPointerDown;
             inputActions.Touch.TouchPress.canceled += OnPointerUp;
-            Debug.Log("[InputManager] SetupTouchInput() - 터치 이벤트 등록 완료!");
+            GameLog.Log("[InputManager] SetupTouchInput() - 터치 이벤트 등록 완료!");
         }
 
         /// <summary>
@@ -136,22 +136,22 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         private void OnPointerDown(InputAction.CallbackContext context)
         {
-            Debug.Log($"[InputManager] 🔵 OnPointerDown 호출됨! context.phase={context.phase}");
+            GameLog.Log($"[InputManager] 🔵 OnPointerDown 호출됨! context.phase={context.phase}");
 
             // UI 클릭 감지: EventSystem이 UI 위에서 클릭했는지 확인
             bool isOverUI = IsPointerOverUI();
-            Debug.Log($"[InputManager] UI 위에 있는가? {isOverUI}");
+            GameLog.Log($"[InputManager] UI 위에 있는가? {isOverUI}");
 
             if (isOverUI)
             {
-                Debug.Log("[InputManager] Click on UI detected, ignoring input");
+                GameLog.Log("[InputManager] Click on UI detected, ignoring input");
                 return;
             }
 
             // 멀티터치 차단: 이미 입력이 활성화되어 있으면 무시
             if (isInputActive)
             {
-                Debug.Log("[InputManager] Multi-touch blocked - input already active");
+                GameLog.Log("[InputManager] Multi-touch blocked - input already active");
                 return;
             }
 
@@ -166,7 +166,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             StartLongPressTimer(longPressCts.Token).Forget();
 
-            Debug.Log($"[InputManager] Pointer down at {pressStartPosition}");
+            GameLog.Log($"[InputManager] Pointer down at {pressStartPosition}");
         }
 
         /// <summary>
@@ -187,13 +187,13 @@ namespace NovelianMagicLibraryDefense.Managers
             // 드래그 중이었으면 드롭 이벤트 발생
             if (isLongPressCompleted)
             {
-                Debug.Log($"[InputManager] Drop at {currentPosition}");
+                GameLog.Log($"[InputManager] Drop at {currentPosition}");
                 OnDrop?.Invoke(currentPosition);
             }
             else
             {
                 // 짧은 터치/클릭 이벤트 발생
-                Debug.Log($"[InputManager] Short press at {currentPosition}");
+                GameLog.Log($"[InputManager] Short press at {currentPosition}");
                 OnShortPress?.Invoke(currentPosition);
             }
 
@@ -214,8 +214,8 @@ namespace NovelianMagicLibraryDefense.Managers
 
                 // 2초 완료: 롱프레스 상태로 전환
                 isLongPressCompleted = true;
-                Debug.Log($"[InputManager] Long press completed at {pressStartPosition}");
-                Debug.Log($"[InputManager] OnLongPressStart 구독자 수: {OnLongPressStart?.GetInvocationList().Length ?? 0}");
+                GameLog.Log($"[InputManager] Long press completed at {pressStartPosition}");
+                GameLog.Log($"[InputManager] OnLongPressStart 구독자 수: {OnLongPressStart?.GetInvocationList().Length ?? 0}");
                 OnLongPressStart?.Invoke(pressStartPosition);
 
                 // 드래그 감지 시작
@@ -320,7 +320,7 @@ namespace NovelianMagicLibraryDefense.Managers
         /// </summary>
         public void ResetInputState()
         {
-            Debug.Log("[InputManager] Resetting input state");
+            GameLog.Log("[InputManager] Resetting input state");
 
             // 타이머 취소
             longPressCts?.Cancel();
@@ -334,7 +334,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (instance != this) return;
 
-            Debug.Log("[InputManager] Cleaning up Input System");
+            GameLog.Log("[InputManager] Cleaning up Input System");
 
             instance = null;
 
@@ -383,7 +383,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 inputActions = null;
             }
 
-            Debug.Log("[InputManager] Cleanup completed successfully");
+            GameLog.Log("[InputManager] Cleanup completed successfully");
         }
     }
 }

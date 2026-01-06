@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using MoreMountains.Feedbacks;
@@ -81,7 +81,7 @@ public class BookMarkUI : MonoBehaviour
 
     private async UniTaskVoid Start()
     {
-        Debug.Log("[BookMarkUI] Start() called - Loading recipes...");
+        GameLog.Log("[BookMarkUI] Start() called - Loading recipes...");
 
         // BookMark BGM 재생 (크로스페이드)
         if (AudioManager.Instance != null)
@@ -91,13 +91,13 @@ public class BookMarkUI : MonoBehaviour
 
         await LoadRecipesFromCSV(); // TODO JML: 부트씬 로드하면 필요 없어짐
 
-        Debug.Log($"[BookMarkUI] Recipes loaded - stat: {statRecipes.Count}, skill: {skillRecipes.Count}");
-        Debug.Log("[BookMarkUI] Preloading bookmark icons...");
+        GameLog.Log($"[BookMarkUI] Recipes loaded - stat: {statRecipes.Count}, skill: {skillRecipes.Count}");
+        GameLog.Log("[BookMarkUI] Preloading bookmark icons...");
 
         await PreloadBookmarkIcons(); // JML: 책갈피 아이콘 미리 캐싱
 
-        Debug.Log($"[BookMarkUI] Icons cached: {cachedBookmarkIcons.Count}");
-        Debug.Log("[BookMarkUI] Setting up button listeners...");
+        GameLog.Log($"[BookMarkUI] Icons cached: {cachedBookmarkIcons.Count}");
+        GameLog.Log("[BookMarkUI] Setting up button listeners...");
 
         // JML: Choice Panel Button Listeners
         selectionStatButton.onClick.AddListener(OnSelectionStatButtonClicked);
@@ -160,7 +160,7 @@ public class BookMarkUI : MonoBehaviour
             filterDropdown.onValueChanged.AddListener(OnFilterChanged);
         }
 
-        Debug.Log("[BookMarkUI] Start() completed - All listeners setup done");
+        GameLog.Log("[BookMarkUI] Start() completed - All listeners setup done");
     }
 
     private void OnDestroy()
@@ -279,13 +279,13 @@ public class BookMarkUI : MonoBehaviour
                 UpdateSkillCraftPanelUI(recipe);
                 break;
             default:
-                Debug.LogError("[BookMarkUI] 알 수 없는 책갈피 타입!");
+                GameLog.LogError("[BookMarkUI] 알 수 없는 책갈피 타입!");
                 return;
         }
         // JML: Update UI
         UpdateStatCraftPanelUI(recipe);
 
-        Debug.Log($"[BookMarkUI] 레시피 선택됨: {CSVLoader.Instance.GetData<StringTable>(recipe.Recipe_Name_ID)?.Text ?? "Unknown"}");
+        GameLog.Log($"[BookMarkUI] 레시피 선택됨: {CSVLoader.Instance.GetData<StringTable>(recipe.Recipe_Name_ID)?.Text ?? "Unknown"}");
     }
 
 
@@ -339,24 +339,24 @@ public class BookMarkUI : MonoBehaviour
     {
         if (selectedRecipe == null)
         {
-            Debug.LogWarning("[BookMarkUI] 선택된 레시피가 없습니다!");
+            GameLog.LogWarning("[BookMarkUI] 선택된 레시피가 없습니다!");
             return;
         }
 
-        Debug.Log($"[BookMarkUI] 제작 시도: {CSVLoader.Instance.GetData<StringTable>(selectedRecipe.Recipe_Name_ID)?.Text ?? "Unknown"}");
+        GameLog.Log($"[BookMarkUI] 제작 시도: {CSVLoader.Instance.GetData<StringTable>(selectedRecipe.Recipe_Name_ID)?.Text ?? "Unknown"}");
 
         // JML: Call BookMarkCraft
         BookMarkCraftResult result = BookMarkCraft.CraftBookmark(selectedRecipe.Recipe_ID);
 
         if (result.IsSuccess)
         {
-            Debug.Log($"[BookMarkUI] 제작 성공! {result.Message}");
+            GameLog.Log($"[BookMarkUI] 제작 성공! {result.Message}");
             // JML: ResultPanel 표시
             ShowCraftResult(result);
         }
         else
         {
-            Debug.LogWarning($"[BookMarkUI] 제작 실패: {result.Message}");
+            GameLog.LogWarning($"[BookMarkUI] 제작 실패: {result.Message}");
             // TODO: 실패 메시지 UI 표시
         }
     }
@@ -423,7 +423,7 @@ public class BookMarkUI : MonoBehaviour
 
         if (recipeTable == null)
         {
-            Debug.LogError("[BookMarkUI] BookmarkCraftData table not found!");
+            GameLog.LogError("[BookMarkUI] BookmarkCraftData table not found!");
             return;
         }
 
@@ -447,7 +447,7 @@ public class BookMarkUI : MonoBehaviour
         statRecipes.Sort((a, b) => a.Recipe_ID.CompareTo(b.Recipe_ID));
         skillRecipes.Sort((a, b) => a.Recipe_ID.CompareTo(b.Recipe_ID));
 
-        Debug.Log($"[BookMarkUI] Loaded {statRecipes.Count} stat recipes, {skillRecipes.Count} skill recipes");
+        GameLog.Log($"[BookMarkUI] Loaded {statRecipes.Count} stat recipes, {skillRecipes.Count} skill recipes");
     }
 
     /// <summary>
@@ -473,7 +473,7 @@ public class BookMarkUI : MonoBehaviour
             slotComponent.Init(bookMark, categoryKey, bookmarkKey, choicePanel, bookMarkInfoPanel).Forget();
         }
 
-        Debug.Log($"[BookMarkUI] 보유 책갈피 슬롯 {ownedBookmarks.Count}개 생성 완료");
+        GameLog.Log($"[BookMarkUI] 보유 책갈피 슬롯 {ownedBookmarks.Count}개 생성 완료");
     }
 
     /// <summary>
@@ -490,7 +490,7 @@ public class BookMarkUI : MonoBehaviour
 
         slotComponent.Init(bookMark, categoryKey, bookmarkKey, choicePanel, bookMarkInfoPanel).Forget();
 
-        Debug.Log($"[BookMarkUI] 새 책갈피 슬롯 추가: {bookMark.Name}");
+        GameLog.Log($"[BookMarkUI] 새 책갈피 슬롯 추가: {bookMark.Name}");
     }
 
     /// <summary>
@@ -526,7 +526,7 @@ public class BookMarkUI : MonoBehaviour
             }
         }
 
-        Debug.Log($"[BookMarkUI] 필터 변경: {filterType}");
+        GameLog.Log($"[BookMarkUI] 필터 변경: {filterType}");
     }
 
     /// <summary>
@@ -603,7 +603,7 @@ public class BookMarkUI : MonoBehaviour
         var ingredientData = CSVLoader.Instance.GetData<IngredientData>(ingredientId);
         if (ingredientData == null || ingredientData.Path_ID <= 0)
         {
-            Debug.LogWarning($"[BookMarkUI] IngredientData 없음 또는 Path_ID 없음: {ingredientId}");
+            GameLog.LogWarning($"[BookMarkUI] IngredientData 없음 또는 Path_ID 없음: {ingredientId}");
             return null;
         }
 
@@ -611,7 +611,7 @@ public class BookMarkUI : MonoBehaviour
         var pathData = CSVLoader.Instance.GetData<PathData>(ingredientData.Path_ID);
         if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
         {
-            Debug.LogWarning($"[BookMarkUI] PathData 없음 또는 키 없음: Path_ID={ingredientData.Path_ID}");
+            GameLog.LogWarning($"[BookMarkUI] PathData 없음 또는 키 없음: Path_ID={ingredientData.Path_ID}");
             return null;
         }
 
@@ -628,7 +628,7 @@ public class BookMarkUI : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"[BookMarkUI] 재료 아이콘 로드 실패: {iconKey} - {e.Message}");
+            GameLog.LogWarning($"[BookMarkUI] 재료 아이콘 로드 실패: {iconKey} - {e.Message}");
         }
 
         return null;
@@ -674,7 +674,7 @@ public class BookMarkUI : MonoBehaviour
     {
         if (result.CraftedBookmark == null)
         {
-            Debug.LogError("[BookMarkUI] CraftedBookmark가 null입니다!");
+            GameLog.LogError("[BookMarkUI] CraftedBookmark가 null입니다!");
             return;
         }
 

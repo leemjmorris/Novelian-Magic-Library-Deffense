@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using TMPro;
@@ -116,7 +116,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // LCB: 진행률 초기화 (0%부터 시작)
             SetProgress(0f);
 
-            Debug.Log("[LoadingUIManager] Loading UI shown");
+            GameLog.Log("[LoadingUIManager] Loading UI shown");
         }
 
         /// <summary>
@@ -141,7 +141,7 @@ namespace NovelianMagicLibraryDefense.Managers
 
             isShowing = false;
 
-            Debug.Log("[LoadingUIManager] Loading UI hidden");
+            GameLog.Log("[LoadingUIManager] Loading UI hidden");
         }
 
         /// <summary>
@@ -293,7 +293,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             catch (System.OperationCanceledException)
             {
-                Debug.Log("[LoadingUIManager] LoadSceneWithProgress was cancelled");
+                GameLog.Log("[LoadingUIManager] LoadSceneWithProgress was cancelled");
                 await Hide(); // 취소되어도 UI는 숨김
                 throw;
             }

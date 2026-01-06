@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Dissolve 효과에 필요한 셰이더, 텍스처, 설정을 중앙 관리하는 ScriptableObject
@@ -50,7 +50,7 @@ public class DissolveSettings : ScriptableObject
     {
         if (dissolveShader == null)
         {
-            Debug.LogWarning("[DissolveSettings] Dissolve Shader가 설정되지 않았습니다!");
+            GameLog.LogWarning("[DissolveSettings] Dissolve Shader가 설정되지 않았습니다!");
             return null;
         }
 

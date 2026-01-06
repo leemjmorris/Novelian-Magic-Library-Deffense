@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using NovelianMagicLibraryDefense.Managers;
@@ -51,13 +51,13 @@ namespace NovelianMagicLibraryDefense.UI
             {
                 bool isUnlocked = StageProgressManager.Instance.IsStageUnlocked(stageNumber);
                 SetLocked(!isUnlocked);
-                Debug.Log($"[StageButton] Stage {stageNumber} - Unlocked: {isUnlocked}");
+                GameLog.Log($"[StageButton] Stage {stageNumber} - Unlocked: {isUnlocked}");
             }
             else
             {
                 // StageProgressManager가 없으면 Inspector 설정값 사용
                 SetLocked(startLocked);
-                Debug.LogWarning("[StageButton] StageProgressManager not found, using Inspector setting");
+                GameLog.LogWarning("[StageButton] StageProgressManager not found, using Inspector setting");
             }
         }
 
@@ -124,14 +124,14 @@ namespace NovelianMagicLibraryDefense.UI
             // CSV에서 stageNumber에 해당하는 스테이지 데이터 조회
             if (CSVLoader.Instance == null)
             {
-                Debug.LogError("[StageButton] CSVLoader가 초기화되지 않음");
+                GameLog.LogError("[StageButton] CSVLoader가 초기화되지 않음");
                 return;
             }
 
             var table = CSVLoader.Instance.GetTable<StageData>();
             if (table == null)
             {
-                Debug.LogError("[StageButton] StageTable이 로드되지 않음");
+                GameLog.LogError("[StageButton] StageTable이 로드되지 않음");
                 return;
             }
 
@@ -140,7 +140,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (cachedStageData == null)
             {
-                Debug.LogError($"[StageButton] stageNumber {stageNumber}에 해당하는 스테이지를 찾을 수 없음");
+                GameLog.LogError($"[StageButton] stageNumber {stageNumber}에 해당하는 스테이지를 찾을 수 없음");
                 return;
             }
 
@@ -153,7 +153,7 @@ namespace NovelianMagicLibraryDefense.UI
                 stagePopUpPanel.UpdateStageText();
             }
 
-            Debug.Log($"[StageButton] 스테이지 선택: Stage_ID={cachedStageData.Stage_ID}, " +
+            GameLog.Log($"[StageButton] 스테이지 선택: Stage_ID={cachedStageData.Stage_ID}, " +
                       $"Time_Limit={cachedStageData.Time_Limit}, Barrier_HP={cachedStageData.Barrier_HP}");
         }
 

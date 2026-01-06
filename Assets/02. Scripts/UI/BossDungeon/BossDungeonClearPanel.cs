@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
 using TMPro;
@@ -89,7 +89,7 @@ namespace NovelianMagicLibraryDefense.UI
             // 다음 층 버튼 활성화/비활성화 체크
             UpdateNextFloorButton();
 
-            Debug.Log($"[BossDungeonClearPanel] Shown - RemainingTime: {remainingTime:F1}s, TimeLimit: {timeLimit:F1}s");
+            GameLog.Log($"[BossDungeonClearPanel] Shown - RemainingTime: {remainingTime:F1}s, TimeLimit: {timeLimit:F1}s");
         }
 
         /// <summary>
@@ -254,7 +254,7 @@ namespace NovelianMagicLibraryDefense.UI
 
                 if (!shouldGive)
                 {
-                    Debug.Log($"[BossDungeonClearPanel] 확률 실패: Item_ID={reward.Item_ID}, Probability={reward.Probability * 100:F1}%");
+                    GameLog.Log($"[BossDungeonClearPanel] 확률 실패: Item_ID={reward.Item_ID}, Probability={reward.Probability * 100:F1}%");
                     continue;
                 }
 
@@ -282,7 +282,7 @@ namespace NovelianMagicLibraryDefense.UI
                 if (CurrencyManager.Instance != null)
                 {
                     CurrencyManager.Instance.AddCurrency(itemId, amount);
-                    Debug.Log($"[BossDungeonClearPanel] Currency 지급: ID={itemId}, Amount={amount}");
+                    GameLog.Log($"[BossDungeonClearPanel] Currency 지급: ID={itemId}, Amount={amount}");
                 }
             }
             else if (itemId >= 10000)
@@ -291,12 +291,12 @@ namespace NovelianMagicLibraryDefense.UI
                 if (IngredientManager.Instance != null)
                 {
                     IngredientManager.Instance.AddIngredient(itemId, amount);
-                    Debug.Log($"[BossDungeonClearPanel] Ingredient 지급: ID={itemId}, Amount={amount}");
+                    GameLog.Log($"[BossDungeonClearPanel] Ingredient 지급: ID={itemId}, Amount={amount}");
                 }
             }
             else
             {
-                Debug.LogWarning($"[BossDungeonClearPanel] 알 수 없는 Item_ID: {itemId}");
+                GameLog.LogWarning($"[BossDungeonClearPanel] 알 수 없는 Item_ID: {itemId}");
             }
         }
 
@@ -350,7 +350,7 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (!hasNextFloor)
             {
-                Debug.Log("[BossDungeonClearPanel] 마지막 층 - 다음 층 버튼 비활성화");
+                GameLog.Log("[BossDungeonClearPanel] 마지막 층 - 다음 층 버튼 비활성화");
             }
 
             // 다음 층 해금 (Firebase 저장)
@@ -384,7 +384,7 @@ namespace NovelianMagicLibraryDefense.UI
                         FirebaseManager.Instance.CurrentUserId,
                         progression
                     ).Forget();
-                    Debug.Log($"[BossDungeonClearPanel] 다음 층 해금: {nextFloor}층");
+                    GameLog.Log($"[BossDungeonClearPanel] 다음 층 해금: {nextFloor}층");
                 }
             }
         }
@@ -400,7 +400,7 @@ namespace NovelianMagicLibraryDefense.UI
             if (progression.bossDungeonAttempted.ContainsKey(key))
             {
                 progression.bossDungeonAttempted.Remove(key);
-                Debug.Log($"[BossDungeonClearPanel] 실패 기록 제거: {floorIndex}층");
+                GameLog.Log($"[BossDungeonClearPanel] 실패 기록 제거: {floorIndex}층");
             }
         }
 
@@ -420,7 +420,7 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnLobbyButtonClicked()
         {
-            Debug.Log("[BossDungeonClearPanel] Lobby button clicked - Loading LobbyScene");
+            GameLog.Log("[BossDungeonClearPanel] Lobby button clicked - Loading LobbyScene");
             Close();
             // Issue #602: 씬 전환 전 TimeScale 스택 리셋
             TimeManager.Instance?.ResetTimeScale();
@@ -433,11 +433,11 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void OnNextFloorButtonClicked()
         {
-            Debug.Log("[BossDungeonClearPanel] Next Floor button clicked");
+            GameLog.Log("[BossDungeonClearPanel] Next Floor button clicked");
 
             if (currentDungeonData == null)
             {
-                Debug.LogWarning("[BossDungeonClearPanel] 현재 던전 정보 없음 - 로비로 이동");
+                GameLog.LogWarning("[BossDungeonClearPanel] 현재 던전 정보 없음 - 로비로 이동");
                 OnLobbyButtonClicked();
                 return;
             }
@@ -448,14 +448,14 @@ namespace NovelianMagicLibraryDefense.UI
 
             if (nextDungeonData == null || !nextDungeonData.IsImplemented)
             {
-                Debug.LogWarning($"[BossDungeonClearPanel] 다음 층({nextFloorIndex}) 없음 - 로비로 이동");
+                GameLog.LogWarning($"[BossDungeonClearPanel] 다음 층({nextFloorIndex}) 없음 - 로비로 이동");
                 OnLobbyButtonClicked();
                 return;
             }
 
             // 다음 층 설정 및 게임 시작
             SelectedBossDungeon.Data = nextDungeonData;
-            Debug.Log($"[BossDungeonClearPanel] 다음 층으로 이동: {nextFloorIndex}층");
+            GameLog.Log($"[BossDungeonClearPanel] 다음 층으로 이동: {nextFloorIndex}층");
 
             Close();
             // Issue #602: 씬 전환 전 TimeScale 스택 리셋

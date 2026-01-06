@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
@@ -75,7 +75,7 @@ namespace NovelianMagicLibraryDefense.Managers
                     confirmNoButton.onClick.AddListener(OnConfirmNo);
             }
 
-            Debug.Log("[WarningUIManager] Initialized");
+            GameLog.Log("[WarningUIManager] Initialized");
         }
 
         /// <summary>
@@ -101,7 +101,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (warningPanel == null || warningCanvasGroup == null || warningText == null)
             {
-                Debug.LogWarning("[WarningUIManager] Warning panel references not assigned!");
+                GameLog.LogWarning("[WarningUIManager] Warning panel references not assigned!");
                 return;
             }
 
@@ -179,7 +179,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (confirmPanel == null || confirmMessageText == null)
             {
-                Debug.LogWarning("[WarningUIManager] Confirm panel references not assigned!");
+                GameLog.LogWarning("[WarningUIManager] Confirm panel references not assigned!");
                 return false;
             }
 

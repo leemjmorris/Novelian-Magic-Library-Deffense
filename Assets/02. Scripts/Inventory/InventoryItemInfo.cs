@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// 인벤토리에 표시될 아이템 정보를 담는 클래스
@@ -31,7 +31,7 @@ public class InventoryItemInfo
 
         if (ingredientData == null)
         {
-            Debug.LogError($"[InventoryItemInfo] 존재하지 않는 재료 ID: {itemId}");
+            GameLog.LogError($"[InventoryItemInfo] 존재하지 않는 재료 ID: {itemId}");
             return;
         }
 

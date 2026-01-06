@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Managers;
 using UnityEngine;
@@ -42,7 +42,7 @@ public class CharacterPlacementManager : MonoBehaviour
         mainCamera = Camera.main;
         if (mainCamera == null)
         {
-            Debug.LogError("[CharacterPlacementManager] Main camera not found!");
+            GameLog.LogError("[CharacterPlacementManager] Main camera not found!");
         }
 
         // 그리드 즉시 생성
@@ -56,12 +56,12 @@ public class CharacterPlacementManager : MonoBehaviour
     //     CharacterTable → PathTable → "Prefab_" + Addressable_Key 로 프리팹 로드
     private async UniTask PreloadCharacterPrefabs()
     {
-        Debug.Log("[CharacterPlacementManager] Preloading all character prefabs...");
+        GameLog.Log("[CharacterPlacementManager] Preloading all character prefabs...");
 
         // CSVLoader 초기화 대기
         while (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
         {
-            Debug.Log("[CharacterPlacementManager] Waiting for CSVLoader to initialize...");
+            GameLog.Log("[CharacterPlacementManager] Waiting for CSVLoader to initialize...");
             await UniTask.Delay(100);
         }
 
@@ -69,7 +69,7 @@ public class CharacterPlacementManager : MonoBehaviour
         var characterTable = CSVLoader.Instance.GetTable<CharacterData>();
         if (characterTable == null || characterTable.Count == 0)
         {
-            Debug.LogError("[CharacterPlacementManager] No character data found in CharacterTable!");
+            GameLog.LogError("[CharacterPlacementManager] No character data found in CharacterTable!");
             isPreloadComplete = true;
             return;
         }
@@ -84,7 +84,7 @@ public class CharacterPlacementManager : MonoBehaviour
             var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
             if (pathData == null)
             {
-                Debug.LogWarning($"[CharacterPlacementManager] PathData not found for Path_ID: {characterData.Path_ID}");
+                GameLog.LogWarning($"[CharacterPlacementManager] PathData not found for Path_ID: {characterData.Path_ID}");
                 failedCount++;
                 continue;
             }
@@ -103,16 +103,16 @@ public class CharacterPlacementManager : MonoBehaviour
                 GameObject prefab = await Addressables.LoadAssetAsync<GameObject>(prefabKey).Task;
                 loadedCharacterPrefabs[prefabKey] = prefab;
                 loadedCount++;
-                Debug.Log($"[CharacterPlacementManager] Loaded: {prefabKey} (Character_ID: {characterData.Character_ID})");
+                GameLog.Log($"[CharacterPlacementManager] Loaded: {prefabKey} (Character_ID: {characterData.Character_ID})");
             }
             catch (System.Exception e)
             {
-                Debug.LogError($"[CharacterPlacementManager] Failed to load '{prefabKey}': {e.Message}");
+                GameLog.LogError($"[CharacterPlacementManager] Failed to load '{prefabKey}': {e.Message}");
                 failedCount++;
             }
         }
 
-        Debug.Log($"[CharacterPlacementManager] Character prefab preload complete. Loaded: {loadedCount}, Failed: {failedCount}");
+        GameLog.Log($"[CharacterPlacementManager] Character prefab preload complete. Loaded: {loadedCount}, Failed: {failedCount}");
         isPreloadComplete = true;
     }
 
@@ -141,32 +141,32 @@ public class CharacterPlacementManager : MonoBehaviour
     /// </summary>
     public async UniTask WaitForInitializationAsync()
     {
-        Debug.Log("[CharacterPlacementManager] 초기화 대기 시작...");
+        GameLog.Log("[CharacterPlacementManager] 초기화 대기 시작...");
 
         // 1. 프리로드 완료 대기
         while (!isPreloadComplete)
         {
             await UniTask.Yield();
         }
-        Debug.Log("[CharacterPlacementManager] 프리로드 완료");
+        GameLog.Log("[CharacterPlacementManager] 프리로드 완료");
 
         // 2. 그리드 생성 (waitForLayoutPreset=true일 때 직접 생성)
         if (!HasGridSlots())
         {
-            Debug.Log("[CharacterPlacementManager] 그리드가 없어서 생성...");
+            GameLog.Log("[CharacterPlacementManager] 그리드가 없어서 생성...");
             CreateGrid();
         }
-        Debug.Log($"[CharacterPlacementManager] 초기화 완료: 그리드 {gridSlots.Count}개 슬롯");
+        GameLog.Log($"[CharacterPlacementManager] 초기화 완료: 그리드 {gridSlots.Count}개 슬롯");
     }
 
     private void OnEnable()
     {
-        Debug.Log("[CharacterPlacementManager] OnEnable called! Starting InputManager event subscription");
+        GameLog.Log("[CharacterPlacementManager] OnEnable called! Starting InputManager event subscription");
         // Subscribe to InputManager events
         InputManager.OnLongPressStart += HandleLongPressStart;
         InputManager.OnDragUpdate += HandleDragUpdate;
         InputManager.OnDrop += HandleDrop;
-        Debug.Log("[CharacterPlacementManager] InputManager event subscription completed");
+        GameLog.Log("[CharacterPlacementManager] InputManager event subscription completed");
     }
 
     private void OnDisable()
@@ -182,7 +182,7 @@ public class CharacterPlacementManager : MonoBehaviour
     {
         if (gridSlotPrefab == null)
         {
-            Debug.LogError("[CharacterPlacementManager] GridSlot Prefab is not assigned!");
+            GameLog.LogError("[CharacterPlacementManager] GridSlot Prefab is not assigned!");
             return;
         }
 
@@ -261,7 +261,7 @@ public class CharacterPlacementManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"[CharacterPlacementManager] {gridSlots.Count} grids created (rows={gridRows}, cols={gridColumns}, rowGap={rowGap})");
+        GameLog.Log($"[CharacterPlacementManager] {gridSlots.Count} grids created (rows={gridRows}, cols={gridColumns}, rowGap={rowGap})");
     }
 
     /// <summary>
@@ -280,7 +280,7 @@ public class CharacterPlacementManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError($"[CharacterPlacementManager] GridSlot component not found: {slotObj.name}");
+            GameLog.LogError($"[CharacterPlacementManager] GridSlot component not found: {slotObj.name}");
         }
     }
 
@@ -293,14 +293,14 @@ public class CharacterPlacementManager : MonoBehaviour
         string prefabKey = GetCharacterPrefabKey(characterId);
         if (string.IsNullOrEmpty(prefabKey))
         {
-            Debug.LogError($"[CharacterPlacementManager] Failed to get prefab key for Character_ID: {characterId}");
+            GameLog.LogError($"[CharacterPlacementManager] Failed to get prefab key for Character_ID: {characterId}");
             return false;
         }
 
         // Check if prefab is loaded
         if (!loadedCharacterPrefabs.ContainsKey(prefabKey))
         {
-            Debug.LogError($"[CharacterPlacementManager] Character prefab '{prefabKey}' (ID: {characterId}) is not loaded!");
+            GameLog.LogError($"[CharacterPlacementManager] Character prefab '{prefabKey}' (ID: {characterId}) is not loaded!");
             return false;
         }
 
@@ -308,14 +308,14 @@ public class CharacterPlacementManager : MonoBehaviour
         GridSlot targetSlot = GetRandomEmptySlot();
         if (targetSlot == null)
         {
-            Debug.LogWarning("[CharacterPlacementManager] No empty slots available!");
+            GameLog.LogWarning("[CharacterPlacementManager] No empty slots available!");
             return false;
         }
 
         // Instantiate character prefab
         Vector3 spawnPosition = targetSlot.GetWorldPosition();
         Quaternion spawnRotation = GetCharacterRotation(targetSlot);
-        Debug.Log($"[CharacterPlacementManager] Spawning character '{prefabKey}' at slot {targetSlot.GetSlotIndex()}, position: {spawnPosition}");
+        GameLog.Log($"[CharacterPlacementManager] Spawning character '{prefabKey}' at slot {targetSlot.GetSlotIndex()}, position: {spawnPosition}");
 
         GameObject characterObj = Instantiate(
             loadedCharacterPrefabs[prefabKey],
@@ -341,7 +341,7 @@ public class CharacterPlacementManager : MonoBehaviour
         // Place in slot
         targetSlot.PlaceCharacter(characterObj);
 
-        Debug.Log($"[CharacterPlacementManager] Character ID {characterId} ({prefabKey}) spawned at slot {targetSlot.GetSlotIndex()}");
+        GameLog.Log($"[CharacterPlacementManager] Character ID {characterId} ({prefabKey}) spawned at slot {targetSlot.GetSlotIndex()}");
         return true;
     }
 
@@ -353,21 +353,21 @@ public class CharacterPlacementManager : MonoBehaviour
     {
         if (CSVLoader.Instance == null)
         {
-            Debug.LogError("[CharacterPlacementManager] CSVLoader.Instance is null");
+            GameLog.LogError("[CharacterPlacementManager] CSVLoader.Instance is null");
             return null;
         }
 
         var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
         if (characterData == null)
         {
-            Debug.LogError($"[CharacterPlacementManager] CharacterData not found for ID: {characterId}");
+            GameLog.LogError($"[CharacterPlacementManager] CharacterData not found for ID: {characterId}");
             return null;
         }
 
         var pathData = CSVLoader.Instance.GetData<PathData>(characterData.Path_ID);
         if (pathData == null)
         {
-            Debug.LogError($"[CharacterPlacementManager] PathData not found for Path_ID: {characterData.Path_ID}");
+            GameLog.LogError($"[CharacterPlacementManager] PathData not found for Path_ID: {characterData.Path_ID}");
             return null;
         }
 
@@ -433,7 +433,7 @@ public class CharacterPlacementManager : MonoBehaviour
     //JML: Long press started (2 second hold)
     private void HandleLongPressStart(Vector2 screenPosition)
     {
-        Debug.Log($"[CharacterPlacementManager] HandleLongPressStart called! screenPosition={screenPosition}");
+        GameLog.Log($"[CharacterPlacementManager] HandleLongPressStart called! screenPosition={screenPosition}");
 
         // Convert screen coordinates to world coordinates using raycast to grid plane
         Ray ray = mainCamera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
@@ -442,11 +442,11 @@ public class CharacterPlacementManager : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
             GameObject hitObject = hit.collider.gameObject;
-            Debug.Log($"[CharacterPlacementManager] Raycast hit={hitObject.name}");
+            GameLog.Log($"[CharacterPlacementManager] Raycast hit={hitObject.name}");
 
             // Check if it's a character
             GridSlot ownerSlot = FindSlotByCharacter(hitObject);
-            Debug.Log($"[CharacterPlacementManager] ownerSlot={ownerSlot?.GetSlotIndex().ToString() ?? "null"}");
+            GameLog.Log($"[CharacterPlacementManager] ownerSlot={ownerSlot?.GetSlotIndex().ToString() ?? "null"}");
 
             if (ownerSlot != null)
             {
@@ -456,12 +456,12 @@ public class CharacterPlacementManager : MonoBehaviour
                 // Show all grids
                 ShowAllGrids();
 
-                Debug.Log($"[CharacterPlacementManager] Character drag started: slot {ownerSlot.GetSlotIndex()}");
+                GameLog.Log($"[CharacterPlacementManager] Character drag started: slot {ownerSlot.GetSlotIndex()}");
             }
         }
         else
         {
-            Debug.Log("[CharacterPlacementManager] Raycast hit nothing");
+            GameLog.Log("[CharacterPlacementManager] Raycast hit nothing");
         }
     }
 
@@ -509,7 +509,7 @@ public class CharacterPlacementManager : MonoBehaviour
                 originalSlot.RemoveCharacter();
                 targetSlot.PlaceCharacter(draggingCharacter);
 
-                Debug.Log($"[CharacterPlacementManager] Character moved: slot {originalSlot.GetSlotIndex()} → {targetSlot.GetSlotIndex()}");
+                GameLog.Log($"[CharacterPlacementManager] Character moved: slot {originalSlot.GetSlotIndex()} → {targetSlot.GetSlotIndex()}");
             }
             else
             {
@@ -524,14 +524,14 @@ public class CharacterPlacementManager : MonoBehaviour
                 targetSlot.PlaceCharacter(draggingCharacter);
                 originalSlot.PlaceCharacter(targetCharacter);
 
-                Debug.Log($"[CharacterPlacementManager] Characters swapped: slot {originalSlot.GetSlotIndex()} ↔ {targetSlot.GetSlotIndex()}");
+                GameLog.Log($"[CharacterPlacementManager] Characters swapped: slot {originalSlot.GetSlotIndex()} ↔ {targetSlot.GetSlotIndex()}");
             }
         }
         else
         {
             // Not a valid slot or same slot: return to original position
             draggingCharacter.transform.position = originalSlot.GetWorldPosition();
-            Debug.Log($"[CharacterPlacementManager] Character returned to original position: slot {originalSlot.GetSlotIndex()}");
+            GameLog.Log($"[CharacterPlacementManager] Character returned to original position: slot {originalSlot.GetSlotIndex()}");
         }
 
         // Reset state
@@ -599,7 +599,7 @@ public class CharacterPlacementManager : MonoBehaviour
             }
             slot.RemoveCharacter();
         }
-        Debug.Log("[CharacterPlacementManager] All slots cleared (characters destroyed)");
+        GameLog.Log("[CharacterPlacementManager] All slots cleared (characters destroyed)");
     }
 
     #region Issue #349 - 전역 스텟 버프 시스템
@@ -697,7 +697,7 @@ public class CharacterPlacementManager : MonoBehaviour
         var globalBuffs = stageManager.GetAllGlobalStatBuffs();
         if (globalBuffs == null || globalBuffs.Count == 0) return;
 
-        Debug.Log($"[CharacterPlacementManager] Applying {globalBuffs.Count} global buffs to new character");
+        GameLog.Log($"[CharacterPlacementManager] Applying {globalBuffs.Count} global buffs to new character");
 
         foreach (var buff in globalBuffs)
         {
@@ -715,7 +715,7 @@ public class CharacterPlacementManager : MonoBehaviour
 
         if (PartySynergyManager.Instance == null)
         {
-            Debug.LogWarning("[CharacterPlacementManager] PartySynergyManager.Instance is null");
+            GameLog.LogWarning("[CharacterPlacementManager] PartySynergyManager.Instance is null");
             return;
         }
 
@@ -729,14 +729,14 @@ public class CharacterPlacementManager : MonoBehaviour
     {
         if (PartySynergyManager.Instance == null)
         {
-            Debug.LogWarning("[CharacterPlacementManager] PartySynergyManager.Instance is null");
+            GameLog.LogWarning("[CharacterPlacementManager] PartySynergyManager.Instance is null");
             return;
         }
 
         var characters = GetAllCharacters();
         if (characters.Count == 0)
         {
-            Debug.Log("[CharacterPlacementManager] 배치된 캐릭터가 없습니다.");
+            GameLog.Log("[CharacterPlacementManager] 배치된 캐릭터가 없습니다.");
             return;
         }
 

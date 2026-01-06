@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Managers;
@@ -87,7 +87,7 @@ namespace NovelianMagicLibraryDefense.Core
             // Start with panel inactive
             fadePanel.SetActive(false);
 
-            Debug.Log("[FadeController] Fade panel created");
+            GameLog.Log("[FadeController] Fade panel created");
         }
 
         /// <summary>

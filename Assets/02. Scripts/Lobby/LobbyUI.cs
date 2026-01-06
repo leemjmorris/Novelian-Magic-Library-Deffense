@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using Dispatch;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
@@ -378,7 +378,7 @@ public class LobbyUI : MonoBehaviour
             dispatchRedDot.SetActive(isCompleted);
             if (isCompleted)
             {
-                Debug.Log("[LobbyUI] ✅ 파견 완료 - 로비에 Red Dot 표시");
+                GameLog.Log("[LobbyUI] ✅ 파견 완료 - 로비에 Red Dot 표시");
             }
         }
     }
@@ -457,15 +457,15 @@ public class LobbyUI : MonoBehaviour
     /// </summary>
     public void OnProfileButton()
     {
-        Debug.Log("[LobbyUI] OnProfileButton 호출됨!");
+        GameLog.Log("[LobbyUI] OnProfileButton 호출됨!");
         if (profileDetailPanel != null)
         {
             profileDetailPanel.SetActive(true);
-            Debug.Log("[LobbyUI] profileDetailPanel 활성화됨");
+            GameLog.Log("[LobbyUI] profileDetailPanel 활성화됨");
         }
         else
         {
-            Debug.LogWarning("[LobbyUI] profileDetailPanel이 null입니다!");
+            GameLog.LogWarning("[LobbyUI] profileDetailPanel이 null입니다!");
         }
     }
 
@@ -490,7 +490,7 @@ public class LobbyUI : MonoBehaviour
         // 매니저가 없으면 직접 씬 로드 (fallback)
         if (FadeController.Instance == null)
         {
-            Debug.LogWarning("FadeController not available, loading scene directly");
+            GameLog.LogWarning("FadeController not available, loading scene directly");
             await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
             return;
         }
@@ -518,7 +518,7 @@ public class LobbyUI : MonoBehaviour
         // 매니저가 없으면 직접 씬 로드 (fallback)
         if (LoadingUIManager.Instance == null || FadeController.Instance == null)
         {
-            Debug.LogWarning("LoadingUIManager or FadeController not available, loading scene directly");
+            GameLog.LogWarning("LoadingUIManager or FadeController not available, loading scene directly");
             await UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(sceneName);
             return;
         }

@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
@@ -77,7 +77,7 @@ namespace NovelianMagicLibraryDefense.UI
                 rewardCount = 1;
                 currentRank = RewardRank.B;
                 UpdateUI();
-                Debug.Log($"[RewardRankUI] Reward 1 claimed! Rank: {currentRank}");
+                GameLog.Log($"[RewardRankUI] Reward 1 claimed! Rank: {currentRank}");
             }
         }
 
@@ -88,7 +88,7 @@ namespace NovelianMagicLibraryDefense.UI
                 rewardCount = 2;
                 currentRank = RewardRank.A;
                 UpdateUI();
-                Debug.Log($"[RewardRankUI] Reward 2 claimed! Rank: {currentRank}");
+                GameLog.Log($"[RewardRankUI] Reward 2 claimed! Rank: {currentRank}");
             }
         }
 
@@ -99,7 +99,7 @@ namespace NovelianMagicLibraryDefense.UI
                 rewardCount = 3;
                 currentRank = RewardRank.S;
                 UpdateUI();
-                Debug.Log($"[RewardRankUI] Reward 3 claimed! Rank: {currentRank}");
+                GameLog.Log($"[RewardRankUI] Reward 3 claimed! Rank: {currentRank}");
             }
         }
 
@@ -135,7 +135,7 @@ namespace NovelianMagicLibraryDefense.UI
             rewardCount = 0;
             currentRank = RewardRank.F;
             UpdateUI();
-            Debug.Log("[RewardRankUI] Reward reset to F rank");
+            GameLog.Log("[RewardRankUI] Reward reset to F rank");
         }
 
         /// <summary>

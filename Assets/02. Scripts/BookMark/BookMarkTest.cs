@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public class BookMarkTest : MonoBehaviour
@@ -64,6 +64,6 @@ public class BookMarkTest : MonoBehaviour
         CurrencyManager.Instance.AddCurrency(CurrencyManager.MAGIC_STONE_ID, 1000);     // 마석
         CurrencyManager.Instance.AddCurrency(CurrencyManager.DUNGEON_PASS_ID, 100);    // 던전 출입증
 
-        Debug.Log("모든 재료 및 재화 지급 완료!");
+        GameLog.Log("모든 재료 및 재화 지급 완료!");
     }
 }

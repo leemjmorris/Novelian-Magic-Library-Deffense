@@ -1,4 +1,4 @@
-//LMJ : Character partial class - Stats, Buffs, Bookmarks, and Star Tier System
+﻿//LMJ : Character partial class - Stats, Buffs, Bookmarks, and Star Tier System
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -43,7 +43,7 @@ namespace Novelian.Combat
         {
             if (starTier >= MAX_STAR_TIER)
             {
-                Debug.LogWarning($"[Character] 이미 최종 성급입니다! (현재: {starTier}성)");
+                GameLog.LogWarning($"[Character] 이미 최종 성급입니다! (현재: {starTier}성)");
                 return false;
             }
 
@@ -61,7 +61,7 @@ namespace Novelian.Combat
             ApplyStatBuff(StatType.Damage, upgradeBonus);
             ApplyStatBuff(StatType.AttackSpeed, upgradeBonus);
 
-            Debug.Log($"[Character] 성급 업그레이드! {oldStarTier}성 → {starTier}성 (배율: {oldTierMultiplier} → {newTierMultiplier}, 증가분: +{upgradeBonus * 100:F0}%)");
+            GameLog.Log($"[Character] 성급 업그레이드! {oldStarTier}성 → {starTier}성 (배율: {oldTierMultiplier} → {newTierMultiplier}, 증가분: +{upgradeBonus * 100:F0}%)");
 
             // 3성 달성 시 특별 대사 재생
             if (starTier == 3)
@@ -90,18 +90,18 @@ namespace Novelian.Combat
             var cardLevelTable = CSVLoader.Instance?.GetTable<CardLevelData>();
             if (cardLevelTable == null)
             {
-                Debug.LogWarning("[Character] CardLevelTable이 로드되지 않았습니다. 기본값 사용.");
+                GameLog.LogWarning("[Character] CardLevelTable이 로드되지 않았습니다. 기본값 사용.");
                 return GetDefaultTierMultiplier(tier);
             }
 
             var cardLevelData = cardLevelTable.GetId(cardLevelId);
             if (cardLevelData == null)
             {
-                Debug.LogWarning($"[Character] CardLevelTable에서 ID {cardLevelId}를 찾을 수 없습니다. 기본값 사용.");
+                GameLog.LogWarning($"[Character] CardLevelTable에서 ID {cardLevelId}를 찾을 수 없습니다. 기본값 사용.");
                 return GetDefaultTierMultiplier(tier);
             }
 
-            Debug.Log($"[Character] CSV 성급 배율 조회: CharacterId={characterId}, Tier={tier}, CardLevelId={cardLevelId}, value_change={cardLevelData.value_change}");
+            GameLog.Log($"[Character] CSV 성급 배율 조회: CharacterId={characterId}, Tier={tier}, CardLevelId={cardLevelId}, value_change={cardLevelData.value_change}");
             return cardLevelData.value_change;
         }
 
@@ -142,18 +142,18 @@ namespace Novelian.Combat
         {
             if (AudioManager.Instance == null)
             {
-                Debug.LogWarning("[Character] AudioManager not available");
+                GameLog.LogWarning("[Character] AudioManager not available");
                 return;
             }
 
             string voiceKey = CharacterVoiceHelper.GetThreeStarVoiceKey(characterId);
             if (string.IsNullOrEmpty(voiceKey))
             {
-                Debug.LogWarning($"[Character] 3성 음성 키를 찾을 수 없습니다. CharacterID: {characterId}");
+                GameLog.LogWarning($"[Character] 3성 음성 키를 찾을 수 없습니다. CharacterID: {characterId}");
                 return;
             }
 
-            Debug.Log($"<color=yellow>[Character] 3성 달성! 특별 대사 재생: {voiceKey}</color>");
+            GameLog.Log($"<color=yellow>[Character] 3성 달성! 특별 대사 재생: {voiceKey}</color>");
             AudioManager.Instance.PlayVoice(voiceKey);
         }
 
@@ -177,46 +177,46 @@ namespace Novelian.Combat
                 case StatType.Damage:
                 case StatType.TotalDamage:
                     damageModifier += percentValue;
-                    Debug.Log($"[Character] 데미지 버프 +{percentValue}% (총 {damageModifier}%)");
+                    GameLog.Log($"[Character] 데미지 버프 +{percentValue}% (총 {damageModifier}%)");
                     break;
 
                 case StatType.AttackSpeed:
                     attackSpeedModifier += percentValue;
-                    Debug.Log($"[Character] 공격속도 버프 +{percentValue}% (총 {attackSpeedModifier}%)");
+                    GameLog.Log($"[Character] 공격속도 버프 +{percentValue}% (총 {attackSpeedModifier}%)");
                     break;
 
                 case StatType.ProjectileSpeed:
                     projectileSpeedModifier += percentValue;
-                    Debug.Log($"[Character] 투사체속도 버프 +{percentValue}% (총 {projectileSpeedModifier}%)");
+                    GameLog.Log($"[Character] 투사체속도 버프 +{percentValue}% (총 {projectileSpeedModifier}%)");
                     break;
 
                 case StatType.Range:
                     rangeModifier += percentValue;
-                    Debug.Log($"[Character] 사거리 버프 +{percentValue}% (총 {rangeModifier}%)");
+                    GameLog.Log($"[Character] 사거리 버프 +{percentValue}% (총 {rangeModifier}%)");
                     break;
 
                 case StatType.CritChance:
                     critChanceModifier += percentValue;
-                    Debug.Log($"[Character] 치명타 확률 버프 +{percentValue}% (총 {critChanceModifier}%)");
+                    GameLog.Log($"[Character] 치명타 확률 버프 +{percentValue}% (총 {critChanceModifier}%)");
                     break;
 
                 case StatType.CritMultiplier:
                     critMultiplierModifier += percentValue;
-                    Debug.Log($"[Character] 치명타 배율 버프 +{percentValue}% (총 {critMultiplierModifier}%)");
+                    GameLog.Log($"[Character] 치명타 배율 버프 +{percentValue}% (총 {critMultiplierModifier}%)");
                     break;
 
                 case StatType.BonusDamage:
                     bonusDamageModifier += percentValue;
-                    Debug.Log($"[Character] 추가 데미지 버프 +{percentValue}% (총 {bonusDamageModifier}%)");
+                    GameLog.Log($"[Character] 추가 데미지 버프 +{percentValue}% (총 {bonusDamageModifier}%)");
                     break;
 
                 case StatType.HealthRegen:
                     healthRegenModifier += percentValue;
-                    Debug.Log($"[Character] 체력 회복 버프 +{percentValue}% (총 {healthRegenModifier}%)");
+                    GameLog.Log($"[Character] 체력 회복 버프 +{percentValue}% (총 {healthRegenModifier}%)");
                     break;
 
                 default:
-                    Debug.LogWarning($"[Character] 알 수 없는 StatType: {statType}");
+                    GameLog.LogWarning($"[Character] 알 수 없는 StatType: {statType}");
                     break;
             }
         }
@@ -228,7 +228,7 @@ namespace Novelian.Combat
         {
             // 버프 적용
             ApplyStatBuff(statType, value);
-            Debug.Log($"[Character] Temporary buff applied: {statType} +{value * 100}% for {duration}s");
+            GameLog.Log($"[Character] Temporary buff applied: {statType} +{value * 100}% for {duration}s");
 
             // 지속시간 후 해제
             RemoveBuffAfterDurationAsync(statType, value, duration).Forget();
@@ -238,7 +238,7 @@ namespace Novelian.Combat
         {
             await UniTask.Delay((int)(duration * 1000));
             ApplyStatBuff(statType, -value); // 버프 해제 (음수로 제거)
-            Debug.Log($"[Character] Temporary buff expired: {statType} -{value * 100}%");
+            GameLog.Log($"[Character] Temporary buff expired: {statType} -{value * 100}%");
         }
 
         #endregion
@@ -281,30 +281,30 @@ namespace Novelian.Combat
         private void ApplyBookmarksIfAvailable()
         {
             int charId = GetCharacterId();
-            Debug.Log($"[Character] ApplyBookmarksIfAvailable 시작 - CharacterID: {charId}");
+            GameLog.Log($"[Character] ApplyBookmarksIfAvailable 시작 - CharacterID: {charId}");
 
             if (charId <= 0)
             {
-                Debug.LogWarning($"[Character] CharacterID가 유효하지 않음: {charId}");
+                GameLog.LogWarning($"[Character] CharacterID가 유효하지 않음: {charId}");
                 return;
             }
 
             if (BookMarkManager.Instance == null)
             {
-                Debug.LogWarning("[Character] BookMarkManager.Instance가 null입니다!");
+                GameLog.LogWarning("[Character] BookMarkManager.Instance가 null입니다!");
                 return;
             }
 
             var bookmarks = BookMarkManager.Instance.GetEquippedBookmarksForCharacter(charId);
-            Debug.Log($"[Character] GetEquippedBookmarksForCharacter({charId}) 결과: {(bookmarks != null ? bookmarks.Count.ToString() : "null")}개");
+            GameLog.Log($"[Character] GetEquippedBookmarksForCharacter({charId}) 결과: {(bookmarks != null ? bookmarks.Count.ToString() : "null")}개");
 
             if (bookmarks == null || bookmarks.Count == 0)
             {
-                Debug.Log($"[Character] CharacterID {charId}에 장착된 책갈피가 없습니다.");
+                GameLog.Log($"[Character] CharacterID {charId}에 장착된 책갈피가 없습니다.");
                 return;
             }
 
-            Debug.Log($"[Character] 책갈피 {bookmarks.Count}개 적용 시작 (CharacterID: {charId})");
+            GameLog.Log($"[Character] 책갈피 {bookmarks.Count}개 적용 시작 (CharacterID: {charId})");
 
             foreach (var bookmark in bookmarks)
             {
@@ -333,47 +333,47 @@ namespace Novelian.Combat
             {
                 case 1: // 공격력 증가
                     damageModifier += percentValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 공격력 +{percentValue:F0}% (총 {damageModifier:F0}%)");
+                    GameLog.Log($"[Character] 스탯 책갈피: 공격력 +{percentValue:F0}% (총 {damageModifier:F0}%)");
                     break;
                 case 2: // 공격 속도 증가
                     attackSpeedModifier += percentValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 공격속도 +{percentValue:F0}% (총 {attackSpeedModifier:F0}%)");
+                    GameLog.Log($"[Character] 스탯 책갈피: 공격속도 +{percentValue:F0}% (총 {attackSpeedModifier:F0}%)");
                     break;
                 case 3: // 치명타 배율 증가
                     critMultiplierModifier += percentValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 치명타 배율 +{percentValue:F0}% (총 {critMultiplierModifier:F0}%)");
+                    GameLog.Log($"[Character] 스탯 책갈피: 치명타 배율 +{percentValue:F0}% (총 {critMultiplierModifier:F0}%)");
                     break;
                 case 4: // 치명타 확률 증가
                     critChanceModifier += percentValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 치명타 확률 +{percentValue:F0}% (총 {critChanceModifier:F0}%)");
+                    GameLog.Log($"[Character] 스탯 책갈피: 치명타 확률 +{percentValue:F0}% (총 {critChanceModifier:F0}%)");
                     break;
                 case 5: // 치명타 피해 증가 (배율에 누적)
                     critMultiplierModifier += percentValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 치명타 피해 +{percentValue:F0}% (총 {critMultiplierModifier:F0}%)");
+                    GameLog.Log($"[Character] 스탯 책갈피: 치명타 피해 +{percentValue:F0}% (총 {critMultiplierModifier:F0}%)");
                     break;
                 case 6: // 속성 강화 (GenreType별)
                     ApplyGenreModifier(bookmark);
                     break;
                 case 7: // 쿨타임 감소
                     cooldownModifier += percentValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 쿨타임 -{percentValue:F0}% (총 {cooldownModifier:F0}%)");
+                    GameLog.Log($"[Character] 스탯 책갈피: 쿨타임 -{percentValue:F0}% (총 {cooldownModifier:F0}%)");
                     break;
                 case 8: // 시전 속도 감소
                     castTimeModifier += percentValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 시전속도 -{percentValue:F0}% (총 {castTimeModifier:F0}%)");
+                    GameLog.Log($"[Character] 스탯 책갈피: 시전속도 -{percentValue:F0}% (총 {castTimeModifier:F0}%)");
                     break;
                 // case 9: 제거됨 (발사체 속도)
                 // case 10, 11, 12: RewardHelper에서 처리 (아이템/골드/파견시간)
                 // case 13, 14, 15: 보류 (적 디버프)
                 case 16: // 보스 데미지 증가
                     bossDamageModifier += percentValue;
-                    Debug.Log($"[Character] 스탯 책갈피: 보스 데미지 +{percentValue:F0}% (총 {bossDamageModifier:F0}%)");
+                    GameLog.Log($"[Character] 스탯 책갈피: 보스 데미지 +{percentValue:F0}% (총 {bossDamageModifier:F0}%)");
                     break;
                 default:
                     // 10, 11, 12는 RewardHelper에서 처리하므로 경고 안 함
                     if (bookmark.OptionType < 10 || bookmark.OptionType > 12)
                     {
-                        Debug.LogWarning($"[Character] 미구현 OptionType: {bookmark.OptionType}");
+                        GameLog.LogWarning($"[Character] 미구현 OptionType: {bookmark.OptionType}");
                     }
                     break;
             }
@@ -392,7 +392,7 @@ namespace Novelian.Combat
                 genreModifiers[genre] = 0f;
 
             genreModifiers[genre] += bookmark.OptionValue;
-            Debug.Log($"[Character] 스탯 책갈피: {genre} 속성 강화 +{bookmark.OptionValue * 100f:F0}% (총 {genreModifiers[genre] * 100f:F0}%)");
+            GameLog.Log($"[Character] 스탯 책갈피: {genre} 속성 강화 +{bookmark.OptionValue * 100f:F0}% (총 {genreModifiers[genre] * 100f:F0}%)");
         }
 
         /// <summary>
@@ -435,7 +435,7 @@ namespace Novelian.Combat
                 if (activeSkillId == 0) // 비어있을 때만 설정
                 {
                     activeSkillId = bookmark.SkillID;
-                    Debug.Log($"[Character] 스킬 책갈피: activeSkillId = {bookmark.SkillID} ({mainSkill.skill_name})");
+                    GameLog.Log($"[Character] 스킬 책갈피: activeSkillId = {bookmark.SkillID} ({mainSkill.skill_name})");
                 }
             }
         }
@@ -480,7 +480,7 @@ namespace Novelian.Combat
                 genreModifiers[genreType] = 0f;
 
             genreModifiers[genreType] += value;
-            Debug.Log($"[Character] 파티 시너지: {genreType} 속성 강화 +{value * 100f:F0}% (총 {genreModifiers[genreType] * 100f:F0}%)");
+            GameLog.Log($"[Character] 파티 시너지: {genreType} 속성 강화 +{value * 100f:F0}% (총 {genreModifiers[genreType] * 100f:F0}%)");
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Demo
@@ -27,25 +27,25 @@ namespace NovelianMagicLibraryDefense.Demo
 
         private async UniTaskVoid InitializeAsync()
         {
-            Debug.Log("[DemoInitializer] Starting initialization...");
+            GameLog.Log("[DemoInitializer] Starting initialization...");
 
             // Wait for CSVLoader instance
             if (CSVLoader.Instance == null)
             {
-                Debug.Log("[DemoInitializer] Waiting for CSVLoader instance...");
+                GameLog.Log("[DemoInitializer] Waiting for CSVLoader instance...");
                 await UniTask.WaitUntil(() => CSVLoader.Instance != null);
             }
 
             // Wait for CSVLoader to finish loading (it auto-loads in Start)
             if (!CSVLoader.Instance.IsInit)
             {
-                Debug.Log("[DemoInitializer] Waiting for CSVLoader to finish loading...");
+                GameLog.Log("[DemoInitializer] Waiting for CSVLoader to finish loading...");
                 await UniTask.WaitUntil(() => CSVLoader.Instance.IsInit);
             }
 
-            Debug.Log("[DemoInitializer] CSVLoader ready!");
+            GameLog.Log("[DemoInitializer] CSVLoader ready!");
             IsReady = true;
-            Debug.Log("[DemoInitializer] Demo initialization complete!");
+            GameLog.Log("[DemoInitializer] Demo initialization complete!");
         }
 
         private void OnDestroy()

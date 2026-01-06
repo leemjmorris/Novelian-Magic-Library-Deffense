@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
@@ -38,7 +38,7 @@ public class CharacterPanel : MonoBehaviour
 
     private async UniTaskVoid Start()
     {
-        Debug.Log("[CharacterPanel] Start() called - Waiting for CSVLoader...");
+        GameLog.Log("[CharacterPanel] Start() called - Waiting for CSVLoader...");
 
         // 드롭다운 초기화
         InitializeFilterDropdown();
@@ -46,18 +46,18 @@ public class CharacterPanel : MonoBehaviour
         // CSV 로딩 완료될 때까지 대기
         await UniTask.WaitUntil(() => CSVLoader.Instance != null && CSVLoader.Instance.IsInit);
 
-        Debug.Log("[CharacterPanel] CSVLoader ready - Getting CharacterTable...");
+        GameLog.Log("[CharacterPanel] CSVLoader ready - Getting CharacterTable...");
 
         CsvTable<CharacterData> characterTable = CSVLoader.Instance.GetTable<CharacterData>();
 
         // null 체크도 추가
         if (characterTable == null)
         {
-            Debug.LogError("[CharacterPanel] CharacterTable is null after loading! CSV data may have failed to load.");
+            GameLog.LogError("[CharacterPanel] CharacterTable is null after loading! CSV data may have failed to load.");
             return;
         }
 
-        Debug.Log($"[CharacterPanel] CharacterTable loaded with {characterTable.Count} entries");
+        GameLog.Log($"[CharacterPanel] CharacterTable loaded with {characterTable.Count} entries");
 
         // 보유 캐릭터가 앞에 오도록 정렬
         var sortedCharacters = characterTable.GetAll()
@@ -83,7 +83,7 @@ public class CharacterPanel : MonoBehaviour
             slotIndex++;
         }
 
-        Debug.Log($"[CharacterPanel] Created {slotIndex} character slots");
+        GameLog.Log($"[CharacterPanel] Created {slotIndex} character slots");
         characterInfoPanel.SetActive(false);
     }
 
@@ -105,7 +105,7 @@ public class CharacterPanel : MonoBehaviour
     {
         if (filterDropdown == null)
         {
-            Debug.LogWarning("[CharacterPanel] FilterDropdown is not assigned!");
+            GameLog.LogWarning("[CharacterPanel] FilterDropdown is not assigned!");
             return;
         }
 
@@ -130,7 +130,7 @@ public class CharacterPanel : MonoBehaviour
         filterDropdown.value = 0;
         filterDropdown.onValueChanged.AddListener(OnFilterChanged);
 
-        Debug.Log("[CharacterPanel] Filter dropdown initialized");
+        GameLog.Log("[CharacterPanel] Filter dropdown initialized");
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public class CharacterPanel : MonoBehaviour
     {
         currentFilter = (CharacterFilterType)index;
         ApplyFilter();
-        Debug.Log($"[CharacterPanel] Filter changed to: {currentFilter}");
+        GameLog.Log($"[CharacterPanel] Filter changed to: {currentFilter}");
     }
 
     /// <summary>
@@ -189,7 +189,7 @@ public class CharacterPanel : MonoBehaviour
             sortedSlots[i].transform.SetSiblingIndex(i);
         }
 
-        Debug.Log($"[CharacterPanel] Sorted by {currentFilter}");
+        GameLog.Log($"[CharacterPanel] Sorted by {currentFilter}");
     }
 
     /// <summary>
@@ -274,7 +274,7 @@ public class CharacterPanel : MonoBehaviour
             }
         }
 
-        Debug.Log("[CharacterPanel] Filter reset to All");
+        GameLog.Log("[CharacterPanel] Filter reset to All");
     }
 
     private void OnDestroy()

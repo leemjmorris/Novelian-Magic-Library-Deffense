@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// Automatically configure Physics 3D Layer Collision Matrix on game start
@@ -16,7 +16,7 @@ public class PhysicsSetup
 
         if (wallLayer == -1 || projectileLayer == -1 || monsterLayer == -1)
         {
-            Debug.LogWarning("[PhysicsSetup] Some layers not found. Using default collision settings.");
+            GameLog.LogWarning("[PhysicsSetup] Some layers not found. Using default collision settings.");
             return;
         }
 
@@ -36,13 +36,13 @@ public class PhysicsSetup
             Physics.IgnoreLayerCollision(projectileLayer, uiLayer, true);
         }
 
-        Debug.Log("[PhysicsSetup] Physics 3D layer collision matrix configured!");
-        Debug.Log($"  -> Projectile (Layer {projectileLayer}) IGNORES Wall (Layer {wallLayer})");
-        Debug.Log($"  -> Projectile (Layer {projectileLayer}) COLLIDES with Monster (Layer {monsterLayer})");
-        Debug.Log($"  -> Monster (Layer {monsterLayer}) COLLIDES with Wall (Layer {wallLayer})");
+        GameLog.Log("[PhysicsSetup] Physics 3D layer collision matrix configured!");
+        GameLog.Log($"  -> Projectile (Layer {projectileLayer}) IGNORES Wall (Layer {wallLayer})");
+        GameLog.Log($"  -> Projectile (Layer {projectileLayer}) COLLIDES with Monster (Layer {monsterLayer})");
+        GameLog.Log($"  -> Monster (Layer {monsterLayer}) COLLIDES with Wall (Layer {wallLayer})");
         if (uiLayer != -1)
         {
-            Debug.Log($"  -> Projectile (Layer {projectileLayer}) IGNORES UI/Character (Layer {uiLayer})");
+            GameLog.Log($"  -> Projectile (Layer {projectileLayer}) IGNORES UI/Character (Layer {uiLayer})");
         }
     }
 }

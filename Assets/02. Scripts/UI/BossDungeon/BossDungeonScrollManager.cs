@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
@@ -34,12 +34,12 @@ namespace NovelianMagicLibraryDefense.UI
             if (FirebaseSaveManager.Instance?.CachedData?.progression != null)
             {
                 unlockedFloorCount = FirebaseSaveManager.Instance.CachedData.progression.bossDungeonProgress;
-                Debug.Log($"[BossDungeonScrollManager] 해금 상태 로드: {unlockedFloorCount}층");
+                GameLog.Log($"[BossDungeonScrollManager] 해금 상태 로드: {unlockedFloorCount}층");
             }
             else
             {
                 unlockedFloorCount = 1; // 기본값
-                Debug.Log("[BossDungeonScrollManager] Firebase 데이터 없음, 기본값(1층) 사용");
+                GameLog.Log("[BossDungeonScrollManager] Firebase 데이터 없음, 기본값(1층) 사용");
             }
         }
 
@@ -119,7 +119,7 @@ namespace NovelianMagicLibraryDefense.UI
                     FirebaseManager.Instance.CurrentUserId,
                     FirebaseSaveManager.Instance.CachedData.progression
                 ).Forget();
-                Debug.Log($"[BossDungeonScrollManager] 해금 상태 저장: {unlockedFloorCount}층");
+                GameLog.Log($"[BossDungeonScrollManager] 해금 상태 저장: {unlockedFloorCount}층");
             }
         }
     }

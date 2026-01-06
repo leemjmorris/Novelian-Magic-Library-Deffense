@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Firebase;
 using Firebase.Auth;
@@ -45,7 +45,7 @@ public class FirebaseManager : MonoBehaviour
     {
         if (IsInitialized)
         {
-            Debug.Log($"{LOG_PREFIX} 이미 초기화됨");
+            GameLog.Log($"{LOG_PREFIX} 이미 초기화됨");
             return true;
         }
 
@@ -66,32 +66,32 @@ public class FirebaseManager : MonoBehaviour
                         // 서버에서 유저 정보 유효성 확인
                         await auth.CurrentUser.ReloadAsync();
                         currentUser = auth.CurrentUser;
-                        Debug.Log($"{LOG_PREFIX} 자동 로그인 성공! UserId: {currentUser.UserId}");
+                        GameLog.Log($"{LOG_PREFIX} 자동 로그인 성공! UserId: {currentUser.UserId}");
                     }
                     catch (Exception)
                     {
                         // 서버에서 유저가 삭제됨 - 로컬 캐시 정리
-                        Debug.LogWarning($"{LOG_PREFIX} 기존 유저가 서버에서 삭제됨. 로컬 캐시 정리.");
+                        GameLog.LogWarning($"{LOG_PREFIX} 기존 유저가 서버에서 삭제됨. 로컬 캐시 정리.");
                         auth.SignOut();
                         currentUser = null;
                     }
                 }
                 else
                 {
-                    Debug.Log($"{LOG_PREFIX} 초기화 완료. 로그인된 유저 없음.");
+                    GameLog.Log($"{LOG_PREFIX} 초기화 완료. 로그인된 유저 없음.");
                 }
 
                 return true;
             }
             else
             {
-                Debug.LogError($"{LOG_PREFIX} Firebase 의존성 해결 실패: {dependencyStatus}");
+                GameLog.LogError($"{LOG_PREFIX} Firebase 의존성 해결 실패: {dependencyStatus}");
                 return false;
             }
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 초기화 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 초기화 실패: {e.Message}");
             return false;
         }
     }
@@ -104,7 +104,7 @@ public class FirebaseManager : MonoBehaviour
     {
         if (!IsInitialized)
         {
-            Debug.LogError($"{LOG_PREFIX} 초기화되지 않음. InitializeAsync를 먼저 호출하세요.");
+            GameLog.LogError($"{LOG_PREFIX} 초기화되지 않음. InitializeAsync를 먼저 호출하세요.");
             return null;
         }
 
@@ -113,12 +113,12 @@ public class FirebaseManager : MonoBehaviour
             var authResult = await auth.SignInAnonymouslyAsync();
             currentUser = authResult.User;
 
-            Debug.Log($"{LOG_PREFIX} 익명 로그인 성공! UserId: {currentUser.UserId}");
+            GameLog.Log($"{LOG_PREFIX} 익명 로그인 성공! UserId: {currentUser.UserId}");
             return currentUser.UserId;
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 익명 로그인 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 익명 로그인 실패: {e.Message}");
             return null;
         }
     }
@@ -134,7 +134,7 @@ public class FirebaseManager : MonoBehaviour
     {
         if (!IsInitialized)
         {
-            Debug.LogError($"{LOG_PREFIX} Firebase 초기화 필요. InitializeAsync를 먼저 호출하세요.");
+            GameLog.LogError($"{LOG_PREFIX} Firebase 초기화 필요. InitializeAsync를 먼저 호출하세요.");
             return null;
         }
 
@@ -156,38 +156,38 @@ public class FirebaseManager : MonoBehaviour
 
             if (googleUser == null)
             {
-                Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: 사용자 정보 없음");
+                GameLog.LogError($"{LOG_PREFIX} Google Sign-In 실패: 사용자 정보 없음");
                 return null;
             }
 
             string idToken = googleUser.IdToken;
             if (string.IsNullOrEmpty(idToken))
             {
-                Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: ID Token 없음");
+                GameLog.LogError($"{LOG_PREFIX} Google Sign-In 실패: ID Token 없음");
                 return null;
             }
 
-            Debug.Log($"{LOG_PREFIX} Google Sign-In 성공! Email: {googleUser.Email}");
+            GameLog.Log($"{LOG_PREFIX} Google Sign-In 성공! Email: {googleUser.Email}");
 
             // 3. Firebase Credential 생성 및 로그인
             Credential credential = GoogleAuthProvider.GetCredential(idToken, null);
             currentUser = await auth.SignInWithCredentialAsync(credential);
 
-            Debug.Log($"{LOG_PREFIX} 구글 로그인 성공! UserId: {currentUser.UserId}");
+            GameLog.Log($"{LOG_PREFIX} 구글 로그인 성공! UserId: {currentUser.UserId}");
             return currentUser.UserId;
         }
         catch (GoogleSignIn.SignInException e)
         {
-            Debug.LogError($"{LOG_PREFIX} Google Sign-In 실패: {e.Status} - {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} Google Sign-In 실패: {e.Status} - {e.Message}");
             return null;
         }
         catch (Exception e)
         {
-            Debug.LogError($"{LOG_PREFIX} 구글 로그인 실패: {e.Message}");
+            GameLog.LogError($"{LOG_PREFIX} 구글 로그인 실패: {e.Message}");
             return null;
         }
 #else
-        Debug.LogWarning($"{LOG_PREFIX} 구글 로그인은 Android/iOS에서만 지원됩니다.");
+        GameLog.LogWarning($"{LOG_PREFIX} 구글 로그인은 Android/iOS에서만 지원됩니다.");
         return null;
 #endif
     }
@@ -201,7 +201,7 @@ public class FirebaseManager : MonoBehaviour
     {
         if (!IsInitialized || auth == null)
         {
-            Debug.LogWarning($"{LOG_PREFIX} 초기화되지 않음.");
+            GameLog.LogWarning($"{LOG_PREFIX} 초기화되지 않음.");
             return;
         }
 
@@ -215,14 +215,14 @@ public class FirebaseManager : MonoBehaviour
         }
         catch (Exception e)
         {
-            Debug.LogWarning($"{LOG_PREFIX} Google SignOut 실패: {e.Message}");
+            GameLog.LogWarning($"{LOG_PREFIX} Google SignOut 실패: {e.Message}");
         }
 #endif
 
         // Firebase 로그아웃
         auth.SignOut();
         currentUser = null;
-        Debug.Log($"{LOG_PREFIX} 로그아웃 완료. UserId: {userId}");
+        GameLog.Log($"{LOG_PREFIX} 로그아웃 완료. UserId: {userId}");
     }
 
     private void OnDestroy()

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
@@ -71,7 +71,7 @@ public class IngredientManager : MonoBehaviour
         var ingredientData = CSVLoader.Instance.GetData<IngredientData>(id);
         if (ingredientData == null)
         {
-            Debug.LogError($"존재하지 않는 재료 ID: {id}");
+            GameLog.LogError($"존재하지 않는 재료 ID: {id}");
             return;
         }
 
@@ -81,7 +81,7 @@ public class IngredientManager : MonoBehaviour
         if (currentCount + count > maxCount)
         {
             string ingredientName = CSVLoader.Instance.GetData<StringTable>(ingredientData.Ingredient_Name_ID)?.Text ?? "Unknown";
-            Debug.LogWarning($"{ingredientName} 최대 수량 초과! (최대: {maxCount})");
+            GameLog.LogWarning($"{ingredientName} 최대 수량 초과! (최대: {maxCount})");
             count = maxCount - currentCount;
         }
 
@@ -91,7 +91,7 @@ public class IngredientManager : MonoBehaviour
             Ingredients[id] = count;
 
         string addedIngredientName = CSVLoader.Instance.GetData<StringTable>(ingredientData.Ingredient_Name_ID)?.Text ?? "Unknown";
-        Debug.Log($"{addedIngredientName} {count}개 획득! (보유: {Ingredients[id]}/{maxCount})");
+        GameLog.Log($"{addedIngredientName} {count}개 획득! (보유: {Ingredients[id]}/{maxCount})");
 
         SaveSingleIngredientToFirebase(id);
         OnIngredientChanged?.Invoke(id, Ingredients[id]);
@@ -101,7 +101,7 @@ public class IngredientManager : MonoBehaviour
     {
         if (!Ingredients.ContainsKey(id) || Ingredients[id] < count)
         {
-            Debug.LogWarning("재료가 부족합니다!");
+            GameLog.LogWarning("재료가 부족합니다!");
             return false;
         }
 
@@ -160,7 +160,7 @@ public class IngredientManager : MonoBehaviour
         }
 
         IsDataLoaded = true;
-        Debug.Log($"<color=#3EB489>[IngredientManager]</color> Firebase에서 재료 로드: {Ingredients.Count}종");
+        GameLog.Log($"<color=#3EB489>[IngredientManager]</color> Firebase에서 재료 로드: {Ingredients.Count}종");
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using Firebase.Data;
 using Cysharp.Threading.Tasks;
@@ -28,7 +28,7 @@ public class CharacterEnhancementManager : MonoBehaviour
         instance = this;
         DontDestroyOnLoad(gameObject);
 
-        Debug.Log("[CharacterEnhancementManager] Initialized");
+        GameLog.Log("[CharacterEnhancementManager] Initialized");
     }
 
     /// <summary>
@@ -38,14 +38,14 @@ public class CharacterEnhancementManager : MonoBehaviour
     {
         if (targetLevel < 2 || targetLevel > 10)
         {
-            Debug.LogError("Target level must be between 2 and 10");
+            GameLog.LogError("Target level must be between 2 and 10");
             return;
         }
 
         CharacterEnhancementData charEnhancement = GetCharacterEnhancementData(characterId);
         if (charEnhancement == null)
         {
-            Debug.LogError($"CharacterEnhancementData not found for ID: {characterId}");
+            GameLog.LogError($"CharacterEnhancementData not found for ID: {characterId}");
             return;
         }
 
@@ -54,7 +54,7 @@ public class CharacterEnhancementManager : MonoBehaviour
 
         if (enhancementData == null)
         {
-            Debug.LogError($"EnhancementLevelData not found for Pw_Level: {pwLevelId}");
+            GameLog.LogError($"EnhancementLevelData not found for Pw_Level: {pwLevelId}");
             return;
         }
 
@@ -65,7 +65,7 @@ public class CharacterEnhancementManager : MonoBehaviour
 
         CharacterData charData = CSVLoader.Instance.GetData<CharacterData>(characterId);
         string charName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";
-        Debug.Log($"[Test] {charName} Lv.{targetLevel} 강화에 필요한 재료 지급 완료!");
+        GameLog.Log($"[Test] {charName} Lv.{targetLevel} 강화에 필요한 재료 지급 완료!");
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public class CharacterEnhancementManager : MonoBehaviour
 
         if (enhancements == null)
         {
-            Debug.Log("<color=#3EB489>[CharacterEnhancement]</color> Firebase 강화 데이터 없음 (새 계정)");
+            GameLog.Log("<color=#3EB489>[CharacterEnhancement]</color> Firebase 강화 데이터 없음 (새 계정)");
             return;
         }
         foreach (var kvp in enhancements)
@@ -101,7 +101,7 @@ public class CharacterEnhancementManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"<color=#3EB489>[CharacterEnhancement]</color> Firebase에서 강화 데이터 로드: {characterEnhancementLevels.Count}개");
+        GameLog.Log($"<color=#3EB489>[CharacterEnhancement]</color> Firebase에서 강화 데이터 로드: {characterEnhancementLevels.Count}개");
     }
 
     /// <summary>
@@ -114,7 +114,7 @@ public class CharacterEnhancementManager : MonoBehaviour
         // 최대 레벨 체크
         if (currentLevel >= 10)
         {
-            Debug.LogWarning($"Character {characterId} is already at max level (10)");
+            GameLog.LogWarning($"Character {characterId} is already at max level (10)");
             return null;
         }
 
@@ -122,7 +122,7 @@ public class CharacterEnhancementManager : MonoBehaviour
         CharacterEnhancementData charEnhancement = GetCharacterEnhancementData(characterId);
         if (charEnhancement == null)
         {
-            Debug.LogError($"CharacterEnhancementData not found for ID: {characterId}");
+            GameLog.LogError($"CharacterEnhancementData not found for ID: {characterId}");
             return null;
         }
 
@@ -133,7 +133,7 @@ public class CharacterEnhancementManager : MonoBehaviour
         EnhancementLevelData enhancementData = CSVLoader.Instance.GetData<EnhancementLevelData>(nextPwLevelId);
         if (enhancementData == null)
         {
-            Debug.LogError($"EnhancementLevelData not found for Pw_Level: {nextPwLevelId}");
+            GameLog.LogError($"EnhancementLevelData not found for Pw_Level: {nextPwLevelId}");
             return null;
         }
 
@@ -151,7 +151,7 @@ public class CharacterEnhancementManager : MonoBehaviour
         CharacterEnhancementData charEnhancement = GetCharacterEnhancementData(characterId);
         if (charEnhancement == null)
         {
-            Debug.LogError($"CharacterEnhancementData not found for ID: {characterId}");
+            GameLog.LogError($"CharacterEnhancementData not found for ID: {characterId}");
             return null;
         }
 
@@ -162,7 +162,7 @@ public class CharacterEnhancementManager : MonoBehaviour
         EnhancementLevelData enhancementData = CSVLoader.Instance.GetData<EnhancementLevelData>(currentPwLevelId);
         if (enhancementData == null)
         {
-            Debug.LogError($"EnhancementLevelData not found for Pw_Level: {currentPwLevelId}");
+            GameLog.LogError($"EnhancementLevelData not found for Pw_Level: {currentPwLevelId}");
             return null;
         }
 
@@ -234,7 +234,7 @@ public class CharacterEnhancementManager : MonoBehaviour
         // 강화 가능 여부 확인
         if (!CanEnhance(characterId, out string failReason))
         {
-            Debug.LogWarning($"[Enhancement Failed] {failReason}");
+            GameLog.LogWarning($"[Enhancement Failed] {failReason}");
             return false;
         }
 
@@ -242,7 +242,7 @@ public class CharacterEnhancementManager : MonoBehaviour
         EnhancementLevelData nextInfo = GetNextEnhancementInfo(characterId);
         if (nextInfo == null)
         {
-            Debug.LogError("Enhancement info is null");
+            GameLog.LogError("Enhancement info is null");
             return false;
         }
 
@@ -253,14 +253,14 @@ public class CharacterEnhancementManager : MonoBehaviour
 
         if (!mat1Result || !mat2Result || !mat3Result)
         {
-            Debug.LogError("Failed to remove materials");
+            GameLog.LogError("Failed to remove materials");
             return false;
         }
 
         // 골드 소모 (CurrencyManager 사용)
         if (!CurrencyManager.Instance.SpendGold(nextInfo.Material_4_Count))
         {
-            Debug.LogError("Failed to spend gold");
+            GameLog.LogError("Failed to spend gold");
             return false;
         }
 
@@ -270,7 +270,7 @@ public class CharacterEnhancementManager : MonoBehaviour
 
         CharacterData charData = CSVLoader.Instance.GetData<CharacterData>(characterId);
         string enhancedCharName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";
-        Debug.Log($"[Enhancement Success] {enhancedCharName} Lv.{currentLevel} → Lv.{currentLevel + 1}");
+        GameLog.Log($"[Enhancement Success] {enhancedCharName} Lv.{currentLevel} → Lv.{currentLevel + 1}");
 
         // Firebase에 저장 (완료 대기)
         await SaveEnhancementToFirebaseAsync(characterId, currentLevel + 1);
@@ -285,13 +285,13 @@ public class CharacterEnhancementManager : MonoBehaviour
     {
         if (FirebaseSaveManager.Instance == null || !FirebaseSaveManager.Instance.IsInitialized)
         {
-            Debug.LogWarning("[CharacterEnhancement] FirebaseSaveManager not ready, skipping save");
+            GameLog.LogWarning("[CharacterEnhancement] FirebaseSaveManager not ready, skipping save");
             return;
         }
 
         if (FirebaseManager.Instance == null || string.IsNullOrEmpty(FirebaseManager.Instance.CurrentUserId))
         {
-            Debug.LogWarning("[CharacterEnhancement] No user logged in, skipping save");
+            GameLog.LogWarning("[CharacterEnhancement] No user logged in, skipping save");
             return;
         }
 
@@ -301,7 +301,7 @@ public class CharacterEnhancementManager : MonoBehaviour
             level
         );
 
-        Debug.Log($"<color=#3EB489>[CharacterEnhancement]</color> Firebase 저장 완료: Character {characterId} → Lv.{level}");
+        GameLog.Log($"<color=#3EB489>[CharacterEnhancement]</color> Firebase 저장 완료: Character {characterId} → Lv.{level}");
     }
 
     /// <summary>

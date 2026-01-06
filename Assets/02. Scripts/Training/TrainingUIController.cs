@@ -1,4 +1,4 @@
-// 훈련소 UI 컨트롤러 (Issue #458)
+﻿// 훈련소 UI 컨트롤러 (Issue #458)
 // UGUI 기반 UI 제어
 namespace Novelian.Training
 {
@@ -326,7 +326,7 @@ namespace Novelian.Training
             }
 
             await UniTask.CompletedTask;
-            Debug.Log($"[TrainingUIController] 드롭다운 데이터 로드 완료: 캐릭터={characterDataList.Count}, 메인스킬={mainSkillDataList.Count}, 보조스킬={supportSkillDataList.Count}, 스탯옵션={statOptionDataList.Count}");
+            GameLog.Log($"[TrainingUIController] 드롭다운 데이터 로드 완료: 캐릭터={characterDataList.Count}, 메인스킬={mainSkillDataList.Count}, 보조스킬={supportSkillDataList.Count}, 스탯옵션={statOptionDataList.Count}");
         }
 
         #endregion
@@ -409,7 +409,7 @@ namespace Novelian.Training
             // 스탯 책갈피 드롭다운 4개 초기화
             InitializeStatBookmarkDropdowns();
 
-            Debug.Log("[TrainingUIController] 드롭다운 초기화 완료");
+            GameLog.Log("[TrainingUIController] 드롭다운 초기화 완료");
         }
 
         /// <summary>
@@ -664,7 +664,7 @@ namespace Novelian.Training
             {
                 if (DeckManager.Instance == null)
                 {
-                    Debug.LogWarning("[TrainingUIController] DeckManager가 없습니다. LobbyScene에서 진입해주세요.");
+                    GameLog.LogWarning("[TrainingUIController] DeckManager가 없습니다. LobbyScene에서 진입해주세요.");
                     if (useMyDeckToggle != null) useMyDeckToggle.isOn = false;
                     return;
                 }
@@ -672,12 +672,12 @@ namespace Novelian.Training
                 var deckCharacters = DeckManager.Instance.GetValidCharacters();
                 if (deckCharacters == null || deckCharacters.Count == 0)
                 {
-                    Debug.LogWarning("[TrainingUIController] 덱에 캐릭터가 없습니다. 덱을 먼저 설정해주세요.");
+                    GameLog.LogWarning("[TrainingUIController] 덱에 캐릭터가 없습니다. 덱을 먼저 설정해주세요.");
                     if (useMyDeckToggle != null) useMyDeckToggle.isOn = false;
                     return;
                 }
 
-                Debug.Log($"[TrainingUIController] 내 덱 사용 모드 ON - 덱 캐릭터 {deckCharacters.Count}명");
+                GameLog.Log($"[TrainingUIController] 내 덱 사용 모드 ON - 덱 캐릭터 {deckCharacters.Count}명");
             }
 
             trainingManager?.SetUseMyDeck(isOn);
@@ -692,7 +692,7 @@ namespace Novelian.Training
             // 토글 OFF: 단일 캐릭터 모드 - 설정 드롭다운 활성화
             SetDropdownsInteractable(!isOn);
 
-            Debug.Log($"[TrainingUIController] 내 덱 사용 모드: {(isOn ? "ON" : "OFF")}");
+            GameLog.Log($"[TrainingUIController] 내 덱 사용 모드: {(isOn ? "ON" : "OFF")}");
         }
 
         /// <summary>

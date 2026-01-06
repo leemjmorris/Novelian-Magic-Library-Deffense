@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -36,7 +36,7 @@ public class DeckCharacterSlot : MonoBehaviour
         var characterData = CSVLoader.Instance.GetData<CharacterData>(characterId);
         if (characterData == null)
         {
-            Debug.LogWarning($"[DeckCharacterSlot] CharacterData not found for ID: {characterId}");
+            GameLog.LogWarning($"[DeckCharacterSlot] CharacterData not found for ID: {characterId}");
             return;
         }
 
@@ -101,7 +101,7 @@ public class DeckCharacterSlot : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[DeckCharacterSlot] Failed to load character image: {spriteKey}");
+                GameLog.LogWarning($"[DeckCharacterSlot] Failed to load character image: {spriteKey}");
             }
         };
     }
@@ -124,7 +124,7 @@ public class DeckCharacterSlot : MonoBehaviour
             }
             else
             {
-                Debug.LogWarning($"[DeckCharacterSlot] Failed to load genre icon: {genreKey}");
+                GameLog.LogWarning($"[DeckCharacterSlot] Failed to load genre icon: {genreKey}");
             }
         };
     }
@@ -150,7 +150,7 @@ public class DeckCharacterSlot : MonoBehaviour
     /// </summary>
     public void OnClicked()
     {
-        Debug.Log($"[DeckCharacterSlot] OnClicked 호출됨 - {characterNameText.text} (ID: {characterId}), teamSetupPanel: {(teamSetupPanel != null ? "연결됨" : "NULL!")}");
+        GameLog.Log($"[DeckCharacterSlot] OnClicked 호출됨 - {characterNameText.text} (ID: {characterId}), teamSetupPanel: {(teamSetupPanel != null ? "연결됨" : "NULL!")}");
 
         // TeamSetupPanel에 선택된 캐릭터 전달
         if (teamSetupPanel != null)
@@ -159,7 +159,7 @@ public class DeckCharacterSlot : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[DeckCharacterSlot] teamSetupPanel이 null입니다! SetPanel이 호출되지 않았습니다.");
+            GameLog.LogError("[DeckCharacterSlot] teamSetupPanel이 null입니다! SetPanel이 호출되지 않았습니다.");
         }
     }
 }

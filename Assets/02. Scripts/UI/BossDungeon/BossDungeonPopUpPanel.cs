@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using NovelianMagicLibraryDefense.Core;
 using NovelianMagicLibraryDefense.Managers;
 using TMPro;
@@ -66,7 +66,7 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (!SelectedBossDungeon.HasSelection)
             {
-                Debug.LogError("[BossDungeonPopUpPanel] 선택된 던전이 없습니다");
+                GameLog.LogError("[BossDungeonPopUpPanel] 선택된 던전이 없습니다");
                 return;
             }
 
@@ -205,21 +205,21 @@ namespace NovelianMagicLibraryDefense.UI
             // 중복 클릭 방지
             if (isLoading)
             {
-                Debug.LogWarning("[BossDungeonPopUpPanel] 이미 로딩 중입니다");
+                GameLog.LogWarning("[BossDungeonPopUpPanel] 이미 로딩 중입니다");
                 return;
             }
 
             // 1. 선택된 던전 확인
             if (!SelectedBossDungeon.HasSelection)
             {
-                Debug.LogError("[BossDungeonPopUpPanel] 선택된 던전이 없습니다");
+                GameLog.LogError("[BossDungeonPopUpPanel] 선택된 던전이 없습니다");
                 return;
             }
 
             // 2. 덱 설정 확인
             if (DeckManager.Instance == null || DeckManager.Instance.IsDeckEmpty())
             {
-                Debug.LogWarning("[BossDungeonPopUpPanel] 덱이 설정되지 않음!");
+                GameLog.LogWarning("[BossDungeonPopUpPanel] 덱이 설정되지 않음!");
                 ShowDeckSetupWarning();
                 return;
             }
@@ -227,21 +227,21 @@ namespace NovelianMagicLibraryDefense.UI
             // 3. 던전 출입증 확인
             if (CurrencyManager.Instance == null)
             {
-                Debug.LogError("[BossDungeonPopUpPanel] CurrencyManager가 없습니다");
+                GameLog.LogError("[BossDungeonPopUpPanel] CurrencyManager가 없습니다");
                 return;
             }
 
             if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.DUNGEON_PASS_ID, ENTRY_COST))
             {
                 int owned = CurrencyManager.Instance.GetCurrency(CurrencyManager.DUNGEON_PASS_ID);
-                Debug.LogWarning($"[BossDungeonPopUpPanel] 던전 출입증 부족! 필요: {ENTRY_COST}, 보유: {owned}");
+                GameLog.LogWarning($"[BossDungeonPopUpPanel] 던전 출입증 부족! 필요: {ENTRY_COST}, 보유: {owned}");
                 WarningUIManager.Instance?.ShowWarning("던전 출입증이 부족합니다");
                 return;
             }
 
             // 4. 던전 출입증 소모
             CurrencyManager.Instance.SpendCurrency(CurrencyManager.DUNGEON_PASS_ID, ENTRY_COST);
-            Debug.Log($"[BossDungeonPopUpPanel] 던전 출입증 {ENTRY_COST}개 소모");
+            GameLog.Log($"[BossDungeonPopUpPanel] 던전 출입증 {ENTRY_COST}개 소모");
 
             // 5. 로딩 시작 표시
             isLoading = true;

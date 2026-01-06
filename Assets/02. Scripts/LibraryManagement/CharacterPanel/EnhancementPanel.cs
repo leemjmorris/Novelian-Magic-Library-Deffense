@@ -1,4 +1,4 @@
-using TMPro;
+﻿using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
@@ -88,7 +88,7 @@ public class EnhancementPanel : MonoBehaviour
     {
         if (CharacterEnhancementManager.Instance == null)
         {
-            Debug.LogWarning("CharacterEnhancementManager is not initialized");
+            GameLog.LogWarning("CharacterEnhancementManager is not initialized");
             return;
         }
 
@@ -116,7 +116,7 @@ public class EnhancementPanel : MonoBehaviour
 
         if (enhancementInfo == null)
         {
-            Debug.LogError("Failed to get enhancement info");
+            GameLog.LogError("Failed to get enhancement info");
             // 정보가 없어도 빈 값으로 표시
             DisplayMaterialInfo(1, 0, 0, material1Text, material1CountText, material1Icon);
             DisplayMaterialInfo(2, 0, 0, material2Text, material2CountText, material2Icon);
@@ -197,14 +197,14 @@ public class EnhancementPanel : MonoBehaviour
     {
         if (CharacterEnhancementManager.Instance == null)
         {
-            Debug.LogError("CharacterEnhancementManager is not initialized");
+            GameLog.LogError("CharacterEnhancementManager is not initialized");
             return;
         }
 
         // 강화 가능 확인
         if (!CharacterEnhancementManager.Instance.CanEnhance(characterID, out string failReason))
         {
-            Debug.LogWarning($"[Enhancement Failed] {failReason}");
+            GameLog.LogWarning($"[Enhancement Failed] {failReason}");
             // TODO: 팝업 표시
             return;
         }
@@ -224,7 +224,7 @@ public class EnhancementPanel : MonoBehaviour
         {
             CharacterData charData = CSVLoader.Instance.GetData<CharacterData>(characterID);
             string charName = CSVLoader.Instance.GetData<StringTable>(charData.Character_Name_ID)?.Text ?? "Unknown";
-            Debug.Log($"[Enhancement Success] {charName} 강화 완료!");
+            GameLog.Log($"[Enhancement Success] {charName} 강화 완료!");
 
             // UI 갱신
             RefreshEnhancementUI();
@@ -234,7 +234,7 @@ public class EnhancementPanel : MonoBehaviour
         }
         else
         {
-            Debug.LogError("Enhancement failed unexpectedly");
+            GameLog.LogError("Enhancement failed unexpectedly");
         }
     }
 
@@ -252,11 +252,11 @@ public class EnhancementPanel : MonoBehaviour
     /// </summary>
     private async UniTaskVoid LoadMaterialIcon(int materialId, Image iconImage, int slotIndex)
     {
-        Debug.Log($"[EnhancementPanel] LoadMaterialIcon - Slot {slotIndex}, MaterialID: {materialId}, IconImage: {(iconImage != null ? iconImage.name : "NULL")}");
+        GameLog.Log($"[EnhancementPanel] LoadMaterialIcon - Slot {slotIndex}, MaterialID: {materialId}, IconImage: {(iconImage != null ? iconImage.name : "NULL")}");
 
         if (iconImage == null)
         {
-            Debug.LogWarning($"[EnhancementPanel] Slot {slotIndex} - iconImage is NULL!");
+            GameLog.LogWarning($"[EnhancementPanel] Slot {slotIndex} - iconImage is NULL!");
             return;
         }
 
@@ -269,7 +269,7 @@ public class EnhancementPanel : MonoBehaviour
         // materialId가 0이면 재료 없음
         if (materialId == 0)
         {
-            Debug.Log($"[EnhancementPanel] Slot {slotIndex} - materialId is 0, disabling icon");
+            GameLog.Log($"[EnhancementPanel] Slot {slotIndex} - materialId is 0, disabling icon");
             iconImage.enabled = false;
             return;
         }
@@ -278,7 +278,7 @@ public class EnhancementPanel : MonoBehaviour
         var ingredientData = CSVLoader.Instance?.GetData<IngredientData>(materialId);
         if (ingredientData == null || ingredientData.Path_ID == 0)
         {
-            Debug.LogWarning($"[EnhancementPanel] Slot {slotIndex} - IngredientData null or Path_ID is 0. IngredientData: {(ingredientData != null ? $"exists, Path_ID={ingredientData.Path_ID}" : "NULL")}");
+            GameLog.LogWarning($"[EnhancementPanel] Slot {slotIndex} - IngredientData null or Path_ID is 0. IngredientData: {(ingredientData != null ? $"exists, Path_ID={ingredientData.Path_ID}" : "NULL")}");
             iconImage.enabled = false;
             return;
         }
@@ -287,7 +287,7 @@ public class EnhancementPanel : MonoBehaviour
         var pathData = CSVLoader.Instance?.GetData<PathData>(ingredientData.Path_ID);
         if (pathData == null || string.IsNullOrEmpty(pathData.Addressable_Key) || pathData.Addressable_Key == "0")
         {
-            Debug.LogWarning($"[EnhancementPanel] Slot {slotIndex} - PathData issue. PathData: {(pathData != null ? $"exists, Addressable_Key={pathData.Addressable_Key}" : "NULL")}");
+            GameLog.LogWarning($"[EnhancementPanel] Slot {slotIndex} - PathData issue. PathData: {(pathData != null ? $"exists, Addressable_Key={pathData.Addressable_Key}" : "NULL")}");
             iconImage.enabled = false;
             return;
         }
@@ -341,7 +341,7 @@ public class EnhancementPanel : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogWarning($"[EnhancementPanel] Failed to load material icon: {iconPath}\n{e.Message}");
+            GameLog.LogWarning($"[EnhancementPanel] Failed to load material icon: {iconPath}\n{e.Message}");
             if (iconImage != null)
                 iconImage.enabled = false;
         }

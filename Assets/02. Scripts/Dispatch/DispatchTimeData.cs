@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace Dispatch
@@ -49,7 +49,7 @@ namespace Dispatch
                 if (data.hours == hours)
                     return data;
             }
-            Debug.LogWarning($"[DispatchTimeSettings] {hours}시간 데이터를 찾을 수 없습니다.");
+            GameLog.LogWarning($"[DispatchTimeSettings] {hours}시간 데이터를 찾을 수 없습니다.");
             return timeOptions[0]; // 기본값: 4시간
         }
     }

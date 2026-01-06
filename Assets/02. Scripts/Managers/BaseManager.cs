@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace NovelianMagicLibraryDefense.Core
 {
@@ -17,13 +17,13 @@ namespace NovelianMagicLibraryDefense.Core
         {
             if (isInitialized)
             {
-                Debug.LogWarning($"{GetType().Name} is already initialized.");
+                GameLog.LogWarning($"{GetType().Name} is already initialized.");
                 return;
             }
 
             OnInitialize();
             isInitialized = true;
-            Debug.Log($"[{GetType().Name}] Initialized");
+            GameLog.Log($"[{GetType().Name}] Initialized");
         }
 
         /// <summary>
@@ -33,12 +33,12 @@ namespace NovelianMagicLibraryDefense.Core
         {
             if (!isInitialized)
             {
-                Debug.LogWarning($"{GetType().Name} is not initialized yet.");
+                GameLog.LogWarning($"{GetType().Name} is not initialized yet.");
                 return;
             }
 
             OnReset();
-            Debug.Log($"[{GetType().Name}] Reset");
+            GameLog.Log($"[{GetType().Name}] Reset");
         }
 
         /// <summary>
@@ -50,7 +50,7 @@ namespace NovelianMagicLibraryDefense.Core
 
             OnDispose();
             isInitialized = false;
-            Debug.Log($"[{GetType().Name}] Disposed");
+            GameLog.Log($"[{GetType().Name}] Disposed");
         }
 
         /// <summary>

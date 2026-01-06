@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -80,7 +80,7 @@ namespace Novelian.Combat
                 return entry.vfxPrefab;
             }
 
-            Debug.LogWarning($"[SkillVFXDatabase] VFX prefab not found for skill_id: {skillId}");
+            GameLog.LogWarning($"[SkillVFXDatabase] VFX prefab not found for skill_id: {skillId}");
             return null;
         }
 
@@ -142,7 +142,7 @@ namespace Novelian.Combat
                 return entry.containerPrefab != null ? entry.containerPrefab : entry.vfxPrefab;
             }
 
-            Debug.LogWarning($"[SkillVFXDatabase] Prefab not found for skill_id: {skillId}");
+            GameLog.LogWarning($"[SkillVFXDatabase] Prefab not found for skill_id: {skillId}");
             return null;
         }
 

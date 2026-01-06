@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Firebase.Data;
@@ -47,7 +47,7 @@ public class CharacterOwnershipManager : MonoBehaviour
     {
         // Awake에서는 빈 HashSet 상태 유지
         // 실제 캐릭터 추가는 Firebase 로드 후 EnsureInitialCharacters()에서 처리
-        Debug.Log("[CharacterOwnershipManager] 초기화 완료 (Firebase 로드 대기 중)");
+        GameLog.Log("[CharacterOwnershipManager] 초기화 완료 (Firebase 로드 대기 중)");
     }
 
     /// <summary>
@@ -69,7 +69,7 @@ public class CharacterOwnershipManager : MonoBehaviour
             {
                 ownedCharacters.Add(characterId);
             }
-            Debug.Log("[CharacterOwnershipManager] 테스트용 공포 캐릭터 4명 지급 (파티 시너지 테스트용)");
+            GameLog.Log("[CharacterOwnershipManager] 테스트용 공포 캐릭터 4명 지급 (파티 시너지 테스트용)");
         }
     }
 
@@ -81,7 +81,7 @@ public class CharacterOwnershipManager : MonoBehaviour
     {
         ownedCharacters.Clear();
         EnsureInitialCharacters();
-        Debug.Log($"[CharacterOwnershipManager] 오프라인 초기화 완료: {ownedCharacters.Count}개");
+        GameLog.Log($"[CharacterOwnershipManager] 오프라인 초기화 완료: {ownedCharacters.Count}개");
     }
 
     /// <summary>
@@ -99,7 +99,7 @@ public class CharacterOwnershipManager : MonoBehaviour
     {
         if (ownedCharacters.Contains(characterId))
         {
-            Debug.LogWarning($"[CharacterOwnershipManager] 이미 보유한 캐릭터입니다: {characterId}");
+            GameLog.LogWarning($"[CharacterOwnershipManager] 이미 보유한 캐릭터입니다: {characterId}");
             return;
         }
 
@@ -107,7 +107,7 @@ public class CharacterOwnershipManager : MonoBehaviour
 
         // 캐릭터 이름 가져오기
         string characterName = GetCharacterName(characterId);
-        Debug.Log($"[CharacterOwnershipManager] 캐릭터 해금! {characterName} (ID: {characterId})");
+        GameLog.Log($"[CharacterOwnershipManager] 캐릭터 해금! {characterName} (ID: {characterId})");
 
         // 이벤트 발생 (UI 갱신용)
         OnCharacterUnlocked?.Invoke(characterId);
@@ -172,7 +172,7 @@ public class CharacterOwnershipManager : MonoBehaviour
         // 2. 초기 캐릭터 및 테스트 캐릭터 보장
         EnsureInitialCharacters();
 
-        Debug.Log($"<color=#3EB489>[CharacterOwnership]</color> 보유 캐릭터 로드 완료: {ownedCharacters.Count}개");
+        GameLog.Log($"<color=#3EB489>[CharacterOwnership]</color> 보유 캐릭터 로드 완료: {ownedCharacters.Count}개");
     }
 
     /// <summary>
@@ -200,11 +200,11 @@ public class CharacterOwnershipManager : MonoBehaviour
     [ContextMenu("보유 캐릭터 출력")]
     private void PrintOwnedCharacters()
     {
-        Debug.Log("=== 보유 캐릭터 목록 ===");
+        GameLog.Log("=== 보유 캐릭터 목록 ===");
         foreach (int characterId in ownedCharacters)
         {
             string name = GetCharacterName(characterId);
-            Debug.Log($"{name} (ID: {characterId})");
+            GameLog.Log($"{name} (ID: {characterId})");
         }
     }
 
@@ -213,7 +213,7 @@ public class CharacterOwnershipManager : MonoBehaviour
     {
         if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
         {
-            Debug.LogError("[CharacterOwnershipManager] CSVLoader가 초기화되지 않았습니다.");
+            GameLog.LogError("[CharacterOwnershipManager] CSVLoader가 초기화되지 않았습니다.");
             return;
         }
 

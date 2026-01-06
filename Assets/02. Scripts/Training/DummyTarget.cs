@@ -1,4 +1,4 @@
-// 훈련소 허수아비 타겟 (Issue #458)
+﻿// 훈련소 허수아비 타겟 (Issue #458)
 // 무한 체력, 피격 시 데미지 기록
 namespace Novelian.Training
 {
@@ -87,7 +87,7 @@ namespace Novelian.Training
 
             // 무한 체력이므로 죽지 않음
             string critText = isCritical ? " (CRITICAL!)" : "";
-            Debug.Log($"[DummyTarget] Took {damage:F1} damage{critText} (subscribers: {OnDamageTaken?.GetInvocationList()?.Length ?? 0})");
+            GameLog.Log($"[DummyTarget] Took {damage:F1} damage{critText} (subscribers: {OnDamageTaken?.GetInvocationList()?.Length ?? 0})");
         }
 
         public bool HasFocusMark() => hasFocusMark;
@@ -152,11 +152,11 @@ namespace Novelian.Training
             if (monsterLayer >= 0)
             {
                 gameObject.layer = monsterLayer;
-                Debug.Log($"[DummyTarget] Layer set to Monster ({monsterLayer})");
+                GameLog.Log($"[DummyTarget] Layer set to Monster ({monsterLayer})");
             }
             else
             {
-                Debug.LogWarning("[DummyTarget] Monster layer not found! Projectile collision may not work.");
+                GameLog.LogWarning("[DummyTarget] Monster layer not found! Projectile collision may not work.");
             }
 
             // Monster/BossMonster 컴포넌트가 있으면 즉시 제거 (더미는 죽으면 안 됨)
@@ -165,14 +165,14 @@ namespace Novelian.Training
             if (monster != null)
             {
                 DestroyImmediate(monster);
-                Debug.Log("[DummyTarget] Monster component removed immediately to prevent death");
+                GameLog.Log("[DummyTarget] Monster component removed immediately to prevent death");
             }
 
             var bossMonster = GetComponent<BossMonster>();
             if (bossMonster != null)
             {
                 DestroyImmediate(bossMonster);
-                Debug.Log("[DummyTarget] BossMonster component removed immediately to prevent death");
+                GameLog.Log("[DummyTarget] BossMonster component removed immediately to prevent death");
             }
 
             // Animator 캐시 (died 상태 전환 방지용)

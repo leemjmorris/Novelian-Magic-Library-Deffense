@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -117,7 +117,7 @@ namespace NovelianMagicLibraryDefense.Managers
             SetVoiceVolume(voiceVolume);
             SetSkillVolume(skillVolume);
 
-            Debug.Log("[AudioManager] Audio settings re-applied after initialization");
+            GameLog.Log("[AudioManager] Audio settings re-applied after initialization");
         }
 
         /// <summary>
@@ -150,7 +150,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // Load saved volume settings
             LoadAudioSettings();
 
-            Debug.Log("[AudioManager] Initialized successfully");
+            GameLog.Log("[AudioManager] Initialized successfully");
         }
 
         /// <summary>
@@ -172,7 +172,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 sfxPool.Add(sfxSource);
             }
 
-            Debug.Log($"[AudioManager] Created SFX pool with {sfxPoolSize} AudioSources (Group: {(sfxGroup != null ? sfxGroup.name : "None")})");
+            GameLog.Log($"[AudioManager] Created SFX pool with {sfxPoolSize} AudioSources (Group: {(sfxGroup != null ? sfxGroup.name : "None")})");
         }
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 skillPool.Add(skillSource);
             }
 
-            Debug.Log($"[AudioManager] Created Skill pool with {sfxPoolSize} AudioSources (Group: {(skillGroup != null ? skillGroup.name : "None")})");
+            GameLog.Log($"[AudioManager] Created Skill pool with {sfxPoolSize} AudioSources (Group: {(skillGroup != null ? skillGroup.name : "None")})");
         }
 
         /// <summary>
@@ -213,7 +213,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 voiceSource.outputAudioMixerGroup = voiceGroup;
             }
 
-            Debug.Log($"[AudioManager] Created Voice AudioSource (Group: {(voiceGroup != null ? voiceGroup.name : "None")})");
+            GameLog.Log($"[AudioManager] Created Voice AudioSource (Group: {(voiceGroup != null ? voiceGroup.name : "None")})");
         }
 
         #region BGM Control
@@ -229,7 +229,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // Issue #605: bgmSource.isPlaying 체크 제거 - 페이드 중에도 중복 방지
             if (!forceRestart && currentBGMName == clipName)
             {
-                Debug.Log($"[AudioManager] BGM already playing: {clipName}");
+                GameLog.Log($"[AudioManager] BGM already playing: {clipName}");
                 return;
             }
 
@@ -243,7 +243,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 bgmSource.clip = clip;
                 bgmSource.volume = 1f;
                 bgmSource.Play();
-                Debug.Log($"[AudioManager] Playing BGM: {clipName}");
+                GameLog.Log($"[AudioManager] Playing BGM: {clipName}");
             }
         }
 
@@ -259,7 +259,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // Issue #605: bgmSource.isPlaying 체크 제거 - 페이드 중에도 중복 방지
             if (!forceRestart && currentBGMName == clipName)
             {
-                Debug.Log($"[AudioManager] BGM already playing: {clipName}");
+                GameLog.Log($"[AudioManager] BGM already playing: {clipName}");
                 return;
             }
 
@@ -275,7 +275,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 bgmSource.Play();
 
                 FadeInAsync(fadeDuration).Forget();
-                Debug.Log($"[AudioManager] Playing BGM with fade in: {clipName}");
+                GameLog.Log($"[AudioManager] Playing BGM with fade in: {clipName}");
             }
         }
 
@@ -289,7 +289,7 @@ namespace NovelianMagicLibraryDefense.Managers
             bgmSource.Stop();
             bgmSource.volume = 1f;
             currentBGMName = "";
-            Debug.Log("[AudioManager] BGM stopped");
+            GameLog.Log("[AudioManager] BGM stopped");
         }
 
         /// <summary>
@@ -299,7 +299,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             CancelBGMFade();
             FadeOutAndStopAsync(fadeDuration).Forget();
-            Debug.Log("[AudioManager] Stopping BGM with fade out");
+            GameLog.Log("[AudioManager] Stopping BGM with fade out");
         }
 
         /// <summary>
@@ -320,7 +320,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // Voice Queue 초기화
             ClearVoiceQueue();
 
-            Debug.Log("[AudioManager] All sounds stopped");
+            GameLog.Log("[AudioManager] All sounds stopped");
         }
 
         /// <summary>
@@ -346,7 +346,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
             }
 
-            Debug.Log("[AudioManager] All SFX stopped");
+            GameLog.Log("[AudioManager] All SFX stopped");
         }
 
         /// <summary>
@@ -361,7 +361,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // Issue #605: bgmSource.isPlaying 체크 제거 - 페이드 중에도 중복 방지
             if (!forceRestart && currentBGMName == clipName)
             {
-                Debug.Log($"[AudioManager] BGM already playing: {clipName}");
+                GameLog.Log($"[AudioManager] BGM already playing: {clipName}");
                 return;
             }
 
@@ -372,7 +372,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (clip != null)
             {
                 CrossfadeAsync(clip, clipName, fadeDuration).Forget();
-                Debug.Log($"[AudioManager] Crossfading to BGM: {clipName}");
+                GameLog.Log($"[AudioManager] Crossfading to BGM: {clipName}");
             }
         }
 
@@ -405,14 +405,14 @@ namespace NovelianMagicLibraryDefense.Managers
                 pausedBGMName = currentBGMName;
                 pausedBGMTime = bgmSource.time;
                 pausedBGMClip = bgmSource.clip;
-                Debug.Log($"[AudioManager] Saving BGM state: {pausedBGMName} at {pausedBGMTime:F2}s");
+                GameLog.Log($"[AudioManager] Saving BGM state: {pausedBGMName} at {pausedBGMTime:F2}s");
             }
 
             // Load new clip
             AudioClip newClip = await LoadAudioClipAsync(newClipName);
             if (newClip == null)
             {
-                Debug.LogError($"[AudioManager] Failed to load new BGM: {newClipName}");
+                GameLog.LogError($"[AudioManager] Failed to load new BGM: {newClipName}");
                 return;
             }
 
@@ -429,7 +429,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (!HasPausedBGM)
             {
-                Debug.LogWarning("[AudioManager] No paused BGM to resume");
+                GameLog.LogWarning("[AudioManager] No paused BGM to resume");
                 return;
             }
 
@@ -456,11 +456,11 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (availableSource != null)
                 {
                     availableSource.PlayOneShot(clip);
-                    Debug.Log($"[AudioManager] Playing SFX: {clipName}");
+                    GameLog.Log($"[AudioManager] Playing SFX: {clipName}");
                 }
                 else
                 {
-                    Debug.LogWarning($"[AudioManager] No available SFX AudioSource for: {clipName}");
+                    GameLog.LogWarning($"[AudioManager] No available SFX AudioSource for: {clipName}");
                 }
             }
         }
@@ -479,7 +479,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (availableSource != null)
                 {
                     availableSource.PlayOneShot(clip, volumeScale);
-                    Debug.Log($"[AudioManager] Playing SFX: {clipName} with volume: {volumeScale}");
+                    GameLog.Log($"[AudioManager] Playing SFX: {clipName} with volume: {volumeScale}");
                 }
             }
         }
@@ -520,11 +520,11 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (availableSource != null)
                 {
                     availableSource.PlayOneShot(clip);
-                    Debug.Log($"[AudioManager] Playing Skill SFX: {clipName}");
+                    GameLog.Log($"[AudioManager] Playing Skill SFX: {clipName}");
                 }
                 else
                 {
-                    Debug.LogWarning($"[AudioManager] No available Skill AudioSource for: {clipName}");
+                    GameLog.LogWarning($"[AudioManager] No available Skill AudioSource for: {clipName}");
                 }
             }
         }
@@ -543,7 +543,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (availableSource != null)
                 {
                     availableSource.PlayOneShot(clip, volumeScale);
-                    Debug.Log($"[AudioManager] Playing Skill SFX: {clipName} with volume: {volumeScale}");
+                    GameLog.Log($"[AudioManager] Playing Skill SFX: {clipName} with volume: {volumeScale}");
                 }
             }
         }
@@ -591,7 +591,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 // 새 음성 재생
                 voiceSource.clip = clip;
                 voiceSource.Play();
-                Debug.Log($"[AudioManager] Playing voice (exclusive): {clipName}");
+                GameLog.Log($"[AudioManager] Playing voice (exclusive): {clipName}");
             }
         }
 
@@ -603,7 +603,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (voiceSource != null && voiceSource.isPlaying)
             {
                 voiceSource.Stop();
-                Debug.Log("[AudioManager] Voice stopped");
+                GameLog.Log("[AudioManager] Voice stopped");
             }
         }
 
@@ -621,7 +621,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (string.IsNullOrEmpty(voiceKey)) return;
 
             voiceQueue.Enqueue(voiceKey);
-            Debug.Log($"[AudioManager] Voice enqueued: {voiceKey} (Queue size: {voiceQueue.Count})");
+            GameLog.Log($"[AudioManager] Voice enqueued: {voiceKey} (Queue size: {voiceQueue.Count})");
 
             // 큐 처리가 실행 중이 아니면 시작
             if (!isVoicePlaying)
@@ -655,7 +655,7 @@ namespace NovelianMagicLibraryDefense.Managers
                     {
                         // Issue #646: Voice 그룹을 사용하는 voiceSource로 재생
                         voiceSource.PlayOneShot(clip);
-                        Debug.Log($"[AudioManager] Playing voice (queue): {voiceKey}");
+                        GameLog.Log($"[AudioManager] Playing voice (queue): {voiceKey}");
 
                         // 클립 재생 시간 + 딜레이만큼 대기
                         float waitTime = clip.length + VOICE_DELAY;
@@ -665,7 +665,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             catch (OperationCanceledException)
             {
-                Debug.Log("[AudioManager] Voice queue cancelled");
+                GameLog.Log("[AudioManager] Voice queue cancelled");
             }
             finally
             {
@@ -683,7 +683,7 @@ namespace NovelianMagicLibraryDefense.Managers
             voiceQueueCts?.Cancel();
             voiceQueue.Clear();
             isVoicePlaying = false;
-            Debug.Log("[AudioManager] Voice queue cleared");
+            GameLog.Log("[AudioManager] Voice queue cleared");
         }
 
         #endregion
@@ -702,11 +702,11 @@ namespace NovelianMagicLibraryDefense.Managers
                 // Convert 0-1 to decibels (-80db to 0db)
                 float db = masterVolume > 0 ? 20f * Mathf.Log10(masterVolume) : -80f;
                 bool success = audioMixer.SetFloat(MASTER_VOLUME_PARAM, db);
-                Debug.Log($"[AudioManager] SetMasterVolume: input={volume}, clamped={masterVolume}, db={db}, success={success}");
+                GameLog.Log($"[AudioManager] SetMasterVolume: input={volume}, clamped={masterVolume}, db={db}, success={success}");
             }
             else
             {
-                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set master volume.");
+                GameLog.LogWarning("[AudioManager] audioMixer is null! Cannot set master volume.");
             }
         }
 
@@ -721,11 +721,11 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 float db = bgmVolume > 0 ? 20f * Mathf.Log10(bgmVolume) : -80f;
                 bool success = audioMixer.SetFloat(BGM_VOLUME_PARAM, db);
-                Debug.Log($"[AudioManager] SetBGMVolume: input={volume}, clamped={bgmVolume}, db={db}, success={success}");
+                GameLog.Log($"[AudioManager] SetBGMVolume: input={volume}, clamped={bgmVolume}, db={db}, success={success}");
             }
             else
             {
-                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set BGM volume.");
+                GameLog.LogWarning("[AudioManager] audioMixer is null! Cannot set BGM volume.");
             }
         }
 
@@ -740,11 +740,11 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 float db = sfxVolume > 0 ? 20f * Mathf.Log10(sfxVolume) : -80f;
                 bool success = audioMixer.SetFloat(SFX_VOLUME_PARAM, db);
-                Debug.Log($"[AudioManager] SetSFXVolume: input={volume}, clamped={sfxVolume}, db={db}, success={success}");
+                GameLog.Log($"[AudioManager] SetSFXVolume: input={volume}, clamped={sfxVolume}, db={db}, success={success}");
             }
             else
             {
-                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set SFX volume.");
+                GameLog.LogWarning("[AudioManager] audioMixer is null! Cannot set SFX volume.");
             }
         }
 
@@ -774,11 +774,11 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 float db = voiceVolume > 0 ? 20f * Mathf.Log10(voiceVolume) : -80f;
                 bool success = audioMixer.SetFloat(VOICE_VOLUME_PARAM, db);
-                Debug.Log($"[AudioManager] SetVoiceVolume: input={volume}, clamped={voiceVolume}, db={db}, success={success}");
+                GameLog.Log($"[AudioManager] SetVoiceVolume: input={volume}, clamped={voiceVolume}, db={db}, success={success}");
             }
             else
             {
-                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set voice volume.");
+                GameLog.LogWarning("[AudioManager] audioMixer is null! Cannot set voice volume.");
             }
         }
 
@@ -798,11 +798,11 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 float db = skillVolume > 0 ? 20f * Mathf.Log10(skillVolume) : -80f;
                 bool success = audioMixer.SetFloat(SKILL_VOLUME_PARAM, db);
-                Debug.Log($"[AudioManager] SetSkillVolume: input={volume}, clamped={skillVolume}, db={db}, success={success}");
+                GameLog.Log($"[AudioManager] SetSkillVolume: input={volume}, clamped={skillVolume}, db={db}, success={success}");
             }
             else
             {
-                Debug.LogWarning("[AudioManager] audioMixer is null! Cannot set skill volume.");
+                GameLog.LogWarning("[AudioManager] audioMixer is null! Cannot set skill volume.");
             }
         }
 
@@ -827,7 +827,7 @@ namespace NovelianMagicLibraryDefense.Managers
             PlayerPrefs.SetFloat(SKILL_VOLUME_KEY, skillVolume);
             PlayerPrefs.Save();
 
-            Debug.Log("[AudioManager] Audio settings saved");
+            GameLog.Log("[AudioManager] Audio settings saved");
         }
 
         /// <summary>
@@ -868,7 +868,7 @@ namespace NovelianMagicLibraryDefense.Managers
             SetVoiceVolume(voiceVolume);
             SetSkillVolume(skillVolume);
 
-            Debug.Log($"[AudioManager] Audio settings loaded - Master: {masterVolume:F2}, BGM: {bgmVolume:F2}, SFX: {sfxVolume:F2}, Voice: {voiceVolume:F2}, Skill: {skillVolume:F2}");
+            GameLog.Log($"[AudioManager] Audio settings loaded - Master: {masterVolume:F2}, BGM: {bgmVolume:F2}, SFX: {sfxVolume:F2}, Voice: {voiceVolume:F2}, Skill: {skillVolume:F2}");
         }
 
         /// <summary>
@@ -923,19 +923,19 @@ namespace NovelianMagicLibraryDefense.Managers
                 {
                     loadedClips[clipName] = handle.Result;
                     loadedHandles[clipName] = handle; // Store handle for proper release
-                    Debug.Log($"[AudioManager] Loaded audio clip: {clipName}");
+                    GameLog.Log($"[AudioManager] Loaded audio clip: {clipName}");
                     return handle.Result;
                 }
                 else
                 {
-                    Debug.LogError($"[AudioManager] Failed to load audio clip: {clipName}");
+                    GameLog.LogError($"[AudioManager] Failed to load audio clip: {clipName}");
                     Addressables.Release(handle);
                     return null;
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AudioManager] Error loading audio clip '{clipName}': {e.Message}");
+                GameLog.LogError($"[AudioManager] Error loading audio clip '{clipName}': {e.Message}");
                 return null;
             }
             finally
@@ -957,7 +957,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
                 loadedHandles.Remove(clipName);
                 loadedClips.Remove(clipName);
-                Debug.Log($"[AudioManager] Unloaded audio clip: {clipName}");
+                GameLog.Log($"[AudioManager] Unloaded audio clip: {clipName}");
             }
         }
 
@@ -975,7 +975,7 @@ namespace NovelianMagicLibraryDefense.Managers
             }
             loadedHandles.Clear();
             loadedClips.Clear();
-            Debug.Log("[AudioManager] Unloaded all audio clips");
+            GameLog.Log("[AudioManager] Unloaded all audio clips");
         }
 
         #endregion
@@ -1118,7 +1118,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 pausedBGMTime = bgmSource.time;
                 bgmSource.Pause();
                 bgmSource.volume = 0f;
-                Debug.Log($"[AudioManager] BGM paused at {pausedBGMTime:F2}s");
+                GameLog.Log($"[AudioManager] BGM paused at {pausedBGMTime:F2}s");
 
                 // Set new clip and fade in
                 currentBGMName = newClipName;
@@ -1136,7 +1136,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 }
 
                 bgmSource.volume = 1f;
-                Debug.Log($"[AudioManager] Now playing: {newClipName}");
+                GameLog.Log($"[AudioManager] Now playing: {newClipName}");
             }
             catch (OperationCanceledException)
             {
@@ -1176,7 +1176,7 @@ namespace NovelianMagicLibraryDefense.Managers
                 bgmSource.clip = pausedBGMClip;
                 bgmSource.time = pausedBGMTime;
                 bgmSource.Play();
-                Debug.Log($"[AudioManager] Resuming BGM: {pausedBGMName} from {pausedBGMTime:F2}s");
+                GameLog.Log($"[AudioManager] Resuming BGM: {pausedBGMName} from {pausedBGMTime:F2}s");
 
                 // Clear paused state
                 pausedBGMName = "";
@@ -1234,7 +1234,7 @@ namespace NovelianMagicLibraryDefense.Managers
             loadedHandles.Clear();
             loadingHandles.Clear();
 
-            Debug.Log("[AudioManager] Cleaned up and released resources");
+            GameLog.Log("[AudioManager] Cleaned up and released resources");
         }
 
         #endregion

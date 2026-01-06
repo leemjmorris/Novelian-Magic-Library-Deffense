@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Firebase.Data;
@@ -39,12 +39,12 @@ public class BookMarkManager : MonoBehaviour
     {
         if (bookmark == null)
         {
-            Debug.LogError("[BookMarkManager] null 책갈피를 추가할 수 없습니다!");
+            GameLog.LogError("[BookMarkManager] null 책갈피를 추가할 수 없습니다!");
             return;
         }
 
         ownedBookmarks.Add(bookmark);
-        Debug.Log($"[BookMarkManager] 책갈피 추가: {bookmark}");
+        GameLog.Log($"[BookMarkManager] 책갈피 추가: {bookmark}");
 
         // JML: 이벤트 발생 (UI 갱신용)
         OnBookmarkAdded?.Invoke(bookmark);
@@ -65,18 +65,18 @@ public class BookMarkManager : MonoBehaviour
             {
                 if (ownedBookmarks[i].IsEquipped)
                 {
-                    Debug.LogWarning($"[BookMarkManager] 장착된 책갈피는 제거할 수 없습니다: {ownedBookmarks[i]}");
+                    GameLog.LogWarning($"[BookMarkManager] 장착된 책갈피는 제거할 수 없습니다: {ownedBookmarks[i]}");
                     return false;
                 }
 
-                Debug.Log($"[BookMarkManager] 책갈피 제거: {ownedBookmarks[i]}");
+                GameLog.Log($"[BookMarkManager] 책갈피 제거: {ownedBookmarks[i]}");
                 ownedBookmarks.RemoveAt(i);
                 SaveToFirebase();
                 return true;
             }
         }
 
-        Debug.LogWarning($"[BookMarkManager] 존재하지 않는 책갈피 ID: {uniqueID}");
+        GameLog.LogWarning($"[BookMarkManager] 존재하지 않는 책갈피 ID: {uniqueID}");
         return false;
     }
 
@@ -250,20 +250,20 @@ public class BookMarkManager : MonoBehaviour
     {
         if (slotIndex < 0 || slotIndex >= 5)
         {
-            Debug.LogError($"[BookMarkManager] 잘못된 슬롯 인덱스: {slotIndex}");
+            GameLog.LogError($"[BookMarkManager] 잘못된 슬롯 인덱스: {slotIndex}");
             return false;
         }
 
         if (bookmark == null)
         {
-            Debug.LogError("[BookMarkManager] null 책갈피는 장착할 수 없습니다.");
+            GameLog.LogError("[BookMarkManager] null 책갈피는 장착할 수 없습니다.");
             return false;
         }
 
         // 다른 곳에 이미 장착된 책갈피인지 확인
         if (bookmark.IsEquipped)
         {
-            Debug.LogWarning($"[BookMarkManager] 책갈피 {bookmark.Name}는 이미 다른 곳에 장착되어 있습니다.");
+            GameLog.LogWarning($"[BookMarkManager] 책갈피 {bookmark.Name}는 이미 다른 곳에 장착되어 있습니다.");
             return false;
         }
 
@@ -274,14 +274,14 @@ public class BookMarkManager : MonoBehaviour
         {
             BookMark oldBookmark = bookmarks[slotIndex];
             oldBookmark.Unequip();
-            Debug.Log($"[BookMarkManager] 슬롯 {slotIndex}에서 기존 책갈피 해제: {oldBookmark.Name}");
+            GameLog.Log($"[BookMarkManager] 슬롯 {slotIndex}에서 기존 책갈피 해제: {oldBookmark.Name}");
         }
 
         // 새 책갈피 장착
         bookmarks[slotIndex] = bookmark;
         bookmark.Equip(characterID, slotIndex);
 
-        Debug.Log($"[BookMarkManager] 책갈피 장착: {bookmark.Name} (슬롯 {slotIndex})");
+        GameLog.Log($"[BookMarkManager] 책갈피 장착: {bookmark.Name} (슬롯 {slotIndex})");
         SaveToFirebase();
         return true;
     }
@@ -305,7 +305,7 @@ public class BookMarkManager : MonoBehaviour
     {
         if (slotIndex < 0 || slotIndex >= 5)
         {
-            Debug.LogError($"[BookMarkManager] 잘못된 슬롯 인덱스: {slotIndex}");
+            GameLog.LogError($"[BookMarkManager] 잘못된 슬롯 인덱스: {slotIndex}");
             return false;
         }
 
@@ -314,7 +314,7 @@ public class BookMarkManager : MonoBehaviour
         // LCB: Check if there's a bookmark in the slot (슬롯에 책갈피가 있는지 확인)
         if (bookmarks[slotIndex] == null)
         {
-            Debug.LogWarning($"[BookMarkManager] 슬롯 {slotIndex}에 장착된 책갈피가 없습니다.");
+            GameLog.LogWarning($"[BookMarkManager] 슬롯 {slotIndex}에 장착된 책갈피가 없습니다.");
             return false;
         }
 
@@ -324,7 +324,7 @@ public class BookMarkManager : MonoBehaviour
         bookmarkToUnequip.Unequip();
         bookmarks[slotIndex] = null;
 
-        Debug.Log($"[BookMarkManager] 책갈피 해제: {bookmarkToUnequip.Name} (슬롯 {slotIndex})");
+        GameLog.Log($"[BookMarkManager] 책갈피 해제: {bookmarkToUnequip.Name} (슬롯 {slotIndex})");
         SaveToFirebase();
         return true;
     }
@@ -335,8 +335,8 @@ public class BookMarkManager : MonoBehaviour
     /// </summary>
     public List<BookMark> GetEquippedBookmarksForCharacter(int characterID)
     {
-        Debug.Log($"[BookMarkManager] GetEquippedBookmarksForCharacter({characterID}) 호출");
-        Debug.Log($"[BookMarkManager] characterBookmarks 딕셔너리 키 목록: [{string.Join(", ", characterBookmarks.Keys)}]");
+        GameLog.Log($"[BookMarkManager] GetEquippedBookmarksForCharacter({characterID}) 호출");
+        GameLog.Log($"[BookMarkManager] characterBookmarks 딕셔너리 키 목록: [{string.Join(", ", characterBookmarks.Keys)}]");
 
         BookMark[] bookmarks = GetOrCreateBookmarkArray(characterID);
         List<BookMark> result = new List<BookMark>();
@@ -346,11 +346,11 @@ public class BookMarkManager : MonoBehaviour
             if (bookmarks[i] != null)
             {
                 result.Add(bookmarks[i]);
-                Debug.Log($"[BookMarkManager] 슬롯 {i}: {bookmarks[i].Name} (Type: {bookmarks[i].Type}, SkillID: {bookmarks[i].SkillID})");
+                GameLog.Log($"[BookMarkManager] 슬롯 {i}: {bookmarks[i].Name} (Type: {bookmarks[i].Type}, SkillID: {bookmarks[i].SkillID})");
             }
         }
 
-        Debug.Log($"[BookMarkManager] CharacterID {characterID}에 장착된 책갈피: {result.Count}개");
+        GameLog.Log($"[BookMarkManager] CharacterID {characterID}에 장착된 책갈피: {result.Count}개");
         return result;
     }
 
@@ -455,15 +455,15 @@ public class BookMarkManager : MonoBehaviour
                         if (item.equipSlotIndex < bookmarks.Length)
                         {
                             bookmarks[item.equipSlotIndex] = bookmark;
-                            Debug.Log($"<color=#3EB489>[BookMarkManager]</color> 장착 상태 복원: CharacterID={item.equippedCharacterId}, 슬롯={item.equipSlotIndex}, 책갈피={bookmark.Name}, SkillID={bookmark.SkillID}");
+                            GameLog.Log($"<color=#3EB489>[BookMarkManager]</color> 장착 상태 복원: CharacterID={item.equippedCharacterId}, 슬롯={item.equipSlotIndex}, 책갈피={bookmark.Name}, SkillID={bookmark.SkillID}");
                         }
                     }
                 }
             }
         }
 
-        Debug.Log($"<color=#3EB489>[BookMarkManager]</color> Firebase에서 책갈피 로드: {ownedBookmarks.Count}개");
-        Debug.Log($"<color=#3EB489>[BookMarkManager]</color> characterBookmarks 딕셔너리 키 목록: [{string.Join(", ", characterBookmarks.Keys)}]");
+        GameLog.Log($"<color=#3EB489>[BookMarkManager]</color> Firebase에서 책갈피 로드: {ownedBookmarks.Count}개");
+        GameLog.Log($"<color=#3EB489>[BookMarkManager]</color> characterBookmarks 딕셔너리 키 목록: [{string.Join(", ", characterBookmarks.Keys)}]");
     }
 
     /// <summary>
@@ -622,10 +622,10 @@ public class BookMarkManager : MonoBehaviour
     [ContextMenu("보유 책갈피 목록 출력")]
     private void PrintAllBookmarks()
     {
-        Debug.Log($"=== 보유 책갈피 목록 ({ownedBookmarks.Count}개) ===");
+        GameLog.Log($"=== 보유 책갈피 목록 ({ownedBookmarks.Count}개) ===");
         for (int i = 0; i < ownedBookmarks.Count; i++)
         {
-            Debug.Log(ownedBookmarks[i]);
+            GameLog.Log(ownedBookmarks[i].ToString());
         }
     }
 

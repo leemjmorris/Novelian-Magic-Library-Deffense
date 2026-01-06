@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using NovelianMagicLibraryDefense.Core;
 using Cysharp.Threading.Tasks;
 using TMPro;
@@ -168,13 +168,13 @@ namespace NovelianMagicLibraryDefense.Managers
 
         private void OnHomeButtonClicked()
         {
-            Debug.Log("[StageSceneManager] Home button clicked - Loading LobbyScene");
+            GameLog.Log("[StageSceneManager] Home button clicked - Loading LobbyScene");
             LoadLobbySceneAsync().Forget();
         }
 
         private void OnStageStartButtonClicked()
         {
-            Debug.Log("[StageSceneManager] Stage button clicked - Loading GameScene3D");
+            GameLog.Log("[StageSceneManager] Stage button clicked - Loading GameScene3D");
             LoadGameSceneAsync().Forget();
         }
 
@@ -187,7 +187,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // 0. 덱 설정 확인
             if (DeckManager.Instance == null || DeckManager.Instance.IsDeckEmpty())
             {
-                Debug.LogWarning("[StageSceneManager] 덱이 설정되지 않음!");
+                GameLog.LogWarning("[StageSceneManager] 덱이 설정되지 않음!");
                 ShowDeckSetupWarning();
                 return;
             }
@@ -195,7 +195,7 @@ namespace NovelianMagicLibraryDefense.Managers
             // 1. SelectedStage 데이터 확인
             if (!SelectedStage.HasSelection)
             {
-                Debug.LogError("[StageSceneManager] 스테이지가 선택되지 않음");
+                GameLog.LogError("[StageSceneManager] 스테이지가 선택되지 않음");
                 return;
             }
 
@@ -205,21 +205,21 @@ namespace NovelianMagicLibraryDefense.Managers
             // 2. AP 잔량 확인
             if (CurrencyManager.Instance == null)
             {
-                Debug.LogError("[StageSceneManager] CurrencyManager가 초기화되지 않음");
+                GameLog.LogError("[StageSceneManager] CurrencyManager가 초기화되지 않음");
                 return;
             }
 
             if (!CurrencyManager.Instance.HasEnoughCurrency(CurrencyManager.AP_ID, apCost))
             {
                 int currentAP = CurrencyManager.Instance.GetCurrency(CurrencyManager.AP_ID);
-                Debug.LogWarning($"[StageSceneManager] AP 부족! 필요: {apCost}, 보유: {currentAP}");
+                GameLog.LogWarning($"[StageSceneManager] AP 부족! 필요: {apCost}, 보유: {currentAP}");
                 // TODO JML: AP 부족 팝업 추가하세요
                 return;
             }
 
             // 3. AP 소모
             CurrencyManager.Instance.SpendCurrency(CurrencyManager.AP_ID, apCost);
-            Debug.Log($"[StageSceneManager] AP {apCost} 소모. Stage_ID: {stageData.Stage_ID}로 게임 시작");
+            GameLog.Log($"[StageSceneManager] AP {apCost} 소모. Stage_ID: {stageData.Stage_ID}로 게임 시작");
 
             // 4. 씬 전환
             LoadGameSceneAsync().Forget();

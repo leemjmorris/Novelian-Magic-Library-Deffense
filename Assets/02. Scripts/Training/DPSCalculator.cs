@@ -1,4 +1,4 @@
-// 훈련소 DPS 계산기 (Issue #458)
+﻿// 훈련소 DPS 계산기 (Issue #458)
 // 실시간 DPS 및 누적 데미지 측정
 namespace Novelian.Training
 {
@@ -71,7 +71,7 @@ namespace Novelian.Training
             {
                 startTime = Time.time;
             }
-            Debug.Log("[DPSCalculator] 측정 시작");
+            GameLog.Log("[DPSCalculator] 측정 시작");
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace Novelian.Training
         public void PauseMeasurement()
         {
             isRunning = false;
-            Debug.Log("[DPSCalculator] 측정 일시정지");
+            GameLog.Log("[DPSCalculator] 측정 일시정지");
         }
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace Novelian.Training
         {
             if (isRunning) return;
             isRunning = true;
-            Debug.Log("[DPSCalculator] 측정 재시작");
+            GameLog.Log("[DPSCalculator] 측정 재시작");
         }
 
         /// <summary>
@@ -104,7 +104,7 @@ namespace Novelian.Training
 
             // 리셋 후 통계 업데이트
             OnStatsUpdated?.Invoke(0f, 0f, 0f);
-            Debug.Log("[DPSCalculator] 리셋 완료");
+            GameLog.Log("[DPSCalculator] 리셋 완료");
         }
 
         /// <summary>

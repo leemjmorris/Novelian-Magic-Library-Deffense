@@ -1,4 +1,4 @@
-//LMJ : Character partial class - Status Effect Application (CC, DOT, Mark, Debuff)
+﻿//LMJ : Character partial class - Status Effect Application (CC, DOT, Mark, Debuff)
 namespace Novelian.Combat
 {
     using UnityEngine;
@@ -45,7 +45,7 @@ namespace Novelian.Combat
                         }
                         else
                         {
-                            Debug.Log($"[Character] 보스 CC 면역: Stun");
+                            GameLog.Log($"[Character] 보스 CC 면역: Stun");
                         }
                     }
                     break;
@@ -63,7 +63,7 @@ namespace Novelian.Combat
                     break;
 
                 default:
-                    Debug.LogWarning($"[Character] Unknown status effect type: {effectType}");
+                    GameLog.LogWarning($"[Character] Unknown status effect type: {effectType}");
                     break;
             }
         }
@@ -95,7 +95,7 @@ namespace Novelian.Combat
                 }
                 else
                 {
-                    Debug.Log($"[Character] 보스 CC 면역: {skillData.skill_name}");
+                    GameLog.Log($"[Character] 보스 CC 면역: {skillData.skill_name}");
                 }
             }
 
@@ -114,7 +114,7 @@ namespace Novelian.Combat
                 float dotDamagePerTick = skillData.base_damage * 0.1f;
 
                 ApplyDOT(target, dotDamagePerTick, skillData.skill_lifetime, dotTickInterval);
-                Debug.Log($"[Character] AOE skill_lifetime 기반 DOT 적용: {skillData.skill_name}, duration={skillData.skill_lifetime}s, tickDamage={dotDamagePerTick}");
+                GameLog.Log($"[Character] AOE skill_lifetime 기반 DOT 적용: {skillData.skill_name}, duration={skillData.skill_lifetime}s, tickDamage={dotDamagePerTick}");
             }
 
             // 표식 효과 적용 (데미지 증폭)
@@ -185,7 +185,7 @@ namespace Novelian.Combat
                 BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                 boss?.ApplyCC(CCType.Slow, duration, slowPercent, null);
             }
-            Debug.Log($"[Character] Applied Slow: {slowPercent * 100}% for {duration}s");
+            GameLog.Log($"[Character] Applied Slow: {slowPercent * 100}% for {duration}s");
         }
 
         /// <summary>
@@ -204,7 +204,7 @@ namespace Novelian.Combat
                 BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                 boss?.ApplyCC(CCType.Stun, duration, 0f, null);
             }
-            Debug.Log($"[Character] Applied Stun: {duration}s");
+            GameLog.Log($"[Character] Applied Stun: {duration}s");
         }
 
         /// <summary>
@@ -218,7 +218,7 @@ namespace Novelian.Combat
                 monster?.ApplyKnockback(sourcePos, force); // sourcePosition 전달
             }
             // BossMonster는 넉백 면역 (메서드 없음)
-            Debug.Log($"[Character] Applied Knockback: force={force}");
+            GameLog.Log($"[Character] Applied Knockback: force={force}");
         }
 
         /// <summary>
@@ -233,7 +233,7 @@ namespace Novelian.Combat
                 monster?.ApplyKnockback(pullTowards, -force);
             }
             // BossMonster는 면역
-            Debug.Log($"[Character] Applied Pull: force={force}");
+            GameLog.Log($"[Character] Applied Pull: force={force}");
         }
 
         /// <summary>
@@ -247,7 +247,7 @@ namespace Novelian.Combat
                 monster?.ApplyRoot(duration);
             }
             // BossMonster는 면역
-            Debug.Log($"[Character] Applied Root: {duration}s");
+            GameLog.Log($"[Character] Applied Root: {duration}s");
         }
 
         /// <summary>
@@ -256,7 +256,7 @@ namespace Novelian.Combat
         private void ApplyFear(ITargetable target, float duration)
         {
             ApplyStun(target, duration);
-            Debug.Log($"[Character] Applied Fear (as Stun): {duration}s");
+            GameLog.Log($"[Character] Applied Fear (as Stun): {duration}s");
         }
 
         /// <summary>
@@ -274,7 +274,7 @@ namespace Novelian.Combat
                 BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                 boss?.ApplyDOT(DOTType.Burn, damagePerTick, tickInterval, duration, null);
             }
-            Debug.Log($"[Character] Applied DOT: {damagePerTick} damage every {tickInterval}s for {duration}s");
+            GameLog.Log($"[Character] Applied DOT: {damagePerTick} damage every {tickInterval}s for {duration}s");
         }
 
         /// <summary>
@@ -292,7 +292,7 @@ namespace Novelian.Combat
                 BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                 boss?.ApplyMark(MarkType.Romance, duration, damageMultiplier, null);
             }
-            Debug.Log($"[Character] Applied Mark: {damageMultiplier}x damage for {duration}s");
+            GameLog.Log($"[Character] Applied Mark: {damageMultiplier}x damage for {duration}s");
         }
 
         /// <summary>
@@ -310,7 +310,7 @@ namespace Novelian.Combat
                 BossMonster boss = target.GetTransform().GetComponent<BossMonster>();
                 boss?.ApplyDebuff(debuffType, debuffValue, duration, null);
             }
-            Debug.Log($"[Character] Applied Debuff: {debuffType} -{debuffValue}% for {duration}s");
+            GameLog.Log($"[Character] Applied Debuff: {debuffType} -{debuffValue}% for {duration}s");
         }
 
         #endregion

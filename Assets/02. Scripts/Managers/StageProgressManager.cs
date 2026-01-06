@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Cysharp.Threading.Tasks;
 using Firebase.Data;
 
@@ -45,7 +45,7 @@ namespace NovelianMagicLibraryDefense.Managers
             if (progression != null)
             {
                 highestClearedStage = progression.highestClearedStage;
-                Debug.Log($"{LOG_PREFIX} Firebase에서 진행도 로드: 클리어한 최고 스테이지 = {highestClearedStage}");
+                GameLog.Log($"{LOG_PREFIX} Firebase에서 진행도 로드: 클리어한 최고 스테이지 = {highestClearedStage}");
             }
         }
 
@@ -88,7 +88,7 @@ namespace NovelianMagicLibraryDefense.Managers
                     ).Forget();
                 }
             }
-            Debug.Log($"{LOG_PREFIX} 진행도 저장: 클리어한 최고 스테이지 = {highestClearedStage}");
+            GameLog.Log($"{LOG_PREFIX} 진행도 저장: 클리어한 최고 스테이지 = {highestClearedStage}");
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 highestClearedStage = clearedStageNumber;
                 SaveProgress();
-                Debug.Log($"[StageProgressManager] 스테이지 {clearedStageNumber} 클리어! 다음 스테이지 해금됨");
+                GameLog.Log($"[StageProgressManager] 스테이지 {clearedStageNumber} 클리어! 다음 스테이지 해금됨");
             }
         }
 
@@ -132,7 +132,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             highestClearedStage = 0;
             SaveProgress();
-            Debug.Log("[StageProgressManager] 진행도 초기화됨");
+            GameLog.Log("[StageProgressManager] 진행도 초기화됨");
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace NovelianMagicLibraryDefense.Managers
             {
                 highestClearedStage = stageNumber;
                 SaveProgress();
-                Debug.Log($"[StageProgressManager] 스테이지 {stageNumber}까지 해금됨 (디버그)");
+                GameLog.Log($"[StageProgressManager] 스테이지 {stageNumber}까지 해금됨 (디버그)");
             }
         }
 
@@ -159,7 +159,7 @@ namespace NovelianMagicLibraryDefense.Managers
         {
             if (FirebaseSaveManager.Instance?.CachedData?.progression == null)
             {
-                Debug.LogWarning($"{LOG_PREFIX} Firebase 캐시 없음 - 랭크 저장 스킵");
+                GameLog.LogWarning($"{LOG_PREFIX} Firebase 캐시 없음 - 랭크 저장 스킵");
                 return;
             }
 
@@ -179,19 +179,19 @@ namespace NovelianMagicLibraryDefense.Managers
                 if (rankIndex < existingRank)
                 {
                     progression.stageRanks[key] = rankIndex;
-                    Debug.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 랭크 갱신: {GetRankString(existingRank)} → {GetRankString(rankIndex)}");
+                    GameLog.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 랭크 갱신: {GetRankString(existingRank)} → {GetRankString(rankIndex)}");
                     SaveProgress();
                 }
                 else
                 {
-                    Debug.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 기존 랭크 {GetRankString(existingRank)}가 더 높음 (신규: {GetRankString(rankIndex)})");
+                    GameLog.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 기존 랭크 {GetRankString(existingRank)}가 더 높음 (신규: {GetRankString(rankIndex)})");
                 }
             }
             else
             {
                 // 새로운 랭크 저장
                 progression.stageRanks[key] = rankIndex;
-                Debug.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 첫 클리어 랭크: {GetRankString(rankIndex)}");
+                GameLog.Log($"{LOG_PREFIX} 스테이지 {stageNumber} 첫 클리어 랭크: {GetRankString(rankIndex)}");
                 SaveProgress();
             }
         }

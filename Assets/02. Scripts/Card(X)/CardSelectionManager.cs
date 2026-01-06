@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -73,7 +73,7 @@ public class CardSelectionManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("[CardSelectionManager] cardPanel이 null입니다! Inspector에서 할당해주세요.");
+            GameLog.LogError("[CardSelectionManager] cardPanel이 null입니다! Inspector에서 할당해주세요.");
         }
 
         // 2. 2개 랜덤 캐릭터 로드
@@ -142,7 +142,7 @@ public class CardSelectionManager : MonoBehaviour
 
         if (availableCharacterIds == null || availableCharacterIds.Count == 0)
         {
-            Debug.LogError("[CardSelectionManager] 덱이 비어있습니다!");
+            GameLog.LogError("[CardSelectionManager] 덱이 비어있습니다!");
             return;
         }
 
@@ -156,7 +156,7 @@ public class CardSelectionManager : MonoBehaviour
         UpdateCardUI(card1, selectedCard1Id);
         UpdateCardUI(card2, selectedCard2Id);
 
-        Debug.Log($"[CardSelectionManager] 덱에서 랜덤 캐릭터 선택: ID {selectedCard1Id}, ID {selectedCard2Id}");
+        GameLog.Log($"[CardSelectionManager] 덱에서 랜덤 캐릭터 선택: ID {selectedCard1Id}, ID {selectedCard2Id}");
     }
 
     /// <summary>
@@ -264,22 +264,22 @@ public class CardSelectionManager : MonoBehaviour
     {
         if (characterId <= 0)
         {
-            Debug.LogError("[CardSelectionManager] 유효하지 않은 캐릭터 ID입니다!");
+            GameLog.LogError("[CardSelectionManager] 유효하지 않은 캐릭터 ID입니다!");
             return;
         }
 
         // JML: CSV에서 캐릭터 이름 가져오기 (Issue #320)
         string characterName = GetCharacterNameFromCSV(characterId);
-        Debug.Log($"[CardSelectionManager] 카드 선택: {characterName} (ID: {characterId})");
+        GameLog.Log($"[CardSelectionManager] 카드 선택: {characterName} (ID: {characterId})");
 
         if (placementManager != null)
         {
             placementManager.SpawnCharacterById(characterId);
-            Debug.Log($"[CardSelectionManager] 캐릭터 배치 완료: {characterName} (ID: {characterId})");
+            GameLog.Log($"[CardSelectionManager] 캐릭터 배치 완료: {characterName} (ID: {characterId})");
         }
         else
         {
-            Debug.LogError("[CardSelectionManager] CharacterPlacementManager를 찾을 수 없습니다!");
+            GameLog.LogError("[CardSelectionManager] CharacterPlacementManager를 찾을 수 없습니다!");
         }
     }
 

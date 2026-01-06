@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
@@ -129,23 +129,23 @@ public class TeamSetupPanel : MonoBehaviour
     {
         if (DeckManager.Instance == null)
         {
-            Debug.LogWarning("[TeamSetupPanel] DeckManager.Instance가 null입니다!");
+            GameLog.LogWarning("[TeamSetupPanel] DeckManager.Instance가 null입니다!");
             return;
         }
 
         // DeckManager의 현재 덱 상태 확인
         var deckData = DeckManager.Instance.GetDeck();
-        Debug.Log($"[TeamSetupPanel] DeckManager 덱 데이터: [{string.Join(", ", deckData)}]");
+        GameLog.Log($"[TeamSetupPanel] DeckManager 덱 데이터: [{string.Join(", ", deckData)}]");
 
         for (int i = 0; i < deckSlots.Count; i++)
         {
             int characterId = DeckManager.Instance.GetCharacterAtIndex(i);
-            Debug.Log($"[TeamSetupPanel] 슬롯 {i} 복원 시도: characterId={characterId}");
+            GameLog.Log($"[TeamSetupPanel] 슬롯 {i} 복원 시도: characterId={characterId}");
 
             if (characterId > 0)
             {
                 deckSlots[i].SetCharacter(characterId);
-                Debug.Log($"[TeamSetupPanel] 슬롯 {i}에 캐릭터 {characterId} 설정 완료");
+                GameLog.Log($"[TeamSetupPanel] 슬롯 {i}에 캐릭터 {characterId} 설정 완료");
             }
             else
             {
@@ -153,7 +153,7 @@ public class TeamSetupPanel : MonoBehaviour
             }
         }
 
-        Debug.Log($"[TeamSetupPanel] 덱 복원 완료. 현재 덱: {GetSetDeckCount()}/4");
+        GameLog.Log($"[TeamSetupPanel] 덱 복원 완료. 현재 덱: {GetSetDeckCount()}/4");
     }
 
     /// <summary>
@@ -173,7 +173,7 @@ public class TeamSetupPanel : MonoBehaviour
             slot.RefreshCharacterInfo();
         }
 
-        Debug.Log("[TeamSetupPanel] 모든 슬롯 정보 갱신 완료");
+        GameLog.Log("[TeamSetupPanel] 모든 슬롯 정보 갱신 완료");
     }
 
     /// <summary>
@@ -181,7 +181,7 @@ public class TeamSetupPanel : MonoBehaviour
     /// </summary>
     public void OnDeckSlotClicked(int slotIndex)
     {
-        Debug.Log($"[TeamSetupPanel] OnDeckSlotClicked 호출됨 - slotIndex: {slotIndex}, 이전 selectedDeckSlotIndex: {selectedDeckSlotIndex}");
+        GameLog.Log($"[TeamSetupPanel] OnDeckSlotClicked 호출됨 - slotIndex: {slotIndex}, 이전 selectedDeckSlotIndex: {selectedDeckSlotIndex}");
 
         // 기존 선택된 슬롯의 프레임 비활성화
         if (selectedDeckSlotIndex >= 0 && selectedDeckSlotIndex < deckSlots.Count)
@@ -193,7 +193,7 @@ public class TeamSetupPanel : MonoBehaviour
         selectedDeckSlotIndex = slotIndex;
         deckSlots[slotIndex].SetSelected(true);
 
-        Debug.Log($"[TeamSetupPanel] 덱 슬롯 {slotIndex} 선택됨, selectedDeckSlotIndex: {selectedDeckSlotIndex}");
+        GameLog.Log($"[TeamSetupPanel] 덱 슬롯 {slotIndex} 선택됨, selectedDeckSlotIndex: {selectedDeckSlotIndex}");
 
         // 캐릭터가 설정되어 있으면 해제 패널 표시, 아니면 캐릭터 탭 열기
         if (deckSlots[slotIndex].IsSet)
@@ -211,11 +211,11 @@ public class TeamSetupPanel : MonoBehaviour
     /// </summary>
     public void OnCharacterSelected(int characterId)
     {
-        Debug.Log($"[TeamSetupPanel] OnCharacterSelected 호출됨 - characterId: {characterId}, selectedDeckSlotIndex: {selectedDeckSlotIndex}");
+        GameLog.Log($"[TeamSetupPanel] OnCharacterSelected 호출됨 - characterId: {characterId}, selectedDeckSlotIndex: {selectedDeckSlotIndex}");
 
         if (selectedDeckSlotIndex < 0 || selectedDeckSlotIndex >= deckSlots.Count)
         {
-            Debug.LogWarning($"[TeamSetupPanel] 선택된 덱 슬롯이 없습니다. selectedDeckSlotIndex: {selectedDeckSlotIndex}");
+            GameLog.LogWarning($"[TeamSetupPanel] 선택된 덱 슬롯이 없습니다. selectedDeckSlotIndex: {selectedDeckSlotIndex}");
             return;
         }
 
@@ -231,13 +231,13 @@ public class TeamSetupPanel : MonoBehaviour
             {
                 // 선택된 슬롯에 캐릭터가 있으면 교환
                 deckSlots[existingSlotIndex].SetCharacter(existingCharacterId);
-                Debug.Log($"[TeamSetupPanel] 슬롯 {existingSlotIndex}에 캐릭터 ID {existingCharacterId} 이동");
+                GameLog.Log($"[TeamSetupPanel] 슬롯 {existingSlotIndex}에 캐릭터 ID {existingCharacterId} 이동");
             }
             else
             {
                 // 선택된 슬롯이 비어있으면 기존 슬롯 초기화
                 deckSlots[existingSlotIndex].ClearSlot();
-                Debug.Log($"[TeamSetupPanel] 슬롯 {existingSlotIndex} 초기화");
+                GameLog.Log($"[TeamSetupPanel] 슬롯 {existingSlotIndex} 초기화");
             }
         }
 
@@ -252,13 +252,13 @@ public class TeamSetupPanel : MonoBehaviour
             AudioManager.Instance?.PlayVoice(voiceKey);
         }
 
-        Debug.Log($"[TeamSetupPanel] 슬롯 {targetSlot}에 캐릭터 설정 후 - IsSet: {deckSlots[targetSlot].IsSet}, CharacterId: {deckSlots[targetSlot].CharacterId}");
+        GameLog.Log($"[TeamSetupPanel] 슬롯 {targetSlot}에 캐릭터 설정 후 - IsSet: {deckSlots[targetSlot].IsSet}, CharacterId: {deckSlots[targetSlot].CharacterId}");
 
         // 선택 프레임 비활성화 및 선택 초기화
         deckSlots[targetSlot].SetSelected(false);
         selectedDeckSlotIndex = -1;
 
-        Debug.Log($"[TeamSetupPanel] 캐릭터 ID {characterId} 설정 완료. 현재 덱: {GetSetDeckCount()}/4");
+        GameLog.Log($"[TeamSetupPanel] 캐릭터 ID {characterId} 설정 완료. 현재 덱: {GetSetDeckCount()}/4");
 
         // 덱 변경 시 시너지 즉시 갱신
         RefreshActiveSynergies();
@@ -309,7 +309,7 @@ public class TeamSetupPanel : MonoBehaviour
         if (characterSelectionButton != null)
             characterSelectionButton.interactable = false;
 
-        Debug.Log("[TeamSetupPanel] 캐릭터 선택 탭 활성화");
+        GameLog.Log("[TeamSetupPanel] 캐릭터 선택 탭 활성화");
     }
 
     /// <summary>
@@ -331,7 +331,7 @@ public class TeamSetupPanel : MonoBehaviour
         // 활성 시너지 새로고침
         RefreshActiveSynergies();
 
-        Debug.Log("[TeamSetupPanel] 파티 시너지 탭 활성화");
+        GameLog.Log("[TeamSetupPanel] 파티 시너지 탭 활성화");
     }
 
     #region Deck Unset Panel
@@ -347,7 +347,7 @@ public class TeamSetupPanel : MonoBehaviour
             if (raycastPanel != null)
                 raycastPanel.SetActive(true);
             deckUnsetPanel.SetActive(true);
-            Debug.Log("[TeamSetupPanel] 덱 해제 패널 표시");
+            GameLog.Log("[TeamSetupPanel] 덱 해제 패널 표시");
         }
     }
 
@@ -362,7 +362,7 @@ public class TeamSetupPanel : MonoBehaviour
             // Unity SerializeField는 ?.가 제대로 동작하지 않으므로 명시적 null 체크
             if (raycastPanel != null)
                 raycastPanel.SetActive(false);
-            Debug.Log("[TeamSetupPanel] 덱 해제 패널 숨김");
+            GameLog.Log("[TeamSetupPanel] 덱 해제 패널 숨김");
         }
     }
 
@@ -384,7 +384,7 @@ public class TeamSetupPanel : MonoBehaviour
                 DeckManager.Instance.SetCharacterAtIndex(selectedDeckSlotIndex, 0);
             }
 
-            Debug.Log($"[TeamSetupPanel] 슬롯 {selectedDeckSlotIndex}에서 캐릭터 ID {characterId} 해제 완료");
+            GameLog.Log($"[TeamSetupPanel] 슬롯 {selectedDeckSlotIndex}에서 캐릭터 ID {characterId} 해제 완료");
         }
 
         // 선택 프레임 비활성화 및 선택 초기화
@@ -416,7 +416,7 @@ public class TeamSetupPanel : MonoBehaviour
         // 패널 숨기기
         HideDeckUnsetPanel();
 
-        Debug.Log("[TeamSetupPanel] 덱 해제 취소");
+        GameLog.Log("[TeamSetupPanel] 덱 해제 취소");
     }
 
     #endregion
@@ -438,7 +438,7 @@ public class TeamSetupPanel : MonoBehaviour
 
         // 현재 프리셋에 맞게 UI 업데이트
         RefreshPresetMarks();
-        Debug.Log($"[TeamSetupPanel] 프리셋 마크 초기화 완료. 현재 프리셋: {GetCurrentPresetIndex() + 1}");
+        GameLog.Log($"[TeamSetupPanel] 프리셋 마크 초기화 완료. 현재 프리셋: {GetCurrentPresetIndex() + 1}");
     }
 
     /// <summary>
@@ -448,14 +448,14 @@ public class TeamSetupPanel : MonoBehaviour
     {
         if (DeckManager.Instance == null)
         {
-            Debug.LogWarning("[TeamSetupPanel] DeckManager.Instance가 null입니다.");
+            GameLog.LogWarning("[TeamSetupPanel] DeckManager.Instance가 null입니다.");
             return;
         }
 
         int currentPreset = DeckManager.Instance.GetCurrentPresetIndex();
         if (presetIndex == currentPreset)
         {
-            Debug.Log($"[TeamSetupPanel] 이미 프리셋 {presetIndex + 1}이 선택되어 있습니다.");
+            GameLog.Log($"[TeamSetupPanel] 이미 프리셋 {presetIndex + 1}이 선택되어 있습니다.");
             return;
         }
 
@@ -465,7 +465,7 @@ public class TeamSetupPanel : MonoBehaviour
         // 프리셋 전환
         DeckManager.Instance.SwitchPreset(presetIndex);
 
-        Debug.Log($"[TeamSetupPanel] 프리셋 {currentPreset + 1} → {presetIndex + 1} 전환");
+        GameLog.Log($"[TeamSetupPanel] 프리셋 {currentPreset + 1} → {presetIndex + 1} 전환");
     }
 
     /// <summary>
@@ -479,7 +479,7 @@ public class TeamSetupPanel : MonoBehaviour
         RefreshAllSlots();
         RefreshActiveSynergies();
 
-        Debug.Log($"[TeamSetupPanel] 프리셋 변경 이벤트 수신: {newPresetIndex + 1}");
+        GameLog.Log($"[TeamSetupPanel] 프리셋 변경 이벤트 수신: {newPresetIndex + 1}");
     }
 
     /// <summary>
@@ -523,7 +523,7 @@ public class TeamSetupPanel : MonoBehaviour
             DeckManager.Instance.SetCharacterAtIndex(i, characterId);
         }
 
-        Debug.Log($"[TeamSetupPanel] 현재 덱을 프리셋 {GetCurrentPresetIndex() + 1}에 저장");
+        GameLog.Log($"[TeamSetupPanel] 현재 덱을 프리셋 {GetCurrentPresetIndex() + 1}에 저장");
     }
 
     #endregion
@@ -531,24 +531,24 @@ public class TeamSetupPanel : MonoBehaviour
     private void OnDisable()
     {
         // JML: 덱 상태 디버그 로그
-        Debug.Log($"[TeamSetupPanel] OnDisable - 현재 덱 슬롯 수: {GetSetDeckCount()}, deckSlots.Count: {deckSlots.Count}");
+        GameLog.Log($"[TeamSetupPanel] OnDisable - 현재 덱 슬롯 수: {GetSetDeckCount()}, deckSlots.Count: {deckSlots.Count}");
         for (int i = 0; i < deckSlots.Count; i++)
         {
-            Debug.Log($"[TeamSetupPanel] Slot[{i}] - IsSet: {deckSlots[i].IsSet}, CharacterId: {deckSlots[i].CharacterId}");
+            GameLog.Log($"[TeamSetupPanel] Slot[{i}] - IsSet: {deckSlots[i].IsSet}, CharacterId: {deckSlots[i].CharacterId}");
         }
 
         if (IsDeckValid())
         {
             // 3개 이상이면 DeckManager에 저장
             SaveDeckToManager();
-            Debug.Log("[TeamSetupPanel] 덱이 유효하므로 저장합니다.");
+            GameLog.Log("[TeamSetupPanel] 덱이 유효하므로 저장합니다.");
         }
         else
         {
             // 3개 미만이면 DeckManager 초기화
             if (DeckManager.Instance != null)
                 DeckManager.Instance.ClearDeck();
-            Debug.Log($"[TeamSetupPanel] 덱이 3개 미만({GetSetDeckCount()}개)이므로 초기화합니다.");
+            GameLog.Log($"[TeamSetupPanel] 덱이 3개 미만({GetSetDeckCount()}개)이므로 초기화합니다.");
         }
 
         // UI 슬롯은 항상 초기화 (다음에 OnEnable에서 복원됨)
@@ -627,14 +627,14 @@ public class TeamSetupPanel : MonoBehaviour
     {
         if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
         {
-            Debug.LogWarning("[TeamSetupPanel] CSVLoader가 초기화되지 않았습니다.");
+            GameLog.LogWarning("[TeamSetupPanel] CSVLoader가 초기화되지 않았습니다.");
             return;
         }
 
         var synergyTable = CSVLoader.Instance.GetTable<PartySynergyData>();
         if (synergyTable == null)
         {
-            Debug.LogWarning("[TeamSetupPanel] PartySynergyTable이 null입니다.");
+            GameLog.LogWarning("[TeamSetupPanel] PartySynergyTable이 null입니다.");
             return;
         }
 
@@ -643,7 +643,7 @@ public class TeamSetupPanel : MonoBehaviour
             .OrderBy(s => s.Party_ID)
             .ToList();
 
-        Debug.Log($"[TeamSetupPanel] 시너지 데이터 로드 완료: {allSynergies.Count}개");
+        GameLog.Log($"[TeamSetupPanel] 시너지 데이터 로드 완료: {allSynergies.Count}개");
     }
 
     /// <summary>
@@ -673,7 +673,7 @@ public class TeamSetupPanel : MonoBehaviour
 
         if (DeckManager.Instance == null)
         {
-            Debug.LogWarning("[TeamSetupPanel] DeckManager.Instance is null");
+            GameLog.LogWarning("[TeamSetupPanel] DeckManager.Instance is null");
             return activeSynergies;
         }
 
@@ -689,7 +689,7 @@ public class TeamSetupPanel : MonoBehaviour
 
         if (deckCharacterIds.Count < 4)
         {
-            Debug.Log($"[TeamSetupPanel] 덱에 캐릭터가 {deckCharacterIds.Count}명뿐입니다. 시너지 활성화에는 4명 필요.");
+            GameLog.Log($"[TeamSetupPanel] 덱에 캐릭터가 {deckCharacterIds.Count}명뿐입니다. 시너지 활성화에는 4명 필요.");
             return activeSynergies;
         }
 
@@ -705,7 +705,7 @@ public class TeamSetupPanel : MonoBehaviour
             if (isActive)
             {
                 activeSynergies.Add(synergy);
-                Debug.Log($"[TeamSetupPanel] 시너지 활성화됨! Party_ID: {synergy.Party_ID}");
+                GameLog.Log($"[TeamSetupPanel] 시너지 활성화됨! Party_ID: {synergy.Party_ID}");
             }
         }
 
@@ -722,7 +722,7 @@ public class TeamSetupPanel : MonoBehaviour
         if (activeSynergyText != null)
             activeSynergyText.text = "활성화된 시너지 없음\n\n4명의 캐릭터를 같은 파티로 편성하세요";
 
-        Debug.Log("[TeamSetupPanel] 활성화된 시너지 없음");
+        GameLog.Log("[TeamSetupPanel] 활성화된 시너지 없음");
     }
 
     /// <summary>
@@ -748,7 +748,7 @@ public class TeamSetupPanel : MonoBehaviour
             activeSynergyText.text = $"{synergyName}\n\n{effectDescription}";
         }
 
-        Debug.Log($"[TeamSetupPanel] 시너지 표시: {activeSynergyText?.text}");
+        GameLog.Log($"[TeamSetupPanel] 시너지 표시: {activeSynergyText?.text}");
     }
 
     /// <summary>
@@ -775,14 +775,14 @@ public class TeamSetupPanel : MonoBehaviour
         var effectData = CSVLoader.Instance.GetData<PartySynergyEffectData>(effectId);
         if (effectData == null)
         {
-            Debug.LogWarning($"[TeamSetupPanel] PartySynergyEffectData not found for ID: {effectId}");
+            GameLog.LogWarning($"[TeamSetupPanel] PartySynergyEffectData not found for ID: {effectId}");
             return $"효과 {effectId}: {effectValue}";
         }
 
         var descriptionString = CSVLoader.Instance.GetData<StringTable>(effectData.Party_Effect_Description_ID);
         if (descriptionString == null)
         {
-            Debug.LogWarning($"[TeamSetupPanel] StringTable not found for ID: {effectData.Party_Effect_Description_ID}");
+            GameLog.LogWarning($"[TeamSetupPanel] StringTable not found for ID: {effectData.Party_Effect_Description_ID}");
             return $"효과: {effectValue}";
         }
 

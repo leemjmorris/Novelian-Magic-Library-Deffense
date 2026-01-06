@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
@@ -292,7 +292,7 @@ namespace Dispatch
             // CSV 로더가 초기화될 때까지 대기
             if (!CSVLoader.Instance.IsInit)
             {
-                Debug.LogWarning("[DispatchTestPanel] CSVLoader가 아직 초기화되지 않았습니다. 잠시 후 다시 시도하세요.");
+                GameLog.LogWarning("[DispatchTestPanel] CSVLoader가 아직 초기화되지 않았습니다. 잠시 후 다시 시도하세요.");
                 return;
             }
 
@@ -301,11 +301,11 @@ namespace Dispatch
             if (timeTable != null)
             {
                 availableTimes = timeTable.FindAll(x => true).OrderBy(x => x.Required_Hours).ToList();
-                Debug.Log($"[DispatchTestPanel] 파견 시간 데이터 로드 완료: {availableTimes.Count}개");
+                GameLog.Log($"[DispatchTestPanel] 파견 시간 데이터 로드 완료: {availableTimes.Count}개");
             }
             else
             {
-                Debug.LogError("[DispatchTestPanel] 파견 시간 테이블을 로드할 수 없습니다!");
+                GameLog.LogError("[DispatchTestPanel] 파견 시간 테이블을 로드할 수 없습니다!");
             }
         }
 
@@ -316,7 +316,7 @@ namespace Dispatch
         {
             if (availableTimes == null || availableTimes.Count == 0)
             {
-                Debug.LogError("[DispatchTestPanel] 파견 시간 데이터가 없습니다!");
+                GameLog.LogError("[DispatchTestPanel] 파견 시간 데이터가 없습니다!");
                 return;
             }
 
@@ -501,17 +501,17 @@ namespace Dispatch
         /// </summary>
         private void SetupItemSlotButtons()
         {
-            Debug.Log($"[DispatchPanel] SetupItemSlotButtons 호출됨!");
+            GameLog.Log($"[DispatchPanel] SetupItemSlotButtons 호출됨!");
 
             Image[] itemSlots = { itemSlot1, itemSlot2, itemSlot3, itemSlot4, itemSlot5 };
 
-            Debug.Log($"[DispatchPanel] itemSlot1={itemSlot1}, itemSlot2={itemSlot2}, itemSlot3={itemSlot3}, itemSlot4={itemSlot4}, itemSlot5={itemSlot5}");
+            GameLog.Log($"[DispatchPanel] itemSlot1={itemSlot1}, itemSlot2={itemSlot2}, itemSlot3={itemSlot3}, itemSlot4={itemSlot4}, itemSlot5={itemSlot5}");
 
             for (int i = 0; i < itemSlots.Length; i++)
             {
                 if (itemSlots[i] == null)
                 {
-                    Debug.LogWarning($"[DispatchPanel] ItemSlot{i + 1}이 null입니다! Inspector에서 연결해주세요.");
+                    GameLog.LogWarning($"[DispatchPanel] ItemSlot{i + 1}이 null입니다! Inspector에서 연결해주세요.");
                     continue;
                 }
 
@@ -520,7 +520,7 @@ namespace Dispatch
                 if (clickHandler == null)
                 {
                     clickHandler = itemSlots[i].gameObject.AddComponent<ItemSlotClickHandler>();
-                    Debug.Log($"[DispatchPanel] ItemSlot{i + 1}에 ItemSlotClickHandler 컴포넌트 추가됨");
+                    GameLog.Log($"[DispatchPanel] ItemSlot{i + 1}에 ItemSlotClickHandler 컴포넌트 추가됨");
                 }
 
                 clickHandler.SlotIndex = i;
@@ -529,7 +529,7 @@ namespace Dispatch
                 clickHandler.OnSlotClicked -= OnItemSlotClicked;
                 clickHandler.OnSlotClicked += OnItemSlotClicked;
 
-                Debug.Log($"[DispatchPanel] ItemSlot{i + 1} ItemSlotClickHandler 등록 완료");
+                GameLog.Log($"[DispatchPanel] ItemSlot{i + 1} ItemSlotClickHandler 등록 완료");
             }
         }
 
@@ -554,7 +554,7 @@ namespace Dispatch
         /// </summary>
         private void OnDeckSlotButtonClicked(int slotIndex)
         {
-            Debug.Log($"[DispatchPanel] OnDeckSlotButtonClicked 호출됨! slotIndex={slotIndex}");
+            GameLog.Log($"[DispatchPanel] OnDeckSlotButtonClicked 호출됨! slotIndex={slotIndex}");
             AddLog($"덱 슬롯 {slotIndex + 1} 클릭 - 덱 설정으로 이동");
             NavigateToLibraryManagementScene().Forget();
         }
@@ -567,7 +567,7 @@ namespace Dispatch
         {
             // CBL: 씬 전환 전 덱 설정 탭 바로 열기 플래그 설정
             NovelianMagicLibraryDefense.UI.TabButton.ShouldOpenTeamSetup = true;
-            Debug.Log($"[DispatchPanel] ShouldOpenTeamSetup 플래그 설정됨: {NovelianMagicLibraryDefense.UI.TabButton.ShouldOpenTeamSetup}");
+            GameLog.Log($"[DispatchPanel] ShouldOpenTeamSetup 플래그 설정됨: {NovelianMagicLibraryDefense.UI.TabButton.ShouldOpenTeamSetup}");
 
             // FadeController의 LoadSceneWithFade 사용 (깜빡임 방지)
             if (FadeController.Instance != null)
@@ -576,7 +576,7 @@ namespace Dispatch
             }
             else
             {
-                Debug.LogWarning("[DispatchPanel] FadeController not available, loading scene directly");
+                GameLog.LogWarning("[DispatchPanel] FadeController not available, loading scene directly");
                 await SceneManager.LoadSceneAsync(SceneName.LibraryManagementScene);
             }
         }
@@ -629,11 +629,11 @@ namespace Dispatch
         /// </summary>
         private void OnItemSlotClicked(int slotIndex)
         {
-            Debug.Log($"[DispatchPanel] OnItemSlotClicked 호출됨! slotIndex={slotIndex}");
+            GameLog.Log($"[DispatchPanel] OnItemSlotClicked 호출됨! slotIndex={slotIndex}");
 
             // 슬롯 인덱스에 해당하는 파견 장소 결정
             DispatchLocation location = GetLocationBySlotIndex(slotIndex);
-            Debug.Log($"[DispatchPanel] 파견 장소: {location}");
+            GameLog.Log($"[DispatchPanel] 파견 장소: {location}");
 
             // 파견 중일 때는 현재 파견 중인 장소의 보상 정보만 표시
             if (isDispatching)
@@ -658,7 +658,7 @@ namespace Dispatch
             }
             else
             {
-                Debug.LogWarning("[DispatchPanel] infoPanel이 null입니다!");
+                GameLog.LogWarning("[DispatchPanel] infoPanel이 null입니다!");
             }
         }
 
@@ -703,19 +703,19 @@ namespace Dispatch
             var locationData = GetLocationData(location);
             if (locationData == null)
             {
-                Debug.LogError($"[DispatchPanel] locationData null - location: {location}");
+                GameLog.LogError($"[DispatchPanel] locationData null - location: {location}");
                 rewardInfoText.text = "보상 정보를 불러올 수 없습니다.";
                 return;
             }
 
             // 현재 선택된 시간의 보상 데이터 사용 (파견 중이면 파견 시작 시의 시간)
             int timeID = currentSelectedTimeID > 0 ? currentSelectedTimeID : 5201;
-            Debug.Log($"[DispatchPanel] UpdateRewardInfoForLocation - location: {location}, locationID: {locationData.Dispatch_Location_ID}, timeID: {timeID}, hours: {currentSelectedHours}");
+            GameLog.Log($"[DispatchPanel] UpdateRewardInfoForLocation - location: {location}, locationID: {locationData.Dispatch_Location_ID}, timeID: {timeID}, hours: {currentSelectedHours}");
 
             var rewardTableData = GetRewardData(locationData.Dispatch_Location_ID, timeID);
             if (rewardTableData == null)
             {
-                Debug.LogError($"[DispatchPanel] rewardTableData null - locationID: {locationData.Dispatch_Location_ID}, timeID: {timeID}");
+                GameLog.LogError($"[DispatchPanel] rewardTableData null - locationID: {locationData.Dispatch_Location_ID}, timeID: {timeID}");
                 rewardInfoText.text = $"보상 정보를 불러올 수 없습니다.\n(Location: {locationData.Dispatch_Location_ID}, TimeID: {timeID})";
                 return;
             }
@@ -950,7 +950,7 @@ namespace Dispatch
         {
             if (button == null)
             {
-                Debug.LogWarning($"[DispatchTestPanel] {GetLocationName(location)} 버튼이 할당되지 않았습니다!");
+                GameLog.LogWarning($"[DispatchTestPanel] {GetLocationName(location)} 버튼이 할당되지 않았습니다!");
                 AddLog($"⚠️ {GetLocationName(location)} 버튼 없음");
                 return;
             }
@@ -1861,20 +1861,20 @@ namespace Dispatch
             var categoryTable = CSVLoader.Instance.GetTable<DispatchCategoryData>();
             if (categoryTable == null)
             {
-                Debug.LogError("[DispatchTestPanel] DispatchCategoryTable을 로드할 수 없습니다!");
+                GameLog.LogError("[DispatchTestPanel] DispatchCategoryTable을 로드할 수 없습니다!");
                 return null;
             }
 
-            Debug.Log($"[DispatchTestPanel] DispatchCategoryTable 행 개수: {categoryTable.Count}");
+            GameLog.Log($"[DispatchTestPanel] DispatchCategoryTable 행 개수: {categoryTable.Count}");
             var result = categoryTable.FindAll(x => x.Dispatch_ID == dispatchID).FirstOrDefault();
 
             if (result == null)
             {
-                Debug.LogError($"[DispatchTestPanel] Dispatch_ID {dispatchID}에 해당하는 카테고리를 찾을 수 없습니다!");
+                GameLog.LogError($"[DispatchTestPanel] Dispatch_ID {dispatchID}에 해당하는 카테고리를 찾을 수 없습니다!");
             }
             else
             {
-                Debug.Log($"[DispatchTestPanel] 찾은 카테고리: Dispatch_ID={result.Dispatch_ID}, Category={result.Dispatch_Category}");
+                GameLog.Log($"[DispatchTestPanel] 찾은 카테고리: Dispatch_ID={result.Dispatch_ID}, Category={result.Dispatch_Category}");
             }
 
             return result;
@@ -2170,12 +2170,12 @@ namespace Dispatch
                     // 토스트로 획득 아이템 표시
                     if (RewardToastManager.Instance != null)
                     {
-                        Debug.Log($"[DispatchPanel] RewardToastManager.ShowReward 호출: itemId={reward.Item_ID}, amount={finalAmount}");
+                        GameLog.Log($"[DispatchPanel] RewardToastManager.ShowReward 호출: itemId={reward.Item_ID}, amount={finalAmount}");
                         RewardToastManager.Instance.ShowReward(reward.Item_ID, finalAmount);
                     }
                     else
                     {
-                        Debug.LogWarning("[DispatchPanel] RewardToastManager.Instance is NULL!");
+                        GameLog.LogWarning("[DispatchPanel] RewardToastManager.Instance is NULL!");
                     }
                 }
                 else
@@ -2376,7 +2376,7 @@ namespace Dispatch
         /// </summary>
         private void AddLog(string message)
         {
-            Debug.Log($"[DispatchTestPanel] {message}");
+            GameLog.Log($"[DispatchTestPanel] {message}");
         }
 
         // 파견 시작 시간 저장용

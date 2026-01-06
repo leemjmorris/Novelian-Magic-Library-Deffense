@@ -1,4 +1,4 @@
-//LMJ : Character - 새 스킬 시스템 구현 완료 (Issue #448)
+﻿//LMJ : Character - 새 스킬 시스템 구현 완료 (Issue #448)
 //     - SkillExecutor 기반 스킬 실행
 //     - CSV 기반 MainSkillData + SupportSkillData 연동
 //     - Addressable 프리팹 로딩
@@ -209,7 +209,7 @@ namespace Novelian.Combat
         {
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.LogWarning("[Character] CSVLoader not initialized!");
+                GameLog.LogWarning("[Character] CSVLoader not initialized!");
                 return;
             }
 
@@ -596,14 +596,14 @@ namespace Novelian.Combat
         {
             if (CSVLoader.Instance == null || !CSVLoader.Instance.IsInit)
             {
-                Debug.LogWarning("[Character] CSVLoader not initialized!");
+                GameLog.LogWarning("[Character] CSVLoader not initialized!");
                 return false;
             }
 
             var skill = CSVLoader.Instance.GetData<SupportSkillData>(skillId);
             if (skill == null)
             {
-                Debug.LogWarning($"[Character] Support skill not found: {skillId}");
+                GameLog.LogWarning($"[Character] Support skill not found: {skillId}");
                 return false;
             }
 
@@ -618,7 +618,7 @@ namespace Novelian.Combat
         public void SetProjectileTemplate(GameObject template)
         {
             projectileTemplate = template;
-            Debug.Log($"[Character] ProjectileTemplate 설정됨: {(template != null ? template.name : "null")}");
+            GameLog.Log($"[Character] ProjectileTemplate 설정됨: {(template != null ? template.name : "null")}");
         }
 
         #endregion
