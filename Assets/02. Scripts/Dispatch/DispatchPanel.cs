@@ -2426,7 +2426,7 @@ namespace Dispatch
                 state
             ).Forget();
 
-            AddLog($"💾 파견 상태 저장됨 ({currentDispatchType}) - 남은 시간: {remainingTime}초");
+            AddLog($"💾 파견 상태 저장됨 ({currentDispatchType}) - startTimeMs: {dispatchStartTimeMs}, endTimeMs: {endTimeMs}, hours: {currentSelectedHours}");
         }
 
         /// <summary>
@@ -2454,6 +2454,8 @@ namespace Dispatch
                 AddLog($"📂 저장된 파견 상태 없음 ({panelDispatchType})");
                 return;
             }
+
+            AddLog($"📂 Firebase에서 로드된 파견 데이터: startTimeMs={state.startTimeMs}, endTimeMs={state.endTimeMs}, hours={state.hours}, isActive={state.isActive}");
 
             // 현재 파견 타입을 패널 타입으로 설정
             currentDispatchType = panelDispatchType;
