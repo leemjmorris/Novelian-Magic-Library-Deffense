@@ -31,6 +31,9 @@ namespace Dispatch
         [SerializeField] private float animationDuration = 1.0f;   // 애니메이션 지속 시간 (초)
         [SerializeField] private float dispatchCheckInterval = 1f; // 파견 상태 확인 주기 (초)
 
+        [Header("Map UI")]
+        [SerializeField] private TMPro.TextMeshProUGUI mapDispatchCountText;  // Map에 표시되는 파견 횟수 텍스트 (0/1, 1/1)
+
         private Vector2 originalSizeM;  // SelectImage-M의 원본 크기 저장
         private bool isAnimationComplete = false;
         private bool isDispatching = false; // 파견 중 여부
@@ -144,26 +147,40 @@ namespace Dispatch
         /// </summary>
         private void CheckDispatchStateAndShowRedDot()
         {
-            if (redDotImage == null) return;
-
             // DispatchStateHelper를 사용한 파견 완료 체크
             bool isCompleted = dispatchSaveKey.Contains("Combat")
                 ? DispatchStateHelper.IsCombatDispatchCompleted()
                 : DispatchStateHelper.IsGatheringDispatchCompleted();
 
-            // 디버그: 상태 확인
+            // 파견 중 여부 확인 (완료 포함)
             var state = dispatchSaveKey.Contains("Combat")
                 ? DispatchStateHelper.GetCombatDispatchState()
                 : DispatchStateHelper.GetGatheringDispatchState();
 
+            bool isActive = state != null && state.isActive;
+
+            // Map UI의 파견 횟수 텍스트 업데이트
+            UpdateMapDispatchCountText(isActive);
+
             // 상태 변경 시에만 SetActive 호출
-            if (isCompleted != redDotImage.activeSelf)
+            if (redDotImage != null && isCompleted != redDotImage.activeSelf)
             {
                 redDotImage.SetActive(isCompleted);
                 if (isCompleted)
                 {
                     Debug.Log($"{LogTag} ✅ 파견 완료 - Map에 Red Dot 표시");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Map UI의 파견 횟수 텍스트 업데이트
+        /// </summary>
+        private void UpdateMapDispatchCountText(bool isActive)
+        {
+            if (mapDispatchCountText != null)
+            {
+                mapDispatchCountText.text = isActive ? "1/1" : "0/1";
             }
         }
 

@@ -324,9 +324,37 @@ namespace Dispatch
             timeSlider.minValue = 0;
             timeSlider.maxValue = availableTimes.Count - 1;
             timeSlider.wholeNumbers = true;
-            timeSlider.value = 0;
 
-            UpdateTimeDisplay(0);
+            // 파견 중이 아닐 때만 슬라이더 초기화 (파견 중이면 저장된 시간 유지)
+            if (!isDispatching)
+            {
+                timeSlider.value = 0;
+                UpdateTimeDisplay(0);
+            }
+            else
+            {
+                // 파견 중일 때는 저장된 시간으로 슬라이더 설정
+                int sliderIndex = GetSliderIndexFromHours(currentSelectedHours);
+                timeSlider.value = sliderIndex;
+                UpdateTimeDisplay(sliderIndex);
+            }
+        }
+
+        /// <summary>
+        /// 시간(hours)으로부터 슬라이더 인덱스 조회
+        /// </summary>
+        private int GetSliderIndexFromHours(int hours)
+        {
+            if (availableTimes == null) return 0;
+
+            for (int i = 0; i < availableTimes.Count; i++)
+            {
+                if ((int)availableTimes[i].Required_Hours == hours)
+                {
+                    return i;
+                }
+            }
+            return 0; // 찾지 못하면 기본값 0
         }
 
         /// <summary>

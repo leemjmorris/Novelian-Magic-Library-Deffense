@@ -186,22 +186,45 @@ namespace NovelianMagicLibraryDefense.UI
         {
             if (earnedRewards.Count == 0)
             {
-                return "보상\n-";
+                return "-";
             }
 
-            System.Collections.Generic.List<string> rewardStrings = new System.Collections.Generic.List<string>();
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            int currentLineLength = 0;
+            const int MAX_LINE_LENGTH = 20;
 
-            foreach (var (itemId, amount) in earnedRewards)
+            for (int i = 0; i < earnedRewards.Count; i++)
             {
+                var (itemId, amount) = earnedRewards[i];
                 string itemName = GetItemName(itemId);
                 if (string.IsNullOrEmpty(itemName))
                 {
                     itemName = $"아이템 {itemId}";
                 }
-                rewardStrings.Add($"{itemName} x{amount}");
+
+                string rewardEntry = $"{itemName} x{amount}";
+
+                // 첫 번째 아이템이 아니면 구분자 추가
+                if (i > 0)
+                {
+                    // 현재 줄 길이 + 새 항목 길이가 20자 초과하면 개행
+                    if (currentLineLength + rewardEntry.Length + 2 > MAX_LINE_LENGTH)
+                    {
+                        sb.Append(",\n");
+                        currentLineLength = 0;
+                    }
+                    else
+                    {
+                        sb.Append(", ");
+                        currentLineLength += 2;
+                    }
+                }
+
+                sb.Append(rewardEntry);
+                currentLineLength += rewardEntry.Length;
             }
 
-            return "보상\n" + string.Join(", ", rewardStrings);
+            return sb.ToString();
         }
 
         /// <summary>
