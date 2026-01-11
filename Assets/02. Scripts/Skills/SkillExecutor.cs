@@ -1363,10 +1363,12 @@ namespace Novelian.Combat
             isCritical = false;
             float damage;
 
-            // Character가 있으면 FinalDamage 사용 (스탯 카드 버프 적용됨)
+            // Character가 있으면 스킬 고유 데미지 + 모디파이어 적용
             if (casterCharacter != null)
             {
-                damage = casterCharacter.FinalDamage;
+                float baseDamage = mainSkill.base_damage;
+                float damageModifier = casterCharacter.GetDamageModifier();
+                damage = baseDamage * (1f + damageModifier / 100f);
 
                 // BonusDamage 적용 (추가 데미지)
                 float bonusDamagePercent = casterCharacter.GetBonusDamageModifier();

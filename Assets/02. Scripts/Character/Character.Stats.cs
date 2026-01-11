@@ -583,6 +583,14 @@ namespace Novelian.Combat
             return rangeModifier;
         }
 
+        /// <summary>
+        /// 데미지 모디파이어 반환 (스킬 데미지 계산용)
+        /// </summary>
+        public float GetDamageModifier()
+        {
+            return damageModifier;
+        }
+
         #endregion
     }
 }
