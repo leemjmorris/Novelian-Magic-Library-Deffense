@@ -68,6 +68,16 @@ namespace NovelianMagicLibraryDefense.Managers
                 tapEffect.Stop();
                 // 자식 ParticleSystem 캐싱
                 childParticleSystems = tapEffect.GetComponentsInChildren<ParticleSystem>(true);
+
+                // TimeScale=0에서도 재생되도록 설정
+                foreach (var ps in childParticleSystems)
+                {
+                    if (ps != null)
+                    {
+                        var main = ps.main;
+                        main.useUnscaledTime = true;
+                    }
+                }
             }
 
             // Awake에서 이벤트 구독 (OnEnable/OnDisable 대신)
