@@ -63,6 +63,9 @@ namespace NovelianMagicLibraryDefense.UI
         /// </summary>
         public void Show(float progressTime)
         {
+            // BossDungeonUI.Awake()에서 gameObject가 비활성화되므로 먼저 활성화
+            gameObject.SetActive(true);
+
             // 패배 효과음 재생
             AudioManager.Instance?.PlaySFX("LoseSFX");
 
